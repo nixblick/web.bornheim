@@ -206,7 +206,7 @@
   var gl = null; try { gl = document.createElement('canvas').getContext('webgl2'); } catch (e) {}
   if (!gl) { fail('Dein Browser kann kein WebGL 2', 'Das Spiel braucht WebGL 2. Aktualisiere Chrome, Edge, Firefox oder Safari und schalte die Hardwarebeschleunigung in den Browser-Einstellungen ein.'); return; }
   var mobile = matchMedia('(pointer: coarse)').matches && !matchMedia('(pointer: fine)').matches;
-  function start() { var s = document.createElement('script'); s.type = 'module'; s.src = 'game.js'; document.body.appendChild(s); }
+  function start() { var s = document.createElement('script'); s.type = 'module'; s.src = 'game.js'; s.onerror = function () { fail('Das Spiel konnte nicht laden', 'Eine Spieldatei fehlt oder ließ sich nicht laden (game.js oder eines seiner Module). Neu laden hilft oft. Bleibt es, melde den Fehler bitte mit dem Knopf unten.'); }; document.body.appendChild(s); }
   if (mobile) { var m = document.getElementById('mobile'); m.style.display = 'flex'; document.getElementById('mobile_anyway').onclick = function (e) { e.preventDefault(); m.style.display = 'none'; start(); }; }
   else start();
 })();
