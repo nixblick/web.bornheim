@@ -22,6 +22,18 @@ def height(t):
     if b in ("apartments","residential","commercial","office","retail","school","hospital","yes"): return 16
     return 10
 
+def under(t):
+    """Unter der Erde oder im Gebäude (Tiefgaragen, Ladenstraßen unter Einkaufszentren): im Spiel nicht auf Bodenhöhe zeigen."""
+    if t.get("indoor") in ("yes","corridor","room") or t.get("location") in ("underground","indoor"): return True
+    try:
+        ls=[int(float(v)) for v in str(t.get("layer","0")).split(";") if v.strip()]
+        if ls and max(ls)<0 and t.get("bridge","no")=="no": return True
+    except: pass
+    try:
+        if str(t.get("level","0")).strip().startswith("-"): return True
+    except: pass
+    return False
+
 ROADW = {"motorway":14,"trunk":12,"primary":11,"secondary":9,"tertiary":8,"residential":6.5,
          "unclassified":6,"living_street":5,"service":4,"pedestrian":5}
 def convert(elements, nodes=None):
@@ -51,6 +63,22 @@ def convert(elements, nodes=None):
             try: b["rh"]=round(float(t.get("roof:levels",1))*3.0,1) if b.get("r") else 0
             except: b["rh"]=3.0
             if t.get("roof:levels")=="0": b.pop("r",None); b["rh"]=0
+            mh=0.0  # Unterkante: aufgeständerte Bauten, Überbauungen, Tankstellen- und Bahnsteigdächer
+            try:
+                if "min_height" in t: mh=float(str(t["min_height"]).replace("m","").strip())
+                elif "building:min_level" in t: mh=float(t["building:min_level"])*3.2
+            except: mh=0.0
+            try: lay=max(int(float(v)) for v in str(t.get("layer","0")).split(";") if v.strip())
+            except: lay=0
+            try: lv=float(t.get("building:levels","1"))
+            except: lv=1
+            if lay>=1 and lv<=1 and mh<=0 and "height" not in t: mh=max(2.8,b["h"]-1.2); b["h"]=max(b["h"],4.2)  # über Grund (Tankstellen-/Vordach, layer=1)
+            if bt=="roof":
+                if "height" not in t and "building:levels" not in t: b["h"]=max(b["h"],5.0)
+                if mh<=0: mh=max(2.8,b["h"]-1.0)
+                b["k"]="small"
+            if mh>=2.2 and b["h"]<=mh+0.4: b["h"]=round(mh+(1.2 if bt=="roof" else 3.2),1)  # Höhe fehlt oder liegt unter der Unterkante
+            if mh>=2.2 and mh<b["h"]-0.4: b["mh"]=round(mh,1)
             if "name" in t: b["n"]=t["name"]
             if "shop" in t or t.get("amenity") in ("bank","cafe","restaurant","pharmacy","bar","pub","fast_food","supermarket"): b["shop"]=t.get("shop",t.get("amenity"))
             out["buildings"].append(b)
@@ -58,7 +86,9 @@ def convert(elements, nodes=None):
             hw=t["highway"]
             if hw in ROADW:
                 if t.get("tunnel")=="yes" or t.get("tunnel")=="building_passage" and hw in ("motorway","motorway_link","trunk"): continue
+                if under(t): continue
                 r={"p":pts,"w":ROADW[hw]}
+                if t.get("tunnel")=="building_passage": r["bp"]=1
                 if t.get("bridge") and t.get("bridge")!="no": r["br"]=1
                 if hw in ("motorway","motorway_link","trunk"): r["mw"]=1
                 if "name" in t: r["n"]=t["name"]
@@ -73,6 +103,7 @@ def convert(elements, nodes=None):
                 if t.get("highway") in ("pedestrian",): r["ped"]=1
                 out["roads"].append(r)
             elif hw in ("footway","path","cycleway","steps","track"):
+                if under(t) or t.get("tunnel")=="yes": continue
                 out["paths"].append({"p":pts})
         elif "barrier" in t and t["barrier"] in ("fence","wall","hedge","retaining_wall","city_wall"):
             out["barriers"].append({"p":pts,"k":t["barrier"]})
