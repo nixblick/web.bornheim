@@ -244,6 +244,8 @@ function solidAtH(x, z, y) {
   const col = blockCols.get(bkey(x, z)); if (col) for (const cy of col) { if (cy + 0.5 > y + 0.5 && cy - 0.5 < y + 1.7) return -2; }
   return -1;
 }
+// Sichtlinie für Explosionen und Pfefferspray: Hindernis (Gebäude unter Dachhöhe, gebauter Block) in 0,5-m-Schritten → Wirkung ×0,2
+function losFactor(ax, ay, az, bx, by, bz) { const L = Math.hypot(bx - ax, by - ay, bz - az); const n = Math.ceil(L / 0.5); for (let i = 1; i < n; i++) { const k = i / n; if (solidAtH(ax + (bx - ax) * k, az + (bz - az) * k, ay + (by - ay) * k) !== -1) return 0.2; } return 1; }
 // Zäune, Mauern, Hecken als Liniensegmente im Raster
 const barrierGrid = new Map();
 function barrierAdd(ax, az, bx, bz, h) { const seg = [ax, az, bx, bz, h]; for (let cx = Math.floor((Math.min(ax, bx) - 2) / CELL); cx <= Math.floor((Math.max(ax, bx) + 2) / CELL); cx++) for (let cz = Math.floor((Math.min(az, bz) - 2) / CELL); cz <= Math.floor((Math.max(az, bz) + 2) / CELL); cz++) { const k = key(cx, cz); if (!barrierGrid.has(k)) barrierGrid.set(k, []); barrierGrid.get(k).push(seg); } return seg; }
@@ -1516,7 +1518,7 @@ function explode(c, src = 'player') {
   c.traverse(m => { if (m.isSprite) m.visible = false; else if (m.isMesh && m.material?.color && m !== u.cone) { m.material = m.material.clone(); m.material.color.setHex(0x1a1a1a); if (m.material.emissive) m.material.emissive.setHex(0); } }); if (u.cone) u.cone.visible = false; u.heads = [];
   burst(c.position.clone().setY(1), 0xff7a1a, 40, 6); burst(c.position.clone().setY(1.5), 0x222222, 20, 3);
   if (c === player.car) { player.hp -= 50; exitCar(); }
-  if (player.pos.distanceTo(c.position) < 7 && !player.car) player.hp -= 40;
+  if (player.pos.distanceTo(c.position) < 7 && !player.car) player.hp -= 40 * losFactor(c.position.x, c.position.y + 0.8, c.position.z, player.pos.x, player.pos.y + 1, player.pos.z);
   if (src === 'player') raiseWanted(1.5);
   for (const f of X.listeners) f('carExploded', c.position, { car: c });
 }
@@ -1707,9 +1709,9 @@ function barrierRegister(d) {
   for (const b of d.barriers || []) run(b.p, b.k);
   for (const a of d.areas || []) for (const r of ringRuns(a)) run(r, 'fence');
   for (const g of d.green || []) if (g.k === 'allotments' || g.k === 'pitch' || g.k === 'playground') for (const r of ringRuns(g)) run(r, g.k === 'allotments' ? 'hedge' : 'fence');
+  return out; // Segmente der Kachel, damit unregisterTile sie wieder aus dem Raster nehmen kann
 }
 // Kachelbild für Minikarte und große Karte
-  return out; // Segmente der Kachel, damit unregisterTile sie wieder aus dem Raster nehmen kann
 function tileMap(t) {
   const c = document.createElement('canvas'); c.width = c.height = TS * MM_SCALE; const g = c.getContext('2d'); g.fillStyle = '#1b1d22'; g.fillRect(0, 0, c.width, c.height);
   const P = ([x, z]) => [(x - t.tx * TS) * MM_SCALE, (z - t.tz * TS) * MM_SCALE]; const d = t.data;
@@ -1729,8 +1731,6 @@ function registerTile(t) {
   t.bar = barrierRegister(d); t.mm = tileMap(t);
   if (typeof DEMO !== 'undefined' && DEMO && DEMO.addRoads) DEMO.addRoads(d.roads || []);
 }
-const loadingTiles = new Set();
-async function loadTile(tx, tz) {
 // Kacheldaten außerhalb R_DATA+2 wieder freigeben (LRU): Raster-Einträge entfernen, Plätze in WORLD.buildings/roads werden null (Indizes der anderen bleiben gültig),
 // Listen in Ort gefiltert (CITY teilt die Arrays), DEM-Höhen, Minikarten-Bild und Rohdaten gelöscht. Fehl-Kacheln (data: {}) ebenso, damit sie neu geladen werden.
 // Der Demo-Routengraph (demo.js) bleibt: er ist klein und addRoads legt beim Neuladen keine doppelten Kanten an.
@@ -1750,6 +1750,8 @@ function unregisterTile(t) {
   for (const seg of t.bar || []) { const [ax, az, bx, bz] = seg; for (let cx = Math.floor((Math.min(ax, bx) - 2) / CELL); cx <= Math.floor((Math.max(ax, bx) + 2) / CELL); cx++) for (let cz = Math.floor((Math.min(az, bz) - 2) / CELL); cz <= Math.floor((Math.max(az, bz) + 2) / CELL); cz++) gridDrop(barrierGrid, key(cx, cz), v => v === seg); }
   DEMT.delete(t.k); DEMN.delete(dkey(t.tx, t.tz)); thK = NaN; thH = null; t.mm = null; t.data = null; t.rd = []; t.rp = []; t.bi = t.bar = null; TILES.delete(t.k);
 }
+const loadingTiles = new Set();
+async function loadTile(tx, tz) {
   const k = tkey(tx, tz); if (TILES.has(k) || loadingTiles.has(k) || !WIDX.tiles[k]) return; loadingTiles.add(k);
   try {
     const inf = WIDX.tiles[k];
@@ -1812,9 +1814,9 @@ function streamUpdate(dt, force = false) {
     const want = []; for (let a = -R_DATA; a <= R_DATA; a++) for (let b = -R_DATA; b <= R_DATA; b++) { const k = tkey(ptx + a, ptz + b); if (WIDX.tiles[k] && !TILES.has(k) && !loadingTiles.has(k)) want.push([a * a + b * b, ptx + a, ptz + b]); }
     want.sort((p, q) => p[0] - q[0]); for (const [, tx, tz] of want) { if (loadingTiles.size >= 6) break; loadTile(tx, tz); }
     let changed = false; for (const [, t] of TILES) if (t.built && (Math.abs(t.tx - ptx) > R_MESH + 1 || Math.abs(t.tz - ptz) > R_MESH + 1)) { unbuildTile(t); changed = true; }
+    for (const [, t] of TILES) if (!t.built && t !== (job && job.t) && (Math.abs(t.tx - ptx) > R_DATA + 2 || Math.abs(t.tz - ptz) > R_DATA + 2)) unregisterTile(t); // Daten ferner Kacheln freigeben
     if (changed) refreshActive(); }
   if (job) { if (!job.upgrade && (Math.abs(job.t.tx - ptx) > R_MESH + 1 || Math.abs(job.t.tz - ptz) > R_MESH + 1)) cancelJob(); else { stepJob(); return; } }
-    for (const [, t] of TILES) if (!t.built && t !== (job && job.t) && (Math.abs(t.tx - ptx) > R_DATA + 2 || Math.abs(t.tz - ptz) > R_DATA + 2)) unregisterTile(t); // Daten ferner Kacheln freigeben
   buildT -= dt; if (buildT > 0 && !force) return;
   let best = null, bd = 1e9; for (let a = -R_MESH; a <= R_MESH; a++) for (let b = -R_MESH; b <= R_MESH; b++) { const t = TILES.get(tkey(ptx + a, ptz + b)); if (!t || t.built || !neighborsReady(t.tx, t.tz)) continue; const d = a * a + b * b; if (d < bd) { bd = d; best = t; } }
   const lod = opts.lod !== false;
@@ -1882,7 +1884,7 @@ $('cont').onclick = () => { let d = null; try { d = JSON.parse(localStorage.getI
 { const bs = CITY.roads.filter(r => r.n === 'Berger Straße').sort((a, b) => Math.hypot(a.p[0][0] - 150, a.p[0][1] + 100) - Math.hypot(b.p[0][0] - 150, b.p[0][1] + 100)); const r = bs[0] || CITY.roads[0]; const [ax, az] = r.p[0], [bx, bz] = r.p[1 % r.p.length];
   const l = Math.hypot(bx - ax, bz - az) || 1; const nx = -(bz - az) / l, nz = (bx - ax) / l; player.pos.set((ax + bx) / 2 + nx * 2, 0, (az + bz) / 2 + nz * 2); player.pos.y = TH(player.pos.x, player.pos.z); camYaw.v = Math.atan2(bx - ax, bz - az) + Math.PI; }
 while (solidAt(player.pos.x, player.pos.z) >= 0) player.pos.x += 3;
-const X = { THREE, scene, camera, renderer, player, peds, cars, shootables, pickups, FX, puff, keys, camYaw, camPitch, opts, world, weather, CITY, TH, solidAt, solidAtH, floorAt, nearestEdge, edgeNormal, moveWithCollision, makeHuman, makeCar, spawnCar, spawnPedAt, playAnim, animateWalk, damage, explode, burst, smoke, wakeParked, wakeParkedRay, sfx, SND, showMsg, raiseWanted, camShake, canvasTex, tracerMat, makeGun, dentCar, rnd, clamp, pick, lerpAngle, distSegSq, pointInPoly, randomRoadPoint, roadsDrivable, driveCar, carFx, carTerrain, exitCar, syncHand, CHAR, coneTex, hurtPlayer, card, closeMenu, saveGame, lockMouse, disposeCar,
+const X = { THREE, scene, camera, renderer, player, peds, cars, shootables, pickups, FX, puff, losFactor, keys, camYaw, camPitch, opts, world, weather, CITY, TH, solidAt, solidAtH, floorAt, nearestEdge, edgeNormal, moveWithCollision, makeHuman, makeCar, spawnCar, spawnPedAt, playAnim, animateWalk, damage, explode, burst, smoke, wakeParked, wakeParkedRay, sfx, SND, showMsg, raiseWanted, camShake, canvasTex, tracerMat, makeGun, dentCar, rnd, clamp, pick, lerpAngle, distSegSq, pointInPoly, randomRoadPoint, roadsDrivable, driveCar, carFx, carTerrain, exitCar, syncHand, CHAR, coneTex, hurtPlayer, card, closeMenu, saveGame, lockMouse, disposeCar,
   listeners: [], mmHooks: MM_HOOKS, menuHooks: MENU_HOOKS, rallyLimit: 8, get creative() { return creative; }, creativeSpawnerActive, pedRoads: () => pedRoads, roadsNear: (x, z, R, car) => roadsNear(x, z, R, car), streetAt: (x, z) => streetNameAt(x, z), barrierNear: (x, z, r) => barrierHit(x, z, r), storyBusy: () => STORY ? STORY.busy : false };
 var WPN = initWeapons(X); var DEMO = initDemo(X, WPN); var FIRE = initFire(X, WPN, DEMO); var STORY = initStory(X, WPN, DEMO, FIRE); var SHOPS = initShops(X, WPN); Object.assign(X, { setPocket: p => { POCKET = p; camera.userData.init = false; }, inPocket, streamInit, roofHeight, WORLD, TILES, TS, WIDX }); var INTERIORS = initInteriors(X, WPN, DEMO, SHOPS);
 for (let i = 0; i < 200 && cars.length < 60; i++) spawnCar(false, player.pos, 10, 260);
@@ -1934,7 +1936,7 @@ function update(dt) {
       let blocked = solidAtH(x, z, y - 0.3) !== -1;
       if (!blocked) for (const c of nearCars) { const u = c.userData, fx = Math.sin(u.heading), fz = Math.cos(u.heading); const dx = x - c.position.x, dz = z - c.position.z; const along = dx * fx + dz * fz, across = dx * fz - dz * fx; if (Math.abs(along) < (u.dims ? u.dims.l / 2 : 2.2) + 0.3 && Math.abs(across) < 1.25 && y < c.position.y + (u.dims ? Math.min(u.dims.h, 1.7) : 1.6) + 0.25) { blocked = true; break; } }
       if (blocked) { t = Math.max(0.08, k - 0.08); break; } } }
-  const want = _camWant.set(ax + (cx - ax) * t, Math.max(cy, TH(ax + (cx - ax) * t, az + (cz - az) * t) + 0.6), az + (cz - az) * t);
+  const want = _camWant.set(ax + (cx - ax) * t, Math.max(cy, surfAt(ax + (cx - ax) * t, az + (cz - az) * t, player.pos.y + 1) + 0.6), az + (cz - az) * t); /* Mindesthöhe kennt Brückendecks (nur das Deck, auf dem die Figur steht, nicht eines darüber) */
   if (!camera.userData.init || want.distanceTo(camera.position) > 30) { camera.position.copy(want); camera.userData.init = true; } else if (t < 1 && Math.hypot(want.x - ax, want.z - az) < Math.hypot(camera.position.x - ax, camera.position.z - az)) camera.position.copy(want); else camera.position.lerp(want, player.car ? 1 - Math.pow(0.001, dt) : 1 - Math.pow(0.00001, dt));
   const fov0 = opts.fov || 65; const fovWant = player.car ? fov0 + Math.min(Math.abs(player.car.userData.speed) / 30, 1) * 12 : fov0; if (Math.abs(camera.fov - fovWant) > 0.1) { camera.fov += (fovWant - camera.fov) * Math.min(1, dt * 3); camera.updateProjectionMatrix(); }
   const look = player.car ? 0 : 6; // zu Fuß: Blick auf einen Punkt vor der Figur, damit Fadenkreuz und Waffe eine Linie bilden

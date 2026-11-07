@@ -178,8 +178,8 @@ export function initWeapons(X) {
   function sprayCone(pos, dir, who) {
     const h = Math.hypot(dir.x, dir.z) || 1, fx = dir.x / h, fz = dir.z / h;
     for (const p of peds) { const u = p.userData; if (u.state === 'dead' || (u.state === 'stunned' && u.stunKind === 'spray') || (who !== 'player' && u.cop)) continue; const dx = p.position.x - pos.x, dz = p.position.z - pos.z, L = Math.hypot(dx, dz); if (L > 5.5 || L < 0.2 || (dx * fx + dz * fz) / L < 0.86) continue;
-      stun(p, 'spray', rnd(4.5, 7)); if (who === 'player') { if (u.cop) { raiseWanted(0.7); emit('sprayCop', p.position, { ped: p }); } else emit('sprayPed', p.position, { ped: p }); } }
-    if (who !== 'player') { const dx = player.pos.x - pos.x, dz = player.pos.z - pos.z, L = Math.hypot(dx, dz); if (L < 5 && L > 0.2 && (dx * fx + dz * fz) / L > 0.8 && !player.car) X.hurtPlayer('spray', 6); }
+      stun(p, 'spray', rnd(4.5, 7) * X.losFactor(pos.x, pos.y + 1.3, pos.z, p.position.x, p.position.y + 1.3, p.position.z)); /* Wand dazwischen: nur kurz */ if (who === 'player') { if (u.cop) { raiseWanted(0.7); emit('sprayCop', p.position, { ped: p }); } else emit('sprayPed', p.position, { ped: p }); } }
+    if (who !== 'player') { const dx = player.pos.x - pos.x, dz = player.pos.z - pos.z, L = Math.hypot(dx, dz); if (L < 5 && L > 0.2 && (dx * fx + dz * fz) / L > 0.8 && !player.car) X.hurtPlayer('spray', 6 * X.losFactor(pos.x, pos.y + 1.3, pos.z, player.pos.x, player.pos.y + 1.3, player.pos.z)); }
   }
 
   // ---------- Taser ----------
@@ -227,7 +227,7 @@ export function initWeapons(X) {
         for (const t of paintTargets) if (p.kind === 'paint' && t.box.containsPoint(_v.set(nx, ny, nz))) { addSplat(new V3(nx, ny, nz), t.normal, p.col, 1.6, t.obj); t.onHit(new V3(nx, ny, nz)); gone = true; break; }
         const ho = !gone && p.t > 0.06 ? bodyHit(nx, ny, nz, p.who) : null;
         if (ho && p.kind === 'molotov') { molotovHit(new V3(nx, ny, nz), ho, p); gone = true; }
-        else if (ho) { if (p.kind === 'paint') { splatBody(ho, new V3(nx, ny, nz), p); gone = true; } else if (p.t > 0.1) { p.v.x *= -0.3; p.v.z *= -0.3; } }
+        else if (ho) { if (p.kind === 'paint') { splatBody(ho, new V3(nx, ny, nz), p); gone = true; } else if (p.t > 0.1) { const hp = ho === 'player' ? player.pos : ho.position; if (p.v.x * (hp.x - nx) + p.v.z * (hp.z - nz) > 0) { p.v.x *= -0.3; p.v.z *= -0.3; } } } /* nur umkehren, solange es auf den Körper zufliegt: kein Zittern in der Figur */
         if (!gone && solidAtH(nx, nz, ny) !== -1) {
           const ne = nearestEdge(ox, oz, 8); let n = new V3(-p.v.x, 0, -p.v.z).normalize(); if (ne) { const e = edgeNormal(ne.b.p, ne.e); n.set(e.nx, 0, e.nz); if (n.x * (ox - ne.b.p[ne.e][0]) + n.z * (oz - ne.b.p[ne.e][1]) < 0) n.negate(); }
           if (p.kind === 'molotov') { molotovHit(new V3(ox, oy, oz).addScaledVector(n, 0.4), null, p); gone = true; }
@@ -282,10 +282,11 @@ export function initWeapons(X) {
     const d = pos.distanceTo(player.pos); sfx('explosion', clamp(1.3 - d / 160, 0.15, 1.3)); flashLight(pos, 0xffa040, 260, 0.45); burst(pos.clone().setY(pos.y + 0.5), 0xff7a1a, 30, 6); burst(pos.clone().setY(pos.y + 1), 0x222222, 14, 3);
     for (let i = 0; i < 10; i++) puff(pos.clone().setY(pos.y + 0.6), i < 4 ? 0xffa040 : 0x3a3530, i < 4 ? 1.2 : 1.6, i < 4 ? 0.5 : 4, new V3(rnd(-2, 2), rnd(1, 4), rnd(-2, 2)), i < 4 ? 6 : 2.2, i < 4 ? 1 : 0.8, i < 4);
     if (d < 45) camShake(0.7 * (1 - d / 45));
-    if (!player.car && d < 8) X.hurtPlayer('boom', 95 * (1 - d / 8));
-    for (const p of peds) { const u = p.userData; const dd = p.position.distanceTo(pos); if (dd < 8 && u.state !== 'dead') { const dir = new V3().subVectors(p.position, pos).setY(0).normalize(); damage(p, 150 * (1 - dd / 8), dir, who === 'player' ? 'player' : 'npc'); if (u.state === 'dead') { u.fly = new V3(dir.x * 8, 6 + rnd(0, 3), dir.z * 8); u.spin = rnd(-6, 6); } } else if (dd < 30 && u.state === 'walk') { u.state = 'flee'; u.fleeT = 8; } }
+    const los = (q, h) => X.losFactor(pos.x, pos.y + 0.5, pos.z, q.x, q.y + h, q.z); // Wand dazwischen: Wirkung ×0,2
+    if (!player.car && d < 8) X.hurtPlayer('boom', 95 * (1 - d / 8) * los(player.pos, 1));
+    for (const p of peds) { const u = p.userData; const dd = p.position.distanceTo(pos); if (dd < 8 && u.state !== 'dead') { const dir = new V3().subVectors(p.position, pos).setY(0).normalize(); damage(p, 150 * (1 - dd / 8) * los(p.position, 1), dir, who === 'player' ? 'player' : 'npc'); if (u.state === 'dead') { u.fly = new V3(dir.x * 8, 6 + rnd(0, 3), dir.z * 8); u.spin = rnd(-6, 6); } } else if (dd < 30 && u.state === 'walk') { u.state = 'flee'; u.fleeT = 8; } }
     if (X.wakeParked) X.wakeParked(pos, 7);
-    for (const c of [...cars]) { const dd = c.position.distanceTo(pos); if (c.userData.mode === 'wreck' || dd > 7) continue; const src = who === 'player' ? 'player' : 'npc'; if (dd < 4.5) explode(c, src); else { c.userData.hp -= 45; if (c.userData.hp <= 0) explode(c, src); } }
+    for (const c of [...cars]) { const dd = c.position.distanceTo(pos); if (c.userData.mode === 'wreck' || dd > 7) continue; const src = who === 'player' ? 'player' : 'npc'; const lf = los(c.position, 0.8); if (dd < 4.5 && lf === 1) explode(c, src); else { c.userData.hp -= 45 * lf; if (c.userData.hp <= 0) explode(c, src); } }
     const g = new THREE.Mesh(new THREE.CircleGeometry(1.8, 16), scorchMat); g.rotation.x = -Math.PI / 2; g.position.set(pos.x, floorAt(pos.x, pos.z, pos.y + 0.5) + 0.03, pos.z); scene.add(g); splats.push(g); trimSplats();
     if (who === 'player') raiseWanted(2); emit('grenade', pos, { who });
   }
