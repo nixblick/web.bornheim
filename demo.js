@@ -65,7 +65,7 @@ export function initDemo(X, W) {
   function removePed(h) { h.traverse(o => { if (o.isSprite && o.material && o.material.map && o.material.map.isCanvasTexture) { o.material.map.dispose(); o.material.dispose(); } }); /* Namensschilder-Texturen freigeben */ scene.remove(h); const i = peds.indexOf(h); if (i >= 0) peds.splice(i, 1); const j = shootables.indexOf(h); if (j >= 0) shootables.splice(j, 1); }
   function addCar(c) { scene.add(c); cars.push(c); shootables.push(c); return c; }
   function removeCar(c) { if (X.disposeCar) X.disposeCar(c); scene.remove(c); const i = cars.indexOf(c); if (i >= 0) cars.splice(i, 1); const j = shootables.indexOf(c); if (j >= 0) shootables.splice(j, 1); }
-  function freeSpot(x, z, r = 2) { if (solidAt(x, z) < 0) return [x, z]; for (let k = 1; k < 12; k++) { const a = k * 2.4, d = r * k * 0.5; const qx = x + Math.cos(a) * d, qz = z + Math.sin(a) * d; if (solidAt(qx, qz) < 0) return [qx, qz]; } return [x, z]; }
+  function freeSpot(x, z, r = 2) { if (solidAt(x, z) < 0) return [x, z]; for (let k = 1; k < 12; k++) { const a = k * 2.4, d = r * k * 0.5; const qx = x + Math.cos(a) * d, qz = z + Math.sin(a) * d; if (solidAt(qx, qz) < 0) return [qx, qz]; } for (let d = 4; d <= 30; d += 2) for (let a = 0; a < 6.283; a += 1.8 / d) { const qx = x + Math.cos(a) * d, qz = z + Math.sin(a) * d; if (solidAt(qx, qz) < 0) return [qx, qz]; } /* große Gebäude: weiter außen suchen statt im Haus zu bleiben */ return [x, z]; }
 
   // ---------- Wasserwerfer ----------
   const MS = (c, r = 0.5, m = 0.2) => new THREE.MeshStandardMaterial({ color: c, roughness: r, metalness: m });
