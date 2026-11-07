@@ -100,6 +100,51 @@ async function run(S, opt) {
   const keysOff = () => { for (const k of Object.keys(G.keys)) G.keys[k] = false; };
   const I = G.INTERIORS, D = G.DEMO, W = G.WPN, F = G.FIRE, T = G.THREE;
 
+  const wrapA = x => Math.atan2(Math.sin(x), Math.cos(x));
+  // Fahrzeug auf Straße r, Abschnitt i in erlaubter Richtung aufstellen
+  function spawnOn(c, r, i) { const dir = r.o === -1 ? -1 : 1; if (dir < 0 && i === 0) i = 1; const a = r.p[i], b = r.p[i + dir] || r.p[i - dir]; const h0 = Math.atan2(b[0] - a[0], b[1] - a[1]); const y0 = G.surfAt(a[0], a[1], 1e9); c.position.set(a[0], y0, a[1]); c.userData.heading = h0; c.rotation.y = h0; c.userData.mode = 'parked'; G.scene.add(c); G.cars.push(c); return c; }
+  function enter(c, what) { jumpOk(); P.pos.set(c.position.x + 1.2, c.position.y, c.position.z); if (P.mesh) P.mesh.position.copy(P.pos); G.toggleCar(); if (P.car !== c) { const near = G.cars.filter(o => o !== c && o.position.distanceTo(P.pos) < 5).map(o => `${o.userData.type || 'car'}@${o.position.distanceTo(P.pos).toFixed(1)}m/${o.userData.mode}`).join(' '); add(S, `Einsteigen klappt nicht (${what})`, `statt dessen: ${P.car ? P.car.userData.type : 'nichts'} · Abstand ${c.position.distanceTo(P.pos).toFixed(1)} m · daneben: ${near || '-'} · mode ${c.userData.mode}`); if (P.car) { jumpOk(5); G.toggleCar(); } return false; } return true; }
+  const nearestSeg = (x, z, ok) => { let best = null, bd = 1e12; for (const r of G.WORLD.roads) { if (!ok(r)) continue; for (let i = 0; i < r.p.length - 1; i++) { const [ax, az] = r.p[i], [bx, bz] = r.p[i + 1]; const dx = bx - ax, dz = bz - az, L2 = dx * dx + dz * dz || 1; const t = Math.max(0, Math.min(1, ((x - ax) * dx + (z - az) * dz) / L2)); const d = (ax + dx * t - x) ** 2 + (az + dz * t - z) ** 2; if (d < bd) { bd = d; best = [r, i, Math.sqrt(d)]; } } } return best; };
+  // Autopilot: folgt der Straße ein Stück voraus, biegt an Knoten zufällig auf erlaubte Anschlussstraßen ab (Einbahn beachtet)
+  async function autopilot(c, r, k, secs, o) {
+    let dir = r.o === -1 ? -1 : (r.o === 1 ? 1 : (Math.random() < 0.5 ? 1 : -1)); if (dir < 0 && k === 0) k = 1; if (dir > 0 && k >= r.p.length - 1) k = r.p.length - 2;
+    { const a = r.p[k], b = r.p[k + dir]; if (b) { const h = Math.atan2(b[0] - a[0], b[1] - a[1]); if (Math.abs(wrapA(h - c.userData.heading)) > 1.6 && Math.abs(c.userData.speed || 0) < 1) { c.userData.heading = h; c.rotation.y = h; } } }
+    const okRoad = q => o.mwOnly ? q.mw : (o.bike ? !q.mw && !q.ry : !q.ped && !q.ry);
+    let dist = 0, vmax = 0, slowT = 0, lastY = c.position.y, turns = 0, uturns = 0, loadF = 0; const lastP = c.position.clone(); const u = c.userData;
+    for (let f = 0; f < 60 * secs && P.car === c && u.mode !== 'wreck'; f += 5) {
+      const segOk = q => q >= 0 && q < r.p.length && q + dir >= 0 && q + dir < r.p.length;
+      const proj = q => { const A = r.p[q], B = r.p[q + dir]; const dx = B[0] - A[0], dz = B[1] - A[1], L2 = dx * dx + dz * dz || 1; return { t: ((c.position.x - A[0]) * dx + (c.position.z - A[1]) * dz) / L2, L: Math.sqrt(L2) }; };
+      if (!segOk(k)) k = dir > 0 ? 0 : r.p.length - 1; while (segOk(k) && proj(k).t > 1 && segOk(k + dir)) k += dir;
+      const look = o.fast ? 25 : o.bike ? 9 : 14;
+      let tgt = null; { const pr = proj(k); let need = look; let q = k; let A = r.p[q], B = r.p[q + dir]; let rest = (1 - Math.min(1, Math.max(0, pr.t))) * pr.L;
+        while (rest < need && segOk(q + dir)) { need -= rest; q += dir; A = r.p[q]; B = r.p[q + dir]; rest = Math.hypot(B[0] - A[0], B[1] - A[1]); }
+        if (rest >= need) { const L = Math.hypot(B[0] - A[0], B[1] - A[1]) || 1, f2 = q === k ? Math.min(1, Math.max(0, pr.t)) + need / L : need / L; tgt = [A[0] + (B[0] - A[0]) * Math.min(1, f2), A[1] + (B[1] - A[1]) * Math.min(1, f2)]; } }
+      if (!tgt) { const end = r.p[dir > 0 ? r.p.length - 1 : 0]; const opts = []; for (const q of G.WORLD.roads) { if (q === r || !okRoad(q)) continue; const s0 = q.p[0], s1 = q.p[q.p.length - 1]; if (Math.hypot(s0[0] - end[0], s0[1] - end[1]) < 3 && q.o !== -1) opts.push([q, 1, 0]); else if (Math.hypot(s1[0] - end[0], s1[1] - end[1]) < 3 && q.o !== 1) opts.push([q, -1, q.p.length - 1]); }
+        if (!opts.length) { tgt = end; if (Math.hypot(end[0] - c.position.x, end[1] - c.position.z) < 6) { if (!r.o && !o.mwOnly && uturns < 2) { uturns++; dir = -dir; k = dir > 0 ? Math.max(0, k - 1) : Math.min(r.p.length - 1, k + 1); continue; } break; } } else { [r, dir, k] = pick(opts); turns++; continue; } }
+      const want = Math.atan2(tgt[0] - c.position.x, tgt[1] - c.position.z), d = wrapA(want - u.heading); const sp = Math.abs(u.speed || 0); const vCap = o.fast ? 99 : o.bike ? 7 : 14;
+      G.keys.KeyW = (Math.abs(d) < 0.6 || sp < (o.bike ? 2 : 5)) && sp < vCap; G.keys.KeyS = Math.abs(d) > 0.8 && sp > (o.bike ? 4 : 9); G.keys.KeyA = d > 0.04; G.keys.KeyD = d < -0.04; G.keys.Space = false;
+      await frames(5); vmax = Math.max(vmax, sp); dist += lastP.distanceTo(c.position); lastP.copy(c.position);
+      const surf = G.surfAt(c.position.x, c.position.z, c.position.y + 2); if (c.position.y < surf - 1.5) add(S, `${o.name}: unter der Fahrbahn`, `${(surf - c.position.y).toFixed(1)} m darunter`);
+      if (lastY - c.position.y > 4) add(S, `${o.name}: stürzt ab`, `${(lastY - c.position.y).toFixed(1)} m in 5 Bildern`); lastY = c.position.y;
+      const loading = /LADE STADT/.test((document.getElementById('msg') || {}).textContent || '') && (document.getElementById('msg') || {}).style?.display !== 'none'; if (loading && (loadF += 5) < 1800) { await frames(5); f -= 5; slowT = 0; continue; } if (sp < (o.bike ? 0.8 : 2) && f > 120) { slowT += 5 / 60; if (slowT > 6) { const fx = Math.sin(u.heading), fz = Math.cos(u.heading); const wall = G.solidAtH(c.position.x + fx * 2, c.position.z + fz * 2, c.position.y + 0.5); const block = G.cars.filter(o => o !== c && o.position.distanceTo(c.position) < 5).map(o => `${o.userData.type || 'car'}/${o.userData.mode}`).join(','); add(S, `${o.name}: bleibt hängen`, `nach ${Math.round(dist)} m, ${r.n || 'ohne Namen'} w${r.w} · vorn Wand ${wall !== -1} · Fahrzeuge <5 m: ${block || '-'} · Ziel-Winkel ${(Math.atan2(Math.sin(want - u.heading), Math.cos(want - u.heading))).toFixed(2)}`, c.position); break; } } else slowT = 0;
+    }
+    keysOff(); const st = { dist: Math.round(dist), vmax: Math.round(vmax * 3.6), turns, crashed: u.mode === 'wreck' };
+    S.log.push(`${Math.round(S.t)}s ${o.name}: ${st.dist} m, max ${st.vmax} km/h, ${turns} Abzweige${st.crashed ? ', gestürzt' : ''}`); (S.rides = S.rides || []).push([o.name, st.dist, st.vmax, turns, st.crashed ? 'X' : '']); return st;
+  }
+  // Rad/Motorrad wie ein Spieler: erst in der Nähe suchen (Ständer, Straßenrand, Verkehr), sonst aufstellen
+  async function zweirad(moto) {
+    if (P.car) { if (P.car.userData.heli) P.car.userData.landed = true; jumpOk(5); G.toggleCar(); }
+    if (!moto && G.updateBikeRacks) G.updateBikeRacks(99);
+    const cand = G.cars.filter(c => { const u = c.userData; return u.bike && !!u.moto === moto && u.mode !== 'wreck' && c !== P.car && c.position.distanceTo(P.pos) < 250 && (u.mode === 'parked' || moto && u.mode === 'ai'); }).sort((a, b) => a.position.distanceTo(P.pos) - b.position.distanceTo(P.pos));
+    let c = cand[0]; const what = moto ? 'Motorrad' : 'Fahrrad'; S.found = S.found || {}; S.found[what] = (S.found[what] || []).concat([c ? Math.round(c.position.distanceTo(P.pos)) : -1]);
+    if (!c) { const sg = nearestSeg(P.pos.x, P.pos.z, q => !q.mw && !q.ry && (moto ? !q.ped : true)); if (!sg) return; c = spawnOn(moto ? G.makeMoto() : G.makeBike(), sg[0], sg[1]); }
+    if (!enter(c, what)) return; await frames(20);
+    if (P.mesh && !P.mesh.visible) add(S, `Fahrer auf dem ${what} unsichtbar`, '');
+    const sg = nearestSeg(c.position.x, c.position.z, q => !q.mw && !q.ry && q.w >= 5 && (moto ? !q.ped : true)); if (!sg) return;
+    if (sg[2] > 6) { const [r, i] = sg; const a = r.p[i]; jumpOk(); c.position.set(a[0], G.surfAt(a[0], a[1], 1e9), a[1]); } // vom Ständer auf die Straße schieben
+    await autopilot(c, sg[0], sg[1], moto ? 35 : 40, { name: what, bike: !moto });
+    if (P.car === c) { jumpOk(5); G.toggleCar(); await frames(10); if (P.car) add(S, `Absteigen vom ${what} klappt nicht`, ''); else if (G.solidAtH(P.pos.x, P.pos.z, P.pos.y + 0.5) !== -1) add(S, `Nach Absteigen (${what}) im Gebäude`, ''); }
+  }
   const ACTIONS = {
     async laufen() { G.camYaw.v = rnd(-3.1, 3.1); G.keys.KeyW = true; G.keys.ShiftLeft = Math.random() < 0.5; for (let k = 0; k < 4; k++) { G.keys.KeyA = Math.random() < 0.3; G.keys.KeyD = !G.keys.KeyA && Math.random() < 0.3; if (Math.random() < 0.3) { G.keys.Space = true; await frames(10); G.keys.Space = false; } await frames(rnd(60, 180)); } keysOff(); },
     async fahren() {
@@ -126,28 +171,13 @@ async function run(S, opt) {
       placeAt(sx + 40, sz + 40); await G.streamInit(sx, sz); placeAt(sx + 40, sz + 40); await frames(30);
       let best = null, bd = 400 * 400; for (const r of G.WORLD.roads) { if (!r.mw || r.w < 10) continue; for (let i = 0; i < r.p.length - 1; i++) { const d = (r.p[i][0] - sx) ** 2 + (r.p[i][1] - sz) ** 2; if (d < bd) { bd = d; best = [r, i]; } } }
       if (!best) { add(S, 'Autobahn nicht gefunden', `${sx},${sz}`); return; }
-      let [r, i] = best; let dir = r.o === -1 ? -1 : 1; if (dir < 0 && i === 0) i = 1; const a = r.p[i], b = r.p[i + dir] || r.p[i - dir]; const h0 = Math.atan2(b[0] - a[0], b[1] - a[1]);
-      const moto = G.makeMoto && Math.random() < 0.33; const c = moto ? G.makeMoto() : G.makeCar(false); const y0 = G.surfAt(a[0], a[1], 1e9); c.position.set(a[0], y0, a[1]); c.userData.heading = h0; c.rotation.y = h0; c.userData.mode = 'parked'; G.scene.add(c); G.cars.push(c);
-      jumpOk(); P.pos.set(a[0] + 1, y0, a[1]); if (P.mesh) P.mesh.position.copy(P.pos); G.toggleCar(); if (P.car !== c) { add(S, 'Einsteigen auf Autobahn klappt nicht', ''); return; }
-      let k = i, dist = 0, vmax = 0, slowT = 0, lastY = c.position.y; const lastP = c.position.clone(); const wrap = x => Math.atan2(Math.sin(x), Math.cos(x));
-      for (let f = 0; f < 60 * 45 && P.car === c; f += 5) {
-        // Ziel 25 m voraus: Auto auf den aktuellen Abschnitt projizieren, Abschnitt weiterschalten, dann entlang der Polylinie vorrechnen
-        const segOk = q => q >= 0 && q < r.p.length && q + dir >= 0 && q + dir < r.p.length;
-        const proj = q => { const A = r.p[q], B = r.p[q + dir]; const dx = B[0] - A[0], dz = B[1] - A[1], L2 = dx * dx + dz * dz || 1; return { t: ((c.position.x - A[0]) * dx + (c.position.z - A[1]) * dz) / L2, L: Math.sqrt(L2) }; };
-        if (!segOk(k)) k = dir > 0 ? 0 : r.p.length - 1; while (segOk(k) && proj(k).t > 1 && segOk(k + dir)) k += dir;
-        let tgt = null; { const pr = proj(k); let need = 25 + Math.max(0, pr.t) * 0 ; let q = k; let A = r.p[q], B = r.p[q + dir]; let rest = (1 - Math.min(1, Math.max(0, pr.t))) * pr.L;
-          while (rest < need && segOk(q + dir)) { need -= rest; q += dir; A = r.p[q]; B = r.p[q + dir]; rest = Math.hypot(B[0] - A[0], B[1] - A[1]); }
-          if (rest >= need) { const L = Math.hypot(B[0] - A[0], B[1] - A[1]) || 1, f2 = q === k ? Math.min(1, Math.max(0, pr.t)) + need / L : need / L; tgt = [A[0] + (B[0] - A[0]) * Math.min(1, f2), A[1] + (B[1] - A[1]) * Math.min(1, f2)]; } }
-        if (!tgt) { const end = r.p[dir > 0 ? r.p.length - 1 : 0]; let nx = null; for (const q of G.WORLD.roads) { if (q === r || !q.mw) continue; const s0 = q.p[0], s1 = q.p[q.p.length - 1]; if (Math.hypot(s0[0] - end[0], s0[1] - end[1]) < 3 && q.o !== -1) { nx = [q, 1, 0]; break; } if (Math.hypot(s1[0] - end[0], s1[1] - end[1]) < 3 && q.o !== 1) { nx = [q, -1, q.p.length - 1]; break; } } if (!nx) { tgt = end; if (Math.hypot(end[0] - c.position.x, end[1] - c.position.z) < 8) break; } else { [r, dir, k] = nx; continue; } }
-        const want = Math.atan2(tgt[0] - c.position.x, tgt[1] - c.position.z), d = wrap(want - c.userData.heading);
-        G.keys.KeyW = Math.abs(d) < 0.5 || Math.abs(c.userData.speed) < 12; G.keys.KeyS = Math.abs(d) > 0.8 && c.userData.speed > 20; G.keys.KeyA = d > 0.03; G.keys.KeyD = d < -0.03;
-        await frames(5); const sp = Math.abs(c.userData.speed || 0); vmax = Math.max(vmax, sp); dist += lastP.distanceTo(c.position); lastP.copy(c.position);
-        const surf = G.surfAt(c.position.x, c.position.z, c.position.y + 2); if (c.position.y < surf - 1.5) add(S, 'Auto unter der Fahrbahn', `${(surf - c.position.y).toFixed(1)} m darunter`);
-        if (lastY - c.position.y > 4) add(S, 'Auto stürzt von der Autobahn', `${(lastY - c.position.y).toFixed(1)} m in 5 Bildern`); lastY = c.position.y;
-        if (sp < 3 && f > 120) { slowT += 5 / 60; if (slowT > 6) { add(S, 'Auto bleibt auf Autobahn hängen', `Strecke ${Math.round(dist)} m`); break; } } else slowT = 0;
-      }
-      keysOff(); S.log.push(`${Math.round(S.t)}s Autobahn ${moto ? '(Motorrad) ' : ''}${sx},${sz}: ${Math.round(dist)} m, max ${Math.round(vmax * 3.6)} km/h`); S.autobahn = (S.autobahn || []).concat([[Math.round(dist), Math.round(vmax * 3.6), moto ? 'M' : 'A']]);
-      if (P.car) { jumpOk(5); G.toggleCar(); } },
+      const moto = G.makeMoto && Math.random() < 0.33; const c = spawnOn(moto ? G.makeMoto() : G.makeCar(false), best[0], best[1]); if (!enter(c, 'Autobahn')) return;
+      const st = await autopilot(c, best[0], best[1], 45, { name: moto ? 'Motorrad (Autobahn)' : 'Auto (Autobahn)', mwOnly: true, fast: true });
+      S.autobahn = (S.autobahn || []).concat([[st.dist, st.vmax, moto ? 'M' : 'A']]); if (P.car) { jumpOk(5); G.toggleCar(); } },
+    // Fahrrad: wie ein Spieler ein abgestelltes Rad suchen (Fahrradständer, Straßenrand), aufsteigen, durch die Straßen radeln, absteigen
+    async rad() { await zweirad(false); },
+    // Motorrad: abgestelltes nehmen oder einem Motorradfahrer abnehmen, durch die Stadt fahren
+    async motorrad() { await zweirad(true); },
     // Christoph 2: zur BG Unfallklinik, Aufzug (F), einsteigen, abheben, Runde fliegen, irgendwo landen, aussteigen
     async fliegen() {
       const HL = G.HELI; if (!HL) return; placeAt(-200, -1715); await G.streamInit(-200, -1715); placeAt(-200, -1715); for (let k = 0; k < 20 && !HL.site; k++) await frames(30); const S2 = HL.site; if (!S2) { add(S, 'Landeplatz BGU fehlt', ''); return; }
@@ -173,7 +203,7 @@ async function run(S, opt) {
       if (getComputedStyle(m).display !== 'none') { dispatchEvent(new KeyboardEvent('keydown', { code: 'Escape', key: 'Escape', bubbles: true })); await frames(10); } if (getComputedStyle(m).display !== 'none' && G.X.closeMenu) G.X.closeMenu(); if (getComputedStyle(m).display !== 'none') add(S, 'Menü schließt nicht', ''); },
     async sondersignal() { const [fx, fz] = freeAt(P.pos.x + 3, P.pos.z); const pc = G.makeCar(true); pc.position.set(fx, G.TH(fx, fz), fz); pc.userData.mode = 'parked'; G.scene.add(pc); G.cars.push(pc); jumpOk(); P.pos.set(pc.position.x + 1, pc.position.y, pc.position.z); G.toggleCar(); if (P.car !== pc) return; pc.userData.siren = true; G.keys.KeyW = true; await frames(400); keysOff(); pc.userData.siren = false; jumpOk(); G.toggleCar(); },
   };
-  const weights = opt.weights || { laufen: 3, fahren: 5, reisen: 2, ubahn: 1.5, laden: 1, haus: 1, explosion: 2, feuer: 1, schiessen: 1.5, demo: 1.5, story: 1, speichern: 1, kreativ: 0.5, wetter: 1, sondersignal: 0.7, tasten: 1.5, menue: 0.7, autobahn: 1.5, fliegen: 1.2 };
+  const weights = opt.weights || { laufen: 3, fahren: 5, reisen: 2, ubahn: 1.5, laden: 1, haus: 1, explosion: 2, feuer: 1, schiessen: 1.5, demo: 1.5, story: 1, speichern: 1, kreativ: 0.5, wetter: 1, sondersignal: 0.7, tasten: 1.5, menue: 0.7, autobahn: 1.5, fliegen: 1.2, rad: 1.5, motorrad: 1.2 };
   const bag = Object.entries(weights).flatMap(([k, w]) => Array(Math.round(w * 2)).fill(k));
   while (S.t < end && !S.stop) {
     const name = opt.only ? pick(opt.only) : pick(bag); S.action = name; S.actions[name] = (S.actions[name] || 0) + 1;

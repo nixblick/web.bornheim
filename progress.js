@@ -4,7 +4,7 @@ export const KEYS_HELP = [
   ['WASD', 'laufen / fahren'], ['Shift', 'rennen'], ['Leertaste', 'springen, im Auto Handbremse'], ['Maus', 'umsehen, Linksklick angreifen, Rechtsklick zielen'],
   ['E', 'einsteigen / aussteigen: Auto, Fahrrad, Motorrad (Fahrradständer!), Christoph 2'], ['F', 'Laden, U-Bahn, Hauseingang, Dach, Aufzug zum Landeplatz (BG Unfallklinik, Seckbach)'], ['Christoph 2', 'W/S vor/zurück · A/D drehen · Leertaste steigen · Shift sinken · E nur gelandet'], ['H', 'Hupe; in Polizei-, Feuerwehr-, Wasserwerferfahrzeugen Sondersignal an/aus'], ['L', 'Licht an/aus (im Fahrzeug)'],
   ['1–0, Mausrad', 'Waffe wählen'], ['Q', 'letzte Waffe'], ['R', 'nachladen'], ['G', 'Leute sammeln / Sprechchor'], ['V', 'filmen'], ['X', 'Dialog weiter'],
-  ['M', 'große Karte'], ['N', 'Minikarte nach Norden'], ['C', 'Kreativmodus'], ['Tab', 'Statistik, Fortschritt, Befehle'], ['F6 / F9', 'speichern / laden'], ['Esc', 'Menü'],
+  ['M', 'große Karte'], ['N', 'Minikarte nach Norden'], ['C', 'Kreativmodus'], ['Tab', 'Statistik, Fortschritt, Befehle'], ['F6 / F9', 'speichern / laden'], ['Esc', 'Menü'], ['F1', 'Hilfe: was geht wo'],
 ];
 export function initProgress(X) {
   const { player, sfx, showMsg } = X; const $ = id => document.getElementById(id);

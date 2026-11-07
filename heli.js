@@ -96,7 +96,7 @@ export function initHeli(X) {
     u.speed = Math.hypot(v.x, v.z); u.alt = p.y - X.TH(p.x, p.z);
     c.rotation.set(u.tilt, u.heading, u.roll); u.rotor.rotation.y += u.rpm * dt * 38; u.tail.rotation.x += u.rpm * dt * 70; u.disc.material.opacity = Math.max(0, u.rpm - 0.4) * 0.28; u.beacon.visible = (performance.now() % 1000) < 120;
   }
-  function damage(c, n) { const u = c.userData; u.hp -= n; if (u.hp > 0 || u.mode === 'wreck') return; if (player.car === c) { X.exitCar && X.exitCar(); player.hp -= 60; } u.mode = 'wreck'; u.rpm = 0; X.explode && X.explode(c.position.clone(), 'heli'); X.showMsg && X.showMsg('CHRISTOPH 2 ABGESTÜRZT', 2000); respawnT = 120; }
+  function damage(c, n) { const u = c.userData; u.hp -= n; if (u.hp > 0 || u.mode === 'wreck') return; u.rpm = 0; if (X.explode) X.explode(c, 'player'); else if (player.car === c && X.exitCar) X.exitCar(); u.mode = 'wreck'; /* explode(c) erwartet das Fahrzeug, steigt selbst aus */ X.showMsg && X.showMsg('CHRISTOPH 2 ABGESTÜRZT', 2000); respawnT = 120; }
   X.heliDrive = heliDrive;
 
   // ---------- je Bild ----------
