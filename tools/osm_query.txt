@@ -1,0 +1,26 @@
+[out:json][timeout:280];
+(
+  way["building"]({BBOX});
+  way["highway"]({BBOX});
+  way["natural"="water"]({BBOX});
+  way["waterway"]({BBOX});
+  way["leisure"~"park|playground|pitch|garden"]({BBOX});
+  way["landuse"~"grass|cemetery|allotments|forest|meadow|recreation_ground"]({BBOX});
+  way["railway"~"rail|tram|subway|light_rail"]({BBOX});
+  node["natural"="tree"]({BBOX});
+  node["highway"="traffic_signals"]({BBOX});
+  node["shop"]({BBOX});
+  node["amenity"~"bank|cafe|restaurant|pharmacy|bar|pub|fast_food|bakery|kindergarten|school|post_office|doctors|dentist|ice_cream|bicycle_rental|atm"]({BBOX});
+  node["highway"="bus_stop"]({BBOX});
+  node["railway"~"tram_stop|station|halt"]({BBOX});
+  node["amenity"~"bench|waste_basket|bicycle_parking|vending_machine|telephone|post_box|recycling|fountain"]({BBOX});
+  node["highway"~"street_lamp|crossing"]({BBOX});
+  way["barrier"~"fence|wall|hedge|retaining_wall"]({BBOX});
+  way["natural"~"scrub|tree_row|wood"]({BBOX});
+  way["shop"]({BBOX});
+  way["amenity"~"bank|cafe|restaurant|pharmacy|school|kindergarten|place_of_worship|community_centre|bar|pub|fast_food"]({BBOX});
+  way["highway"="crossing"]({BBOX});
+);
+out body;
+>;
+out skel qt;

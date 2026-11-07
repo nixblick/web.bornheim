@@ -6,8 +6,9 @@ export function initDemo(X, W) {
 
   // ---------- Wegenetz für Demozüge (Dijkstra über die Straßen) ----------
   const NODES = new Map(); const nk = (x, z) => Math.round(x * 2) + ',' + Math.round(z * 2);
-  for (const r of CITY.roads) { if (r.mw || r.ry) continue; const cost = r.w >= 8 ? 1 : r.w >= 6 ? 1.15 : 1.6;
-    for (let i = 0; i < r.p.length - 1; i++) { const [ax, az] = r.p[i], [bx, bz] = r.p[i + 1]; const ka = nk(ax, az), kb = nk(bx, bz); if (ka === kb) continue; if (!NODES.has(ka)) NODES.set(ka, { x: ax, z: az, e: [] }); if (!NODES.has(kb)) NODES.set(kb, { x: bx, z: bz, e: [] }); const L = Math.hypot(bx - ax, bz - az) * cost; NODES.get(ka).e.push([kb, L]); NODES.get(kb).e.push([ka, L]); } }
+  function addRoads(list) { for (const r of list) { if (r.mw || r.ry) continue; const cost = r.w >= 8 ? 1 : r.w >= 6 ? 1.15 : 1.6;
+    for (let i = 0; i < r.p.length - 1; i++) { const [ax, az] = r.p[i], [bx, bz] = r.p[i + 1]; const ka = nk(ax, az), kb = nk(bx, bz); if (ka === kb) continue; if (!NODES.has(ka)) NODES.set(ka, { x: ax, z: az, e: [] }); if (!NODES.has(kb)) NODES.set(kb, { x: bx, z: bz, e: [] }); const L = Math.hypot(bx - ax, bz - az) * cost; NODES.get(ka).e.push([kb, L]); NODES.get(kb).e.push([ka, L]); } } }
+  addRoads(CITY.roads);
   function nearestNode(x, z) { let best = 1e18, bk = null; for (const [k, n] of NODES) { const d = (n.x - x) ** 2 + (n.z - z) ** 2; if (d < best && n.e.length) { best = d; bk = k; } } return bk; }
   function route(ax, az, bx, bz) {
     const s = nearestNode(ax, az), t = nearestNode(bx, bz); if (!s || !t) return null; const dist = new Map([[s, 0]]), prev = new Map(); const heap = [[0, s]]; const done = new Set();
@@ -346,5 +347,5 @@ export function initDemo(X, W) {
   const _origUpdate = update;
   function update2(dt) { for (const d of demos) if (d.guard && !d.result) { d.age = 0; d.members.length = 0; d.cx = d.cx; } _origUpdate(dt); for (const d of demos) if (d.guard && !d.result && Math.hypot(player.pos.x - d.cx, player.pos.z - d.cz) > 250) endDemo(d, 'faded'); }
 
-  return { jetEmit, driveTo, aimTurret, cannonSpray, addCar, SCHOOL_SLOGANS, update: update2, spawnDemo, endDemo, spontaneous, rally, film, carTrigger, spawnCannon, makeCannon, makeCop, makeMember, addSign, post, sub, say, rep, addRep, stats, demos, route, trailFrom, posAt, busted, removePed, removeCar, setStage, get followers() { return followers; }, get filming() { return filming; }, spawnSquad, freeSpot };
+  return { addRoads,  jetEmit, driveTo, aimTurret, cannonSpray, addCar, SCHOOL_SLOGANS, update: update2, spawnDemo, endDemo, spontaneous, rally, film, carTrigger, spawnCannon, makeCannon, makeCop, makeMember, addSign, post, sub, say, rep, addRep, stats, demos, route, trailFrom, posAt, busted, removePed, removeCar, setStage, get followers() { return followers; }, get filming() { return filming; }, spawnSquad, freeSpot };
 }

@@ -23,7 +23,7 @@ export function initFire(X, W, D) {
   let scanT = 0, crackT = 0;
   function updateFires(dt) {
     scanT -= dt; if (scanT <= 0) { scanT = 0.4; // Bengalos zünden, was daneben steht
-      for (const p of W.projs) { if (p.kind !== 'flare' || p.t < 0.4 || p.t > 27) continue; const q = p.m.position; for (const c of cars) { if (c.userData.fire || c.position.distanceTo(q) > 2.2) continue; if (Math.random() < 0.2) ignite(c, { I: 0.35, by: p.who }); } for (const b of bins) if (!b.userData.fire && b.position.distanceTo(q) < 1.3 && Math.random() < 0.5) ignite(b, { by: p.who }); } }
+      for (const p of W.projs) { if (p.kind !== 'flare' || p.t < 0.4 || p.t > 27) continue; const q = p.m.position; if (X.wakeParked && Math.random() < 0.1) X.wakeParked(q, 2.5); for (const c of cars) { if (c.userData.fire || c.position.distanceTo(q) > 2.2) continue; if (Math.random() < 0.2) ignite(c, { I: 0.35, by: p.who }); } for (const b of bins) if (!b.userData.fire && b.position.distanceTo(q) < 1.3 && Math.random() < 0.5) ignite(b, { by: p.who }); } }
     const lit = [];
     for (let i = fires.length - 1; i >= 0; i--) {
       const f = fires[i]; f.t += dt; f.wetT = Math.max(0, (f.wetT || 0) - dt);
@@ -42,7 +42,7 @@ export function initFire(X, W, D) {
       const hr = (f.car ? 2.6 : 1.6) * (0.6 + f.I * 0.5); if (!player.car && dPl < hr) X.hurtPlayer('fire', 16 * f.I * dt);
       for (const q of peds) { const u = q.userData; if (u.state !== 'walk' && u.state !== 'npc') continue; if (q.position.distanceTo(p) < 7) { u.state = 'flee'; u.fleeT = rnd(3, 6); } }
       // Ausbreitung auf Nachbarautos
-      f.spreadT -= dt; if (f.spreadT <= 0) { f.spreadT = rnd(2, 3.5); if (f.I > 0.6) for (const c of cars) { if (c.userData.fire || c === f.car || c.position.distanceTo(p) > (f.car ? 5.2 : 2.6)) continue; if (Math.random() < 0.3) ignite(c, { I: 0.3, by: 'spread' }); } }
+      f.spreadT -= dt; if (f.spreadT <= 0) { f.spreadT = rnd(2, 3.5); if (f.I > 0.6 && X.wakeParked) X.wakeParked(p, 5.5); if (f.I > 0.6) for (const c of cars) { if (c.userData.fire || c === f.car || c.position.distanceTo(p) > (f.car ? 5.2 : 2.6)) continue; if (Math.random() < 0.3) ignite(c, { I: 0.3, by: 'spread' }); } }
       if (dPl < 120) lit.push([dPl, f, p]);
     }
     lit.sort((a, b) => a[0] - b[0]); const T = performance.now() / 1000;

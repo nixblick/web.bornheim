@@ -12,6 +12,7 @@ import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { initWeapons } from './weapons.js';
 import { initDemo } from './demo.js';
 import { initStory } from './story.js';
+import { initShops } from './shops.js';
 import { initFire } from './fire.js';
 const GradeShader = { uniforms: { tDiffuse: { value: null }, vig: { value: 0.32 }, wet: { value: 0 }, night: { value: 0 } }, vertexShader: 'varying vec2 vUv; void main(){ vUv=uv; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0); }',
   fragmentShader: 'uniform sampler2D tDiffuse; uniform float vig, wet, night; varying vec2 vUv; void main(){ vec4 c=texture2D(tDiffuse,vUv); vec3 col=c.rgb; float l=dot(col,vec3(0.299,0.587,0.114)); col=mix(vec3(l),col,1.12-wet*0.25); col=(col-0.5)*1.06+0.5; col*=mix(vec3(1.0),vec3(0.92,0.97,1.06),wet*0.7+night*0.5); col=mix(col,col*vec3(1.04,1.0,0.94),0.6*(1.0-night)); vec2 d=vUv-0.5; col*=1.0-vig*dot(d,d)*2.2; gl_FragColor=vec4(clamp(col,0.0,1.0),c.a); }' };
@@ -109,7 +110,7 @@ function applyQuality() {
   const ultra = q === 'ultra', post = q === 'hoch' || ultra;
   renderer.setPixelRatio((q === 'niedrig' ? 0.75 : ultra ? Math.min(2, Math.max(1, devicePixelRatio || 1)) : 1) * (opts.scale || 1)); renderer.setSize(innerWidth, innerHeight);
   const sm = ultra ? 4096 : q === 'hoch' ? 2048 : 1024; sun.shadow.mapSize.set(sm, sm); { const e = ultra ? 95 : 70; sc.left = -e; sc.right = e; sc.top = e; sc.bottom = -e; sc.updateProjectionMatrix(); } sun.shadow.radius = ultra ? 2 : 1;
-  WIN_U.value = q === 'niedrig' ? 0 : 1; if (typeof applyTreeQuality === 'function') applyTreeQuality(); if (typeof groundMesh !== 'undefined' && groundMesh) buildGround();
+  WIN_U.value = q === 'niedrig' ? 0 : 1; if (typeof applyTreeQuality === 'function') applyTreeQuality(); if (typeof rebuildAllTiles === 'function') rebuildAllTiles();
   { const an = ultra ? renderer.capabilities.getMaxAnisotropy() : q === 'niedrig' ? 2 : 4; scene.traverse(o => { const ms = o.material ? (Array.isArray(o.material) ? o.material : [o.material]) : []; for (const m of ms) for (const key of ['map', 'normalMap', 'roughnessMap']) { const t = m[key]; if (t && t.anisotropy !== an) { t.anisotropy = an; t.needsUpdate = true; } } }); } if (sun.shadow.map) { sun.shadow.map.dispose(); sun.shadow.map = null; }
   if (post) { const key = q + (opts.ao ? 'a' : '') + innerWidth + 'x' + innerHeight; if (!composer || composer.userData !== key) { if (composer) composer.dispose(); const rt = new THREE.WebGLRenderTarget(innerWidth, innerHeight, { type: THREE.HalfFloatType, samples: ultra ? 8 : 4 }); composer = new EffectComposer(renderer, rt); composer.userData = key; composer.addPass(new RenderPass(scene, camera)); aoPass = null; if (opts.ao) { aoPass = new GTAOPass(scene, camera, innerWidth, innerHeight); aoPass.output = GTAOPass.OUTPUT.Default; aoPass.blendIntensity = 0.85; aoPass.updateGtaoMaterial({ radius: 1.2, distanceExponent: 1.5, thickness: 2, scale: 1.2, samples: ultra ? 24 : 12 }); aoPass.updatePdMaterial({ lumaPhi: 10, depthPhi: 2, normalPhi: 3, radius: ultra ? 8 : 6, rings: ultra ? 3 : 2, samples: ultra ? 20 : 12 }); const r0 = aoPass.render.bind(aoPass); aoPass.render = (...args) => { const hid = [skyDome, sunDisk, rainPts, ...clouds, ...(leafMat ? scene.children.filter(o => o.material === leafMat) : [])].filter(o => o && o.visible); hid.forEach(o => o.visible = false); r0(...args); hid.forEach(o => o.visible = true); }; composer.addPass(aoPass); } bloomPass = new UnrealBloomPass(new THREE.Vector2(innerWidth / 2, innerHeight / 2), 0.28, 0.35, 0.93); composer.addPass(bloomPass); composer.addPass(new OutputPass()); gradePass = new ShaderPass(GradeShader); composer.addPass(gradePass); } composer.setSize(innerWidth, innerHeight); bloomPass.strength = 0.28 * (opts.bloom ?? 1); }
   else composer = null;
@@ -135,7 +136,11 @@ function distSegSq(px, pz, ax, az, bx, bz) {
 }
 
 // ---------- Stadt ----------
-const CITY = await (await fetch('data/city.json')).json();
+const WIDX = await (await fetch('data/tiles/index.json')).json(); const TS = WIDX.ts;
+const WKEYS = ['buildings', 'roads', 'paths', 'rails', 'water', 'green', 'trees', 'signals', 'pois', 'barriers', 'stops', 'furniture', 'areas', 'crossings'];
+const WORLD = {}; for (const k of WKEYS) WORLD[k] = []; // alles bisher geladene, nur anhängen (Indizes bleiben gültig)
+const CITY = Object.assign({ origin: WIDX.origin }, WORLD); // beim Bau einer Kachel zeigt CITY kurz nur auf deren Daten
+const TILES = new Map(); const tkey = (tx, tz) => tx + '_' + tz;
 // Qualitätsstufe früh lesen (Normal-Maps werden beim Aufbau gesetzt)
 function detectGPU() { try { const gl = renderer.getContext(); const ext = gl.getExtension('WEBGL_debug_renderer_info'); return String(ext ? gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER)); } catch (e) { return ''; } }
 function autoQuality(gpu) { const g = gpu.toLowerCase();
@@ -165,22 +170,25 @@ const [gPeople, gCars, gPistol, TEXA] = await Promise.all([
   ])]);
 const NM = QUALITY !== 'niedrig'; // Normal-Maps an?
 const TEX = { asphalt: TEXA[0], asphaltN: NM ? TEXA[1] : null, paving: TEXA[2], pavingN: NM ? TEXA[3] : null, cobble: TEXA[4], cobbleN: NM ? TEXA[5] : null, tiles: TEXA[6], tilesN: NM ? TEXA[7] : null, plasterN: NM ? TEXA[8] : null, brick: TEXA[9] };
-const DEM = await (await fetch('data/dem.json')).json();
-// Geländehöhe (bilinear aus dem 25-m-Raster), in Metern über dem tiefsten Punkt
+const DEM = { step: WIDX.demStep, n: WIDX.demN }; const DEMT = new Map();
+// Geländehöhe (bilinear aus dem 4-m-Raster der Kachel), in Metern über BASE; ohne geladene Kachel deren Mittelwert
+const DEMN = new Map(); let thK = NaN, thH = null; const dkey = (tx, tz) => (tx + 4096) * 8192 + tz + 4096;
 function TH(x, z) {
-  const fx = (x - DEM.x0) / DEM.step, fz = (z - DEM.z0) / DEM.step;
-  const ix = clamp(Math.floor(fx), 0, DEM.nx - 2), iz = clamp(Math.floor(fz), 0, DEM.nz - 2);
-  const tx = clamp(fx - ix, 0, 1), tz = clamp(fz - iz, 0, 1); const H = DEM.h, n = DEM.nx;
+  const tx = Math.floor(x / TS), tz = Math.floor(z / TS); const k = dkey(tx, tz); let H; if (k === thK) H = thH; else { H = DEMN.get(k); if (H) { thK = k; thH = H; } }
+  if (!H) { const inf = WIDX.tiles[tx + '_' + tz]; return inf ? inf[2] : 0; }
+  const n = DEM.n, fx = (x - tx * TS) / DEM.step, fz = (z - tz * TS) / DEM.step;
+  const ix = Math.min(n - 2, Math.max(0, Math.floor(fx))), iz = Math.min(n - 2, Math.max(0, Math.floor(fz))); const u = clamp(fx - ix, 0, 1), v = clamp(fz - iz, 0, 1);
   const h00 = H[iz * n + ix], h10 = H[iz * n + ix + 1], h01 = H[(iz + 1) * n + ix], h11 = H[(iz + 1) * n + ix + 1];
-  return (h00 * (1 - tx) + h10 * tx) * (1 - tz) + (h01 * (1 - tx) + h11 * tx) * tz;
+  return (h00 * (1 - u) + h10 * u) * (1 - v) + (h01 * (1 - u) + h11 * u) * v;
 }
+const inWorld = (x, z) => !!WIDX.tiles[Math.floor(x / TS) + '_' + Math.floor(z / TS)];
 const rayTargets = []; // Boden, Gebäude, gebaute Blöcke (für Kreativmodus)
 const signalMeshes = []; const nightOnly = []; const emissiveMats = []; // Ampelleuchten (Reihenfolge wie CITY.signals, ohne die in Gebäuden)
 // Ampelphase: Nord-Süd-Verkehr und Ost-West-Verkehr wechseln sich alle 8 s ab
 const SIG_C = [[new THREE.Color(0x2a0806), new THREE.Color(3.2, 0.25, 0.12)], [new THREE.Color(0x2a1a04), new THREE.Color(3.0, 1.6, 0.1)], [new THREE.Color(0x062a10), new THREE.Color(0.2, 3.0, 0.9)]];
 function signalRed(heading, t) { const ns = Math.abs(Math.cos(heading)) > 0.7; const phase = Math.floor(t / 8) % 2; return ns ? phase === 1 : phase === 0; }
 const CELL = 40, grid = new Map();
-const key = (cx, cz) => cx + ',' + cz;
+const key = (cx, cz) => (cx + 32768) * 65536 + (cz + 32768); // Zahl statt Text: schneller in Maps
 function addToGrid(idx, pts) {
   let x0 = 1e9, x1 = -1e9, z0 = 1e9, z1 = -1e9;
   for (const [x, z] of pts) { x0 = Math.min(x0, x); x1 = Math.max(x1, x); z0 = Math.min(z0, z); z1 = Math.max(z1, z); }
@@ -189,10 +197,9 @@ function addToGrid(idx, pts) {
       const k = key(cx, cz); if (!grid.has(k)) grid.set(k, []); grid.get(k).push(idx);
     }
 }
-CITY.buildings.forEach((b, i) => addToGrid(i, b.p));
 function solidAt(x, z) {
   const c = grid.get(key(Math.floor(x / CELL), Math.floor(z / CELL))); if (!c) return -1;
-  for (const i of c) if (pointInPoly(x, z, CITY.buildings[i].p)) return i;
+  for (const i of c) if (pointInPoly(x, z, WORLD.buildings[i].p)) return i;
   return -1;
 }
 // Dachhöhe an einem Punkt (Flachdach oder Sattel-/Walmdach)
@@ -208,13 +215,13 @@ function blockAdd(rec) { const k = bkey(rec.x, rec.z); if (!blockCols.has(k)) bl
 function blockRemove(rec) { const a = blockCols.get(bkey(rec.x, rec.z)); if (a) { const i = a.indexOf(rec.y); if (i >= 0) a.splice(i, 1); } }
 // Boden unter (x,z) für jemanden auf Höhe y: Gelände, Dach oder Blockoberkante, höchstens 0.55 m über den Füßen
 function floorAt(x, z, y = 1e9) {
-  let f = TH(x, z); { const d = deckAt(x, z, y, 0.55); if (d !== null) f = Math.max(f, d); } const bi = solidAt(x, z); if (bi >= 0) { const rh = roofHeight(CITY.buildings[bi], x, z); if (rh <= y + 0.55) f = Math.max(f, rh); }
+  let f = TH(x, z); { const d = deckAt(x, z, y, 0.55); if (d !== null) f = Math.max(f, d); } const bi = solidAt(x, z); if (bi >= 0) { const rh = roofHeight(WORLD.buildings[bi], x, z); if (rh <= y + 0.55) f = Math.max(f, rh); }
   const col = blockCols.get(bkey(x, z)); if (col) for (const cy of col) { const t = cy + 0.5; if (t <= y + 0.55) f = Math.max(f, t); }
   return f;
 }
 // Hindernis auf Körperhöhe? (Gebäude nur unterhalb des Dachs, Blöcke im Bereich y..y+1.7)
 function solidAtH(x, z, y) {
-  const bi = solidAt(x, z); if (bi >= 0 && y < roofHeight(CITY.buildings[bi], x, z) - 0.45) return bi;
+  const bi = solidAt(x, z); if (bi >= 0 && y < roofHeight(WORLD.buildings[bi], x, z) - 0.45) return bi;
   const col = blockCols.get(bkey(x, z)); if (col) for (const cy of col) { if (cy + 0.5 > y + 0.5 && cy - 0.5 < y + 1.7) return -2; }
   return -1;
 }
@@ -225,7 +232,7 @@ function barrierHit(x, z, r, y) { const c = barrierGrid.get(key(Math.floor(x / C
 // Kreis-Kollision: probiert Zielposition, dann Achsen einzeln; mit y zählt die Höhe (Dächer, Blöcke)
 function moveWithCollision(pos, dx, dz, r, y) {
   const S = y === undefined ? (x, z) => solidAt(x, z) >= 0 : (x, z) => solidAtH(x, z, y) !== -1;
-  const free = (x, z) => !S(x, z) && !S(x + r, z) && !S(x - r, z) && !S(x, z + r) && !S(x, z - r) && !barrierHit(x, z, r, y);
+  const free = (x, z) => inWorld(x, z) && !S(x, z) && !S(x + r, z) && !S(x - r, z) && !S(x, z + r) && !S(x, z - r) && !barrierHit(x, z, r, y);
   if (free(pos.x + dx, pos.z + dz)) { pos.x += dx; pos.z += dz; return false; }
   if (free(pos.x + dx, pos.z)) pos.x += dx;
   else if (free(pos.x, pos.z + dz)) pos.z += dz;
@@ -279,7 +286,9 @@ function facadeTextures(kind = 'res') {
 }
 // Erdgeschoss: 12 m breit, 3.3 m hoch. Tür, Fenster, Läden, Tore
 const GF_W = 12, GF_H = 3.3;
-function groundTextures(kind = 'res') {
+const GT_CACHE = new Map();
+function groundTextures(kind = 'res') { if (!GT_CACHE.has(kind)) GT_CACHE.set(kind, groundTextures0(kind)); return GT_CACHE.get(kind); }
+function groundTextures0(kind = 'res') {
   const M = 512 / GF_W; // px je Meter
   const shop = kind === 'res' && Math.random() < 0.3;
   const draw = (emis) => (ctx, w, h) => {
@@ -322,7 +331,7 @@ const roofTex = canvasTex(128, 128, (ctx, w, h) => { ctx.fillStyle = '#7d6b62'; 
 function edgeNormal(poly, i) { const sgn = polyArea(poly) > 0 ? 1 : -1; const [ax, az] = poly[i], [bx, bz] = poly[(i + 1) % poly.length]; const dx = bx - ax, dz = bz - az, l = Math.hypot(dx, dz) || 1; return { nx: dz / l * sgn, nz: -dx / l * sgn, dx, dz, l, ax, az, bx, bz }; }
 function nearestEdge(x, z, maxD = 20) { // nächste Gebäudekante über das Kollisionsraster
   let best = maxD * maxD, res = null; const cx = Math.floor(x / CELL), cz = Math.floor(z / CELL);
-  for (let i = -1; i <= 1; i++) for (let j = -1; j <= 1; j++) { const cell = grid.get(key(cx + i, cz + j)); if (!cell) continue; for (const bi of cell) { const b = CITY.buildings[bi]; for (let e = 0; e < b.p.length; e++) { const q = b.p[(e + 1) % b.p.length]; const d = distSegSq(x, z, b.p[e][0], b.p[e][1], q[0], q[1]); if (d < best) { best = d; res = { b, e }; } } } }
+  for (let i = -1; i <= 1; i++) for (let j = -1; j <= 1; j++) { const cell = grid.get(key(cx + i, cz + j)); if (!cell) continue; for (const bi of cell) { const b = WORLD.buildings[bi]; for (let e = 0; e < b.p.length; e++) { const q = b.p[(e + 1) % b.p.length]; const d = distSegSq(x, z, b.p[e][0], b.p[e][1], q[0], q[1]); if (d < best) { best = d; res = { b, e }; } } } }
   return res;
 }
 const SIGN_STYLES = { pharmacy: ['#c8102e', '#ffffff'], bank: ['#1a4f9c', '#ffffff'], cafe: ['#5b3a1e', '#f6e7c8'], restaurant: ['#2b2b2b', '#f2d16b'], fast_food: ['#d8471c', '#ffffff'], bakery: ['#d99a2b', '#3a2a10'], bar: ['#1f1f2e', '#ff6f91'], pub: ['#163a2a', '#e8d9a0'], supermarket: ['#1d6fb8', '#ffffff'], convenience: ['#2a7f3e', '#ffffff'], hairdresser: ['#7a2e8e', '#ffffff'], clothes: ['#222222', '#ffffff'], kiosk: ['#c4342d', '#ffe9a0'], florist: ['#2f7d4a', '#ffd1dc'], ice_cream: ['#ff9ab3', '#3a1a2a'], doctors: ['#ffffff', '#1a4f9c'], dentist: ['#ffffff', '#1a8f8f'], post_office: ['#ffcc00', '#000000'], butcher: ['#b3272d', '#ffffff'], books: ['#3a3a7a', '#ffffff'], optician: ['#ffffff', '#222222'], beauty: ['#c77dba', '#ffffff'], chemist: ['#1a5fb4', '#ffffff'], default: ['#2b3a67', '#ffffff'] };
@@ -338,12 +347,12 @@ function drape(geo, lift, minLen = 2.5, tol = 0.1) {
   for (let i = 0; i < p.count; i += 3) tri([p.getX(i), p.getZ(i)], [p.getX(i + 1), p.getZ(i + 1)], [p.getX(i + 2), p.getZ(i + 2)], 0);
   const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(out, 3)); g.computeVertexNormals(); return g;
 }
-function buildDetails() {
+function* buildDetails() {
   // --- Schilder: ein Atlas, ein Mesh ---
   const items = [];
   for (const poi of CITY.pois) { const ne = nearestEdge(poi.x, poi.z, 18); if (ne) items.push({ n: poi.n, k: poi.k, b: ne.b, e: ne.e, px: poi.x, pz: poi.z }); }
   for (const b of CITY.buildings) if (b.n && (b.k === 'public' || b.k === 'hall' || b.k === 'church' || b.shop)) { let e = 0, best = 0; for (let i = 0; i < b.p.length; i++) { const l = edgeNormal(b.p, i).l; if (l > best) { best = l; e = i; } } items.push({ n: b.n, k: b.shop || b.k, b, e, px: null }); }
-  const COLS = 8, ROWS = 64, CW = 256, CH = 32; const atlas = document.createElement('canvas'); atlas.width = COLS * CW; atlas.height = ROWS * CH; const ac = atlas.getContext('2d');
+  const COLS = 8, ROWS = Math.max(1, Math.min(64, Math.ceil(items.length / 8))), CW = 256, CH = 32; const atlas = document.createElement('canvas'); atlas.width = COLS * CW; atlas.height = ROWS * CH; const ac = atlas.getContext('2d');
   const sv = [], suv = [], sn = []; let si = 0;
   for (const it of items.slice(0, COLS * ROWS)) {
     const col = si % COLS, row = Math.floor(si / COLS); const [bg, fg] = SIGN_STYLES[it.k] || SIGN_STYLES.default;
@@ -356,11 +365,11 @@ function buildDetails() {
     const tri = (P, Q, R, a, b, c) => { sv.push(...P, ...Q, ...R); suv.push(...a, ...b, ...c); sn.push(en.nx, 0, en.nz, en.nx, 0, en.nz, en.nx, 0, en.nz); };
     tri(A, B, C, [u0, v0], [u1, v0], [u1, v1]); tri(A, C, D, [u0, v0], [u1, v1], [u0, v1]); si++;
   }
-  if (sv.length) { const tex = new THREE.CanvasTexture(atlas); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 8; const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(sv, 3)); g.setAttribute('normal', new THREE.Float32BufferAttribute(sn, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(suv, 2)); scene.add(new THREE.Mesh(g, new THREE.MeshBasicMaterial({ map: tex, side: THREE.DoubleSide }))); }
+  if (sv.length) { const tex = new THREE.CanvasTexture(atlas); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 8; const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(sv, 3)); g.setAttribute('normal', new THREE.Float32BufferAttribute(sn, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(suv, 2)); { const mt = new THREE.MeshBasicMaterial({ map: tex, side: THREE.DoubleSide }); mt.userData.ownTex = true; scene.add(new THREE.Mesh(g, mt)); } }
   // --- Zäune, Mauern, Hecken ---
   const fenceRail = [], fencePost = [], wall = [], hedge = [], rwall = [];
   const runBarrier = (pts, k, autoFence = false) => {
-    for (let i = 0; i < pts.length - 1; i++) { const [ax, az] = pts[i], [bx, bz] = pts[i + 1]; const l = Math.hypot(bx - ax, bz - az); if (l < 0.5) continue; const mx = (ax + bx) / 2, mz = (az + bz) / 2; if (solidAt(mx, mz) >= 0) continue; barrierAdd(ax, az, bx, bz, k === 'retaining_wall' ? 1.0 : k === 'fence' || k === 'hedge' ? 1.3 : 1.7); const ang = Math.atan2(bx - ax, bz - az); const ty = TH(mx, mz); const slope = Math.atan2(TH(ax, az) - TH(bx, bz), l);
+    for (let i = 0; i < pts.length - 1; i++) { const [ax, az] = pts[i], [bx, bz] = pts[i + 1]; const l = Math.hypot(bx - ax, bz - az); if (l < 0.5) continue; const mx = (ax + bx) / 2, mz = (az + bz) / 2; if (solidAt(mx, mz) >= 0) continue; const ang = Math.atan2(bx - ax, bz - az); const ty = TH(mx, mz); const slope = Math.atan2(TH(ax, az) - TH(bx, bz), l);
       const box = (w, h, d, y, arr) => { const g = new THREE.BoxGeometry(w, h, d); g.rotateX(slope); g.rotateY(ang); g.translate(mx, ty + y, mz); arr.push(g); };
       if (k === 'fence') { box(0.04, 0.06, l, 1.15, fenceRail); box(0.04, 0.06, l, 0.6, fenceRail); box(0.04, 0.06, l, 0.15, fenceRail); for (let d = 0; d <= l; d += 2.5) { const px = ax + (bx - ax) * d / l, pz = az + (bz - az) * d / l; const g = new THREE.BoxGeometry(0.08, 1.3, 0.08); g.translate(px, TH(px, pz) + 0.65, pz); fencePost.push(g); } }
       else if (k === 'wall' || k === 'city_wall') box(0.3, 1.7, l, 0.85, wall);
@@ -369,8 +378,8 @@ function buildDetails() {
     }
   };
   for (const b of CITY.barriers) runBarrier(b.p, b.k);
-  for (const a of CITY.areas) runBarrier(a.p.concat([a.p[0]]), 'fence', true);
-  for (const g of CITY.green) if (g.k === 'allotments' || g.k === 'pitch' || g.k === 'playground') runBarrier(g.p.concat([g.p[0]]), g.k === 'allotments' ? 'hedge' : 'fence', true);
+  for (const a of CITY.areas) for (const run of ringRuns(a)) runBarrier(run, 'fence', true);
+  for (const g of CITY.green) if (g.k === 'allotments' || g.k === 'pitch' || g.k === 'playground') for (const run of ringRuns(g)) runBarrier(run, g.k === 'allotments' ? 'hedge' : 'fence', true);
   const addMerged = (arr, mat, shadow = true) => { if (!arr.length) return null; const m = new THREE.Mesh(mergeGeometries(arr), mat); m.castShadow = shadow; m.receiveShadow = true; scene.add(m); return m; };
   addMerged(fenceRail, new THREE.MeshLambertMaterial({ color: 0x3a3a3a }), false); addMerged(fencePost, new THREE.MeshLambertMaterial({ color: 0x4a4a4a }), false);
   addMerged(wall, new THREE.MeshLambertMaterial({ color: 0x9a9388 })); addMerged(rwall, new THREE.MeshLambertMaterial({ color: 0x8a847a })); addMerged(hedge, new THREE.MeshLambertMaterial({ color: 0x3f6f2f }));
@@ -379,12 +388,12 @@ function buildDetails() {
   addMerged(yard, new THREE.MeshLambertMaterial({ color: 0x8f8d88 }), false);
   // --- Balkone ---
   const slab = [], rail = [];
-  for (const b of CITY.buildings) { if ((b.k && b.k !== 'res') || b.h < 9 || Math.random() > 0.4) continue; let e = 0, best = 0; for (let i = 0; i < b.p.length; i++) { const l = edgeNormal(b.p, i).l; if (l > best) { best = l; e = i; } } if (best < 8) continue; const en = edgeNormal(b.p, e); const ux = en.dx / en.l, uz = en.dz / en.l; const floors = Math.min(5, Math.floor((b.h - 1) / 3.2)); const ang = Math.atan2(en.nx, en.nz);
+  for (const b of CITY.buildings) { if (++YC % 10 === 0) yield; if ((b.k && b.k !== 'res') || b.h < 9 || Math.random() > 0.4) continue; let e = 0, best = 0; for (let i = 0; i < b.p.length; i++) { const l = edgeNormal(b.p, i).l; if (l > best) { best = l; e = i; } } if (best < 8) continue; const en = edgeNormal(b.p, e); const ux = en.dx / en.l, uz = en.dz / en.l; const floors = Math.min(5, Math.floor((b.h - 1) / 3.2)); const ang = Math.atan2(en.nx, en.nz);
     for (let f = 1; f < floors; f++) for (let d = 3; d < en.l - 2; d += 5.5) { const x = en.ax + ux * d + en.nx * 0.6, z = en.az + uz * d + en.nz * 0.6; const y = (b.base || 0) + f * 3.2 + 0.1; const g = new THREE.BoxGeometry(2.2, 0.14, 1.2); g.rotateY(ang); g.translate(x, y, z); slab.push(g); const r = new THREE.BoxGeometry(2.2, 0.95, 0.05); r.rotateY(ang); r.translate(x + en.nx * 0.58, y + 0.55, z + en.nz * 0.58); rail.push(r); } }
   addMerged(slab, new THREE.MeshLambertMaterial({ color: 0xd8d2c8 })); addMerged(rail, new THREE.MeshLambertMaterial({ color: 0x3b3f44 }), false);
   // --- Büsche ---
   const bushPts = []; let tries = 0;
-  while (bushPts.length < 900 && tries++ < 20000) { const g = pick(CITY.green); if (!['garden', 'allotments', 'park', 'grass', 'scrub', 'wood', 'meadow', 'forest'].includes(g.k)) continue; const xs = g.p.map(p => p[0]), zs = g.p.map(p => p[1]); const x = rnd(Math.min(...xs), Math.max(...xs)), z = rnd(Math.min(...zs), Math.max(...zs)); if (pointInPoly(x, z, g.p) && solidAt(x, z) < 0) bushPts.push([x, z]); }
+  while (CITY.green.length && bushPts.length < Math.min(900, CITY.green.length * 6) && tries++ < 20000) { const g = pick(CITY.green); if (!['garden', 'allotments', 'park', 'grass', 'scrub', 'wood', 'meadow', 'forest'].includes(g.k)) continue; const xs = g.p.map(p => p[0]), zs = g.p.map(p => p[1]); const x = rnd(Math.min(...xs), Math.max(...xs)), z = rnd(Math.min(...zs), Math.max(...zs)); if (pointInPoly(x, z, g.p) && solidAt(x, z) < 0) bushPts.push([x, z]); }
   if (bushPts.length) { const bm = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(0.7, 1), new THREE.MeshLambertMaterial({ color: 0x4a7d3a }), bushPts.length); const o = new THREE.Object3D(); bushPts.forEach(([x, z], i) => { const sc = rnd(0.6, 1.3); o.position.set(x, TH(x, z) + sc * 0.45, z); o.scale.set(sc * rnd(0.9, 1.4), sc * 0.8, sc); o.rotation.y = Math.random() * 6; o.updateMatrix(); bm.setMatrixAt(i, o.matrix); }); bm.castShadow = true; scene.add(bm); }
   // --- Haltestellen ---
   const poles = [], signsB = [], signsT = [], shelterG = [], shelterRoof = [];
@@ -394,7 +403,7 @@ function buildDetails() {
   addMerged(shelterRoof, new THREE.MeshLambertMaterial({ color: 0x9aa0a8 })); if (shelterG.length) { const m = new THREE.Mesh(mergeGeometries(shelterG), new THREE.MeshLambertMaterial({ color: 0x9fc4e8, transparent: true, opacity: 0.45 })); scene.add(m); }
   // --- Möbel ---
   const benchW = [], bins = [], bikes = [], vend = [], recyc = [], post = [], fount = [], lampP = [], lampH = [];
-  for (const f of CITY.furniture) { if (solidAt(f.x, f.z) >= 0) continue; const ty = TH(f.x, f.z); const ne = nearestRoadDir(f.x, f.z); const ang = ne ? ne.ang : Math.random() * 6;
+  for (const f of CITY.furniture) { if (++YC % 10 === 0) yield; if (solidAt(f.x, f.z) >= 0) continue; const ty = TH(f.x, f.z); const ne = nearestRoadDir(f.x, f.z); const ang = ne ? ne.ang : Math.random() * 6;
     const bx = (w, h, d, y, arr, ox = 0, oz = 0) => { const g = new THREE.BoxGeometry(w, h, d); g.rotateY(ang); g.translate(f.x + ox, ty + y, f.z + oz); arr.push(g); };
     if (f.k === 'bench') { bx(1.6, 0.06, 0.45, 0.45, benchW); bx(1.6, 0.42, 0.05, 0.72, benchW, -Math.cos(ang) * 0.2, Math.sin(ang) * 0.2); bx(0.08, 0.45, 0.4, 0.22, benchW, Math.sin(ang) * 0.7, Math.cos(ang) * 0.7); bx(0.08, 0.45, 0.4, 0.22, benchW, -Math.sin(ang) * 0.7, -Math.cos(ang) * 0.7); }
     else if (f.k === 'waste_basket') { const g = new THREE.CylinderGeometry(0.2, 0.17, 0.9, 8); g.translate(f.x, ty + 0.55, f.z); bins.push(g); }
@@ -411,29 +420,28 @@ function buildDetails() {
   for (const c of CITY.crossings) { let x = c.x, z = c.z; if (c.p) { const m = c.p[Math.floor(c.p.length / 2)]; x = m[0]; z = m[1]; } if (x === undefined) continue; const nr = nearestRoadDir(x, z, 7); if (!nr || nr.w < 5) continue; const ang = nr.ang; for (let k = -2.5; k <= 2.5; k++) { const sx = nr.x + Math.sin(ang) * k * 1.0, sz = nr.z + Math.cos(ang) * k * 1.0; const g = new THREE.PlaneGeometry(nr.w - 0.6, 0.5); g.rotateX(-Math.PI / 2); g.rotateY(ang + Math.PI / 2); g.translate(sx, TH(sx, sz) + 0.055, sz); zebra.push(g); } }
   addMerged(zebra, new THREE.MeshLambertMaterial({ color: 0xe9e6dc }), false);
 }
-function nearestRoadDir(x, z, maxD = 15) { let best = maxD * maxD, res = null; for (const r of CITY.roads) for (let i = 0; i < r.p.length - 1; i++) { const [ax, az] = r.p[i], [bx, bz] = r.p[i + 1]; const d = distSegSq(x, z, ax, az, bx, bz); if (d < best) { best = d; const dx = bx - ax, dz = bz - az, l2 = dx * dx + dz * dz || 1; const t = clamp(((x - ax) * dx + (z - az) * dz) / l2, 0, 1); res = { ang: Math.atan2(dx, dz), w: r.w, x: ax + dx * t, z: az + dz * t }; } } return res; }
+function nearestRoadDir(x, z, maxD = 15) { let best = maxD * maxD, res = null; const g = getRoadGrid(); const cx = Math.floor(x / CELL), cz = Math.floor(z / CELL); const R = Math.ceil(maxD / CELL);
+  for (let a = -R; a <= R; a++) for (let b = -R; b <= R; b++) { const c = g.get(key(cx + a, cz + b)); if (!c) continue; for (const [ri, i] of c) { const r = WORLD.roads[ri]; const [ax, az] = r.p[i], [bx, bz] = r.p[i + 1]; const d = distSegSq(x, z, ax, az, bx, bz); if (d < best) { best = d; const dx = bx - ax, dz = bz - az, l2 = dx * dx + dz * dz || 1; const t = clamp(((x - ax) * dx + (z - az) * dz) / l2, 0, 1); res = { ang: Math.atan2(dx, dz), w: r.w, x: ax + dx * t, z: az + dz * t }; } } }
+  return res; }
 
 
 // ---------- Runde 1: Straßenraster, Himmel, Gesimse, Dachaufbauten, Bordsteine, Straßenbäume, Parkreihen ----------
 let roadGridCache = null;
-function getRoadGrid() {
-  if (roadGridCache) return roadGridCache; const g = new Map();
-  CITY.roads.forEach((r, ri) => { for (let i = 0; i < r.p.length - 1; i++) { const [ax, az] = r.p[i], [bx, bz] = r.p[i + 1]; const pad = r.w / 2 + 4; for (let cx = Math.floor((Math.min(ax, bx) - pad) / CELL); cx <= Math.floor((Math.max(ax, bx) + pad) / CELL); cx++) for (let cz = Math.floor((Math.min(az, bz) - pad) / CELL); cz <= Math.floor((Math.max(az, bz) + pad) / CELL); cz++) { const k = key(cx, cz); if (!g.has(k)) g.set(k, []); g.get(k).push([ri, i]); } } });
-  return roadGridCache = g;
-}
+function getRoadGrid() { return roadGridCache || (roadGridCache = new Map()); }
+function gridAddRoad(r, ri) { const g = getRoadGrid(); for (let i = 0; i < r.p.length - 1; i++) { const [ax, az] = r.p[i], [bx, bz] = r.p[i + 1]; const pad = r.w / 2 + 4; for (let cx = Math.floor((Math.min(ax, bx) - pad) / CELL); cx <= Math.floor((Math.max(ax, bx) + pad) / CELL); cx++) for (let cz = Math.floor((Math.min(az, bz) - pad) / CELL); cz <= Math.floor((Math.max(az, bz) + pad) / CELL); cz++) { const k = key(cx, cz); if (!g.has(k)) g.set(k, []); g.get(k).push([ri, i]); } } }
 // liegt (x,z) auf der Fahrbahn einer anderen Straße als `self` (+ Rand)?
 // Punkt von allen Fahrbahnen an den Rand schieben (Ampelmasten, Bäume aus OSM liegen oft auf der Mittellinie)
 function pushOffRoads(x, z, margin = 0.7) {
   for (let k = 0; k < 10; k++) { const c = []; for (let gx = -1; gx <= 1; gx++) for (let gz = -1; gz <= 1; gz++) { const cc = getRoadGrid().get(key(Math.floor(x / CELL) + gx, Math.floor(z / CELL) + gz)); if (cc) c.push(...cc); } let moved = false;
-    for (const [ri, i] of c) { const r = CITY.roads[ri]; if (r.ped) continue; const [ax, az] = r.p[i], [bx, bz] = r.p[i + 1]; const lim = r.w / 2 + margin; if (distSegSq(x, z, ax, az, bx, bz) >= lim * lim) continue;
+    for (const [ri, i] of c) { const r = WORLD.roads[ri]; if (r.ped) continue; const [ax, az] = r.p[i], [bx, bz] = r.p[i + 1]; const lim = r.w / 2 + margin; if (distSegSq(x, z, ax, az, bx, bz) >= lim * lim) continue;
       const dx = bx - ax, dz = bz - az, L2 = dx * dx + dz * dz || 1; const t = clamp(((x - ax) * dx + (z - az) * dz) / L2, 0, 1); const cx = ax + dx * t, cz = az + dz * t; let ox = x - cx, oz = z - cz; let d = Math.hypot(ox, oz);
       if (d < 0.05) { const l = Math.sqrt(L2); ox = dz / l; oz = -dx / l; d = 1; } x = cx + ox / d * (lim + 0.05); z = cz + oz / d * (lim + 0.05); moved = true; break; }
     if (!moved) break; }
-  const onAny = (px, pz) => { for (let gx = -1; gx <= 1; gx++) for (let gz = -1; gz <= 1; gz++) { const cc = getRoadGrid().get(key(Math.floor(px / CELL) + gx, Math.floor(pz / CELL) + gz)); if (cc) for (const [ri, i] of cc) { const r = CITY.roads[ri]; if (r.ped) continue; const [ax, az] = r.p[i], [bx, bz] = r.p[i + 1]; const lim = r.w / 2 + margin; if (distSegSq(px, pz, ax, az, bx, bz) < lim * lim) return true; } } return false; };
+  const onAny = (px, pz) => { for (let gx = -1; gx <= 1; gx++) for (let gz = -1; gz <= 1; gz++) { const cc = getRoadGrid().get(key(Math.floor(px / CELL) + gx, Math.floor(pz / CELL) + gz)); if (cc) for (const [ri, i] of cc) { const r = WORLD.roads[ri]; if (r.ped) continue; const [ax, az] = r.p[i], [bx, bz] = r.p[i + 1]; const lim = r.w / 2 + margin; if (distSegSq(px, pz, ax, az, bx, bz) < lim * lim) return true; } } return false; };
   if (onAny(x, z)) { const x0 = x, z0 = z; for (let rad = 1; rad <= 24; rad += 1) for (let a = 0; a < 16; a++) { const px = x0 + Math.cos(a / 16 * 6.283) * rad, pz = z0 + Math.sin(a / 16 * 6.283) * rad; if (!onAny(px, pz) && solidAt(px, pz) < 0) return [px, pz]; } return [NaN, NaN]; }
   return [x, z]; }
 const signalPoles = [], treeSpots = [];
-function onOtherRoad(x, z, self, extra = 0) { const c = getRoadGrid().get(key(Math.floor(x / CELL), Math.floor(z / CELL))); if (!c) return false; for (const [ri, i] of c) { const r = CITY.roads[ri]; if (r === self) continue; const [ax, az] = r.p[i], [bx, bz] = r.p[i + 1]; const lim = r.w / 2 + extra; if (distSegSq(x, z, ax, az, bx, bz) < lim * lim) return true; } return false; }
+function onOtherRoad(x, z, self, extra = 0) { const c = getRoadGrid().get(key(Math.floor(x / CELL), Math.floor(z / CELL))); if (!c) return false; for (const [ri, i] of c) { const r = WORLD.roads[ri]; if (r === self) continue; const [ax, az] = r.p[i], [bx, bz] = r.p[i + 1]; const lim = r.w / 2 + extra; if (distSegSq(x, z, ax, az, bx, bz) < lim * lim) return true; } return false; }
 function nearPoint(x, z, list, d) { for (const q of list) { const qx = q.x ?? q[0], qz = q.z ?? q[1]; if (qx === undefined) continue; if ((qx - x) ** 2 + (qz - z) ** 2 < d * d) return true; } return false; }
 function streetTrees() {
   const out = [];
@@ -460,12 +468,12 @@ function updateSky(dt) {
   const bright = 0.25 + 0.75 * world.day; const grey = 1 - weather.cloud * 0.45; const cov = 0.25 + 0.75 * weather.cloud;
   for (const c of clouds) { c.userData.ox += dt * 2.5; if (c.userData.ox > 700) c.userData.ox -= 1400; const x = camera.position.x + c.userData.ox, z = camera.position.z + c.userData.oz; c.position.set(x, c.userData.y, z); c.material.opacity = cov * (0.55 + 0.45 * world.day); c.material.color.setScalar(bright * grey); }
 }
-function buildDetails2() {
+function* buildDetails2() {
   const Q = () => ({ v: [], n: [] });
   const quad = (T, A, B, C, D, nx, ny, nz) => { T.v.push(...A, ...B, ...C, ...A, ...C, ...D); for (let i = 0; i < 6; i++) T.n.push(nx, ny, nz); };
   const mk = (T, mat, shadow = false) => { if (!T.v.length) return null; const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(T.v, 3)); g.setAttribute('normal', new THREE.Float32BufferAttribute(T.n, 3)); const m = new THREE.Mesh(g, mat); m.castShadow = shadow; m.receiveShadow = true; scene.add(m); return m; };
   const cor = Q(), band = Q(), curbF = Q(), curbT = Q(); const roofBox = [], chim = [];
-  for (const b of CITY.buildings) {
+  for (const b of CITY.buildings) { if (++YC % 10 === 0) yield;
     const base = b.base ?? 0, top = base + b.h, kind = b.k || 'res'; const sgn = polyArea(b.p) > 0 ? 1 : -1;
     const doCor = kind === 'res' || kind === 'public' || kind === 'church' || kind === 'house'; const doBand = (kind === 'res' || kind === 'public') && b.h >= 7;
     for (let i = 0; i < b.p.length; i++) { const [ax, az] = b.p[i], [bx, bz] = b.p[(i + 1) % b.p.length]; const dx = bx - ax, dz = bz - az, l = Math.hypot(dx, dz); if (l < 1.2) continue; const nx = dz / l * sgn, nz = -dx / l * sgn; const ex = dx / l * 0.3, ez = dz / l * 0.3;
@@ -486,7 +494,7 @@ function buildDetails2() {
   if (roofBox.length) { const m = new THREE.Mesh(mergeGeometries(roofBox), new THREE.MeshLambertMaterial({ color: 0x8f8b85 })); m.castShadow = true; m.receiveShadow = true; scene.add(m); }
   if (chim.length) { const m = new THREE.Mesh(mergeGeometries(chim), new THREE.MeshLambertMaterial({ color: 0x8a4b38 })); m.castShadow = true; scene.add(m); }
   // Bordsteine: an beiden Fahrbahnrändern, unterbrochen an Einmündungen
-  for (const r of CITY.roads) { if (r.ped || r.w < 5) continue;
+  for (const r of CITY.roads) { if (r.ped || r.w < 5) continue; if (++YC % 10 === 0) yield;
     for (let i = 0; i < r.p.length - 1; i++) { const [ax, az] = r.p[i], [bx, bz] = r.p[i + 1]; const l = Math.hypot(bx - ax, bz - az); if (l < 0.5) continue; const nx = -(bz - az) / l, nz = (bx - ax) / l; const steps = Math.max(1, Math.ceil(l / 2));
       for (const sd of [-1, 1]) for (let k = 0; k < steps; k++) { const t0 = k / steps, t1 = (k + 1) / steps; const off = r.w / 2; const x0 = ax + (bx - ax) * t0 + nx * off * sd, z0 = az + (bz - az) * t0 + nz * off * sd, x1 = ax + (bx - ax) * t1 + nx * off * sd, z1 = az + (bz - az) * t1 + nz * off * sd;
         const mx = (x0 + x1) / 2, mz = (z0 + z1) / 2; if (onOtherRoad(mx, mz, r, 0.3)) continue;
@@ -498,28 +506,33 @@ function buildDetails2() {
 // Geparkte Autos als ein InstancedMesh; beim Einsteigen wird daraus ein echtes Auto
 const staticParked = []; let parkedMesh = null; let roadMeshRef = null; const roadChunks = [];
 const instRefs = [];
+let PARK_TG = null, PARK_LOW = null;
 function buildParked() {
+  const local = [];
   for (const r of CITY.roads) { if (r.ped || r.mw || r.ry || r.w < 5 || r.w > 9.5) continue;
     for (let i = 0; i < r.p.length - 1; i++) { const [ax, az] = r.p[i], [bx2, bz] = r.p[i + 1]; const l = Math.hypot(bx2 - ax, bz - az); if (l < 8) continue; const nx = -(bz - az) / l, nz = (bx2 - ax) / l; const hd = Math.atan2(bx2 - ax, bz - az);
       for (const sd of [-1, 1]) { if (Math.random() < 0.06) continue; for (let d = 4; d < l - 4; d += 5.4) { if (Math.random() < 0.14) continue; const off = r.w / 2 + 0.55; const x = ax + (bx2 - ax) * d / l + nx * off * sd, z = az + (bz - az) * d / l + nz * off * sd;
         const fx = Math.sin(hd) * 2.2, fz = Math.cos(hd) * 2.2; if (solidAt(x, z) >= 0 || solidAt(x + fx, z + fz) >= 0 || solidAt(x - fx, z - fz) >= 0 || solidAt(x + nx * sd, z + nz * sd) >= 0) continue;
         if (onOtherRoad(x + fx, z + fz, r, 1.5) || onOtherRoad(x - fx, z - fz, r, 1.5) || nearPoint(x, z, CITY.signals, 10) || nearPoint(x, z, CITY.stops, 12) || nearPoint(x, z, CITY.crossings, 7)) continue;
-        const type = CAR_PICK.length ? pick(CAR_PICK) : null; staticParked.push({ x, z, h: hd + (sd > 0 ? Math.PI : 0), type, col: carBodyColor(type), active: true, refs: [] }); } } } }
-  staticParked.sort(() => Math.random() - 0.5); staticParked.length = Math.min(staticParked.length, 1800);
+        const type = CAR_PICK.length ? pick(CAR_PICK) : null; local.push({ x, z, h: hd + (sd > 0 ? Math.PI : 0), type, col: carBodyColor(type), active: true, refs: [] }); } } } }
+  local.sort(() => Math.random() - 0.5); local.length = Math.min(local.length, 180); staticParked.push(...local);
   // Geometrie je Typ vorbereiten: Lack (Instanzfarbe) + Rest (Vertexfarben oder Atlas-Textur)
   const toNI = g => { const gg = g.index ? g.toNonIndexed() : g; for (const k of Object.keys(gg.attributes)) if (!['position', 'normal', 'uv'].includes(k)) gg.deleteAttribute(k); if (!gg.attributes.uv) gg.setAttribute('uv', new THREE.Float32BufferAttribute(new Float32Array(gg.attributes.position.count * 2), 2)); return gg; };
   const withColor = (g, col) => { const n = g.attributes.position.count; const a = new Float32Array(n * 3); for (let i = 0; i < n; i++) { a[i * 3] = col.r; a[i * 3 + 1] = col.g; a[i * 3 + 2] = col.b; } g.setAttribute('color', new THREE.BufferAttribute(a, 3)); return g; };
+  const TG = PARK_TG || (PARK_TG = (() => {
   const TG = {};
   for (const type of Object.keys(CAR_TPL)) { const T = CAR_TPL[type]; T.root.updateMatrixWorld(true); const body = [], rest = []; let atlas = null;
     T.root.traverse(m => { if (!m.isMesh) return; const g = toNI(m.geometry.clone().applyMatrix4(m.matrixWorld)); if (BODY_MATS.includes(m.material.name)) body.push(g); else { if (m.material.map) atlas = m.material.map; rest.push(withColor(g, m.material.color)); } });
     TG[type] = { body: body.length ? mergeGeometries(body) : null, rest: rest.length ? mergeGeometries(rest) : null, restMat: atlas ? new THREE.MeshLambertMaterial({ map: atlas }) : new THREE.MeshLambertMaterial({ vertexColors: true }) }; }
-  const bodyMat = new THREE.MeshLambertMaterial({ color: 0xffffff });
+  for (const t of Object.values(TG)) { for (const g of [t.body, t.rest]) if (g) g.userData.shared = true; t.restMat.userData.shared = true; } return TG; })());
+  if (!PARK_LOW) { PARK_LOW = { bodyMat: new THREE.MeshLambertMaterial({ color: 0xffffff }) }; PARK_LOW.bodyMat.userData.shared = true; }
+  const bodyMat = PARK_LOW.bodyMat;
   // Ferne Stufe: einfacher Kasten mit Fensterband
   const lp = []; const lcol = (g, c) => withColor(toNI(g), new THREE.Color(c));
   { const b = new THREE.BoxGeometry(1.8, 0.62, 4.3); b.translate(0, 0.6, 0); lp.push(lcol(b, 0xffffff)); const c = new THREE.BoxGeometry(1.6, 0.48, 2.2); c.translate(0, 1.15, -0.2); lp.push(lcol(c, 0xffffff)); const w = new THREE.BoxGeometry(1.62, 0.28, 2.22); w.translate(0, 1.17, -0.2); lp.push(lcol(w, 0x0c1018)); const t = new THREE.BoxGeometry(1.82, 0.3, 4.32); t.translate(0, 0.25, 0); lp.push(lcol(t, 0x161616)); }
-  const lowGeo = mergeGeometries(lp); const lowMat = new THREE.MeshLambertMaterial({ vertexColors: true });
+  if (!PARK_LOW.geo) { PARK_LOW.geo = mergeGeometries(lp); PARK_LOW.geo.userData.shared = true; PARK_LOW.mat = new THREE.MeshLambertMaterial({ vertexColors: true }); PARK_LOW.mat.userData.shared = true; } const lowGeo = PARK_LOW.geo; const lowMat = PARK_LOW.mat;
   // Kacheln zu 100 m, Nah: Modelle, Fern: Kasten
-  const PT = 100; const tiles = new Map(); for (const sp of staticParked) { const k = Math.floor(sp.x / PT) + ',' + Math.floor(sp.z / PT); if (!tiles.has(k)) tiles.set(k, { x0: Math.floor(sp.x / PT) * PT, z0: Math.floor(sp.z / PT) * PT, list: [] }); tiles.get(k).list.push(sp); }
+  const PT = 100; const tiles = new Map(); for (const sp of local) { const k = Math.floor(sp.x / PT) + ',' + Math.floor(sp.z / PT); if (!tiles.has(k)) tiles.set(k, { x0: Math.floor(sp.x / PT) * PT, z0: Math.floor(sp.z / PT) * PT, list: [] }); tiles.get(k).list.push(sp); }
   const o = new THREE.Object3D(); const cc = new THREE.Color();
   const place = (im, list, colorize) => { list.forEach((sp, i) => { o.position.set(sp.x, TH(sp.x, sp.z), sp.z); o.rotation.set(0, sp.h, 0); o.scale.setScalar(1); o.updateMatrix(); im.setMatrixAt(i, o.matrix); if (colorize) im.setColorAt(i, cc.setHex(sp.col).convertSRGBToLinear()); sp.refs.push({ mesh: im, i }); }); im.userData.noChunk = true; im.computeBoundingSphere(); scene.add(im); };
   for (const [, t] of tiles) { const det = []; const byType = new Map(); for (const sp of t.list) { if (!byType.has(sp.type)) byType.set(sp.type, []); byType.get(sp.type).push(sp); }
@@ -529,6 +542,9 @@ function buildParked() {
 }
 const parkedTiles = [];
 function updateParkedLOD() { const cx = camera.position.x, cz = camera.position.z; for (const t of parkedTiles) { const dx = Math.max(t.x0 - cx, 0, cx - (t.x0 + 100)), dz = Math.max(t.z0 - cz, 0, cz - (t.z0 + 100)); const near = dx * dx + dz * dz < 90 * 90; for (const m of t.det) m.visible = near; t.low.visible = !near; } }
+// Geparkte Autos sind nur Instanzen; wo Explosion, Feuer, Schläge oder Schüsse sie treffen, werden sie zu echten Autos (mit Schaden, Brand, Wrack)
+function wakeParked(pos, r) { const out = []; for (const sp of staticParked) { if (!sp.active) continue; if ((sp.x - pos.x) ** 2 + (sp.z - pos.z) ** 2 < r * r) out.push(activateParked(sp)); } return out; }
+function wakeParkedRay(o, d, range) { const hits = []; for (const sp of staticParked) { if (!sp.active) continue; const rx = sp.x - o.x, rz = sp.z - o.z; const dl = Math.hypot(d.x, d.z) || 1; const along = (rx * d.x + rz * d.z) / dl; if (along < 0 || along > range) continue; const ry = TH(sp.x, sp.z) + 0.8 - (o.y + d.y / dl * along); const lat = Math.abs(rx * d.z - rz * d.x) / dl; if (lat < 2.4 && Math.abs(ry) < 2.5) hits.push([along, sp]); } hits.sort((a, b) => a[0] - b[0]); return hits.slice(0, 3).map(h => activateParked(h[1])); }
 function activateParked(sp) {
   sp.active = false; const o = new THREE.Object3D(); o.scale.setScalar(0); o.updateMatrix(); for (const r of sp.refs || []) { r.mesh.setMatrixAt(r.i, o.matrix); r.mesh.instanceMatrix.needsUpdate = true; }
   const c = makeCar(false, sp.type); setCarColor(c, sp.col); c.position.set(sp.x, TH(sp.x, sp.z), sp.z); c.userData.heading = sp.h; c.rotation.y = sp.h; c.userData.mode = 'parked'; scene.add(c); cars.push(c); shootables.push(c); return c;
@@ -703,8 +719,9 @@ let groundMesh = null, groundStep = 0;
 function groundMul() { const q = opts.quality || 'mittel'; return q === 'niedrig' ? 3 : q === 'mittel' ? 2 : 1; }
 // Höhe eines groben Gitterpunkts: tiefster feiner Punkt im Umkreis, damit die grobe Fläche unter Straßen bleibt
 // Straßenkorridor: Höhe der Mittellinie, wenn (x,z) auf Fahrbahn oder Gehweg liegt
-function corridorH(x, z) { const c = []; for (let gx = -1; gx <= 1; gx++) for (let gz = -1; gz <= 1; gz++) { const cc = getRoadGrid().get(key(Math.floor(x / CELL) + gx, Math.floor(z / CELL) + gz)); if (cc) c.push(...cc); } let best = null;
-  for (const [ri, i] of c) { const r = CITY.roads[ri]; if (r.ry && (r.el[i] || r.el[i + 1])) continue; const [ax, az] = r.p[i], [bx, bz] = r.p[i + 1]; const lim = r.w / 2 + (r.mw ? 1.6 : 2.6) + 1.5; const dx = bx - ax, dz = bz - az, L2 = dx * dx + dz * dz || 1; const t = clamp(((x - ax) * dx + (z - az) * dz) / L2, 0, 1); const ex = x - ax - dx * t, ez = z - az - dz * t; if (ex * ex + ez * ez > lim * lim) continue; const h = TH(ax + dx * t, az + dz * t); if (best === null || h < best) best = h; }
+function corridorH(x, z) { const g = getRoadGrid(); const cx0 = Math.floor(x / CELL), cz0 = Math.floor(z / CELL); let best = null;
+  { const c = g.get(key(cx0, cz0)); if (!c) return null;
+  for (const [ri, i] of c) { const r = WORLD.roads[ri]; if (r.ry && (r.el[i] || r.el[i + 1])) continue; const [ax, az] = r.p[i], [bx, bz] = r.p[i + 1]; const lim = r.w / 2 + (r.mw ? 1.6 : 2.6) + 1.5; const dx = bx - ax, dz = bz - az, L2 = dx * dx + dz * dz || 1; const t = clamp(((x - ax) * dx + (z - az) * dz) / L2, 0, 1); const ex = x - ax - dx * t, ez = z - az - dz * t; if (ex * ex + ez * ez > lim * lim) continue; const h = TH(ax + dx * t, az + dz * t); if (best === null || h < best) best = h; } }
   return best; }
 function groundH(x, z, mul) { const cr = corridorH(x, z); const g = groundH0(x, z, mul); return cr === null ? g : Math.min(g, cr - 0.05); }
 function groundH0(x, z, mul) { if (mul <= 1) return TH(x, z); const st = DEM.step; let m = 1e9; for (let a = -mul + 1; a <= mul - 1; a++) for (let b = -mul + 1; b <= mul - 1; b++) m = Math.min(m, TH(x + a * st, z + b * st)); return m; }
@@ -720,14 +737,13 @@ function buildGround() {
 const WIN_U = { value: 1 };
 let leafMat = null, blobMat = null;
 function applyTreeQuality() { if (!leafMat) return; const leafy = opts.quality === 'hoch' || opts.quality === 'ultra'; leafMat.visible = leafy; blobMat.visible = !leafy; }
-function buildCity() {
-  computeRoadHeights();
+function* buildCity() {
   const palette = [0xd9c7b0, 0xcdb8a3, 0xe3d6c4, 0xb8a894, 0xd4b9a0, 0xc8c2b6, 0xe8dccb, 0xb49f8c, 0xd6cfc2, 0xc49e85, 0xb7c4c9, 0xd8b0a8];
   const byKey = new Map(); // "art|farbe" -> Wandgeometrien
   const roofMat = new THREE.MeshLambertMaterial({ map: roofTex }); const roofGeos = [], tileGeos = [], gableGeos = []; const dW = [], dR = [], dG = []; // Gauben: Wände, Dach, Glas
   const gfByKind = new Map(); // Erdgeschoss je Art
   const kindOf = b => b.k || 'res';
-  for (const b of CITY.buildings) {
+  for (const b of CITY.buildings) { if (++YC % 10 === 0) yield;
     const kind = kindOf(b);
     const shape = new THREE.Shape(b.p.map(([x, z]) => new THREE.Vector2(x, -z)));
     const ths = b.p.map(([x, z]) => TH(x, z)); const tBase = Math.min(...ths), tTop = Math.max(...ths); b.base = tTop; // Erdgeschoss auf dem höchsten Punkt
@@ -790,7 +806,7 @@ function buildCity() {
       }
     }
   }
-  const facByKind = {}; for (const k of ['res', 'house', 'public', 'hall', 'small', 'church']) facByKind[k] = [facadeTextures(k), facadeTextures(k)];
+  const facByKind = FAC_CACHE || (FAC_CACHE = (() => { const f = {}; for (const k of ['res', 'house', 'public', 'hall', 'small', 'church']) f[k] = [facadeTextures(k), facadeTextures(k)]; return f; })());
   const counters = {};
   const groups = new Map(); const tmpC = new THREE.Color();
   for (const [key, geos] of byKey) {
@@ -809,13 +825,11 @@ function buildCity() {
     const mg = new THREE.Mesh(mergeGeometries(dG), new THREE.MeshLambertMaterial({ color: 0x2a3340, emissive: 0x000000, side: THREE.DoubleSide })); scene.add(mg); }
   if (gableGeos.length) scene.add(new THREE.Mesh(mergeGeometries(gableGeos), new THREE.MeshLambertMaterial({ color: 0xd9cbb6, side: THREE.DoubleSide })));
   // Boden
-  buildGround();
-  const far = new THREE.Mesh(new THREE.PlaneGeometry(8000, 8000), new THREE.MeshLambertMaterial({ color: 0x6e6a60 })); far.rotation.x = -Math.PI / 2; far.position.y = -1; scene.add(far);
   // Grün- und Freiflächen je Art
   const greenCol = { park: 0x6f9a52, grass: 0x7aa35a, garden: 0x6a9450, meadow: 0x86a85c, forest: 0x4e7d3a, allotments: 0x7f9a5a, dog_park: 0x7aa35a, cemetery: 0x6f9a52, recreation_ground: 0x72a052, playground: 0xd2bb8e, parking: 0x6d6d70, track: 0xb0563c };
   const sportCol = { soccer: 0x3f8a3a, tennis: 0xb0563c, basketball: 0x7a7f86, multi: 0x7a7f86, petanque: 0xc8b48a, table_tennis: 0x7aa35a, volleyball: 0xd2bb8e };
   const byCol = new Map();
-  for (const g of CITY.green) {
+  for (const g of CITY.green) { if (++YC % 10 === 0) yield;
     const shape = new THREE.Shape(g.p.map(([x, z]) => new THREE.Vector2(x, -z)));
     let geo = new THREE.ShapeGeometry(shape); geo.rotateX(-Math.PI / 2); geo = drape(geo, g.k === 'pitch' || g.k === 'playground' ? 0.07 : 0.05);
     const col = g.k === 'pitch' ? (sportCol[g.s] || 0x7a7f86) : (greenCol[g.k] || 0x6f9a52);
@@ -825,7 +839,7 @@ function buildCity() {
   // Spielplatzgeräte und Sportplatz-Linien
   const propGeos = { red: [], blue: [], yellow: [], wood: [], white: [], steel: [] };
   const bx = (w, h, d, x, y, z, ry, bucket) => { const g = new THREE.BoxGeometry(w, h, d); if (ry) g.rotateY(ry); g.translate(x, y + TH(x, z), z); propGeos[bucket].push(g); };
-  for (const g of CITY.green) {
+  for (const g of CITY.green) { if (++YC % 10 === 0) yield;
     const ob = orientedBox(g.p); const cu = (ob.umin + ob.umax) / 2, cv = (ob.vmin + ob.vmax) / 2; const ang = Math.atan2(ob.ux, ob.uz) - Math.PI / 2; const [cx, cz] = ob.pt(cu, cv);
     const inside = (u, v) => { const [x, z] = ob.pt(u, v); return pointInPoly(x, z, g.p) && solidAt(x, z) < 0; };
     const L = ob.umax - ob.umin, W = ob.vmax - ob.vmin;
@@ -853,7 +867,7 @@ function buildCity() {
   const propMat = { red: 0xc0392b, blue: 0x2980b9, yellow: 0xe3c98a, wood: 0x8b5a2b, white: 0xf4f4f4, steel: 0x8a8f94 };
   for (const k in propGeos) if (propGeos[k].length) { const m = new THREE.Mesh(mergeGeometries(propGeos[k]), new THREE.MeshLambertMaterial({ color: propMat[k] })); m.castShadow = true; scene.add(m); }
   const waters = [];
-  for (const w of CITY.water) { const shape = new THREE.Shape(w.p.map(([x, z]) => new THREE.Vector2(x, -z))); const geo = new THREE.ShapeGeometry(shape); geo.rotateX(-Math.PI / 2); geo.translate(0, 0.02, 0); waters.push(geo); }
+  for (const w of CITY.water) { const shape = new THREE.Shape(w.p.map(([x, z]) => new THREE.Vector2(x, -z))); const geo = new THREE.ShapeGeometry(shape); geo.rotateX(-Math.PI / 2); geo.translate(0, Math.min(...w.p.map(([x, z]) => TH(x, z))) + 0.2, 0); waters.push(geo); }
   if (waters.length) scene.add(new THREE.Mesh(mergeGeometries(waters), new THREE.MeshLambertMaterial({ color: 0x4f7fa0 })));
   // Straßen als Bänder
   const ribbon = (lines, y, widthFn) => {
@@ -878,7 +892,7 @@ function buildCity() {
   };
   const flat = (geo, opts) => { const m = new THREE.Mesh(geo, new THREE.MeshLambertMaterial(opts)); m.receiveShadow = true; scene.add(m); };
   const walkG = ribbon(CITY.roads, 0.02, r => r.w + (r.mw ? 1.6 : 5)); if (walkG) flat(walkG, TEX.paving ? { map: TEX.paving, normalMap: TEX.pavingN, color: 0xd8d4cc } : { map: pavingTex });
-  const roadG = ribbon(CITY.roads, 0.04, r => r.w); if (roadG) { const rm = new THREE.Mesh(roadG, new THREE.MeshStandardMaterial(Object.assign(TEX.asphalt ? { map: TEX.asphalt, normalMap: TEX.asphaltN, color: 0xb8b8b8 } : { map: asphaltTex }, { roughness: 0.92, metalness: 0, roughnessMap: null }))); rm.material.userData.pud = puddleTex(); rm.receiveShadow = true; scene.add(rm); roadMatRef = rm.material; }
+  const roadG = ribbon(CITY.roads, 0.04, r => r.w); if (roadG) { const rm = new THREE.Mesh(roadG, roadMatRef || new THREE.MeshStandardMaterial(Object.assign(TEX.asphalt ? { map: TEX.asphalt, normalMap: TEX.asphaltN, color: 0xb8b8b8 } : { map: asphaltTex }, { roughness: 0.92, metalness: 0, roughnessMap: null }))); if (!rm.material.userData.pud) { rm.material.userData.pud = puddleTex(); rm.material.userData.shared = true; } rm.receiveShadow = true; scene.add(rm); roadMatRef = rm.material; }
   const pathG = ribbon(CITY.paths, 0.03, () => 2); if (pathG) flat(pathG, TEX.cobble ? { map: TEX.cobble, normalMap: TEX.cobbleN, color: 0xd0c8bc } : { map: pavingTex, color: 0xcfc8bb });
   buildBridges();
   const railG = ribbon(CITY.rails, 0.05, () => 3); if (railG) flat(railG, { color: 0x6b6258 });
@@ -888,7 +902,7 @@ function buildCity() {
   if (railLines.length) scene.add(new THREE.Mesh(mergeGeometries(railLines), new THREE.MeshLambertMaterial({ color: 0x9a9a9a })));
   // Ampeln
   const sigPole = [], sigBox = [], sigLight = [];
-  for (const [sx0, sz0] of CITY.signals) { if (solidAt(sx0, sz0) >= 0) continue;
+  for (const [sx0, sz0] of CITY.signals) { if (++YC % 10 === 0) yield; if (solidAt(sx0, sz0) >= 0) continue;
     // StVO: je Zufahrt zwei Signalgeber, rechts und links der Fahrbahn
     let best = null, bd = 1e18; for (const r of CITY.roads) { if (r.ped) continue; for (let i = 0; i < r.p.length - 1; i++) { const [ax, az] = r.p[i], [bx, bz] = r.p[i + 1]; const d = distSegSq(sx0, sz0, ax, az, bx, bz); if (d < bd) { bd = d; best = { r, ax, az, bx, bz }; } } }
     let spots = [[sx0, sz0]]; if (best && bd < 400) { const dx = best.bx - best.ax, dz = best.bz - best.az, l = Math.hypot(dx, dz) || 1, L2 = l * l; const t = clamp(((sx0 - best.ax) * dx + (sz0 - best.az) * dz) / L2, 0, 1); const cx = best.ax + dx * t, cz = best.az + dz * t; const o = best.r.w / 2 + 0.8; spots = [[cx - dz / l * o, cz + dx / l * o], [cx + dz / l * o, cz - dx / l * o]]; }
@@ -913,15 +927,15 @@ function buildCity() {
   if (dash.length) scene.add(new THREE.Mesh(mergeGeometries(dash), new THREE.MeshBasicMaterial({ color: 0xe9e2c8 })));
   // Bäume
   const trunk = new THREE.CylinderGeometry(0.15, 0.2, 2.2, 5); const crown = mergeGeometries([new THREE.IcosahedronGeometry(1.75, 0), new THREE.IcosahedronGeometry(1.3, 0).translate(0.95, 0.45, 0.35), new THREE.IcosahedronGeometry(1.2, 0).translate(-0.75, 0.6, -0.55), new THREE.IcosahedronGeometry(1.05, 0).translate(0.1, 1.2, -0.2)]); crown.computeVertexNormals();
-  const trees = CITY.trees.concat(extraTrees(700), streetTrees()).map(([x, z]) => pushOffRoads(x, z, 0.9)).filter(([x, z]) => !Number.isNaN(x) && solidAt(x, z) < 0); treeSpots.push(...trees);
+  const trees = CITY.trees.concat(extraTrees(Math.min(700, CITY.green.length * 5)), streetTrees()).map(([x, z]) => pushOffRoads(x, z, 0.9)).filter(([x, z]) => !Number.isNaN(x) && solidAt(x, z) < 0); treeSpots.push(...trees);
   const tm = new THREE.InstancedMesh(trunk, new THREE.MeshLambertMaterial({ color: 0x5a3f2a }), trees.length);
-  const cm = new THREE.InstancedMesh(crown, new THREE.MeshLambertMaterial({ color: 0xffffff }), trees.length);
+  if (!CROWN_MAT) { CROWN_MAT = new THREE.MeshLambertMaterial({ color: 0xffffff }); CROWN_MAT.userData.shared = true; } const cm = new THREE.InstancedMesh(crown, CROWN_MAT, trees.length);
   const o = new THREE.Object3D();
   trees.forEach(([x, z], i) => { const ty = TH(x, z); o.position.set(x, 1.1 + ty, z); o.scale.setScalar(1); o.updateMatrix(); tm.setMatrixAt(i, o.matrix); const s = rnd(0.8, 1.4); o.position.set(x, 2.2 + s + ty, z); o.scale.setScalar(s); o.updateMatrix(); cm.setMatrixAt(i, o.matrix); });
   { const tc = new THREE.Color(); const greens = [0x4e7d3a, 0x5b8a3c, 0x46703a, 0x6a8f45, 0x3f6a33, 0x5f7f3a]; for (let i = 0; i < trees.length; i++) cm.setColorAt(i, tc.setHex(pick(greens)).multiplyScalar(rnd(0.85, 1.1))); }
   tm.castShadow = cm.castShadow = true; scene.add(tm, cm);
   // Blattkronen (Hoch/Ultra): dunkler Kern plus viele Blattflächen mit Alphatextur, Normalen nach außen für weiches Licht
-  { const leafTex = canvasTex(256, 256, (ctx, w, h) => { ctx.clearRect(0, 0, w, h); ctx.fillStyle = '#5b8040'; ctx.fillRect(0, 0, 16, 16);
+  { if (!leafMat) { const leafTex = canvasTex(256, 256, (ctx, w, h) => { ctx.clearRect(0, 0, w, h); ctx.fillStyle = '#5b8040'; ctx.fillRect(0, 0, 16, 16);
       for (let i = 0; i < 260; i++) { const x = 20 + Math.random() * (w - 40), y = 20 + Math.random() * (h - 40); const dx = x - w / 2, dy = y - h / 2; if (dx * dx + dy * dy > (w * 0.44) ** 2) continue; const g = 120 + Math.random() * 90 | 0; ctx.fillStyle = `rgb(${g * 0.55 | 0},${g},${g * 0.4 | 0})`; ctx.save(); ctx.translate(x, y); ctx.rotate(Math.random() * 6.28); ctx.beginPath(); ctx.ellipse(0, 0, 7 + Math.random() * 5, 3 + Math.random() * 2, 0, 0, 6.29); ctx.fill(); ctx.restore(); } });
     leafTex.colorSpace = THREE.SRGBColorSpace;
     const parts = []; const C = new THREE.Vector3(0, 0.35, 0);
@@ -930,12 +944,12 @@ function buildCity() {
       q.lookAt(dir); q.rotateZ(Math.random() * 6.28); q.applyMatrix4(new THREE.Matrix4().makeRotationFromEuler(new THREE.Euler((Math.random() - 0.5) * 0.9, (Math.random() - 0.5) * 0.9, 0))); q.translate(pos.x, pos.y, pos.z);
       const pa = q.attributes.position, nn = q.attributes.normal; for (let k = 0; k < pa.count; k++) { const v = new THREE.Vector3(pa.getX(k), pa.getY(k), pa.getZ(k)).sub(C).normalize(); nn.setXYZ(k, v.x, v.y, v.z); } parts.push(q.index ? q.toNonIndexed() : q); }
     const leafG = mergeGeometries(parts.map(g => { for (const a of Object.keys(g.attributes)) if (!['position', 'normal', 'uv'].includes(a)) g.deleteAttribute(a); return g; }));
-    leafMat = new THREE.MeshLambertMaterial({ map: leafTex, alphaTest: 0.45, side: THREE.DoubleSide, color: 0xffffff, emissive: 0x1a2a10 }); blobMat = cm.material;
+    leafMat = new THREE.MeshLambertMaterial({ map: leafTex, alphaTest: 0.45, side: THREE.DoubleSide, color: 0xffffff, emissive: 0x1a2a10 }); leafMat.userData.shared = true; leafG.userData.shared = true; LEAF_G = leafG; } blobMat = CROWN_MAT; const leafG = LEAF_G;
     const lm = new THREE.InstancedMesh(leafG, leafMat, trees.length); const m4 = new THREE.Matrix4(), c = new THREE.Color(); for (let i = 0; i < trees.length; i++) { cm.getMatrixAt(i, m4); lm.setMatrixAt(i, m4); cm.getColorAt(i, c); lm.setColorAt(i, c.multiplyScalar(1.25)); }
     lm.castShadow = true; lm.receiveShadow = false; scene.add(lm); applyTreeQuality(); }
   // Laternen
   const lampG = new THREE.CylinderGeometry(0.06, 0.08, 5, 5); const lamps = [];
-  for (const r of CITY.roads) { if (r.w < 5 || r.ped) continue; let acc = 8, side = 1; // Abstand über die ganze Straße, Seiten im Wechsel
+  for (const r of CITY.roads) { if (r.w < 5 || r.ped) continue; let acc = 8, side = 1; if (++YC % 10 === 0) yield; // Abstand über die ganze Straße, Seiten im Wechsel
     for (let i = 0; i < r.p.length - 1; i++) { const [ax, az] = r.p[i], [bx, bz] = r.p[i + 1]; const l = Math.hypot(bx - ax, bz - az) || 0.001; const dx = (bx - ax) / l, dz = (bz - az) / l; let d = acc;
       for (; d < l; d += 24) { const off = (r.w / 2 + 0.6) * side; const sx = ax + dx * d - dz * off, sz = az + dz * d + dx * off; side = -side; if (solidAt(sx, sz) < 0 && !onOtherRoad(sx, sz, r, 0.5) && deckAt(sx, sz, 1e9, 0) === null) lamps.push([sx, sz]); }
       acc = d - l; } }
@@ -943,7 +957,7 @@ function buildCity() {
   const headG = new THREE.BoxGeometry(0.5, 0.2, 0.3); const hm = new THREE.InstancedMesh(headG, new THREE.MeshBasicMaterial({ color: 0xffe3a0 }), lamps.length);
   lamps.forEach(([x, z], i) => { const ty = TH(x, z); o.position.set(x, 2.5 + ty, z); o.scale.setScalar(1); o.updateMatrix(); lm.setMatrixAt(i, o.matrix); o.position.set(x, 5.0 + ty, z); o.updateMatrix(); hm.setMatrixAt(i, o.matrix); }); scene.add(lm, hm); lampSpots.push(...lamps);
   // Lichtschein als additive Sprites
-  const glowTex = canvasTex(64, 64, (ctx, w, h) => { const gr = ctx.createRadialGradient(32, 32, 2, 32, 32, 32); gr.addColorStop(0, 'rgba(255,220,150,0.55)'); gr.addColorStop(1, 'rgba(255,220,150,0)'); ctx.fillStyle = gr; ctx.fillRect(0, 0, w, h); });
+  const glowTex = GLOW_TEX || (GLOW_TEX = canvasTex(64, 64, (ctx, w, h) => { const gr = ctx.createRadialGradient(32, 32, 2, 32, 32, 32); gr.addColorStop(0, 'rgba(255,220,150,0.55)'); gr.addColorStop(1, 'rgba(255,220,150,0)'); ctx.fillStyle = gr; ctx.fillRect(0, 0, w, h); }));
   const glowMat = new THREE.SpriteMaterial({ map: glowTex, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true });
   { const gp = new Float32Array(lamps.length * 3); lamps.forEach(([x, z], i) => { gp[i * 3] = x; gp[i * 3 + 1] = 4.6 + TH(x, z); gp[i * 3 + 2] = z; }); const gg = new THREE.BufferGeometry(); gg.setAttribute('position', new THREE.BufferAttribute(gp, 3)); const pts = new THREE.Points(gg, new THREE.PointsMaterial({ map: glowTex, size: 4.5, sizeAttenuation: true, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true })); scene.add(pts); nightOnly.push(pts); }
   // Lichtflecken auf dem Boden
@@ -1154,13 +1168,13 @@ function makeCarBox(police = false) {
   return g;
 }
 const cars = [], peds = [], particles = [], shootables = [], pickups = [], trams = [];
-const roadsDrivable = CITY.roads.filter(r => r.w >= 5);
+const roadsDrivable = [], pedRoads = []; // Straßen der gebauten Kacheln
 function randomRoadPoint(r) {
   const i = (Math.random() * (r.p.length - 1)) | 0; const [ax, az] = r.p[i], [bx, bz] = r.p[i + 1]; const t = Math.random();
   return { x: ax + (bx - ax) * t, z: az + (bz - az) * t, heading: Math.atan2(bx - ax, bz - az), road: r, seg: i, dir: Math.random() < 0.5 ? 1 : -1 };
 }
 function spawnCar(police = false, near = null, minD = 60, maxD = 220) {
-  let p; for (let k = 0; k < 40; k++) { p = randomRoadPoint(pick(roadsDrivable)); const d = near ? Math.hypot(p.x - near.x, p.z - near.z) : 0; if (!near || (d < maxD && d > minD)) break; }
+  const pool = near ? roadsNear(near.x, near.z, 1, true) : roadsDrivable; if (!pool.length) return null; let p; for (let k = 0; k < 40; k++) { p = randomRoadPoint(pick(pool)); const d = near ? Math.hypot(p.x - near.x, p.z - near.z) : 0; if (!near || (d < maxD && d > minD)) break; }
   for (const o of cars) if ((o.position.x - p.x) ** 2 + (o.position.z - p.z) ** 2 < 64) return null; // nicht in ein anderes Auto setzen
   const c = makeCar(police); c.position.set(p.x, roadY(p.road, p.x, p.z), p.z);
   const u = c.userData; u.heading = p.heading; u.road = p.road; u.seg = p.seg; u.dir = p.road.o ? p.road.o : p.dir; if (u.dir < 0) u.heading += Math.PI;
@@ -1171,9 +1185,8 @@ function spawnCar(police = false, near = null, minD = 60, maxD = 220) {
   if (u.mode === 'ai') { u.isCar = true; snapToLane(u, c.position, u.road.w * 0.25 * u.dir); u.vh = u.heading; if (solidAt(c.position.x, c.position.z) >= 0) return null; }
   c.rotation.y = u.heading; scene.add(c); cars.push(c); shootables.push(c); return c;
 }
-let pedRoads = null;
 function spawnPed(near = null) {
-  const r = pick(pedRoads || (pedRoads = CITY.roads.filter(r => !r.mw && !r.ry))); const p = randomRoadPoint(r); const side = Math.random() < 0.5 ? 1 : -1; const w = r.w / 2 + 1.5;
+  const pool = roadsNear(player.pos.x, player.pos.z, 1, false); if (!pool.length) return null; const r = pick(pool); const p = randomRoadPoint(r); const side = Math.random() < 0.5 ? 1 : -1; const w = r.w / 2 + 1.5;
   const x = p.x + Math.cos(p.heading) * side * w, z = p.z - Math.sin(p.heading) * side * w;
   if (solidAt(x, z) >= 0) return null; if (near && Math.hypot(x - near.x, z - near.z) > 200) return null;
   const h = makeHuman(Math.random() < 0.5); h.position.set(x, TH(x, z), z);
@@ -1207,7 +1220,7 @@ function advanceAlongRoad(u, pos, dist, offset) {
       // Kreuzung: Abbiegen, Einbahnstraßen beachten; am Ende einer Einbahnstraße muss abgebogen werden
       const atEnd = (j === 0 || j === r.p.length - 1);
       if (Math.random() < 0.3 || (atEnd && (r.o || u.isCar)) || u.goal) { const opts = [];
-        for (const q of (u.mode === 'tram' ? CITY.rails : u.isCar ? roadsDrivable : (pedRoads || (pedRoads = CITY.roads.filter(r => !r.mw && !r.ry))))) { if (q === r) continue; const k = q.p.findIndex(p => Math.hypot(p[0] - bx, p[1] - bz) < 1); if (k < 0) continue;
+        for (const [q, k] of nodesNear(bx, bz)) { if (q === r) continue; if (u.mode === 'tram' ? q.w !== undefined : (q.w === undefined || (u.isCar ? q.w < 5 : (q.mw || q.ry)))) continue;
           for (const d of [1, -1]) { if (k + d < 0 || k + d >= q.p.length) continue; if (u.isCar && !u.police && q.o && q.o !== d) continue; opts.push([q, k, d]); } }
         if (opts.length) { let choice = pick(opts); if (u.goal) { let best = 1e9; for (const o of opts) { const [q, k, d] = o; const q2 = q.p[k + d]; const dd = Math.hypot(q2[0] - u.goal.x, q2[1] - u.goal.z); if (dd < best) { best = dd; choice = o; } } } const [nr, k, d] = choice; const [nx2, nz2] = nr.p[k + d]; const nh = Math.atan2(nx2 - bx, nz2 - bz); const turn = ((nh - u.heading + Math.PI) % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI) - Math.PI; if (Math.abs(turn) > 0.5) { u.blink = turn > 0 ? 0 : 1; u.blinkT = 2.5; } u.road = nr; u.seg = k; u.dir = d; return; } }
     }
@@ -1315,7 +1328,7 @@ function updatePickups(dt) {
 }
 
 // ---------- Spieler ----------
-const player = { pos: new THREE.Vector3(0, 0, 0), yaw: 0, vy: 0, hp: 100, bustedT: 0, car: null, female: false, mesh: null, wanted: 0, wantedTimer: 0, dead: false, score: 0, money: 0 };
+const player = { pos: new THREE.Vector3(0, 0, 0), yaw: 0, vy: 0, hp: 100, bustedT: 0, car: null, female: false, mesh: null, wanted: 0, wantedTimer: 0, dead: false, score: 0, money: 150 };
 const camYaw = { v: 0 }, camPitch = { v: 0.2 };
 const keys = {};
 const opts = { sens: 1, vol: 0.8, shadows: true, timeSpeed: 1, headlights: true, weather: 'auto', traffic: 1, quality: QUALITY, scale: 1, view: 700, bloom: 1, ao: true, fps: false, fov: 65, camdist: 1, invy: false, shake: true, peds: 1, police: true, god: false, ammo: false, fall: true, grip: 1, minimap: true, hud: true, tts: true, demos: true, firebrigade: true };
@@ -1342,14 +1355,15 @@ function closeMenu() { menuOpen = false; $('menu').style.display = 'none'; if (s
 let mapOpen = false;
 function toggleMap() { mapOpen = !mapOpen; $('bigmap').style.display = mapOpen ? 'block' : 'none'; if (mapOpen) drawBigMap(); }
 function drawBigMap() {
-  const cv = $('bigmap'); const W = cv.width = Math.min(innerWidth - 40, 900), H = cv.height = Math.min(innerHeight - 40, 700); const c2 = cv.getContext('2d'); const sc = Math.min(W / MM.width, H / MM.height) * 1.0;
-  c2.fillStyle = '#111'; c2.fillRect(0, 0, W, H); const ox = (W - MM.width * sc) / 2, oy = (H - MM.height * sc) / 2; c2.drawImage(MM, ox, oy, MM.width * sc, MM.height * sc);
-  const P = (x, z) => [ox + (x - ext.x0) * MM_SCALE * sc, oy + (z - ext.z0) * MM_SCALE * sc];
-  c2.font = 'bold 11px system-ui'; c2.fillStyle = '#ddd'; const seen = new Set(); for (const r of CITY.roads) { if (!r.n || seen.has(r.n) || r.w < 8) continue; seen.add(r.n); const m = r.p[Math.floor(r.p.length / 2)]; const [x, y] = P(m[0], m[1]); c2.fillText(r.n, x + 3, y - 3); }
+  const cv = $('bigmap'); const W = cv.width = Math.min(innerWidth - 40, 900), H = cv.height = Math.min(innerHeight - 40, 700); const c2 = cv.getContext('2d');
+  const span = mapZoom; const sc = W / span; const cx0 = player.pos.x - span / 2, cz0 = player.pos.z - span * H / W / 2; // Meter -> Pixel
+  c2.fillStyle = '#111'; c2.fillRect(0, 0, W, H); const P = (x, z) => [(x - cx0) * sc, (z - cz0) * sc];
+  for (const [, t] of TILES) { if (!t.mm) continue; const [x, y] = P(t.tx * TS, t.tz * TS); if (x > W || y > H || x + TS * sc < 0 || y + TS * sc < 0) continue; c2.drawImage(t.mm, x, y, TS * sc, TS * sc); }
+  c2.font = 'bold 11px system-ui'; c2.fillStyle = '#ddd'; const seen = new Set(); for (const r of WORLD.roads) { if (!r.n || seen.has(r.n) || r.w < 8) continue; const m = r.p[Math.floor(r.p.length / 2)]; const [x, y] = P(m[0], m[1]); if (x < 0 || y < 0 || x > W || y > H) continue; seen.add(r.n); c2.fillText(r.n, x + 3, y - 3); }
   for (const c of cars) if (c.userData.police) { const [x, y] = P(c.position.x, c.position.z); c2.fillStyle = '#4f8bff'; c2.beginPath(); c2.arc(x, y, 4, 0, 7); c2.fill(); }
   for (const p of pickups) { const [x, y] = P(p.position.x, p.position.z); c2.fillStyle = p.userData.kind.startsWith('w:') ? '#c86bff' : p.userData.kind === 'money' ? '#f0c030' : p.userData.kind === 'ammo' ? '#40c060' : '#e04040'; c2.fillRect(x - 2, y - 2, 4, 4); }
   const [px, py] = P(player.pos.x, player.pos.z); c2.save(); c2.translate(px, py); c2.rotate(-camYaw.v + Math.PI); c2.fillStyle = '#ffd84a'; c2.beginPath(); c2.moveTo(0, -9); c2.lineTo(6, 6); c2.lineTo(-6, 6); c2.fill(); c2.restore();
-  c2.fillStyle = '#fff'; c2.font = '14px system-ui'; c2.fillText('BORNHEIM · ' + Math.floor(world.hour) + ':' + String(Math.floor(world.hour % 1 * 60)).padStart(2, '0') + ' Uhr · M schließen', 16, 24);
+  c2.fillStyle = '#fff'; c2.font = '14px system-ui'; c2.fillText('FRANKFURT · ' + (mapZoom / 1000).toFixed(1) + ' km · Mausrad Zoom · ' + Math.floor(world.hour) + ':' + String(Math.floor(world.hour % 1 * 60)).padStart(2, '0') + ' Uhr · M schließen', 16, 24);
 }
 addEventListener('keydown', e => { if (e.code === 'Escape') { if (started && !menuOpen) openMenu(); return; } if (menuOpen) return; keys[e.code] = true; if (e.code === 'KeyM') toggleMap(); if (e.code === 'F5' && e.ctrlKey) return; if (e.code === 'F6') { e.preventDefault(); saveGame(); } if (e.code === 'F9') { e.preventDefault(); loadGame(); } if (e.code === 'KeyE') toggleCar(); if (e.code === 'KeyR') WPN.reload(); if (e.code === 'KeyG') DEMO.rally(); if (e.code === 'KeyV') DEMO.film(); if (e.code === 'KeyX') STORY.skipLine(); if (e.code === 'KeyQ' && !creative.on) WPN.quick(); if (e.code === 'Space') e.preventDefault(); if (e.code === 'KeyC') toggleCreative(); if (e.code === 'KeyH' && player.car) sfx('horn'); if (creative.on && (e.code === 'Comma' || e.code === 'Period')) creativeSelect(creative.slot + (e.code === 'Period' ? 1 : -1)); if (creative.on && e.code === 'Minus') creativeSelect(20); if (e.code.startsWith('Digit')) { const n = (+e.code.slice(5) + 9) % 10; if (creative.on) creativeSelect(n + (e.shiftKey ? 10 : 0)); else if (!player.car) WPN.slotKey(+e.code.slice(5)); } });
 const CREATIVE_ITEMS = [
@@ -1398,30 +1412,22 @@ const cross = $('cross'), hint = $('hint'), streetEl = $('street'), ammoEl = $('
 function showMsg(t, ms = 2500) { msgEl.textContent = t; msgEl.style.display = 'block'; clearTimeout(showMsg.t); showMsg.t = setTimeout(() => msgEl.style.display = 'none', ms); }
 // Minimap: ganze Stadt einmal vorzeichnen
 const MM_SCALE = 0.5; // px pro Meter
-const MM = document.createElement('canvas'); const ext = { x0: -1000, z0: -1200, x1: 1400, z1: 1000 };
-MM.width = (ext.x1 - ext.x0) * MM_SCALE; MM.height = (ext.z1 - ext.z0) * MM_SCALE;
-{ const c = MM.getContext('2d'); c.fillStyle = '#1b1d22'; c.fillRect(0, 0, MM.width, MM.height);
-  const P = ([x, z]) => [(x - ext.x0) * MM_SCALE, (z - ext.z0) * MM_SCALE];
-  c.fillStyle = '#2f4a2a'; for (const g of CITY.green) { c.beginPath(); g.p.forEach((p, i) => { const [x, y] = P(p); i ? c.lineTo(x, y) : c.moveTo(x, y); }); c.fill(); }
-  c.fillStyle = '#34363c'; for (const b of CITY.buildings) { c.beginPath(); b.p.forEach((p, i) => { const [x, y] = P(p); i ? c.lineTo(x, y) : c.moveTo(x, y); }); c.fill(); }
-  c.strokeStyle = '#8d8d93'; c.lineCap = 'round'; for (const r of CITY.roads) { c.lineWidth = Math.max(1, r.w * MM_SCALE * 0.7); c.beginPath(); r.p.forEach((p, i) => { const [x, y] = P(p); i ? c.lineTo(x, y) : c.moveTo(x, y); }); c.stroke(); }
-}
+const ext = { x0: -1000, z0: -1200 }; // Bezugspunkt der Kartenkoordinaten
 const mm = $('minimap'), mmc = mm.getContext('2d'); const MM_HOOKS = [];
 function drawMinimap() {
   const R = 110, zoom = 0.9; mmc.clearRect(0, 0, 220, 220); mmc.save(); mmc.beginPath(); mmc.arc(110, 110, R, 0, Math.PI * 2); mmc.clip();
   mmc.translate(110, 110); mmc.rotate(-(camYaw.v)); // Blickrichtung oben
   mmc.scale(zoom, zoom); const px = (player.pos.x - ext.x0) * MM_SCALE, pz = (player.pos.z - ext.z0) * MM_SCALE;
-  mmc.drawImage(MM, -px, -pz);
+  { const [ptx, ptz] = [Math.floor(player.pos.x / TS), Math.floor(player.pos.z / TS)]; for (let a = -1; a <= 1; a++) for (let b = -1; b <= 1; b++) { const t = TILES.get(tkey(ptx + a, ptz + b)); if (t && t.mm) mmc.drawImage(t.mm, (t.tx * TS - ext.x0) * MM_SCALE - px, (t.tz * TS - ext.z0) * MM_SCALE - pz); } }
   for (const c of cars) { const u = c.userData; mmc.fillStyle = u.police ? '#4f8bff' : '#bbbbbb'; mmc.beginPath(); mmc.arc((c.position.x - ext.x0) * MM_SCALE - px, (c.position.z - ext.z0) * MM_SCALE - pz, u.police ? 3 : 1.5, 0, 7); mmc.fill(); }
   { const P = (x, z) => [(x - ext.x0) * MM_SCALE - px, (z - ext.z0) * MM_SCALE - pz]; for (const f of MM_HOOKS) f(mmc, P, (R - 8) / zoom); }
   mmc.restore(); mmc.fillStyle = '#ffd84a'; mmc.beginPath(); mmc.moveTo(110, 102); mmc.lineTo(116, 114); mmc.lineTo(104, 114); mmc.fill();
 }
 let streetTimer = 0, worldT = 0;
-function nearestStreet() {
-  let best = 1e9, name = ''; const x = player.pos.x, z = player.pos.z;
-  for (const r of CITY.roads) { if (!r.n) continue; for (let i = 0; i < r.p.length - 1; i++) { const d = distSegSq(x, z, r.p[i][0], r.p[i][1], r.p[i + 1][0], r.p[i + 1][1]); if (d < best) { best = d; name = r.n; } } }
-  return best < 40 * 40 ? name : 'Bornheim';
-}
+function streetNameAt(x, z, maxD = 40) { let best = maxD * maxD, name = ''; const g = getRoadGrid(); const cx = Math.floor(x / CELL), cz = Math.floor(z / CELL);
+  for (let a = -1; a <= 1; a++) for (let b = -1; b <= 1; b++) { const c = g.get(key(cx + a, cz + b)); if (!c) continue; for (const [ri, i] of c) { const r = WORLD.roads[ri]; if (!r.n) continue; const d = distSegSq(x, z, r.p[i][0], r.p[i][1], r.p[i + 1][0], r.p[i + 1][1]); if (d < best) { best = d; name = r.n; } } }
+  return name; }
+function nearestStreet() { return streetNameAt(player.pos.x, player.pos.z) || 'Frankfurt'; }
 
 // ---------- Schießen ----------
 const tracerMat = new THREE.MeshBasicMaterial({ color: 0xfff0a0 });
@@ -1537,16 +1543,141 @@ function driveCar(c, dt, ctrl) {
   for (const o of cars) { if (o === c) continue; const d = o.position.distanceTo(p); if (d < 3.6 && d > 0.01) { const push = new THREE.Vector3().subVectors(o.position, p).setY(0).normalize().multiplyScalar((3.6 - d) * 0.5); if (o.userData.mode !== 'wreck') { o.position.add(push); if (solidAt(o.position.x, o.position.z) >= 0) o.position.sub(push); } p.sub(push.multiplyScalar(0.5)); if (Math.abs(u.speed) > 10) { u.hp -= 8; o.userData.hp -= 15; if (o.userData.hp <= 0) explode(o); if (u.hp <= 0) explode(c); } u.speed *= 0.6; if (o === player.car && u.police) player.hp -= 2; } }
 }
 
+// ---------- Welt in Kacheln: ganz Frankfurt, geladen wird nur die Umgebung ----------
+// Daten (Gebäude, Straßen, Gelände) bleiben nach dem Laden im Speicher, Meshes nur im Umkreis R_MESH.
+let waitMsg = false; let FAC_CACHE = null, CROWN_MAT = null, LEAF_G = null, GLOW_TEX = null; let mapZoom = 3000;
+const R_DATA = 3; let R_MESH = 2; const GROUND_MAT = new THREE.MeshLambertMaterial({ vertexColors: true }); GROUND_MAT.userData.shared = true;
+const farPlane = new THREE.Mesh(new THREE.PlaneGeometry(9000, 9000), new THREE.MeshLambertMaterial({ color: 0x6e6a60 })); farPlane.rotation.x = -Math.PI / 2; farPlane.userData.noChunk = true; scene.add(farPlane);
+const OWN_LISTS = () => [rayTargets, nightOnly, emissiveMats, signalMeshes, signalPoles, treeSpots, lampSpots, staticParked, parkedTiles];
+// Kreuzungen: Index aller Straßen- und Gleispunkte (2-m-Raster)
+const NODEIDX = new Map(); const nkey = (x, z) => Math.round(x / 2) + ',' + Math.round(z / 2);
+function nodeAdd(r) { r.p.forEach((p, k) => { const kk = nkey(p[0], p[1]); let a = NODEIDX.get(kk); if (!a) NODEIDX.set(kk, a = []); a.push([r, k]); }); }
+function nodesNear(x, z) { const out = []; const cx = Math.round(x / 2), cz = Math.round(z / 2); for (let a = -1; a <= 1; a++) for (let b = -1; b <= 1; b++) { const l = NODEIDX.get((cx + a) + ',' + (cz + b)); if (l) for (const e of l) { const p = e[0].p[e[1]]; if (Math.abs(p[0] - x) < 1 && Math.abs(p[1] - z) < 1) out.push(e); } } return out; }
+// Ampeln im Raster (für die KI-Autos)
+const SIGGRID = new Map();
+function signalsNear(x, z) { const out = []; const cx = Math.floor(x / CELL), cz = Math.floor(z / CELL); for (let a = -1; a <= 1; a++) for (let b = -1; b <= 1; b++) { const l = SIGGRID.get(key(cx + a, cz + b)); if (l) out.push(...l); } return out; }
+// Brücken/Rampen: Höhen kommen aus build_tiles.py, hier nur das Raster für deckAt
+function deckAddRoad(r) {
+  if (!r.ry) return;
+  for (let i = 0; i < r.p.length - 1; i++) { if (!r.el[i] && !r.el[i + 1]) continue; const [ax, az] = r.p[i], [bx, bz] = r.p[i + 1];
+    const seg = { ax, az, bx, bz, ya: r.el[i] ? r.ry[i] : TH(ax, az), yb: r.el[i + 1] ? r.ry[i + 1] : TH(bx, bz), w: r.w / 2 + (r.mw ? 0.8 : 2.5), r };
+    const x0 = Math.floor((Math.min(ax, bx) - seg.w) / DCELL), x1 = Math.floor((Math.max(ax, bx) + seg.w) / DCELL), z0 = Math.floor((Math.min(az, bz) - seg.w) / DCELL), z1 = Math.floor((Math.max(az, bz) + seg.w) / DCELL);
+    for (let gx = x0; gx <= x1; gx++) for (let gz = z0; gz <= z1; gz++) { const kk = gx + ',' + gz; if (!deckGrid.has(kk)) deckGrid.set(kk, []); deckGrid.get(kk).push(seg); } }
+}
+// Ränder einer Fläche ohne die Schnittkanten an Kachelgrenzen (dort steht kein Zaun)
+function ringRuns(o) { const P = o.p.concat([o.p[0]]); if (!o.cut) return [P]; const onCut = (a, b) => { for (const i of [0, 1]) { const m = a[i] / TS; if (Math.abs(m - Math.round(m)) < 1e-4 && Math.abs(a[i] - b[i]) < 0.02) return true; } return false; };
+  const runs = []; let cur = [P[0]]; for (let i = 0; i < P.length - 1; i++) { if (onCut(P[i], P[i + 1])) { if (cur.length > 1) runs.push(cur); cur = [P[i + 1]]; } else cur.push(P[i + 1]); } if (cur.length > 1) runs.push(cur); return runs; }
+function barrierRegister(d) {
+  const run = (pts, k) => { for (let i = 0; i < pts.length - 1; i++) { const [ax, az] = pts[i], [bx, bz] = pts[i + 1]; if (Math.hypot(bx - ax, bz - az) < 0.5) continue; if (solidAt((ax + bx) / 2, (az + bz) / 2) >= 0) continue; barrierAdd(ax, az, bx, bz, k === 'retaining_wall' ? 1.0 : k === 'fence' || k === 'hedge' ? 1.3 : 1.7); } };
+  for (const b of d.barriers || []) run(b.p, b.k);
+  for (const a of d.areas || []) for (const r of ringRuns(a)) run(r, 'fence');
+  for (const g of d.green || []) if (g.k === 'allotments' || g.k === 'pitch' || g.k === 'playground') for (const r of ringRuns(g)) run(r, g.k === 'allotments' ? 'hedge' : 'fence');
+}
+// Kachelbild für Minikarte und große Karte
+function tileMap(t) {
+  const c = document.createElement('canvas'); c.width = c.height = TS * MM_SCALE; const g = c.getContext('2d'); g.fillStyle = '#1b1d22'; g.fillRect(0, 0, c.width, c.height);
+  const P = ([x, z]) => [(x - t.tx * TS) * MM_SCALE, (z - t.tz * TS) * MM_SCALE]; const d = t.data;
+  const poly = (list, col) => { g.fillStyle = col; for (const o of list || []) { g.beginPath(); o.p.forEach((p, i) => { const [x, y] = P(p); i ? g.lineTo(x, y) : g.moveTo(x, y); }); g.fill(); } };
+  poly(d.green, '#2f4a2a'); poly(d.water, '#284a66'); poly(d.buildings, '#34363c');
+  g.strokeStyle = '#8d8d93'; g.lineCap = 'round'; for (const r of d.roads || []) { g.lineWidth = Math.max(1, r.w * MM_SCALE * 0.7); g.beginPath(); r.p.forEach((p, i) => { const [x, y] = P(p); i ? g.lineTo(x, y) : g.moveTo(x, y); }); g.stroke(); }
+  return c;
+}
+function registerTile(t) {
+  const d = t.data;
+  for (const b of d.buildings || []) { const i = WORLD.buildings.length; WORLD.buildings.push(b); addToGrid(i, b.p); }
+  t.rd = []; t.rp = [];
+  for (const r of d.roads || []) { const i = WORLD.roads.length; WORLD.roads.push(r); gridAddRoad(r, i); deckAddRoad(r); nodeAdd(r); if (r.w >= 5) t.rd.push(r); if (!r.mw && !r.ry) t.rp.push(r); }
+  for (const r of d.rails || []) { WORLD.rails.push(r); nodeAdd(r); }
+  for (const s of d.signals || []) { const k = key(Math.floor(s[0] / CELL), Math.floor(s[1] / CELL)); if (!SIGGRID.has(k)) SIGGRID.set(k, []); SIGGRID.get(k).push(s); }
+  for (const k of WKEYS) if (k !== 'buildings' && k !== 'roads' && k !== 'rails' && d[k]) for (const o of d[k]) WORLD[k].push(o);
+  barrierRegister(d); t.mm = tileMap(t);
+  if (typeof DEMO !== 'undefined' && DEMO && DEMO.addRoads) DEMO.addRoads(d.roads || []);
+}
+const loadingTiles = new Set();
+async function loadTile(tx, tz) {
+  const k = tkey(tx, tz); if (TILES.has(k) || loadingTiles.has(k) || !WIDX.tiles[k]) return; loadingTiles.add(k);
+  try {
+    const inf = WIDX.tiles[k];
+    const [data, dem] = await Promise.all([inf[0] || inf[1] ? fetch(`data/tiles/${k}.json`).then(r => r.ok ? r.json() : {}) : Promise.resolve({}), inf[3] ? fetch(`data/dem/${k}.bin`).then(r => r.ok ? r.arrayBuffer() : null) : Promise.resolve(null)]);
+    if (dem) { const u = new Uint16Array(dem); const f = new Float32Array(u.length); for (let i = 0; i < u.length; i++) f[i] = u[i] / 100 - 50; DEMT.set(k, f); DEMN.set(dkey(tx, tz), f); }
+    const t = { tx, tz, k, data, built: false }; TILES.set(k, t); registerTile(t);
+  } catch (e) { console.warn('Kachel', k, e); TILES.set(k, { tx, tz, k, data: {}, built: false, rd: [], rp: [] }); }
+  finally { loadingTiles.delete(k); }
+}
+function withBuildSet(d, fn, grp = new THREE.Group()) {
+  const saved = {}; for (const k of WKEYS) { saved[k] = CITY[k]; CITY[k] = d[k] || []; }
+ const add = scene.add; scene.add = function (...o) { grp.add(...o); return this; };
+  const L = OWN_LISTS(); const before = L.map(l => l.length);
+  try { fn(); } finally { scene.add = add; for (const k of WKEYS) CITY[k] = saved[k]; }
+  return { grp, owned: L.map((l, i) => l.slice(before[i])) };
+}
+function* buildTileGround(t) {
+  const mul = groundMul(); const step = DEM.step * mul; const n = Math.round(TS / step); const drop = mul === 1 ? 0.03 : 0.06;
+  const gg = new THREE.PlaneGeometry(TS, TS, n, n); gg.rotateX(-Math.PI / 2); gg.translate(t.tx * TS + TS / 2, 0, t.tz * TS + TS / 2);
+  const pa = gg.attributes.position; for (let i = 0; i < pa.count; i++) { pa.setY(i, groundH(pa.getX(i), pa.getZ(i), mul) - drop); if ((i & 255) === 255) yield; } gg.computeVertexNormals();
+  const nn = gg.attributes.normal, cc = new Float32Array(nn.count * 3), dirt = new THREE.Color(0x6e6a60), grass = new THREE.Color(0x5d7c3c), c = new THREE.Color(); for (let i = 0; i < nn.count; i++) { const k = clamp((1 - nn.getY(i) - 0.012) * 18, 0, 1); c.copy(dirt).lerp(grass, k); cc[i * 3] = c.r; cc[i * 3 + 1] = c.g; cc[i * 3 + 2] = c.b; } gg.setAttribute('color', new THREE.BufferAttribute(cc, 3));
+  const m = new THREE.Mesh(gg, GROUND_MAT); m.receiveShadow = true; scene.add(m); rayTargets.push(m);
+}
+let YC = 0; const BUILD_STEPS = ['ground', 'city', 'det', 'det2', 'park'];
+const STEP_FN = { ground: t => buildTileGround(t), city: () => buildCity(), det: () => buildDetails(), det2: () => buildDetails2(), park: function* () { buildParked(); } };
+function finishTile(t, grp, owned) { t.grp = grp; t.owned = owned; scene.add(grp); t.built = true; t.mul = groundMul(); t.ms = Object.values(t.prof).reduce((a, b) => a + b, 0); }
+function makeJob(t) { t.prof = {}; return { t, steps: BUILD_STEPS.slice(), gen: null, grp: new THREE.Group(), owned: OWN_LISTS().map(() => []) }; }
+// arbeitet am Job, bis das Zeitbudget (ms) verbraucht ist; true = Kachel fertig
+function runJob(j, budget) {
+  const t0 = performance.now(); const d = j.t.data; const any = !!(d.buildings || d.roads || d.green);
+  while (j.steps.length) { const st = j.steps[0]; if (!j.gen) j.gen = (st === 'ground' || any) ? STEP_FN[st](j.t) : null; let done = !j.gen; const a = performance.now();
+    while (!done) { const res = withBuildSet(d, () => { done = j.gen.next().done; }, j.grp); res.owned.forEach((o, i) => { if (o.length) j.owned[i].push(...o); }); if (performance.now() - t0 > budget) break; }
+    j.t.prof[st] = (j.t.prof[st] || 0) + Math.round(performance.now() - a); if (done) { j.steps.shift(); j.gen = null; } if (performance.now() - t0 > budget) break; }
+  if (j.steps.length) return false; finishTile(j.t, j.grp, j.owned); return true;
+}
+function buildTileNow(t) { runJob(makeJob(t), Infinity); }
+let job = null; // Kachel, die gerade schrittweise gebaut wird
+let BUILD_BUDGET = 9;
+function stepJob() { if (runJob(job, BUILD_BUDGET)) { job = null; refreshActive(); } }
+function cancelJob() { if (!job) return; const t = { built: true, grp: job.grp, owned: job.owned }; scene.add(job.grp); unbuildTile(t); job = null; }
+function unbuildTile(t) {
+  if (!t.built) return; scene.remove(t.grp); const L = OWN_LISTS();
+  L.forEach((l, i) => { const own = t.owned[i]; if (!own.length) return; const s = new Set(own); let w = 0; for (let r = 0; r < l.length; r++) if (!s.has(l[r])) l[w++] = l[r]; l.length = w; });
+  t.grp.traverse(o => { if (o.geometry && !o.geometry.userData.shared) o.geometry.dispose(); if (o.isInstancedMesh) o.dispose(); const ms = Array.isArray(o.material) ? o.material : o.material ? [o.material] : []; for (const m of ms) if (!m.userData.shared) { if (m.userData.ownTex && m.map) m.map.dispose(); m.dispose(); } });
+  t.grp = null; t.owned = null; t.built = false;
+}
+function rebuildAllTiles() { let n = 0; for (const [, t] of TILES) if (t.built && t.mul !== groundMul()) { unbuildTile(t); n++; } if (n) refreshActive(); }
+function refreshActive() { roadsDrivable.length = 0; pedRoads.length = 0; for (const [, t] of TILES) if (t.built) { roadsDrivable.push(...t.rd); pedRoads.push(...t.rp); } }
+function roadsNear(x, z, R, car) { const tx = Math.floor(x / TS), tz = Math.floor(z / TS); const out = []; for (let a = -R; a <= R; a++) for (let b = -R; b <= R; b++) { const t = TILES.get(tkey(tx + a, tz + b)); if (t && t.rd) out.push(...(car ? t.rd : t.rp)); } return out.length ? out : (car ? roadsDrivable : pedRoads); }
+const neighborsReady = (tx, tz) => { for (let a = -1; a <= 1; a++) for (let b = -1; b <= 1; b++) { const k = tkey(tx + a, tz + b); if (WIDX.tiles[k] && !TILES.has(k)) return false; } return true; };
+let streamT = 0, buildT = 0;
+function streamUpdate(dt, force = false) {
+  const cx = player.car ? player.car.position.x : player.pos.x, cz = player.car ? player.car.position.z : player.pos.z;
+  farPlane.position.set(camera.position.x, TH(cx, cz) - 12, camera.position.z);
+  const ptx = Math.floor(cx / TS), ptz = Math.floor(cz / TS);
+  R_MESH = (opts.view || 700) > 550 ? 2 : 1;
+  streamT -= dt; if (streamT <= 0 || force) { streamT = 0.3;
+    const want = []; for (let a = -R_DATA; a <= R_DATA; a++) for (let b = -R_DATA; b <= R_DATA; b++) { const k = tkey(ptx + a, ptz + b); if (WIDX.tiles[k] && !TILES.has(k) && !loadingTiles.has(k)) want.push([a * a + b * b, ptx + a, ptz + b]); }
+    want.sort((p, q) => p[0] - q[0]); for (const [, tx, tz] of want) { if (loadingTiles.size >= 6) break; loadTile(tx, tz); }
+    let changed = false; for (const [, t] of TILES) if (t.built && (Math.abs(t.tx - ptx) > R_MESH + 1 || Math.abs(t.tz - ptz) > R_MESH + 1)) { unbuildTile(t); changed = true; }
+    if (changed) refreshActive(); }
+  if (job) { if (Math.abs(job.t.tx - ptx) > R_MESH + 1 || Math.abs(job.t.tz - ptz) > R_MESH + 1) cancelJob(); else { stepJob(); return; } }
+  buildT -= dt; if (buildT > 0 && !force) return;
+  let best = null, bd = 1e9; for (let a = -R_MESH; a <= R_MESH; a++) for (let b = -R_MESH; b <= R_MESH; b++) { const t = TILES.get(tkey(ptx + a, ptz + b)); if (!t || t.built || !neighborsReady(t.tx, t.tz)) continue; const d = a * a + b * b; if (d < bd) { bd = d; best = t; } }
+  if (best) { if (bd === 0) { buildTileNow(best); refreshActive(); } else { job = makeJob(best); stepJob(); } buildT = 0.05; }
+}
+// Spieler steht auf noch nicht gebautem Boden?
+const hereReady = () => { const x = player.car ? player.car.position.x : player.pos.x, z = player.car ? player.car.position.z : player.pos.z; const t = TILES.get(tkey(Math.floor(x / TS), Math.floor(z / TS))); return !t ? !inWorld(x, z) : t.built; };
+async function streamInit() {
+  const sx = player.pos.x, sz = player.pos.z; const ptx = Math.floor(sx / TS), ptz = Math.floor(sz / TS); const el = $('loading');
+  const need = []; for (let a = -R_DATA; a <= R_DATA; a++) for (let b = -R_DATA; b <= R_DATA; b++) if (WIDX.tiles[tkey(ptx + a, ptz + b)]) need.push([ptx + a, ptz + b]);
+  for (let i = 0; i < need.length; i += 8) { await Promise.all(need.slice(i, i + 8).map(([tx, tz]) => loadTile(tx, tz))); if (el) el.textContent = `Lade Frankfurt … ${Math.min(need.length, i + 8)} / ${need.length} Kacheln`; }
+  let n = 0; for (let a = -1; a <= 1; a++) for (let b = -1; b <= 1; b++) { const t = TILES.get(tkey(ptx + a, ptz + b)); /* Rest baut sich beim Spielen */ if (t && !t.built) { buildTileNow(t); n++; if (el) el.textContent = `Baue Stadt … ${n}`; await new Promise(r => setTimeout(r, 0)); } }
+  refreshActive();
+}
+addEventListener('wheel', e => { if (mapOpen) { mapZoom = clamp(mapZoom * (e.deltaY > 0 ? 1.25 : 0.8), 600, 16000); drawBigMap(); } });
+
 // ---------- Start ----------
 let started = false, lastT = performance.now() / 1000, walkT = 0;
 $('bm').onclick = () => { player.female = false; $('bm').classList.add('sel'); $('bf').classList.remove('sel'); };
 $('bf').onclick = () => { player.female = true; $('bf').classList.add('sel'); $('bm').classList.remove('sel'); };
-buildCity();
-buildDetails();
-buildDetails2();
-buildParked();
 buildSky();
-chunkStatic();
+await streamInit();
 loadOpts(); applyTime();
 // Spielstand als Datei: kein Konto nötig, auf jedem Gerät wieder ladbar
 function exportSave() { saveGame(); const data = localStorage.getItem('notgta.save'); if (!data) return; const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([data], { type: 'application/json' })); a.download = 'bornheim-spielstand-' + new Date().toISOString().slice(0, 10) + '.json'; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000); }
@@ -1570,17 +1701,17 @@ makeRain();
 $('cont').style.display = hasSave() ? 'inline-block' : 'none';
 $('cont').onclick = () => { const d = JSON.parse(localStorage.getItem('notgta.save')); player.female = !!d.female; $('go').onclick(); loadGame(); };
 // Start: mitten auf der Berger Straße, auf dem Gehweg
-{ const bs = CITY.roads.filter(r => r.n === 'Berger Straße'); const r = bs[Math.floor(bs.length / 2)] || CITY.roads[0]; const [ax, az] = r.p[0], [bx, bz] = r.p[1 % r.p.length];
+{ const bs = CITY.roads.filter(r => r.n === 'Berger Straße').sort((a, b) => Math.hypot(a.p[0][0] - 150, a.p[0][1] + 100) - Math.hypot(b.p[0][0] - 150, b.p[0][1] + 100)); const r = bs[0] || CITY.roads[0]; const [ax, az] = r.p[0], [bx, bz] = r.p[1 % r.p.length];
   const l = Math.hypot(bx - ax, bz - az) || 1; const nx = -(bz - az) / l, nz = (bx - ax) / l; player.pos.set((ax + bx) / 2 + nx * 2, 0, (az + bz) / 2 + nz * 2); player.pos.y = TH(player.pos.x, player.pos.z); camYaw.v = Math.atan2(bx - ax, bz - az) + Math.PI; }
 while (solidAt(player.pos.x, player.pos.z) >= 0) player.pos.x += 3;
-const X = { THREE, scene, camera, renderer, player, peds, cars, shootables, particles, pickups, keys, camYaw, camPitch, opts, world, weather, CITY, TH, solidAt, solidAtH, floorAt, nearestEdge, edgeNormal, moveWithCollision, makeHuman, makeCar, spawnCar, spawnPedAt, playAnim, animateWalk, damage, explode, burst, smoke, sfx, SND, showMsg, raiseWanted, camShake, canvasTex, tracerMat, makeGun, dentCar, rnd, clamp, pick, lerpAngle, distSegSq, pointInPoly, randomRoadPoint, roadsDrivable, driveCar, carFx, carTerrain, exitCar, syncHand, CHAR, coneTex, hurtPlayer, card, closeMenu,
-  listeners: [], mmHooks: MM_HOOKS, menuHooks: MENU_HOOKS, rallyLimit: 8, get creative() { return creative; }, creativeSpawnerActive, pedRoads: () => pedRoads || (pedRoads = CITY.roads.filter(r => !r.mw && !r.ry)), streetAt: (x, z) => { let best = 1600, name = ''; for (const r of CITY.roads) { if (!r.n) continue; for (let i = 0; i < r.p.length - 1; i++) { const d = distSegSq(x, z, r.p[i][0], r.p[i][1], r.p[i + 1][0], r.p[i + 1][1]); if (d < best) { best = d; name = r.n; } } } return name; }, barrierNear: (x, z, r) => barrierHit(x, z, r), storyBusy: () => STORY ? STORY.busy : false };
-var WPN = initWeapons(X); var DEMO = initDemo(X, WPN); var FIRE = initFire(X, WPN, DEMO); var STORY = initStory(X, WPN, DEMO, FIRE);
+const X = { THREE, scene, camera, renderer, player, peds, cars, shootables, particles, pickups, keys, camYaw, camPitch, opts, world, weather, CITY, TH, solidAt, solidAtH, floorAt, nearestEdge, edgeNormal, moveWithCollision, makeHuman, makeCar, spawnCar, spawnPedAt, playAnim, animateWalk, damage, explode, burst, smoke, wakeParked, wakeParkedRay, sfx, SND, showMsg, raiseWanted, camShake, canvasTex, tracerMat, makeGun, dentCar, rnd, clamp, pick, lerpAngle, distSegSq, pointInPoly, randomRoadPoint, roadsDrivable, driveCar, carFx, carTerrain, exitCar, syncHand, CHAR, coneTex, hurtPlayer, card, closeMenu,
+  listeners: [], mmHooks: MM_HOOKS, menuHooks: MENU_HOOKS, rallyLimit: 8, get creative() { return creative; }, creativeSpawnerActive, pedRoads: () => pedRoads, roadsNear: (x, z, R, car) => roadsNear(x, z, R, car), streetAt: (x, z) => streetNameAt(x, z), barrierNear: (x, z, r) => barrierHit(x, z, r), storyBusy: () => STORY ? STORY.busy : false };
+var WPN = initWeapons(X); var DEMO = initDemo(X, WPN); var FIRE = initFire(X, WPN, DEMO); var STORY = initStory(X, WPN, DEMO, FIRE); var SHOPS = initShops(X, WPN);
 for (let i = 0; i < 200 && cars.length < 60; i++) spawnCar(false, player.pos, 10, 260);
 for (let i = 0; i < 55; i++) spawnPed(null);
 spawnPickups(40);
 spawnTrams(4);
-$('loading').textContent = `Stadt geladen: ${CITY.buildings.length} Gebäude, ${CITY.roads.length} Straßen`;
+$('loading').textContent = `Frankfurt bereit: ${Object.keys(WIDX.tiles).length} Kacheln, ${CITY.buildings.length} Gebäude in der Nähe geladen`;
 $('go').onclick = () => { audioInit();
   player.mesh = makeHuman(player.female, { model: player.female ? 'hero_woman' : 'hero_man', keepColors: true, shadow: true, top: player.female ? 0xd9403c : 0x2b3a67, pants: 0x222222, style: 'jacket', hair: player.female ? 'long' : 'short' }); player.mesh.userData.aiming = false;
   const gun = makeGun(); player.mesh.userData.hand.add(gun); player.mesh.userData.gun = gun; player.mesh.position.copy(player.pos); scene.add(player.mesh);
@@ -1590,7 +1721,7 @@ $('go').onclick = () => { audioInit();
 // ---------- Schleife ----------
 function update(dt) {
   ANIM_DT = dt;
-  if (!started || menuOpen) return; updateWeather(dt); if (mapOpen && Math.floor(worldT * 2) !== Math.floor((worldT - dt) * 2)) drawBigMap(); worldT += dt; world.hour = (world.hour + dt * world.speed) % 24; applyTime();
+  if (!started || menuOpen) return; streamUpdate(dt); if (!hereReady()) { if (msgEl) { msgEl.textContent = 'LADE STADT …'; msgEl.style.display = 'block'; waitMsg = true; } return; } else if (waitMsg) { waitMsg = false; msgEl.style.display = 'none'; } updateWeather(dt); if (mapOpen && Math.floor(worldT * 2) !== Math.floor((worldT - dt) * 2)) drawBigMap(); worldT += dt; world.hour = (world.hour + dt * world.speed) % 24; applyTime();
   for (const o of nightOnly) o.visible = world.night; for (const m of emissiveMats) m.emissiveIntensity = world.night ? 1.0 : 0.25 * (1 - world.day) ;
   for (const lm of signalMeshes) { const L = lm.userData.lights; const ph = worldT % 8; for (let i = 0; i < L.length; i++) { const l = L[i]; const red = signalRed(l.hd, worldT); const amber = !red && ph > 6.6, redAmber = red && ph > 7.2; const on = l.k === 0 ? red : l.k === 1 ? (amber || redAmber) : (!red && !amber); lm.setColorAt(i, SIG_C[l.k][on ? 1 : 0]); } lm.instanceColor.needsUpdate = true; }
   const ctrl = { fwd: keys.KeyW || keys.ArrowUp, back: keys.KeyS || keys.ArrowDown, left: keys.KeyA || keys.ArrowLeft, right: keys.KeyD || keys.ArrowRight, brake: keys.Space, run: keys.ShiftLeft || keys.ShiftRight };
@@ -1643,12 +1774,12 @@ function update(dt) {
       if (!player.car && ahead(player.pos.x, player.pos.z, 1.6)) block = true;
       if (!block) for (const o of cars) { if (o !== c && o.visible && ahead(o.position.x, o.position.z, 1.8)) { block = true; break; } }
       if (!block) for (const p of peds) { if (p.visible && p.userData.state !== 'dead' && ahead(p.position.x, p.position.z, 1.4)) { block = true; break; } }
-      if (!block) for (const sg of CITY.signals) { const rx = sg[0] - c.position.x, rz = sg[1] - c.position.z; const along = rx * fx + rz * fz; if (along > 1 && along < 7 + u.speed * 0.6 && Math.abs(rx * fz - rz * fx) < 7 && signalRed(u.heading, worldT)) { block = true; break; } }
+      if (!block) for (const sg of signalsNear(c.position.x, c.position.z)) { const rx = sg[0] - c.position.x, rz = sg[1] - c.position.z; const along = rx * fx + rz * fz; if (along > 1 && along < 7 + u.speed * 0.6 && Math.abs(rx * fz - rz * fx) < 7 && signalRed(u.heading, worldT)) { block = true; break; } }
       u.isCar = true; u.speed = block ? Math.max(0, u.speed - 18 * dt) : Math.min(u.speed + 5 * dt, u.maxv || 9);
       u.stuckT = block && u.speed < 0.5 ? (u.stuckT || 0) + dt : 0; if (u.stuckT > rnd(2.5, 6) && d < 80) { u.stuckT = -rnd(4, 10); sfx('horn', clamp(1 - d / 80, 0.1, 0.8)); }
       if (u.speed > 0.05) advanceAlongRoad(u, c.position, u.speed * dt, u.road.w * 0.25 * u.dir);
       if (u.vh === undefined) u.vh = u.heading; u.vh = lerpAngle(u.vh, u.heading, Math.min(1, dt * Math.max(2.5, u.speed * 0.9))); const hh = u.heading; u.heading = u.vh; c.rotation.y = u.vh; carFx(c, dt, block); carTerrain(c); u.heading = hh;
-      if (u.respawn) { u.respawn = false; const q = randomRoadPoint(pick(roadsDrivable)); if (Math.hypot(q.x - player.pos.x, q.z - player.pos.z) > 120) { u.road = q.road; u.seg = q.seg; u.dir = q.road.o || q.dir; u.heading = q.heading + (u.dir < 0 ? Math.PI : 0); c.position.set(q.x, TH(q.x, q.z), q.z); u.speed = 0; snapToLane(u, c.position, u.road.w * 0.25 * u.dir); u.vh = u.heading; c.rotation.y = u.heading; } else { u.dir *= -1; } }
+      if (u.respawn) { u.respawn = false; const q = randomRoadPoint(pick(roadsNear(player.pos.x, player.pos.z, 1, true))); if (Math.hypot(q.x - player.pos.x, q.z - player.pos.z) > 120) { u.road = q.road; u.seg = q.seg; u.dir = q.road.o || q.dir; u.heading = q.heading + (u.dir < 0 ? Math.PI : 0); c.position.set(q.x, TH(q.x, q.z), q.z); u.speed = 0; snapToLane(u, c.position, u.road.w * 0.25 * u.dir); u.vh = u.heading; c.rotation.y = u.heading; } else { u.dir *= -1; } }
       if (!player.car && d < 2.4 && u.speed > 2.5) { player.hp -= 25; const kx = player.pos.x - c.position.x, kz = player.pos.z - c.position.z, kl = Math.hypot(kx, kz) || 1; moveWithCollision(player.pos, kx / kl * 2.5, kz / kl * 2.5, 0.35); player.vy = 4; u.speed *= 0.3; showMsg('ANGEFAHREN', 700); sfx('hit'); } }
     else if (u.mode === 'police') policeAI(c, dt);
     if (u.police && u.bar) u.bar.material.color.setHex(Math.floor(performance.now() / 250) % 2 ? 0x3b7bff : 0xff3b3b);
@@ -1686,6 +1817,7 @@ function update(dt) {
   starsEl.textContent = '★'.repeat(Math.ceil(player.wanted)) + '☆'.repeat(5 - Math.ceil(player.wanted));
   streetTimer -= dt; if (streetTimer <= 0) { streetTimer = 0.5; streetEl.textContent = nearestStreet(); }
   if (!player.car) { let near = null; for (const c of cars) if (c.userData.mode !== 'wreck' && c.position.distanceTo(player.pos) < (c.userData.cannon ? 7 : 4)) near = c; hint.textContent = near ? (near.userData.mode === 'parked' ? (near.userData.cannon ? 'E · Wasserwerfer übernehmen' : 'E · einsteigen') : 'E · Fahrer rauszerren') : (staticParked.some(sp => sp.active && Math.hypot(sp.x - player.pos.x, sp.z - player.pos.z) < 3.6) ? 'E · einsteigen' : ''); } else hint.textContent = player.car.userData.cannon ? 'E · aussteigen · Linksklick Wasser · Maus zielt' : 'E · aussteigen · Leertaste bremsen';
+  { const sh = SHOPS.update(dt); if (sh && !player.car && !hint.textContent) hint.textContent = sh; }
   if (!locked && !menuOpen && !mapOpen && !document.hidden) hint.textContent = 'Ins Spiel klicken für Maussteuerung';
   hint.style.display = hint.textContent ? 'block' : 'none';
   cross.style.display = (!player.car && !player.dead) ? 'block' : 'none';
@@ -1708,10 +1840,10 @@ function copAI(h, dt) {
     const len = from.distanceTo(target); const tr = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.04, len), tracerMat); tr.position.copy(from).lerp(target, 0.5); tr.lookAt(target); scene.add(tr); setTimeout(() => scene.remove(tr), 90); sfx('shot', clamp(1 - d / 40, 0.2, 0.7));
     if (hit) { if (player.car) { player.car.userData.hp -= 6; if (player.car.userData.hp <= 0) explode(player.car); } else player.hp -= 9; } }
 }
-function nearestRoadSeg(x, z) { let best = 1e9, res = null; for (const r of roadsDrivable) for (let i = 0; i < r.p.length - 1; i++) { const d = distSegSq(x, z, r.p[i][0], r.p[i][1], r.p[i + 1][0], r.p[i + 1][1]); if (d < best) { best = d; res = { road: r, seg: i }; } } return res; }
+function nearestRoadSeg(x, z) { let best = 1e9, res = null; for (const r of roadsNear(x, z, 1, true)) for (let i = 0; i < r.p.length - 1; i++) { const d = distSegSq(x, z, r.p[i][0], r.p[i][1], r.p[i + 1][0], r.p[i + 1][1]); if (d < best) { best = d; res = { road: r, seg: i }; } } return res; }
 function policeAI(c, dt) {
   const u = c.userData; const to = new THREE.Vector3().subVectors(player.pos, c.position); const d = to.length();
-  if (d > 380) { const q = (() => { for (let k = 0; k < 30; k++) { const rr = randomRoadPoint(pick(roadsDrivable)); const dd = Math.hypot(rr.x - player.pos.x, rr.z - player.pos.z); if (dd > 110 && dd < 200) return rr; } return null; })(); if (q) { c.position.set(q.x, TH(q.x, q.z), q.z); u.onRoad = false; u.speed = 0; } return; }
+  if (d > 380) { const q = (() => { for (let k = 0; k < 30; k++) { const rr = randomRoadPoint(pick(roadsNear(player.pos.x, player.pos.z, 1, true))); const dd = Math.hypot(rr.x - player.pos.x, rr.z - player.pos.z); if (dd > 110 && dd < 200) return rr; } return null; })(); if (q) { c.position.set(q.x, TH(q.x, q.z), q.z); u.onRoad = false; u.speed = 0; } return; }
   // Weit weg: über das Straßennetz Richtung Spieler, nah: direkt
   if (d > 40 && (!u.directT || u.directT <= 0)) {
     if (!u.onRoad) { const ns = nearestRoadSeg(c.position.x, c.position.z); if (ns) { const a = ns.road.p[ns.seg], b = ns.road.p[ns.seg + 1]; const toB = Math.hypot(b[0] - player.pos.x, b[1] - player.pos.z) < Math.hypot(a[0] - player.pos.x, a[1] - player.pos.z); u.road = ns.road; u.dir = toB ? 1 : -1; u.seg = toB ? ns.seg : ns.seg + 1; u.onRoad = true; } }
@@ -1732,7 +1864,7 @@ function updateFx(dt) { for (const k of ['spray', 'water', 'paint']) { fxEl[k] =
 let cardT = null; function card(title, sub, sec = 4) { const el = $('card'); el.innerHTML = `<h2>${title}</h2>${sub ? '<p>' + sub + '</p>' : ''}`; el.style.display = 'block'; el.style.opacity = 1; clearTimeout(cardT); cardT = setTimeout(() => { el.style.opacity = 0; cardT = setTimeout(() => el.style.display = 'none', 600); }, sec * 1000); }
 function respawn() { player.dead = false; player.hp = 100; player.wanted = 0; if (!WPN.inv.pistol) WPN.give('pistol', 24); msgEl.style.display = 'none'; for (const c of cars) if (c.userData.police) c.userData.mode = 'parked'; }
 
-window.G = { WPN, DEMO, STORY, FIRE, X, card, hurtPlayer, composerRef: () => composer,  autoQuality, groundH, dentCar, deckAt, surfAt, signalPoles, treeSpots, lampSpots, pushOffRoads, onOtherRoad, floorAt, solidAtH, solidAt, roofHeight, camShake,  CHAR, CAR_TPL, playAnim, makeHuman, makeCar, makeGun, applyQuality,  staticParked, chunkStatic,  saveGame, loadGame, world, opts, pickups, weather, trams, scene, cars, peds, player, camera, camYaw, camPitch, keys, CITY, DEM, TH, renderer, sun, hemi, THREE, shoot, toggleCar, update, toggleCreative, creative, creativePlace };
+window.G = { SHOPS, TILES, WORLD, WIDX, streamUpdate, streamInit, buildTileNow, TS, WPN, DEMO, STORY, FIRE, X, card, hurtPlayer, composerRef: () => composer,  autoQuality, groundH, dentCar, deckAt, surfAt, signalPoles, treeSpots, lampSpots, pushOffRoads, onOtherRoad, floorAt, solidAtH, solidAt, roofHeight, camShake,  CHAR, CAR_TPL, playAnim, makeHuman, makeCar, makeGun, applyQuality,  staticParked, chunkStatic,  saveGame, loadGame, world, opts, pickups, weather, trams, scene, cars, peds, player, camera, camYaw, camPitch, keys, CITY, DEM, TH, renderer, sun, hemi, THREE, shoot, toggleCar, update, toggleCreative, creative, creativePlace };
 let fpsN = 0, fpsT = 0;
 renderer.setAnimationLoop(() => {
   fpsN++; const tn = performance.now(); if (tn - fpsT > 500) { const fe = document.getElementById('fps'); if (fe && opts.fps) fe.textContent = Math.round(fpsN * 1000 / (tn - fpsT)) + ' fps'; fpsN = 0; fpsT = tn; }

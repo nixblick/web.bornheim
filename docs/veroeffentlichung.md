@@ -4,14 +4,14 @@ Webseite und Spiel laufen unter `https://nixblick.github.io/web.bornheim/`. GitH
 
 ## So funktioniert es
 
-- `.github/workflows/pages.yml` stellt bei jedem Push auf `main` nur die Dateien zusammen, die der Browser braucht: die HTML-Seiten, die Spielmodule, `assets/`, `vendor/`, `data/city.json` und `data/dem.json`, zusammen etwa 25 MB. Werkzeuge, Tests und Notizen landen nicht auf der Seite.
+- `.github/workflows/pages.yml` stellt bei jedem Push auf `main` nur die Dateien zusammen, die der Browser braucht: die HTML-Seiten, die Spielmodule, `assets/`, `vendor/`, `data/tiles/` und `data/dem/` (ganz Frankfurt in 500-m-Kacheln). Werkzeuge, Tests und Notizen landen nicht auf der Seite.
 - Alle Pfade im Spiel sind relativ, das Spiel läuft also im Unterordner `/web.bornheim/`.
 - Spielstände liegen im Browser und hängen an der Adresse.
 
 ## Lizenzen
 
 - Für den eigenen Code gibt es noch keine Lizenzdatei, es gilt also „alle Rechte vorbehalten“.
-- `data/city.json` ist ein Auszug aus OpenStreetMap und steht unter der ODbL.
+- `data/tiles/` ist ein Auszug aus OpenStreetMap und steht unter der ODbL. `data/dem/` stammt aus dem DGM1 Hessen (Datenlizenz Deutschland Zero 2.0).
 - Für Modelle, Texturen und Geländedaten gelten die Lizenzen in `CREDITS.md` und `credits.html`.
 
 ## Grenzen von GitHub Pages

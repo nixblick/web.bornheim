@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <title>Bornheim – Spielen</title>
-<meta name="description" content="Open-World-Spiel im Browser: Frankfurt-Bornheim.">
+<meta name="description" content="Open-World-Spiel im Browser: ganz Frankfurt am Main.">
 <meta name="theme-color" content="#0b0d12">
 <link rel="icon" href="assets/site/icon.svg" type="image/svg+xml">
 <link rel="manifest" href="manifest.webmanifest">
@@ -98,7 +98,7 @@
     <button id="bf">♀ Frau</button>
   </div>
   <button id="go">Rein da</button><button id="cont">Fortsetzen</button>
-  <div class="sub"><button id="s_opts">Einstellungen</button><button id="s_import">Spielstand importieren</button><a href="./">← Startseite</a></div>
+  <div class="sub"><button id="s_opts">Einstellungen</button><button id="s_import">Spielstand importieren</button><button id="s_feedback">🐞 Fehler melden</button><a href="./">← Startseite</a></div>
   <div id="gpuinfo"></div>
   <p>WASD laufen · Maus umschauen · Shift rennen · Leertaste springen<br>
      E Auto klauen / aussteigen · Linksklick angreifen · 1–0 / Mausrad Waffen · R nachladen<br>G Leute sammeln / Sprechchor · V filmen · C Kreativmodus · M Karte · Esc Menü</p>
@@ -114,6 +114,7 @@
   <button id="m_load">Laden (F9)</button>
   <button id="m_restart">Neu starten</button>
   <div class="row2"><button id="m_export">Spielstand exportieren</button><button id="m_import">Importieren</button></div>
+  <button id="m_feedback">🐞 Fehler melden / Idee schicken</button>
   <button id="m_home">Zur Startseite</button>
   <input type="file" id="importfile" accept=".json,application/json" style="display:none">
   <div class="opts">
@@ -156,7 +157,7 @@
       <label>Sprechchöre und Durchsagen vorlesen <input id="o_tts" type="checkbox"></label>
     </div>
     <div class="pane" data-tab="story" style="display:none" id="storypane"></div>
-    <small>Esc Menü · M Karte · H Hupe · C Kreativmodus (Auswahl 1–0, Shift+1–0, ß, Mausrad, Klick) · 1–0 Waffen · Q letzte Waffe · G Leute sammeln / Sprechchor · V filmen · X Dialog weiter · Rechtsklick: Zielen</small>
+    <small>Esc Menü · M Karte · H Hupe · F Laden (einkaufen) · C Kreativmodus (Auswahl 1–0, Shift+1–0, ß, Mausrad, Klick) · 1–0 Waffen · Q letzte Waffe · G Leute sammeln / Sprechchor · V filmen · X Dialog weiter · Rechtsklick: Zielen</small>
   </div>
 </div></div>
 <div id="hud">
@@ -178,5 +179,6 @@
   "three/addons/":"./vendor/three/examples/jsm/"
 }}</script>
 <script type="module" src="game.js"></script>
+<script type="module" src="feedback.js"></script>
 </body>
 </html>

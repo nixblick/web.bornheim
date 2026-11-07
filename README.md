@@ -2,13 +2,13 @@
 
 Spielen: https://nixblick.github.io/web.bornheim/
 
-Open-World-Prototyp im Browser: Frankfurt-Bornheim aus echten OpenStreetMap-Daten,
+Open-World-Spiel im Browser: ganz Frankfurt am Main aus echten OpenStreetMap-Daten und dem Geländemodell DGM1 Hessen,
 Figur (Mann/Frau), Autos klauen, Waffe, Passanten, Polizei. Kein Nachbau, keine Marken.
 
 ## Aufbau
 
 - `index.html`: Webseite (Startseite mit Bildern, Funktionen, Grafikstufen, Steuerung)
-- `play.html` + `game.js`: das Spiel (Welt, Fahren, Passanten, HUD)
+- `play.html` + `game.js`: das Spiel (Welt, Fahren, Passanten, HUD); die Welt lädt 500-m-Kacheln um den Spieler und baut sie schrittweise auf (Zeitbudget je Bild), entfernte Kacheln werden abgebaut
 - `weapons.js`: Waffen, Wurfsachen, Pyro, Farbe, Rauch, Licht, Feuerwerk
 - `demo.js`: Demos, Polizei-Eskalation (Begleitung, Kette, Kessel, Wasserwerfer, Räumung), Social Feed, Ruf, Leute sammeln, Filmen
 - `story.js`: Story-Engine (Kapitel, Ziele, Marker, GPS, Dialoge, Menü) und Story 1 „Bornheim bleibt“ (fünf Kapitel, drei Enden)
@@ -82,10 +82,13 @@ Dann http://localhost:8000 öffnen.
 
 ## Daten
 
-- `data/bornheim.osm.json` – Rohdaten von Overpass (nicht im Git). Neu holen: `python -I tools/fetch_osm.py`
-- `data/city.json` – daraus erzeugte Spielgeometrie in Metern, eingecheckt.
-- `data/dem.json` – Geländehöhen (EU-DEM 25 m über opentopodata.org), eingecheckt. Neu holen: `python -I tools/fetch_dem.py`
-  Neu bauen: `python -I tools/build_city.py`
+Ganz Frankfurt in Kacheln zu 500 m (Ursprung bleibt Bornheim, 50.129441 N / 8.7096938 O):
+
+1. `python -I tools/fetch_osm_ffm.py` holt die OSM-Daten der Stadt in Zellen von ca. 2 km über Overpass nach `data/raw/` (nicht im Git; zu große Zellen werden automatisch geviertelt, abgebrochene Läufe setzen fort).
+2. `python -I tools/fetch_dgm_ffm.py` holt das Gelände (DGM1 Hessen, 4-m-Raster) je Kachel nach `data/dem/<tx>_<tz>.bin` (126 x 126 Werte, Uint16).
+3. `python -I tools/build_tiles.py` erzeugt `data/tiles/<tx>_<tz>.json` und `data/tiles/index.json`. Brücken- und Rampenhöhen werden dabei über die ganze Stadt berechnet. `tools/build_city.py` enthält die Umwandlung OSM -> Spielobjekte.
+
+`data/tiles/` und `data/dem/` sind eingecheckt, damit die Seite ohne Server-Logik läuft.
 
 ## Veröffentlichung
 

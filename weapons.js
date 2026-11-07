@@ -115,6 +115,7 @@ export function initWeapons(X) {
     shootPose(d.snd); camShake(cur === 'shotgun' ? 0.16 : cur === 'rifle' ? 0.07 : 0.05); player.mesh.userData.recoil = cur === 'shotgun' ? 0.5 : 0.22;
     const muzzle = new V3(); model.userData.muzzle.getWorldPosition(muzzle);
     const moving = keys.KeyW || keys.KeyA || keys.KeyS || keys.KeyD; const spread = d.spread * (player.aimHold ? 0.55 : 1) * (moving ? 1.7 : 1) + heat * (d.auto ? 0.02 : 0.006);
+    if (X.wakeParkedRay) { _ray.setFromCamera(_ndc.set(0, 0), camera); X.wakeParkedRay(_ray.ray.origin, _ray.ray.direction, d.range); }
     const cands = candidates(d.range); const n = d.pellets || 1;
     for (let k = 0; k < n; k++) {
       _ndc.set(rnd(-1, 1) * spread, rnd(-1, 1) * spread); _ray.setFromCamera(_ndc, camera); _ray.far = d.range;
@@ -141,6 +142,7 @@ export function initWeapons(X) {
     const fx = Math.sin(player.yaw), fz = Math.cos(player.yaw); let best = null, bd = d.range + 0.3;
     for (const p of peds) { const u = p.userData; if (u.state === 'dead' || u.hp <= 0) continue; const dx = p.position.x - player.pos.x, dz = p.position.z - player.pos.z, L = Math.hypot(dx, dz); if (L > bd || Math.abs(p.position.y - player.pos.y) > 1.6) continue; if ((dx * fx + dz * fz) / (L || 1) < 0.35) continue; bd = L; best = p; }
     if (best) { const dir = new V3(fx, 0, fz); sfx('punch', cur === 'bat' ? 1 : 0.7); hitTarget(best, d.dmg, dir); if (best.userData.state !== 'dead') { moveWithCollision(best.position, fx * (cur === 'bat' ? 1.1 : 0.5), fz * (cur === 'bat' ? 1.1 : 0.5), 0.3); if (cur === 'bat') stun(best, 'hit', 2.2); } camShake(0.08); return; }
+    if (cur === 'bat' && X.wakeParked) X.wakeParked(player.pos, 3.2);
     if (cur === 'bat') for (const c of cars) { if (c === player.car || c.userData.mode === 'wreck') continue; const dx = c.position.x - player.pos.x, dz = c.position.z - player.pos.z, L = Math.hypot(dx, dz); if (L > 3.4 || (dx * fx + dz * fz) / L < 0.3) continue;
       const wp = new V3(player.pos.x + fx * 1.4, player.pos.y + 0.9, player.pos.z + fz * 1.4); dentCar(c, wp, new V3(fx, -0.2, fz), 0.13); c.userData.hp -= 5; sfx('bump', 0.9); camShake(0.1); emit('vandal', c.position, { car: c }); if (c.userData.mode === 'ai') { c.userData.speed = 0; } return; }
   }
@@ -243,6 +245,7 @@ export function initWeapons(X) {
 
   function molotovHit(pos, hitObj, p) {
     sfx('glass', clamp(1.2 - pos.distanceTo(player.pos) / 70, 0.1, 1)); sparks(pos, 0xffa040, 18, 5); flashLight(pos, 0xff8a2a, 90, 0.4);
+    if (X.wakeParked && !(hitObj && cars.includes(hitObj))) { const w = X.wakeParked(pos, 3.5); if (w.length && !hitObj) hitObj = w[0]; }
     if (X.ignite) { if (hitObj && hitObj !== 'player' && cars.includes(hitObj)) X.ignite(hitObj, { I: 0.6, by: p.who }); else X.ignite(pos, { I: 0.9, life: 9, by: p.who }); for (const c of cars) if (c !== hitObj && !c.userData.fire && c.position.distanceTo(pos) < 2.4) X.ignite(c, { I: 0.4, by: p.who }); }
     if (hitObj === 'player') X.hurtPlayer('fire', 20); else if (hitObj && peds.includes(hitObj)) { damage(hitObj, 35, new V3(0, 0, 1), p.who === 'player' ? 'player' : 'npc'); }
     for (const q of peds) { const u = q.userData; if (u.state === 'walk' && q.position.distanceTo(pos) < 14) { u.state = 'flee'; u.fleeT = 6; } }
@@ -285,6 +288,7 @@ export function initWeapons(X) {
     if (d < 45) camShake(0.7 * (1 - d / 45));
     if (!player.car && d < 8) X.hurtPlayer('boom', 95 * (1 - d / 8));
     for (const p of peds) { const u = p.userData; const dd = p.position.distanceTo(pos); if (dd < 8 && u.state !== 'dead') { const dir = new V3().subVectors(p.position, pos).setY(0).normalize(); damage(p, 150 * (1 - dd / 8), dir, who === 'player' ? 'player' : 'npc'); if (u.state === 'dead') { u.fly = new V3(dir.x * 8, 6 + rnd(0, 3), dir.z * 8); u.spin = rnd(-6, 6); } } else if (dd < 30 && u.state === 'walk') { u.state = 'flee'; u.fleeT = 8; } }
+    if (X.wakeParked) X.wakeParked(pos, 7);
     for (const c of [...cars]) { const dd = c.position.distanceTo(pos); if (c.userData.mode === 'wreck' || dd > 7) continue; const src = who === 'player' ? 'player' : 'npc'; if (dd < 4.5) explode(c, src); else { c.userData.hp -= 45; if (c.userData.hp <= 0) explode(c, src); } }
     const g = new THREE.Mesh(new THREE.CircleGeometry(1.8, 16), scorchMat); g.rotation.x = -Math.PI / 2; g.position.set(pos.x, floorAt(pos.x, pos.z, pos.y + 0.5) + 0.03, pos.z); scene.add(g); splats.push(g); trimSplats();
     if (who === 'player') raiseWanted(2); emit('grenade', pos, { who });
