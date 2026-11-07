@@ -1192,7 +1192,7 @@ function makeCarBox(police = false) {
   g.userData = { speed: 0, heading: 0, hp: 100, police, driver: null, mode: 'parked', bar, wheels, tlMat, cone, type: T, blMat, blink: 0, blinkT: 0 };
   return g;
 }
-const cars = [], peds = [], particles = [], shootables = [], pickups = [], trams = [];
+const cars = [], peds = [], shootables = [], pickups = [], trams = [];
 const roadsDrivable = [], pedRoads = []; // Straßen der gebauten Kacheln
 function randomRoadPoint(r) {
   const i = (Math.random() * (r.p.length - 1)) | 0; const [ax, az] = r.p[i], [bx, bz] = r.p[i + 1]; const t = Math.random();
@@ -1512,13 +1512,62 @@ function explode(c, src = 'player') {
   if (src === 'player') raiseWanted(1.5);
   for (const f of X.listeners) f('carExploded', c.position, { car: c });
 }
-// Partikel: Geometrie geteilt, Material pro Partikel (Opazität) und beim Abbau freigegeben – vorher ein Leck von ~8 Geometrien pro Sekunde je rauchendem Auto
-const SMOKE_GEO = new THREE.BoxGeometry(0.4, 0.4, 0.4), BURST_GEO = new THREE.BoxGeometry(0.2, 0.2, 0.2);
-function smoke(pos, color) { const m = new THREE.Mesh(SMOKE_GEO, new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.5 })); m.position.copy(pos); m.userData.v = new THREE.Vector3(rnd(-0.4, 0.4), rnd(1.2, 2.2), rnd(-0.4, 0.4)); m.userData.life = rnd(0.8, 1.6); m.userData.smoke = true; scene.add(m); particles.push(m); }
-function burst(pos, color, n, spread) {
-  const mat = new THREE.MeshBasicMaterial({ color }); mat.userData.refs = n; const geo = BURST_GEO;
-  for (let i = 0; i < n; i++) { const m = new THREE.Mesh(geo, mat); m.position.copy(pos); m.userData.v = new THREE.Vector3(rnd(-1, 1), rnd(0.5, 2), rnd(-1, 1)).multiplyScalar(spread); m.userData.life = rnd(0.4, 1.2); scene.add(m); particles.push(m); }
-}
+// ---------- Partikel-Pool: Rauch, Spray, Funken und Explosionen als ein instanziertes Quad = ein Draw-Call ----------
+// Vorher: je Partikel ein Sprite bzw. Mesh mit eigenem Material (bis 520 Sprites + Würfel). Jetzt: feste Puffer, Farbe/Deckkraft/Größe je Instanz,
+// vormultipliziertes Alpha (Alpha 0 = additiv für Flammen und Funken). Obergrenze bei schwacher GPU 150, sonst 600; voll → das am weitesten verbrauchte Partikel wird ersetzt.
+const FX = (() => {
+  const N = WEAK_GPU ? 150 : 600;
+  const tex = canvasTex(64, 64, (ctx, w, h) => { const g = ctx.createRadialGradient(32, 32, 0, 32, 32, 32); g.addColorStop(0, 'rgba(255,255,255,0.95)'); g.addColorStop(0.45, 'rgba(255,255,255,0.55)'); g.addColorStop(1, 'rgba(255,255,255,0)'); ctx.fillStyle = g; ctx.fillRect(0, 0, w, h); }); tex.wrapS = tex.wrapT = THREE.ClampToEdgeWrapping; tex.anisotropy = 1;
+  const quad = new THREE.PlaneGeometry(1, 1); const geo = new THREE.InstancedBufferGeometry(); geo.index = quad.index; geo.setAttribute('position', quad.attributes.position); geo.setAttribute('uv', quad.attributes.uv); geo.boundingSphere = new THREE.Sphere(new THREE.Vector3(), 1e9);
+  const aPos = new THREE.InstancedBufferAttribute(new Float32Array(N * 3), 3), aCol = new THREE.InstancedBufferAttribute(new Float32Array(N * 4), 4), aPar = new THREE.InstancedBufferAttribute(new Float32Array(N * 3), 3); // iCol: rgb + additiv, iPar: Größe, Deckkraft, Drehung
+  for (const a of [aPos, aCol, aPar]) a.setUsage(THREE.DynamicDrawUsage); geo.setAttribute('iPos', aPos); geo.setAttribute('iCol', aCol); geo.setAttribute('iPar', aPar); geo.instanceCount = 0;
+  const mat = new THREE.ShaderMaterial({ uniforms: THREE.UniformsUtils.merge([THREE.UniformsLib.fog, { map: { value: null } }]), fog: true, transparent: true, depthWrite: false, blending: THREE.CustomBlending, blendSrc: THREE.OneFactor, blendDst: THREE.OneMinusSrcAlphaFactor, blendEquation: THREE.AddEquation,
+    vertexShader: `attribute vec3 iPos; attribute vec4 iCol; attribute vec3 iPar; varying vec2 vUv; varying vec4 vCol; varying float vA;
+      #include <fog_pars_vertex>
+      void main() { vUv = uv; vCol = iCol; vA = iPar.y; float c = cos(iPar.z), s = sin(iPar.z); vec2 q = vec2(position.x * c - position.y * s, position.x * s + position.y * c) * iPar.x;
+        vec4 mvPosition = modelViewMatrix * vec4(iPos, 1.0); mvPosition.xy += q; gl_Position = projectionMatrix * mvPosition;
+      #include <fog_vertex>
+      }`,
+    fragmentShader: `uniform sampler2D map; varying vec2 vUv; varying vec4 vCol; varying float vA;
+      #include <fog_pars_fragment>
+      void main() { float a = texture2D(map, vUv).a * vA; if (a < 0.004) discard; vec3 rgb = vCol.rgb;
+      #ifdef USE_FOG
+        float ff = smoothstep(fogNear, fogFar, vFogDepth); rgb = mix(rgb, fogColor * (1.0 - vCol.a), ff);
+      #endif
+        gl_FragColor = vec4(rgb, 1.0);
+      #include <colorspace_fragment>
+        gl_FragColor = vec4(gl_FragColor.rgb * a, a * (1.0 - vCol.a)); }` });
+  mat.uniforms.map.value = tex;
+  const mesh = new THREE.Mesh(geo, mat); mesh.frustumCulled = false; mesh.renderOrder = 10; mesh.visible = false; mesh.userData.fxPool = true; mesh.userData.noChunk = true; scene.add(mesh);
+  const F = () => new Float32Array(N); const px = F(), py = F(), pz = F(), vx = F(), vy = F(), vz = F(), tt = F(), lf = F(), sz = F(), gr = F(), op = F(), rt = F(), cr = F(), cg = F(), cb = F(); const kind = new Uint8Array(N), addv = new Uint8Array(N); let n = 0; const C = new THREE.Color();
+  const ALL = [px, py, pz, vx, vy, vz, tt, lf, sz, gr, op, rt, cr, cg, cb, kind, addv];
+  // kind 0 = Puff (treibt, wächst, blendet ein und aus), 1 = Motorrauch (steigt, wächst, verblasst), 2 = Funke (fällt, prallt am Boden)
+  function spawn(k, x, y, z, ux, uy, uz, size, life, grow, maxOp, color, additive) {
+    let i; if (n < N) i = n++; else { let bi = 0, bk = -1; for (let j = 0; j < N; j++) { const f = tt[j] / lf[j]; if (f > bk) { bk = f; bi = j; } } i = bi; }
+    C.setHex(color); if (!additive && k !== 2) C.multiplyScalar((0.22 + 0.78 * (world.day ?? 1)) * (0.75 + Math.random() * 0.35)); // Rauch ist nicht selbstleuchtend
+    px[i] = x; py[i] = y; pz[i] = z; vx[i] = ux; vy[i] = uy; vz[i] = uz; tt[i] = 0; lf[i] = Math.max(0.05, life); sz[i] = size; gr[i] = grow; op[i] = maxOp; rt[i] = Math.random() * 6.28; cr[i] = C.r; cg[i] = C.g; cb[i] = C.b; kind[i] = k; addv[i] = additive ? 1 : 0; return i;
+  }
+  function update(dt) {
+    const damp = Math.pow(0.55, dt);
+    for (let i = 0; i < n; i++) {
+      tt[i] += dt; if (tt[i] >= lf[i]) { n--; if (i !== n) for (const a of ALL) a[i] = a[n]; i--; continue; }
+      const k = kind[i];
+      if (k === 0) { vx[i] *= damp; vy[i] = vy[i] * damp + 0.25 * dt; vz[i] *= damp; const q = tt[i] / lf[i]; sz[i] += gr[i] * dt * (1 - q * 0.6); }
+      else if (k === 2) vy[i] -= 9 * dt; else sz[i] += gr[i] * dt;
+      px[i] += vx[i] * dt; py[i] += vy[i] * dt; pz[i] += vz[i] * dt;
+      if (k !== 0) { const gy = TH(px[i], pz[i]); if (py[i] < gy) { py[i] = gy; vx[i] *= 0.3; vy[i] *= 0.3; vz[i] *= 0.3; } }
+    }
+    const P = aPos.array, Q = aCol.array, R = aPar.array;
+    for (let i = 0; i < n; i++) { const q = tt[i] / lf[i], k = kind[i]; const a = k === 0 ? op[i] * Math.min(1, tt[i] * 4) * (1 - q) * (1 - q * 0.3) : k === 1 ? Math.min(0.5, (lf[i] - tt[i]) * 0.35) : (q < 0.75 ? 1 : (1 - q) * 4);
+      P[i * 3] = px[i]; P[i * 3 + 1] = py[i]; P[i * 3 + 2] = pz[i]; Q[i * 4] = cr[i]; Q[i * 4 + 1] = cg[i]; Q[i * 4 + 2] = cb[i]; Q[i * 4 + 3] = addv[i]; R[i * 3] = sz[i]; R[i * 3 + 1] = a; R[i * 3 + 2] = rt[i]; }
+    geo.instanceCount = n; mesh.visible = n > 0;
+    if (n) { for (const [a, w] of [[aPos, 3], [aCol, 4], [aPar, 3]]) { a.clearUpdateRanges(); a.addUpdateRange(0, n * w); a.needsUpdate = true; } }
+  }
+  return { spawn, update, mesh, get count() { return n; }, max: N };
+})();
+function puff(pos, color, size, life, vel, grow, maxOp, additive) { return FX.spawn(0, pos.x, pos.y, pos.z, vel.x, vel.y, vel.z, size, life, grow, maxOp, color, additive); }
+function smoke(pos, color) { FX.spawn(1, pos.x, pos.y, pos.z, rnd(-0.4, 0.4), rnd(1.2, 2.2), rnd(-0.4, 0.4), 0.4, rnd(0.8, 1.6), 0.6, 0.5, color, false); }
+function burst(pos, color, n, spread) { for (let i = 0; i < n; i++) FX.spawn(2, pos.x, pos.y, pos.z, rnd(-1, 1) * spread, rnd(0.5, 2) * spread, rnd(-1, 1) * spread, 0.3, rnd(0.4, 1.2), 0, 1, color, false); }
 const shadowSnap = { x: 1e9, z: 1e9, n: 0 };
 let shakeT = 0; function camShake(t) { shakeT = Math.max(shakeT, t); }
 function raiseWanted(n) { if (opts.police === false) return; player.wanted = clamp(player.wanted + n, 0, 5); player.wantedTimer = 15; }
@@ -1804,7 +1853,7 @@ $('cont').onclick = () => { let d = null; try { d = JSON.parse(localStorage.getI
 { const bs = CITY.roads.filter(r => r.n === 'Berger Straße').sort((a, b) => Math.hypot(a.p[0][0] - 150, a.p[0][1] + 100) - Math.hypot(b.p[0][0] - 150, b.p[0][1] + 100)); const r = bs[0] || CITY.roads[0]; const [ax, az] = r.p[0], [bx, bz] = r.p[1 % r.p.length];
   const l = Math.hypot(bx - ax, bz - az) || 1; const nx = -(bz - az) / l, nz = (bx - ax) / l; player.pos.set((ax + bx) / 2 + nx * 2, 0, (az + bz) / 2 + nz * 2); player.pos.y = TH(player.pos.x, player.pos.z); camYaw.v = Math.atan2(bx - ax, bz - az) + Math.PI; }
 while (solidAt(player.pos.x, player.pos.z) >= 0) player.pos.x += 3;
-const X = { THREE, scene, camera, renderer, player, peds, cars, shootables, particles, pickups, keys, camYaw, camPitch, opts, world, weather, CITY, TH, solidAt, solidAtH, floorAt, nearestEdge, edgeNormal, moveWithCollision, makeHuman, makeCar, spawnCar, spawnPedAt, playAnim, animateWalk, damage, explode, burst, smoke, wakeParked, wakeParkedRay, sfx, SND, showMsg, raiseWanted, camShake, canvasTex, tracerMat, makeGun, dentCar, rnd, clamp, pick, lerpAngle, distSegSq, pointInPoly, randomRoadPoint, roadsDrivable, driveCar, carFx, carTerrain, exitCar, syncHand, CHAR, coneTex, hurtPlayer, card, closeMenu, saveGame, lockMouse, disposeCar,
+const X = { THREE, scene, camera, renderer, player, peds, cars, shootables, pickups, FX, puff, keys, camYaw, camPitch, opts, world, weather, CITY, TH, solidAt, solidAtH, floorAt, nearestEdge, edgeNormal, moveWithCollision, makeHuman, makeCar, spawnCar, spawnPedAt, playAnim, animateWalk, damage, explode, burst, smoke, wakeParked, wakeParkedRay, sfx, SND, showMsg, raiseWanted, camShake, canvasTex, tracerMat, makeGun, dentCar, rnd, clamp, pick, lerpAngle, distSegSq, pointInPoly, randomRoadPoint, roadsDrivable, driveCar, carFx, carTerrain, exitCar, syncHand, CHAR, coneTex, hurtPlayer, card, closeMenu, saveGame, lockMouse, disposeCar,
   listeners: [], mmHooks: MM_HOOKS, menuHooks: MENU_HOOKS, rallyLimit: 8, get creative() { return creative; }, creativeSpawnerActive, pedRoads: () => pedRoads, roadsNear: (x, z, R, car) => roadsNear(x, z, R, car), streetAt: (x, z) => streetNameAt(x, z), barrierNear: (x, z, r) => barrierHit(x, z, r), storyBusy: () => STORY ? STORY.busy : false };
 var WPN = initWeapons(X); var DEMO = initDemo(X, WPN); var FIRE = initFire(X, WPN, DEMO); var STORY = initStory(X, WPN, DEMO, FIRE); var SHOPS = initShops(X, WPN); Object.assign(X, { setPocket: p => { POCKET = p; camera.userData.init = false; }, inPocket, streamInit, roofHeight, WORLD, TILES, TS, WIDX }); var INTERIORS = initInteriors(X, WPN, DEMO, SHOPS);
 for (let i = 0; i < 200 && cars.length < 60; i++) spawnCar(false, player.pos, 10, 260);
@@ -1905,8 +1954,7 @@ function update(dt) {
   }
   if (!POCKET) { const pw = Math.round(55 * (opts.peds ?? 1)); for (let k = 0; k < 2 && peds.length < pw; k++) spawnPed(player.pos); if (peds.length > pw + 3) { const far = peds.find(p => { const u = p.userData; return !u.cop && !u.demo && !u.keep && !u.follow && u.state !== 'arrested' && u.state !== 'stunned' && p.position.distanceTo(player.pos) > 90; }); if (far) { scene.remove(far); peds.splice(peds.indexOf(far), 1); unshoot(far); } } }
   updatePickups(dt); updateTrams(dt); WPN.update(dt); DEMO.update(dt); FIRE.update(dt); STORY.update(dt); updateFx(dt);
-  // Partikel
-  for (let i = particles.length - 1; i >= 0; i--) { const p = particles[i]; p.userData.life -= dt; if (p.userData.smoke) { p.scale.addScalar(dt * 1.5); p.material.opacity = Math.max(0, p.userData.life * 0.35); } else p.userData.v.y -= 9 * dt; p.position.addScaledVector(p.userData.v, dt); const gy = TH(p.position.x, p.position.z); if (p.position.y < gy) { p.position.y = gy; p.userData.v.multiplyScalar(0.3); } if (p.userData.life <= 0) { scene.remove(p); particles.splice(i, 1); const m = p.material; if (m.userData.refs !== undefined) { if (--m.userData.refs <= 0) m.dispose(); } else m.dispose(); } }
+  FX.update(dt); // Partikel (ein Pool, ein Draw-Call)
   // Fahndung
   if (creative.on) player.wanted = 0;
   if (player.wanted > 0) { player.wantedTimer -= dt; if (player.wantedTimer <= 0) player.wanted = Math.max(0, player.wanted - dt * 0.25); const want = Math.min(Math.floor(player.wanted) + 1, 5); let n = 0; for (const c of cars) if (c.userData.mode === 'police') n++; if (n < want && Math.random() < dt * 0.5) spawnCar(true, player.pos); }
@@ -1980,7 +2028,7 @@ function updateFx(dt) { for (const k of ['spray', 'water', 'paint']) { fxEl[k] =
 let cardT = null; function card(title, sub, sec = 4) { const el = $('card'); el.innerHTML = `<h2>${title}</h2>${sub ? '<p>' + sub + '</p>' : ''}`; el.style.display = 'block'; el.style.opacity = 1; clearTimeout(cardT); cardT = setTimeout(() => { el.style.opacity = 0; cardT = setTimeout(() => el.style.display = 'none', 600); }, sec * 1000); }
 function respawn() { player.dead = false; player.hp = 100; player.wanted = 0; msgEl.style.display = 'none'; for (const c of cars) if (c.userData.police && c !== player.car) c.userData.mode = 'parked'; }
 
-window.G = { INTERIORS, explode, makeBike, SHOPS, TILES, WORLD, WIDX, streamUpdate, streamInit, buildTileNow, TS, WPN, DEMO, STORY, FIRE, X, card, hurtPlayer, composerRef: () => composer,  autoQuality, groundH, dentCar, deckAt, surfAt, signalPoles, treeSpots, lampSpots, pushOffRoads, onOtherRoad, floorAt, solidAtH, solidAt, roofHeight, camShake,  CHAR, CAR_TPL, playAnim, makeHuman, makeCar, makeGun, applyQuality,  staticParked, chunkStatic,  saveGame, loadGame, world, opts, pickups, weather, trams, scene, cars, peds, player, camera, camYaw, camPitch, keys, CITY, DEM, TH, renderer, sun, hemi, THREE, shoot, toggleCar, update, toggleCreative, creative, creativePlace };
+window.G = { INTERIORS, explode, makeBike, FX, puff, burst, smoke, SHOPS, TILES, WORLD, WIDX, streamUpdate, streamInit, buildTileNow, TS, WPN, DEMO, STORY, FIRE, X, card, hurtPlayer, composerRef: () => composer,  autoQuality, groundH, dentCar, deckAt, surfAt, signalPoles, treeSpots, lampSpots, pushOffRoads, onOtherRoad, floorAt, solidAtH, solidAt, roofHeight, camShake,  CHAR, CAR_TPL, playAnim, makeHuman, makeCar, makeGun, applyQuality,  staticParked, chunkStatic,  saveGame, loadGame, world, opts, pickups, weather, trams, scene, cars, peds, player, camera, camYaw, camPitch, keys, CITY, DEM, TH, renderer, sun, hemi, THREE, shoot, toggleCar, update, toggleCreative, creative, creativePlace };
 let fpsN = 0, fpsT = 0;
 renderer.setAnimationLoop(() => {
   fpsN++; const tn = performance.now(); if (tn - fpsT > 500) { const fe = document.getElementById('fps'); if (fe && opts.fps) fe.textContent = Math.round(fpsN * 1000 / (tn - fpsT)) + ' fps'; fpsN = 0; fpsT = tn; }

@@ -257,17 +257,7 @@ export function initWeapons(X) {
     if (p.who === 'player') raiseWanted(1.2); emit('molotov', pos, { who: p.who });
   }
   // ---------- Effekte: Rauch, Funken, Licht ----------
-  const puffTex = canvasTex(64, 64, (ctx, w, h) => { const gr = ctx.createRadialGradient(32, 32, 0, 32, 32, 32); gr.addColorStop(0, 'rgba(255,255,255,0.95)'); gr.addColorStop(0.45, 'rgba(255,255,255,0.55)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); ctx.fillStyle = gr; ctx.fillRect(0, 0, w, h); });
-  const puffs = [];
-  function puff(pos, color, size, life, vel, grow, maxOp, additive) {
-    if (puffs.length > 520) return null; const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: puffTex, color, transparent: true, depthWrite: false, opacity: 0, blending: additive ? THREE.AdditiveBlending : THREE.NormalBlending }));
-    if (!additive) s.material.color.multiplyScalar((0.22 + 0.78 * (X.world.day ?? 1)) * (0.75 + Math.random() * 0.35)); // Rauch ist nicht selbstleuchtend
-    s.position.copy(pos); s.scale.setScalar(size); s.material.rotation = Math.random() * 6; s.userData = { v: vel, life, t: 0, grow, op: maxOp }; scene.add(s); puffs.push(s); return s;
-  }
-  function updatePuffs(dt) {
-    for (let i = puffs.length - 1; i >= 0; i--) { const s = puffs[i], u = s.userData; u.t += dt; s.position.addScaledVector(u.v, dt); u.v.multiplyScalar(Math.pow(0.55, dt)); u.v.y += 0.25 * dt; const k = u.t / u.life; s.scale.addScalar(u.grow * dt * (1 - k * 0.6)); s.material.opacity = u.op * Math.min(1, u.t * 4) * (1 - k) * (1 - k * 0.3);
-      if (u.t >= u.life) { scene.remove(s); s.material.dispose(); puffs.splice(i, 1); } }
-  }
+  const puff = X.puff; // Rauch-/Spray-Puffs laufen über den Partikel-Pool in game.js (ein Draw-Call statt bis zu 520 Sprites mit eigenem Material)
   // Lichter nur sichtbar, solange sie leuchten: unsichtbare Punktlichter kosten im Shader nichts
   const lights = []; for (let i = 0; i < 2; i++) { const l = new THREE.PointLight(0xffffff, 0, 26, 2); l.castShadow = false; l.visible = false; scene.add(l); lights.push({ l, t: 0, dur: 1, peak: 0, busy: 0 }); }
   function flashLight(pos, color, peak, dur) { const L = lights.filter(x => !x.busy).sort((a, b) => a.t - b.t)[0]; if (!L) return; L.l.position.copy(pos).setY(pos.y + 1); L.l.color.setHex(color); L.peak = peak; L.dur = dur; L.t = dur; }
@@ -334,10 +324,10 @@ export function initWeapons(X) {
     if (model && model.userData.piv) { if (swingT > 0) { swingT -= dt; const k = 1 - swingT / 0.34; model.userData.piv.rotation.x = k < 0.35 ? 0.7 + k / 0.35 * 0.5 : 1.2 - (k - 0.35) / 0.65 * 3.1; } else model.userData.piv.rotation.x += (0.7 - model.userData.piv.rotation.x) * Math.min(1, dt * 10); }
     for (const p of peds) if (p.userData.state === 'stunned') updateStunned(p, dt);
     for (let i = wires.length - 1; i >= 0; i--) { wires[i].t -= dt; if (wires[i].t <= 0) { scene.remove(wires[i].l); wires[i].l.geometry.dispose(); wires.splice(i, 1); } }
-    updateProj(dt); updatePuffs(dt); updateLights(dt); updateFireworks(dt); drawBar();
+    updateProj(dt); updateLights(dt); updateFireworks(dt); drawBar();
   }
   function inSmoke(pos) { for (const p of projs) if (p.kind === 'smoke' && p.t > 2 && p.t < 24 && p.m.position.distanceTo(pos) < 5.5) return true; return false; }
 
   reset();
-  return { quick, DEF, ORDER, inv, give, reset, save, load, confiscate, lock, allowed, get locked() { return lockMode; }, select, slotKey, cycle, press, update, reload, addAmmo, attach, hud, canAim, stun, spawnProj, sprayCone, puff, sparks, bang, boom, flashLight, firework, addSplat, paintTargets, inSmoke, buildModel, PAINT, get cur() { return cur; }, get trigger() { return trigger; }, projs, puffs };
+  return { quick, DEF, ORDER, inv, give, reset, save, load, confiscate, lock, allowed, get locked() { return lockMode; }, select, slotKey, cycle, press, update, reload, addAmmo, attach, hud, canAim, stun, spawnProj, sprayCone, puff, sparks, bang, boom, flashLight, firework, addSplat, paintTargets, inSmoke, buildModel, PAINT, get cur() { return cur; }, get trigger() { return trigger; }, projs };
 }

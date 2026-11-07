@@ -222,6 +222,13 @@ async function physikChecks(add) {
       add('Ragdoll liegt auf dem Brückendeck, fester Schritt stabil bei 10 Hz', !!R && nan === 0 && below === 0, R ? `${below} von ${R.P.length} Punkten unter dem Boden, ${nan} NaN` : 'kein Ragdoll (Modell ohne Knochen?)'); G.DEMO.removePed(h); }
       else add('Fußgänger auf der Brücke fällt nicht durch (Flucht)', false, 'spawnPedAt lieferte nichts'); }
     else add('Fußgänger auf der Brücke fällt nicht durch (Flucht)', false, 'keine Brücke in den gebauten Kacheln'); }
+  // 5) Partikel: Explosion, Funken, Motorrauch und Spray laufen über einen Pool (ein instanziertes Quad = ein Draw-Call), keine Sprites je Partikel
+  { const [ox, oz] = openPlace(); const pos = new T3.Vector3(ox, G.TH(ox, oz) + 1, oz); const sprites0 = G.scene.children.filter(o => o.isSprite).length;
+    G.WPN.boom(pos.clone(), 'test'); G.burst(pos.clone(), 0xff8800, 30, 4); G.smoke(pos.clone(), 0x888888); G.puff(pos.clone(), 0xf2f8ff, 0.5, 0.6, new T3.Vector3(0, 2, 0), 2, 0.4, false); run(2);
+    const sprites1 = G.scene.children.filter(o => o.isSprite).length; const n = G.FX.count; G.camera.position.copy(pos).add(new T3.Vector3(0, 3, 12)); G.camera.lookAt(pos); G.camera.updateMatrixWorld();
+    G.renderer.render(G.scene, G.camera); const c1 = G.renderer.info.render.calls; G.FX.mesh.visible = false; G.renderer.render(G.scene, G.camera); const c0 = G.renderer.info.render.calls; G.FX.mesh.visible = true; G.camera.userData.init = false;
+    add('Partikel (Explosion, Funken, Rauch, Spray) als ein Draw-Call aus dem Pool', n >= 60 && c1 - c0 === 1 && sprites1 === sprites0 && G.FX.count <= G.FX.max, `${n} Partikel im Pool (max ${G.FX.max}), ${c1 - c0} Draw-Call(s) für die Partikel, Sprites ${sprites0} → ${sprites1}`);
+    run(600); add('Partikel-Pool leert sich wieder', G.FX.count < 20, G.FX.count + ' Partikel nach 10 s'); }
   G.opts.god = god; clear();
 }
 // Gerade Strecke ohne Zaun und Parkreihe bis kurz vor das Gebäude
