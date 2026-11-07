@@ -55,7 +55,10 @@
   #money{position:absolute;right:20px;top:52px;font-size:20px;font-weight:700;color:#8fe08f;text-shadow:0 1px 4px #000}
   #bigmap{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);display:none;border:2px solid #fff6;border-radius:12px;box-shadow:0 0 40px #000;z-index:5}
   #menu{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:#000a;z-index:20}
-  #menu .box{background:#161a24;border:1px solid #333a4a;border-radius:14px;padding:26px 30px;min-width:340px;color:#eee}
+  #menu .box{background:#161a24;border:1px solid #333a4a;border-radius:14px;padding:22px 26px;min-width:340px;color:#eee;display:grid;grid-template-columns:230px minmax(0,1fr);gap:24px;width:min(1000px,96vw);max-height:92vh;overflow:auto;box-sizing:border-box}
+  #menu .mside{min-width:0}#menu .opts{min-width:0}#menu .tabs .sep{font-size:11px;letter-spacing:2px;color:#8a93a8;align-self:center;margin:0 4px 0 10px;text-transform:uppercase}
+  #menu #progpane table,#menu #keyspane table{width:100%;font-size:13px;border-collapse:collapse}#menu #progpane td,#menu #keyspane td{padding:3px 0;vertical-align:top}#menu #progpane td:first-child,#menu #keyspane td:first-child{color:#aab;width:42%}#menu #progpane h3{margin:12px 0 6px;font-size:13px;letter-spacing:2px;color:#ffd84a}#menu #progpane .zl{columns:3;font-size:12px;line-height:1.55}#menu #progpane .zl span{display:block}#menu #progpane .zl .no{opacity:.35}#menu kbd{background:#2a3040;border-radius:4px;padding:1px 6px;font:600 12px system-ui;color:#fff}
+  @media (max-width:760px){#menu .box{grid-template-columns:1fr}}
   #menu h2{margin:0 0 14px;font-size:22px;letter-spacing:2px}
   #menu button{display:block;width:100%;margin:6px 0;padding:10px;border:0;border-radius:8px;background:#2a3040;color:#eee;font-size:15px;cursor:pointer}
   #menu button:disabled{opacity:.4}
@@ -63,7 +66,7 @@
   #menu label{display:flex;justify-content:space-between;align-items:center;font-size:13px;margin:8px 0;gap:12px}
   #menu input[type=range]{width:160px}
   #menu select{background:#2a3040;color:#eee;border:0;padding:4px 8px;border-radius:6px}
-  #menu .opts{border-top:1px solid #333a4a;margin-top:14px;padding-top:10px}
+  #menu .opts{border-left:1px solid #333a4a;padding-left:22px}@media (max-width:760px){#menu .opts{border-left:0;padding-left:0;border-top:1px solid #333a4a;padding-top:10px}}
   #menu small{opacity:.6;font-size:11px}
   #cont{background:#2a3040;color:#eee;border:0;padding:14px 28px;border-radius:30px;font-size:16px;cursor:pointer;margin-left:10px;display:none}
   #menu .tabs{display:flex;gap:4px;margin-bottom:10px;flex-wrap:wrap}
@@ -122,6 +125,7 @@
 <div id="flash"></div><div class="fx" id="fx_spray"></div><div class="fx" id="fx_water"></div><div class="fx" id="fx_paint"></div><div id="card"></div>
 <canvas id="bigmap"></canvas>
 <div id="menu"><div class="box">
+  <div class="mside">
   <h2>PAUSE</h2>
   <button id="m_resume" class="y">Weiter</button>
   <button id="m_story">📖 Story wählen</button>
@@ -132,9 +136,12 @@
   <button id="m_feedback">🐞 Fehler melden / Idee schicken</button>
   <button id="m_home">Zur Startseite</button>
   <input type="file" id="importfile" accept=".json,application/json" style="display:none">
+  </div>
   <div class="opts">
-    <div class="tabs"><button data-tab="grafik" class="on">Grafik</button><button data-tab="kamera">Kamera</button><button data-tab="welt">Welt</button><button data-tab="spiel">Spiel</button><button data-tab="ton">Ton &amp; HUD</button><button data-tab="story">Story</button></div>
-    <div class="pane" data-tab="grafik">
+    <div class="tabs"><button data-tab="fortschritt" class="on">📊 Fortschritt</button><button data-tab="steuerung">⌨ Steuerung</button><button data-tab="story">📖 Story</button><span class="sep">Einstellungen</span><button data-tab="grafik">Grafik</button><button data-tab="kamera">Kamera</button><button data-tab="welt">Welt</button><button data-tab="spiel">Spiel</button><button data-tab="ton">Ton &amp; HUD</button></div>
+    <div class="pane" data-tab="fortschritt" id="progpane"></div>
+    <div class="pane" data-tab="steuerung" style="display:none" id="keyspane"></div>
+    <div class="pane" data-tab="grafik" style="display:none">
       <label>Grafikqualität <select id="o_quality"><option value="niedrig">Niedrig</option><option value="mittel">Mittel</option><option value="hoch">Hoch (Leuchten, feine Schatten)</option><option value="ultra">Ultra (starke Grafikkarte)</option></select></label>
       <label>Renderauflösung <span><input id="o_scale" type="range" min="0.5" max="1.5" step="0.05" data-pct="1"><output></output></span></label>
       <label>Sichtweite (m) <span><input id="o_view" type="range" min="250" max="900" step="25"><output></output></span></label>
@@ -176,7 +183,6 @@
       <label>Sprechchöre und Durchsagen vorlesen <input id="o_tts" type="checkbox"></label>
     </div>
     <div class="pane" data-tab="story" style="display:none" id="storypane"></div>
-    <small style="display:block;line-height:1.7;margin-top:10px"><b style="color:#eee">Tasten</b> · WASD laufen · Shift rennen · Leertaste springen · E Auto klauen / aussteigen · H Hupe · F Geschäft, U-Bahn, Hauseingang, Dach · M große Karte · N Minikarte drehen<br>Linksklick angreifen · Rechtsklick zielen · 1–0 / Mausrad Waffe · Q letzte Waffe · R nachladen<br>G Leute sammeln / Sprechchor · V filmen · X Dialog weiter · C Kreativmodus (Auswahl 1–0, Shift+1–0, ß, Mausrad, Klick) · F6 speichern · F9 laden · Esc Menü</small>
   </div>
 </div></div>
 <div id="hud">

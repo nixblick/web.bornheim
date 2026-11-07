@@ -17,7 +17,7 @@
 #minimap{position:fixed!important;left:8px!important;top:78px!important;bottom:auto!important;width:96px!important;height:96px!important}
 #street{top:6px!important;bottom:auto!important;right:auto!important;left:50%!important;transform:translateX(-50%);font-size:14px!important}
 #stars{font-size:16px!important;top:52px!important;letter-spacing:2px!important}#money{font-size:14px!important;top:72px!important}
-#feed{width:210px!important;top:92px!important;font-size:11px!important}#hint{bottom:12px!important;font-size:12px!important;max-width:38vw;white-space:normal}
+#lvl{top:180px!important;left:10px!important}#zone{display:none}#zoneban b{font-size:26px!important}#feed{width:210px!important;top:92px!important;font-size:11px!important}#hint{bottom:12px!important;font-size:12px!important;max-width:38vw;white-space:normal}
 #obj{top:30px!important;font-size:11px!important;max-width:46vw!important;padding:4px 10px!important;pointer-events:auto!important}#sub{bottom:58px!important;font-size:12px!important;max-width:52vw!important}#card h2{font-size:28px!important}#card p{font-size:13px!important}
 #tcrot{position:fixed;inset:0;z-index:60;background:#0b0d12;color:#fff;display:none;align-items:center;justify-content:center;text-align:center;font:600 18px system-ui;padding:30px}`;
   const st = document.createElement('style'); st.textContent = css; document.head.appendChild(st);
@@ -25,7 +25,7 @@
   el.innerHTML = `<div class="stick"><div class="knob"></div></div>
 <div class="b fire" data-k="fire">ANGRIFF</div><div class="b jump" data-k="Space">SPRUNG</div><div class="b aim" data-k="aim">ZIELEN</div>
 <div class="b e" data-k="KeyE">E<br><small style="font-size:9px;font-weight:600">Auto</small></div><div class="b f hide" data-k="KeyF">F</div><div class="b w" data-k="weapon">⟳</div>
-<div class="b top" data-k="Escape" style="right:8px">☰</div><div class="b top" data-k="KeyM" style="right:54px">🗺</div><div class="b top" data-k="KeyV" style="right:100px">🎥</div><div class="b top" data-k="KeyG" style="right:146px">📣</div>`;
+<div class="b top" data-k="Escape" style="right:8px">☰</div><div class="b top" data-k="KeyM" style="right:54px">🗺</div><div class="b top" data-k="KeyV" style="right:100px">🎥</div><div class="b top" data-k="KeyG" style="right:146px">📣</div><div class="b top" data-k="stats" style="right:192px">📊</div>`;
   document.body.appendChild(el);
   const rot = document.createElement('div'); rot.id = 'tcrot'; rot.innerHTML = '<div>📱↻<br><br>Bitte das Gerät quer halten.</div>'; document.body.appendChild(rot);
   const G = () => window.G; const key = (code, down) => dispatchEvent(new KeyboardEvent(down ? 'keydown' : 'keyup', { code, bubbles: true }));
@@ -48,9 +48,10 @@
       if (k === 'fire') { if (g.WPN && g.WPN.press) g.WPN.press(true); }
       else if (k === 'aim') { g.player.aimHold = !g.player.aimHold; b.classList.toggle('on', g.player.aimHold); return; }
       else if (k === 'weapon') { if (g.WPN && g.WPN.cycle) g.WPN.cycle(1); }
+      else if (k === 'stats') { if (g.PROGRESS) { const o = document.getElementById('tabov'); g.PROGRESS.showTab(!(o && o.style.display === 'flex')); } }
       else if (k === 'Space') { g.keys.Space = true; key('Space', true); }
       else key(k, true); }, { passive: false });
-    const up = e => { e.preventDefault(); if (k !== 'aim') b.classList.remove('on'); const g = G(); if (!g) return; if (k === 'fire') { if (g.WPN && g.WPN.press) g.WPN.press(false); } else if (k === 'Space') { g.keys.Space = false; key('Space', false); } else if (k !== 'aim' && k !== 'weapon') key(k, false); };
+    const up = e => { e.preventDefault(); if (k !== 'aim') b.classList.remove('on'); const g = G(); if (!g) return; if (k === 'fire') { if (g.WPN && g.WPN.press) g.WPN.press(false); } else if (k === 'Space') { g.keys.Space = false; key('Space', false); } else if (k !== 'aim' && k !== 'weapon' && k !== 'stats') key(k, false); };
     b.addEventListener('touchend', up, { passive: false }); b.addEventListener('touchcancel', up, { passive: false });
   }
   // F-Knopf zeigt die aktuelle Aktion (aus dem Hinweistext), E-Knopf nur, wenn ein Fahrzeug nah ist

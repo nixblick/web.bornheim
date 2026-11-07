@@ -156,7 +156,7 @@ export function initInteriors(X, W, D, SH) {
     if (to.entr && to.entr.length) station(to, exit, 1); else { leaveSilent(); player.pos.set(fx, TH(fx, fz), fz); if (player.mesh) player.mesh.position.copy(player.pos); }
     ov.style.opacity = '0'; setTimeout(() => ov.remove(), 450); riding = false;
     if (fine) { player.money = Math.max(0, player.money - 60); showMsg('FAHRKARTENKONTROLLE: 60 € ERHÖHTES BEFÖRDERUNGSENTGELT', 2600); } else showMsg(to.name.toUpperCase(), 1400);
-    if (X.emitEvent) X.emitEvent('metro', player.pos, { to: to.id });
+    if (X.emit) X.emit('metro', player.pos, { to: to.id });
   }
 
   // ---------- Eingänge an der Oberfläche ----------
