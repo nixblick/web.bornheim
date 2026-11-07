@@ -215,10 +215,16 @@ function solidAt(x, z) {
 }
 // Hausdurchfahrten (OSM tunnel=building_passage): Korridor durch das Gebäude ist frei begehbar und befahrbar
 function inPassage(b, x, z) { for (const q of b.pass) if (distSegSq(x, z, q[0], q[1], q[2], q[3]) < q[4] * q[4]) return true; return false; }
-function passageAdd(r) { const hw = Math.max(1.6, r.w / 2 + 0.3);
+// neues Gebäude: Straßenstücke aus dem Straßenraster, die durch den Grundriss laufen, als Durchfahrt eintragen
+function buildingPassages(bi) { const b = WORLD.buildings[bi]; if (b.mh >= 2.2) return; let x0 = 1e9, x1 = -1e9, z0 = 1e9, z1 = -1e9; for (const [x, z] of b.p) { x0 = Math.min(x0, x); x1 = Math.max(x1, x); z0 = Math.min(z0, z); z1 = Math.max(z1, z); }
+  const g = getRoadGrid(), seen = new Set();
+  for (let cx = Math.floor(x0 / CELL); cx <= Math.floor(x1 / CELL); cx++) for (let cz = Math.floor(z0 / CELL); cz <= Math.floor(z1 / CELL); cz++) { const c = g.get(key(cx, cz)); if (!c) continue;
+    for (const [ri, i] of c) { const sk = ri * 4096 + i; if (seen.has(sk)) continue; seen.add(sk); const r = WORLD.roads[ri]; if (r.mw) continue; const [ax, az] = r.p[i], [bx, bz] = r.p[i + 1]; if (Math.max(ax, bx) < x0 || Math.min(ax, bx) > x1 || Math.max(az, bz) < z0 || Math.min(az, bz) > z1) continue;
+      const L = Math.hypot(bx - ax, bz - az) || 1; for (let t = 0; t <= L; t += 2) { if (pointInPoly(ax + (bx - ax) * t / L, az + (bz - az) * t / L, b.p)) { const hw = Math.max(1.6, r.w / 2 + 0.3); const q = b.pass || (b.pass = []); if (!q.some(e => e[0] === ax && e[1] === az && e[2] === bx && e[3] === bz)) q.push([ax, az, bx, bz, hw]); break; } } } } }
+function passageAdd(r, minBi = 0) { const hw = Math.max(1.6, r.w / 2 + 0.3);
   for (let i = 0; i < r.p.length - 1; i++) { const [ax, az] = r.p[i], [bx, bz] = r.p[i + 1]; const L = Math.hypot(bx - ax, bz - az); const seen = new Set();
     for (let s = 0; s <= L; s += 2) { const x = ax + (bx - ax) * s / (L || 1), z = az + (bz - az) * s / (L || 1); const c = grid.get(key(Math.floor(x / CELL), Math.floor(z / CELL))); if (!c) continue;
-      for (const bi of c) { if (seen.has(bi)) continue; const b = WORLD.buildings[bi]; if (!pointInPoly(x, z, b.p)) continue; seen.add(bi); (b.pass || (b.pass = [])).push([ax, az, bx, bz, hw]); } } } }
+      for (const bi of c) { if (bi < minBi || seen.has(bi)) continue; const b = WORLD.buildings[bi]; if (!pointInPoly(x, z, b.p)) continue; seen.add(bi); const q = b.pass || (b.pass = []); if (!q.some(e => e[0] === ax && e[1] === az && e[2] === bx && e[3] === bz)) q.push([ax, az, bx, bz, hw]); } } } }
 // Dachhöhe an einem Punkt (Flachdach oder Sattel-/Walmdach)
 function roofHeight(b, x, z) {
   const top = (b.base ?? 0) + b.h;
@@ -1573,7 +1579,8 @@ function sideGuard(u, pos, W, kMin, sgn) {
   else if (u.offK < 1) { const d = W * (1 - u.offK); if (!inWall(pos.x + nx * sgn * d, pos.z + nz * sgn * d)) u.offK = Math.min(1, u.offK + 0.25); }
   return u.offK;
 }
-const pedSidewalk = (u, h) => { const W = u.road.w / 2 + 1.5; sideGuard(u, h.position, W, Math.min(1, u.road.w / 2 * 0.8 / W), u.side * u.dir); };
+const pedSidewalk = (u, h) => { const W = u.road.w / 2 + 1.5, kMin = Math.min(1, u.road.w / 2 * 0.8 / W); const k0 = u.offK; sideGuard(u, h.position, W, kMin, u.side * u.dir);
+  /* schon am Fahrbahnrand und trotzdem in der Wand: auf die andere Straßenseite wechseln (höchstens alle 8 s, sonst Pendeln) */ if (k0 !== undefined && k0 <= kMin + 1e-6 && u.offT === 12 && solidAt(h.position.x, h.position.z) >= 0 && (u.sideT || 0) < performance.now()) { u.side = -u.side; u.offK = 1; u.sideT = performance.now() + 8000; } };
 function spawnPedAt(x, z) { if (solidAt(x, z) >= 0) return null; const u0 = {}; if (!rehome(u0, { x, z })) return null; const h = makeHuman(Math.random() < 0.5); h.position.set(x, TH(x, z), z); Object.assign(h.userData, u0, { speed: 1.4, hp: 100, state: 'walk', t: 0 }); scene.add(h); peds.push(h); shootables.push(h); return h; }
 
 
@@ -1701,9 +1708,12 @@ function tileMap(t) {
 }
 function registerTile(t) {
   const d = t.data;
+  const nb0 = WORLD.buildings.length;
   for (const b of d.buildings || []) { const i = WORLD.buildings.length; WORLD.buildings.push(b); if (!(b.mh >= 2.2)) addToGrid(i, b.p); /* aufgeständert (Überbauung, Tankstellendach): darunter frei */ }
+
   t.rd = []; t.rp = [];
-  for (const r of d.roads || []) { const i = WORLD.roads.length; WORLD.roads.push(r); gridAddRoad(r, i); deckAddRoad(r); nodeAdd(r); if (r.w >= 5 && !r.ped) t.rd.push(r); if (!r.mw && !r.ry) t.rp.push(r); if (r.bp) passageAdd(r); }
+  for (const r of d.roads || []) { const i = WORLD.roads.length; WORLD.roads.push(r); gridAddRoad(r, i); deckAddRoad(r); nodeAdd(r); if (r.w >= 5 && !r.ped) t.rd.push(r); if (!r.mw && !r.ry) t.rp.push(r); if (!r.mw) passageAdd(r); /* Weg durch ein Haus = Durchfahrt/Arkade, auch ohne OSM-Markierung */ }
+  for (let bi = nb0; bi < WORLD.buildings.length; bi++) buildingPassages(bi); /* Haus lädt nach dem Weg (Nachbarkachel) */
   for (const r of d.rails || []) { WORLD.rails.push(r); nodeAdd(r); }
   for (const s of d.signals || []) { const k = key(Math.floor(s[0] / CELL), Math.floor(s[1] / CELL)); if (!SIGGRID.has(k)) SIGGRID.set(k, []); SIGGRID.get(k).push(s); }
   for (const k of WKEYS) if (k !== 'buildings' && k !== 'roads' && k !== 'rails' && d[k]) for (const o of d[k]) WORLD[k].push(o);

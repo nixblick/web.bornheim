@@ -47,13 +47,13 @@ async function run(S, opt) {
   S.cleanup.push(() => { console.warn = origWarn; removeEventListener('error', onErr); removeEventListener('unhandledrejection', onErr); });
   // Wächter: laufen nach jedem 10. Bild
   let expectJump = 0, lastPos = P.pos.clone(), insideT = 0, carInT = 0, loadT = 0, geo0 = G.renderer.info.memory.geometries, under = 0;
-  const pedIn = new Map(), carStuck = new Map(), carIn = new Map(), pedPos = new Map(); let floatT = 0, carAirT = 0; const trail = [];
+  const pedIn = new Map(), carStuck = new Map(), carIn = new Map(), pedPos = new Map(), wrongT = new Map(); let floatT = 0, carAirT = 0; const trail = [];
   const solidBody = (x, z, y) => G.solidAtH(x, z, y + 0.5) !== -1;
   // Straße führt selbst durch ein Haus (OSM tunnel=building_passage): kein Laufbug, sondern Datenlücke
   const passage = (r, p) => { if (!r || !r.p) return false; let best = 1e9, bp = null; for (let i = 0; i < r.p.length - 1; i++) { const [ax, az] = r.p[i], [bx, bz] = r.p[i + 1]; const dx = bx - ax, dz = bz - az, L2 = dx * dx + dz * dz || 1; const t = Math.max(0, Math.min(1, ((p.x - ax) * dx + (p.z - az) * dz) / L2)); const x = ax + dx * t, z = az + dz * t, d = (x - p.x) ** 2 + (z - p.z) ** 2; if (d < best) { best = d; bp = [x, z]; } } return bp && G.solidAt(bp[0], bp[1]) >= 0; };
   const nearDemo = p => G.DEMO.demos.some(d => d.members.some(m => m.position.distanceTo(p) < 80) || (d.pol && d.pol.cars || []).some(c => c.position && c.position.distanceTo(p) < 60));
   function watch(dt) {
-    if (S.frames % 3000 < 10) { const live = new Set(G.peds), liveC = new Set(G.cars); for (const m of [pedIn, pedPos]) for (const k of m.keys()) if (!live.has(k)) m.delete(k); for (const m of [carStuck, carIn]) for (const k of m.keys()) if (!liveC.has(k)) m.delete(k); }
+    if (S.frames % 3000 < 10) { const live = new Set(G.peds), liveC = new Set(G.cars); for (const m of [pedIn, pedPos]) for (const k of m.keys()) if (!live.has(k)) m.delete(k); for (const m of [carStuck, carIn, wrongT]) for (const k of m.keys()) if (!liveC.has(k)) m.delete(k); }
     const p = P.car ? P.car.position : P.pos;
     if (![p.x, p.y, p.z].every(Number.isFinite)) add(S, 'Position ungültig (NaN)', JSON.stringify([p.x, p.y, p.z]));
     if (!Number.isFinite(P.hp) || !Number.isFinite(P.money)) add(S, 'Werte ungültig', `hp ${P.hp} geld ${P.money}`);
@@ -79,6 +79,9 @@ async function run(S, opt) {
     for (const h of G.peds) { const u = h.userData; if (u.state === 'dead' || !h.visible || h.position.distanceTo(P.pos) > 120) continue; if (solidBody(h.position.x, h.position.z, h.position.y)) { const t0 = pedIn.get(h) ?? now; pedIn.set(h, t0); if (now - t0 > 3) { add(S, passage(u.road, h.position) ? 'Figur in Hausdurchfahrt (Kartendaten)' : 'Figur steckt im Gebäude', `${u.state}${u.cop ? ' Polizei' : ''}${u.ff ? ' Feuerwehr' : ''}${u.demo ? ' Demo' : ''} y ${h.position.y.toFixed(1)}`, h.position); pedIn.set(h, now + 1e9); } } else pedIn.delete(h); }
     for (const c of G.cars) { const u = c.userData; if (c === P.car || u.mode === 'wreck' || c.position.distanceTo(P.pos) > 150) continue; if (G.solidAt(c.position.x, c.position.z) >= 0 && c.position.y < G.TH(c.position.x, c.position.z) + 3) { const t0 = carIn.get(c) ?? now; carIn.set(c, t0); if (now - t0 > 2) { add(S, passage(u.road, c.position) ? 'Fahrzeug in Hausdurchfahrt (Kartendaten)' : 'Fahrzeug im Gebäude', `${u.mode}${u.cannon ? ' Wasserwerfer' : ''}${u.police ? ' Polizei' : ''}${u.brigade ? ' Feuerwehr' : ''} speed ${(u.speed||0).toFixed(1)}`, c.position); carIn.set(c, now + 1e9); } } else carIn.delete(c);
       if (u.mode === 'ai' && Math.abs(u.speed || 0) < 0.2 && !nearDemo(c.position)) { const t0 = carStuck.get(c) ?? now; carStuck.set(c, t0); if (now - t0 > 60) { add(S, 'KI-Auto steht über 60 s', u.road && u.road.n || '', c.position); carStuck.set(c, now + 1e9); } } else carStuck.delete(c); }
+    // Verkehrsregeln: Einbahnstraße, Fußgängerzone, Passanten auf Autobahn (Rückfall-Schutz für behobene Fehler)
+    for (const c of G.cars) { const u = c.userData; if (u.mode !== 'ai' || u.police || !u.road || c.position.distanceTo(P.pos) > 150) continue; if (u.road.o && u.dir !== u.road.o && Math.abs(u.speed || 0) > 1) { wrongT.set(c, (wrongT.get(c) || 0) + dt); if (wrongT.get(c) > 2) { add(S, 'KI-Auto gegen die Einbahnstraße', `${u.road.n || ''} dir ${u.dir} o ${u.road.o}`, c.position); wrongT.set(c, -1e9); } } if (u.road.ped && !u.bike) { add(S, 'KI-Auto in Fußgängerzone', u.road.n || '', c.position); } }
+    for (const h of G.peds) { const u = h.userData; if (u.state === 'walk' && u.road && (u.road.mw || u.road.ry) && h.position.distanceTo(P.pos) < 150) add(S, 'Passant auf Autobahn/Gleis', u.road.n || '', h.position); }
     if (G.cars.length > 160) add(S, 'Zu viele Fahrzeuge', G.cars.length); if (G.peds.length > 200) add(S, 'Zu viele Figuren', G.peds.length);
     const cops = G.peds.filter(h => h.userData.cop).length; if (cops > 60) add(S, 'Zu viele Polizisten', cops);
   }
