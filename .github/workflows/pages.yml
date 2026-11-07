@@ -30,7 +30,7 @@ jobs:
           cp index.html play.html credits.html impressum.html manifest.webmanifest _site/
           cp *.js _site/   # alle Spielmodule im Wurzelverzeichnis (tools/ bleibt draußen); eine feste Liste hat story3.js vergessen und die Seite hing bei „Lade Stadt“
           cp -r assets vendor _site/
-          mkdir _site/data && cp -r data/tiles data/dem data/metro.json _site/data/
+          mkdir _site/data && cp -r data/tiles data/dem data/metro.json data/districts.json _site/data/
           touch _site/.nojekyll
           du -sh _site
       - uses: actions/configure-pages@v5

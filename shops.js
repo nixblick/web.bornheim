@@ -14,6 +14,7 @@ export function initShops(X, W) {
     band: { n: 'Verband (+50 Gesundheit)', p: 20, hp: 50 }, kit: { n: 'Erste-Hilfe-Set (volle Gesundheit)', p: 60, hp: 100 },
   };
   const ALL = Object.keys(ITEMS);
+  const price = it => Math.max(1, Math.round(it.p * ((X.perks && X.perks.shop) || 1))); // Rabatt nach Stufe (progress.js)
   const TYPES = {
     super: { n: 'Supermarkt', ic: '🛒', items: ALL },
     kiosk: { n: 'Kiosk', ic: '🗞', items: ['drink', 'snack', 'banger', 'flare', 'smoke'] },
@@ -45,18 +46,18 @@ export function initShops(X, W) {
   function render() {
     const T = TYPES[cur.k]; const list = T.items.map(id => [id, ITEMS[id]]).filter(([, it]) => !(it.ammo && !W.inv[it.ammo]));
     el.innerHTML = `<div class="box"><h3>${T.ic} ${cur.name}</h3><div class="sub">${T.n} · Du hast <b style="color:#ffd84a">${player.money} €</b> · Gesundheit ${Math.round(player.hp)}</div>` +
-      list.map(([id, it]) => { const no = player.money < it.p || owned(it) || (it.hp && player.hp >= 100); return `<div class="it${no ? ' no' : ''}" data-id="${id}"><span>${it.n}${owned(it) ? ' · hast du' : ''}</span><b>${it.p} €</b></div>`; }).join('') +
+      list.map(([id, it]) => { const no = player.money < price(it) || owned(it) || (it.hp && player.hp >= 100); return `<div class="it${no ? ' no' : ''}" data-id="${id}"><span>${it.n}${owned(it) ? ' · hast du' : ''}</span><b>${price(it)} €</b></div>`; }).join('') +
       `<div class="row"><span class="sub">Klick zum Kaufen · Esc schließt</span><button id="shop_x">Fertig</button></div></div>`;
     $('shop_x').onclick = close;
     for (const d of el.querySelectorAll('.it')) d.onclick = () => buy(d.dataset.id);
   }
   function buy(id) {
-    const it = ITEMS[id]; if (!it || player.money < it.p || owned(it) || (it.hp && player.hp >= 100)) { sfx('click', 0.3); return; }
-    player.money -= it.p;
+    const it = ITEMS[id]; if (!it || player.money < price(it) || owned(it) || (it.hp && player.hp >= 100)) { sfx('click', 0.3); return; }
+    player.money -= price(it);
     if (it.w) { const fresh = W.give(it.w); if (fresh) W.select(it.w, true); }
     if (it.ammo) W.give(it.ammo);
     if (it.hp) player.hp = Math.min(100, player.hp + it.hp);
-    sfx('click', 0.6); X.emit && X.emit('bought', player.pos, { id, price: it.p }); render();
+    sfx('click', 0.6); X.emit && X.emit('bought', player.pos, { id, price: price(it) }); render();
   }
   let wasLocked = false;
   // Während der Laden offen ist, darf das Loslassen der Maus nicht das Pausemenü öffnen; danach die Maus wieder fangen
