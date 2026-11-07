@@ -71,7 +71,7 @@ export function initShops(X, W) {
     for (const s of shops) { const d = (s.x - player.pos.x) ** 2 + (s.z - player.pos.z) ** 2; if (d < bd) { bd = d; near = s; } }
     return near ? `F · ${TYPES[near.k].ic} ${near.name} (${TYPES[near.k].n})` : null;
   }
-  addEventListener('keydown', e => { if (e.code !== 'KeyF' || X.shopOpen || !near || X.menuOpen && X.menuOpen()) return; if (player.wanted > 0) { showMsg('POLIZEI SUCHT DICH – KEIN EINKAUF', 1200); return; } open(near); });
+  addEventListener('keydown', e => { if (X.interiors) return; /* Taste F übernimmt interiors.js (Laden betreten) */ if (e.code !== 'KeyF' || X.shopOpen || !near || X.menuOpen && X.menuOpen()) return; if (player.wanted > 0) { showMsg('POLIZEI SUCHT DICH – KEIN EINKAUF', 1200); return; } open(near); });
   X.mmHooks.push((ctx, P, R) => { for (const s of shops) { const [x, y] = P(s.x, s.z); if (x * x + y * y > R * R) continue; ctx.fillStyle = s.k === 'super' ? '#3fd0ff' : '#7fa8b8'; ctx.fillRect(x - 2, y - 2, 4, 4); } });
   return { update, shops, open, close, ITEMS, TYPES, buy, scan, get near() { return near; } };
 }

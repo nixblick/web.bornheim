@@ -13,6 +13,7 @@ import { initWeapons } from './weapons.js';
 import { initDemo } from './demo.js';
 import { initStory } from './story.js';
 import { initShops } from './shops.js';
+import { initInteriors } from './interiors.js';
 import { initFire } from './fire.js';
 const GradeShader = { uniforms: { tDiffuse: { value: null }, vig: { value: 0.32 }, wet: { value: 0 }, night: { value: 0 } }, vertexShader: 'varying vec2 vUv; void main(){ vUv=uv; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0); }',
   fragmentShader: 'uniform sampler2D tDiffuse; uniform float vig, wet, night; varying vec2 vUv; void main(){ vec4 c=texture2D(tDiffuse,vUv); vec3 col=c.rgb; float l=dot(col,vec3(0.299,0.587,0.114)); col=mix(vec3(l),col,1.12-wet*0.25); col=(col-0.5)*1.06+0.5; col*=mix(vec3(1.0),vec3(0.92,0.97,1.06),wet*0.7+night*0.5); col=mix(col,col*vec3(1.04,1.0,0.94),0.6*(1.0-night)); vec2 d=vUv-0.5; col*=1.0-vig*dot(d,d)*2.2; gl_FragColor=vec4(clamp(col,0.0,1.0),c.a); }' };
@@ -69,7 +70,7 @@ function updateWeather(dt) {
   if (opts.weather === 'auto') { weather.next -= dt; if (weather.next <= 0) { weather.kind = pick(['clear', 'clear', 'cloudy', 'rain', 'fog', 'storm', 'clear']); weather.next = rnd(150, 400); } }
   else if (opts.weather && WEATHER[opts.weather]) weather.kind = opts.weather;
   // Regen um die Kamera
-  if (rainPts) { rainPts.visible = weather.rain > 0.05; rainPts.material.opacity = 0.45 * weather.rain; if (rainPts.visible) { const a = rainPts.geometry.attributes.position; const sp = 26 * dt; rainPts.position.set(camera.position.x, camera.position.y - 15, camera.position.z); const A = a.array; for (let i = 1; i < A.length; i += 6) { A[i] -= sp; A[i + 3] -= sp; if (A[i] < 0) { A[i] += 30; A[i + 3] += 30; } } a.needsUpdate = true; } }
+  if (rainPts) { rainPts.visible = weather.rain > 0.05 && !POCKET; rainPts.material.opacity = 0.45 * weather.rain; if (rainPts.visible) { const a = rainPts.geometry.attributes.position; const sp = 26 * dt; rainPts.position.set(camera.position.x, camera.position.y - 15, camera.position.z); const A = a.array; for (let i = 1; i < A.length; i += 6) { A[i] -= sp; A[i + 3] -= sp; if (A[i] < 0) { A[i] += 30; A[i + 3] += 30; } } a.needsUpdate = true; } }
   weather.wet = (weather.wet || 0) + ((weather.rain > 0.1 ? 1 : 0) - (weather.wet || 0)) * dt * (weather.rain > 0.1 ? 0.05 : 0.008);
   if (roadMatRef) { const w = weather.wet; roadMatRef.color.setScalar(0.6 - w * 0.25); roadMatRef.roughness = 0.95 - w * 0.75; const pm = w > 0.12 ? roadMatRef.userData.pud : null; if (roadMatRef.roughnessMap !== pm) { roadMatRef.roughnessMap = pm; roadMatRef.needsUpdate = true; } roadMatRef.envMapIntensity = 0.4 + w * 2.2; }
   updateStreaks(dt);
@@ -188,7 +189,9 @@ function TH(x, z) {
   const h00 = H[iz * n + ix], h10 = H[iz * n + ix + 1], h01 = H[(iz + 1) * n + ix], h11 = H[(iz + 1) * n + ix + 1];
   return (h00 * (1 - u) + h10 * u) * (1 - v) + (h01 * (1 - u) + h11 * u) * v;
 }
-const inWorld = (x, z) => !!WIDX.tiles[Math.floor(x / TS) + '_' + Math.floor(z / TS)];
+// Innenraum (U-Bahn-Station, Laden, Treppenhaus) liegt als eigener Raum weit außerhalb der Stadt, mit eigener Kollision
+let POCKET = null; const inPocket = (x, z) => !!POCKET && x >= POCKET.x0 && x <= POCKET.x1 && z >= POCKET.z0 && z <= POCKET.z1;
+const inWorld = (x, z) => inPocket(x, z) || !!WIDX.tiles[Math.floor(x / TS) + '_' + Math.floor(z / TS)];
 const rayTargets = []; // Boden, Gebäude, gebaute Blöcke (für Kreativmodus)
 const signalMeshes = []; const nightOnly = []; const emissiveMats = []; // Ampelleuchten (Reihenfolge wie CITY.signals, ohne die in Gebäuden)
 // Ampelphase: Nord-Süd-Verkehr und Ost-West-Verkehr wechseln sich alle 8 s ab
@@ -228,6 +231,7 @@ function floorAt(x, z, y = 1e9) {
 }
 // Hindernis auf Körperhöhe? (Gebäude nur unterhalb des Dachs, Blöcke im Bereich y..y+1.7)
 function solidAtH(x, z, y) {
+  if (inPocket(x, z)) return POCKET.solidH(x, z, y) ? -2 : -1;
   const bi = solidAt(x, z); if (bi >= 0 && y < roofHeight(WORLD.buildings[bi], x, z) - 0.45) return bi;
   const col = blockCols.get(bkey(x, z)); if (col) for (const cy of col) { if (cy + 0.5 > y + 0.5 && cy - 0.5 < y + 1.7) return -2; }
   return -1;
@@ -1470,7 +1474,7 @@ let streetTimer = 0, worldT = 0;
 function streetNameAt(x, z, maxD = 40) { let best = maxD * maxD, name = ''; const g = getRoadGrid(); const cx = Math.floor(x / CELL), cz = Math.floor(z / CELL);
   for (let a = -1; a <= 1; a++) for (let b = -1; b <= 1; b++) { const c = g.get(key(cx + a, cz + b)); if (!c) continue; for (const [ri, i] of c) { const r = WORLD.roads[ri]; if (!r.n) continue; const d = distSegSq(x, z, r.p[i][0], r.p[i][1], r.p[i + 1][0], r.p[i + 1][1]); if (d < best) { best = d; name = r.n; } } }
   return name; }
-function nearestStreet() { return streetNameAt(player.pos.x, player.pos.z) || 'Frankfurt'; }
+function nearestStreet() { if (POCKET) return POCKET.label || 'Frankfurt'; return streetNameAt(player.pos.x, player.pos.z) || 'Frankfurt'; }
 
 // ---------- Schießen ----------
 const tracerMat = new THREE.MeshBasicMaterial({ color: 0xfff0a0 });
@@ -1693,7 +1697,7 @@ function roadsNear(x, z, R, car) { const tx = Math.floor(x / TS), tz = Math.floo
 const neighborsReady = (tx, tz) => { for (let a = -1; a <= 1; a++) for (let b = -1; b <= 1; b++) { const k = tkey(tx + a, tz + b); if (WIDX.tiles[k] && !TILES.has(k)) return false; } return true; };
 let streamT = 0, buildT = 0;
 function streamUpdate(dt, force = false) {
-  const cx = player.car ? player.car.position.x : player.pos.x, cz = player.car ? player.car.position.z : player.pos.z;
+  const cx = POCKET ? POCKET.anchor[0] : player.car ? player.car.position.x : player.pos.x, cz = POCKET ? POCKET.anchor[1] : player.car ? player.car.position.z : player.pos.z;
   farPlane.position.set(camera.position.x, TH(cx, cz) - 12, camera.position.z);
   const ptx = Math.floor(cx / TS), ptz = Math.floor(cz / TS);
   R_MESH = (opts.view || 700) > 550 ? 2 : 1;
@@ -1713,9 +1717,9 @@ function streamUpdate(dt, force = false) {
 const buildEl = $('build');
 function showBuild(on) { if (!buildEl) return; if (!on) { buildEl.style.display = 'none'; return; } const x = player.car ? player.car.position.x : player.pos.x, z = player.car ? player.car.position.z : player.pos.z; const ptx = Math.floor(x / TS), ptz = Math.floor(z / TS); let tot = 0, bl = 0; for (let a = -R_MESH; a <= R_MESH; a++) for (let b = -R_MESH; b <= R_MESH; b++) { const k = tkey(ptx + a, ptz + b); if (!WIDX.tiles[k]) continue; tot++; const t = TILES.get(k); if (t && t.built) bl++; } buildEl.style.display = 'block'; buildEl.innerHTML = `<h3>BAUE STADT …</h3><div class="bar"><i style="width:${tot ? Math.round(100 * bl / tot) : 0}%"></i></div><p>${bl} von ${tot} Kacheln im Umkreis · einen Moment</p>`; }
 // Spieler steht auf noch nicht gebautem Boden?
-const hereReady = () => { const x = player.car ? player.car.position.x : player.pos.x, z = player.car ? player.car.position.z : player.pos.z; const t = TILES.get(tkey(Math.floor(x / TS), Math.floor(z / TS))); return !t ? !inWorld(x, z) : t.built; };
-async function streamInit() {
-  const sx = player.pos.x, sz = player.pos.z; const ptx = Math.floor(sx / TS), ptz = Math.floor(sz / TS); const el = $('loading');
+const hereReady = () => { if (inPocket(player.pos.x, player.pos.z)) return true; const x = player.car ? player.car.position.x : player.pos.x, z = player.car ? player.car.position.z : player.pos.z; const t = TILES.get(tkey(Math.floor(x / TS), Math.floor(z / TS))); return !t ? !inWorld(x, z) : t.built; };
+async function streamInit(sx = player.pos.x, sz = player.pos.z) {
+ const ptx = Math.floor(sx / TS), ptz = Math.floor(sz / TS); const el = $('loading');
   const need = []; for (let a = -R_DATA; a <= R_DATA; a++) for (let b = -R_DATA; b <= R_DATA; b++) if (WIDX.tiles[tkey(ptx + a, ptz + b)]) need.push([ptx + a, ptz + b]);
   for (let i = 0; i < need.length; i += 8) { await Promise.all(need.slice(i, i + 8).map(([tx, tz]) => loadTile(tx, tz))); const k = Math.min(need.length, i + 8); setLoading(`Lade Frankfurt … ${k} / ${need.length} Kacheln`, 0.3 + 0.5 * k / need.length); }
   let n = 0; for (let a = -1; a <= 1; a++) for (let b = -1; b <= 1; b++) { const t = TILES.get(tkey(ptx + a, ptz + b)); /* Rest baut sich beim Spielen */ if (t && !t.built) { setLoading(`Baue Stadt … ${n + 1} / 9`, 0.8 + 0.2 * n / 9); await new Promise(r => setTimeout(r, 0)); buildTileNow(t); n++; await new Promise(r => setTimeout(r, 0)); } }
@@ -1772,7 +1776,7 @@ $('cont').onclick = () => { const d = JSON.parse(localStorage.getItem('notgta.sa
 while (solidAt(player.pos.x, player.pos.z) >= 0) player.pos.x += 3;
 const X = { THREE, scene, camera, renderer, player, peds, cars, shootables, particles, pickups, keys, camYaw, camPitch, opts, world, weather, CITY, TH, solidAt, solidAtH, floorAt, nearestEdge, edgeNormal, moveWithCollision, makeHuman, makeCar, spawnCar, spawnPedAt, playAnim, animateWalk, damage, explode, burst, smoke, wakeParked, wakeParkedRay, sfx, SND, showMsg, raiseWanted, camShake, canvasTex, tracerMat, makeGun, dentCar, rnd, clamp, pick, lerpAngle, distSegSq, pointInPoly, randomRoadPoint, roadsDrivable, driveCar, carFx, carTerrain, exitCar, syncHand, CHAR, coneTex, hurtPlayer, card, closeMenu, saveGame, lockMouse,
   listeners: [], mmHooks: MM_HOOKS, menuHooks: MENU_HOOKS, rallyLimit: 8, get creative() { return creative; }, creativeSpawnerActive, pedRoads: () => pedRoads, roadsNear: (x, z, R, car) => roadsNear(x, z, R, car), streetAt: (x, z) => streetNameAt(x, z), barrierNear: (x, z, r) => barrierHit(x, z, r), storyBusy: () => STORY ? STORY.busy : false };
-var WPN = initWeapons(X); var DEMO = initDemo(X, WPN); var FIRE = initFire(X, WPN, DEMO); var STORY = initStory(X, WPN, DEMO, FIRE); var SHOPS = initShops(X, WPN);
+var WPN = initWeapons(X); var DEMO = initDemo(X, WPN); var FIRE = initFire(X, WPN, DEMO); var STORY = initStory(X, WPN, DEMO, FIRE); var SHOPS = initShops(X, WPN); Object.assign(X, { setPocket: p => { POCKET = p; camera.userData.init = false; }, inPocket, streamInit, roofHeight, WORLD, TILES, TS, WIDX }); var INTERIORS = initInteriors(X, WPN, DEMO, SHOPS);
 for (let i = 0; i < 200 && cars.length < 60; i++) spawnCar(false, player.pos, 10, 260);
 for (let i = 0; i < 55; i++) spawnPed(null);
 spawnPickups(40);
@@ -1855,9 +1859,9 @@ function update(dt) {
   }
   // Wracks nach einer Weile wegräumen
   for (let i = cars.length - 1; i >= 0; i--) { const c = cars[i]; if (c.userData.mode === 'wreck') { c.userData.wreckT = (c.userData.wreckT || 0) + dt; if (c.userData.wreckT > 45 && c.position.distanceTo(player.pos) > 60) { scene.remove(c); cars.splice(i, 1); shootables.splice(shootables.indexOf(c), 1); } } }
-  // weit entfernte Autos recyceln
-  for (let i = cars.length - 1; i >= 0; i--) { const c = cars[i]; if (c !== player.car && !c.userData.unitCar && !c.userData.cannon && !c.userData.keep && c.position.distanceTo(player.pos) > 450) { scene.remove(c); cars.splice(i, 1); shootables.splice(shootables.indexOf(c), 1); spawnCar(false, player.pos, 120, 260, !!c.userData.bike); } }
-  { let nb = 0; for (const c of cars) if (c.userData.bike) nb++; const wantB = Math.round(10 * opts.traffic); if (nb < wantB && Math.random() < dt * 0.8) spawnCar(false, player.pos, 50, 200, true);
+  // weit entfernte Autos recyceln (nicht im Innenraum: dort ist alles weit weg)
+  if (!POCKET) for (let i = cars.length - 1; i >= 0; i--) { const c = cars[i]; if (c !== player.car && !c.userData.unitCar && !c.userData.cannon && !c.userData.keep && c.position.distanceTo(player.pos) > 450) { scene.remove(c); cars.splice(i, 1); shootables.splice(shootables.indexOf(c), 1); spawnCar(false, player.pos, 120, 260, !!c.userData.bike); } }
+  if (!POCKET) { let nb = 0; for (const c of cars) if (c.userData.bike) nb++; const wantB = Math.round(10 * opts.traffic); if (nb < wantB && Math.random() < dt * 0.8) spawnCar(false, player.pos, 50, 200, true);
     const want = Math.round(60 * opts.traffic) + wantB; if (cars.length < want && Math.random() < dt) spawnCar(false, player.pos, 120, 260); else if (cars.length > want + 5) { const far = cars.filter(c => c !== player.car && !c.userData.police && c.position.distanceTo(player.pos) > 200)[0]; if (far) { scene.remove(far); cars.splice(cars.indexOf(far), 1); shootables.splice(shootables.indexOf(far), 1); } } }
   // Passanten
   for (let i = peds.length - 1; i >= 0; i--) {
@@ -1867,7 +1871,7 @@ function update(dt) {
     else if (u.state === 'flee') { u.fleeT -= dt; const dirx = h.position.x - player.pos.x, dirz = h.position.z - player.pos.z, l = Math.hypot(dirx, dirz) || 1; moveWithCollision(h.position, dirx / l * 5 * dt, dirz / l * 5 * dt, 0.3); h.position.y = TH(h.position.x, h.position.z); h.rotation.y = Math.atan2(dirx, dirz); animateWalk(h, u.t * 1.6, 7); if (u.fleeT <= 0) u.state = 'walk'; }
     else if (u.state === 'dead') { if (u.mixer && ragdoll(h, u, dt)) {} else if (u.fly) { h.position.addScaledVector(u.fly, dt); u.fly.y -= 14 * dt; h.rotation.y += (u.spin || 0) * dt; const fy = TH(h.position.x, h.position.z); if (h.position.y <= fy && u.fly.y < 0) { h.position.y = fy; if (u.fly.length() > 4) { u.fly.multiplyScalar(0.35); u.fly.y = Math.abs(u.fly.y) * 0.3; } else u.fly = null; } } if (u.mixer && !u.rd) { if (!u.dead) { u.dead = true; playAnim(h, 'death', { once: true, fade: 0.1 }); } u.mixer.update(dt); } else h.rotation.x = Math.min(h.rotation.x + dt * 5, Math.PI / 2); u.deadT = (u.deadT || 0) + dt; if (u.deadT > 25) { scene.remove(h); peds.splice(i, 1); shootables.splice(shootables.indexOf(h), 1); } }
   }
-  { const pw = Math.round(55 * (opts.peds ?? 1)); for (let k = 0; k < 2 && peds.length < pw; k++) spawnPed(player.pos); if (peds.length > pw + 3) { const far = peds.find(p => { const u = p.userData; return !u.cop && !u.demo && !u.keep && !u.follow && u.state !== 'arrested' && u.state !== 'stunned' && p.position.distanceTo(player.pos) > 90; }); if (far) { scene.remove(far); peds.splice(peds.indexOf(far), 1); shootables.splice(shootables.indexOf(far), 1); } } }
+  if (!POCKET) { const pw = Math.round(55 * (opts.peds ?? 1)); for (let k = 0; k < 2 && peds.length < pw; k++) spawnPed(player.pos); if (peds.length > pw + 3) { const far = peds.find(p => { const u = p.userData; return !u.cop && !u.demo && !u.keep && !u.follow && u.state !== 'arrested' && u.state !== 'stunned' && p.position.distanceTo(player.pos) > 90; }); if (far) { scene.remove(far); peds.splice(peds.indexOf(far), 1); shootables.splice(shootables.indexOf(far), 1); } } }
   updatePickups(dt); updateTrams(dt); WPN.update(dt); DEMO.update(dt); FIRE.update(dt); STORY.update(dt); updateFx(dt);
   // Partikel
   for (let i = particles.length - 1; i >= 0; i--) { const p = particles[i]; p.userData.life -= dt; if (p.userData.smoke) { p.scale.addScalar(dt * 1.5); p.material.opacity = Math.max(0, p.userData.life * 0.35); } else p.userData.v.y -= 9 * dt; p.position.addScaledVector(p.userData.v, dt); const gy = TH(p.position.x, p.position.z); if (p.position.y < gy) { p.position.y = gy; p.userData.v.multiplyScalar(0.3); } if (p.userData.life <= 0) { scene.remove(p); particles.splice(i, 1); } }
@@ -1888,7 +1892,7 @@ function update(dt) {
   autoT += dt; if (autoT > 120 && !player.dead && player.wanted < 1 && !player.car) { autoT = 0; saveGame(true); }
   streetTimer -= dt; if (streetTimer <= 0) { streetTimer = 0.5; streetEl.textContent = nearestStreet(); }
   if (!player.car) { let near = null; for (const c of cars) if (c.userData.mode !== 'wreck' && c.position.distanceTo(player.pos) < (c.userData.cannon ? 7 : 4)) near = c; hint.textContent = near ? (near.userData.mode === 'parked' ? (near.userData.cannon ? 'E · Wasserwerfer übernehmen' : near.userData.bike ? 'E · aufsteigen' : 'E · einsteigen') : near.userData.bike ? 'E · Radler runterziehen' : 'E · Fahrer rauszerren') : (staticParked.some(sp => sp.active && Math.hypot(sp.x - player.pos.x, sp.z - player.pos.z) < 3.6) ? 'E · einsteigen' : ''); } else hint.textContent = player.car.userData.cannon ? 'E · aussteigen · Linksklick Wasser · Maus zielt' : player.car.userData.bike ? 'E · absteigen · Leertaste bremsen · H klingeln' : 'E · aussteigen · Leertaste bremsen';
-  { const sh = SHOPS.update(dt); if (sh && !player.car && !hint.textContent) hint.textContent = sh; }
+  { const sh = SHOPS.update(dt); if (sh && !player.car && !hint.textContent) hint.textContent = sh; const ih = INTERIORS.update(dt); if (ih) hint.textContent = ih; }
   if (!locked && !menuOpen && !mapOpen && !document.hidden) hint.textContent = 'Ins Spiel klicken für Maussteuerung';
   hint.style.display = hint.textContent ? 'block' : 'none';
   setSty(cross, 'display', (!player.car && !player.dead) ? 'block' : 'none');
@@ -1935,7 +1939,7 @@ function updateFx(dt) { for (const k of ['spray', 'water', 'paint']) { fxEl[k] =
 let cardT = null; function card(title, sub, sec = 4) { const el = $('card'); el.innerHTML = `<h2>${title}</h2>${sub ? '<p>' + sub + '</p>' : ''}`; el.style.display = 'block'; el.style.opacity = 1; clearTimeout(cardT); cardT = setTimeout(() => { el.style.opacity = 0; cardT = setTimeout(() => el.style.display = 'none', 600); }, sec * 1000); }
 function respawn() { player.dead = false; player.hp = 100; player.wanted = 0; msgEl.style.display = 'none'; for (const c of cars) if (c.userData.police) c.userData.mode = 'parked'; }
 
-window.G = { explode, makeBike, SHOPS, TILES, WORLD, WIDX, streamUpdate, streamInit, buildTileNow, TS, WPN, DEMO, STORY, FIRE, X, card, hurtPlayer, composerRef: () => composer,  autoQuality, groundH, dentCar, deckAt, surfAt, signalPoles, treeSpots, lampSpots, pushOffRoads, onOtherRoad, floorAt, solidAtH, solidAt, roofHeight, camShake,  CHAR, CAR_TPL, playAnim, makeHuman, makeCar, makeGun, applyQuality,  staticParked, chunkStatic,  saveGame, loadGame, world, opts, pickups, weather, trams, scene, cars, peds, player, camera, camYaw, camPitch, keys, CITY, DEM, TH, renderer, sun, hemi, THREE, shoot, toggleCar, update, toggleCreative, creative, creativePlace };
+window.G = { INTERIORS, explode, makeBike, SHOPS, TILES, WORLD, WIDX, streamUpdate, streamInit, buildTileNow, TS, WPN, DEMO, STORY, FIRE, X, card, hurtPlayer, composerRef: () => composer,  autoQuality, groundH, dentCar, deckAt, surfAt, signalPoles, treeSpots, lampSpots, pushOffRoads, onOtherRoad, floorAt, solidAtH, solidAt, roofHeight, camShake,  CHAR, CAR_TPL, playAnim, makeHuman, makeCar, makeGun, applyQuality,  staticParked, chunkStatic,  saveGame, loadGame, world, opts, pickups, weather, trams, scene, cars, peds, player, camera, camYaw, camPitch, keys, CITY, DEM, TH, renderer, sun, hemi, THREE, shoot, toggleCar, update, toggleCreative, creative, creativePlace };
 let fpsN = 0, fpsT = 0;
 renderer.setAnimationLoop(() => {
   fpsN++; const tn = performance.now(); if (tn - fpsT > 500) { const fe = document.getElementById('fps'); if (fe && opts.fps) fe.textContent = Math.round(fpsN * 1000 / (tn - fpsT)) + ' fps'; fpsN = 0; fpsT = tn; }
