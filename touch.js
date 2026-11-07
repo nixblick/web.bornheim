@@ -17,7 +17,8 @@
 #minimap{position:fixed!important;left:8px!important;top:78px!important;bottom:auto!important;width:96px!important;height:96px!important}
 #street{top:6px!important;bottom:auto!important;right:auto!important;left:50%!important;transform:translateX(-50%);font-size:14px!important}
 #stars{font-size:16px!important;top:52px!important;letter-spacing:2px!important}#money{font-size:14px!important;top:72px!important}
-#feed{width:210px!important;top:92px!important;font-size:11px!important}#hint{bottom:auto!important;top:34px!important;font-size:13px!important}
+#feed{width:210px!important;top:92px!important;font-size:11px!important}#hint{bottom:12px!important;font-size:12px!important;max-width:38vw;white-space:normal}
+#obj{top:30px!important;font-size:11px!important;max-width:46vw!important;padding:4px 10px!important;pointer-events:auto!important}#sub{bottom:58px!important;font-size:12px!important;max-width:52vw!important}#card h2{font-size:28px!important}#card p{font-size:13px!important}
 #tcrot{position:fixed;inset:0;z-index:60;background:#0b0d12;color:#fff;display:none;align-items:center;justify-content:center;text-align:center;font:600 18px system-ui;padding:30px}`;
   const st = document.createElement('style'); st.textContent = css; document.head.appendChild(st);
   const el = document.createElement('div'); el.id = 'tc';
@@ -63,6 +64,11 @@
   }, 250);
   // Beim Start: Vollbild und Querformat versuchen
   document.addEventListener('click', e => { if (e.target && (e.target.id === 'go' || e.target.id === 'cont')) { try { const r = document.documentElement.requestFullscreen && document.documentElement.requestFullscreen(); if (r && r.then) r.then(() => screen.orientation && screen.orientation.lock && screen.orientation.lock('landscape').catch(() => {})).catch(() => {}); } catch (err) {} } }, true);
+  // Zielhinweis: antippen blendet ihn aus (kommt mit dem nächsten Ziel wieder); "Esc" gibt es am Handy nicht -> ☰
+  const obj = document.getElementById('obj');
+  if (obj) { obj.addEventListener('touchstart', e => { e.preventDefault(); obj.style.display = 'none'; }, { passive: false });
+    const fix = () => { if (/Esc ›/.test(obj.innerHTML)) obj.innerHTML = obj.innerHTML.replace(/Esc ›/g, '☰ ›'); };
+    new MutationObserver(fix).observe(obj, { childList: true, characterData: true, subtree: true }); fix(); }
   // Doppeltipp-Zoom und Scrollen verhindern
   document.addEventListener('gesturestart', e => e.preventDefault());
   document.documentElement.style.touchAction = 'none';
