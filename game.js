@@ -19,7 +19,9 @@ const GradeShader = { uniforms: { tDiffuse: { value: null }, vig: { value: 0.32 
 let aoPass = null, gradePass = null;
 
 // ---------- Grundgerüst ----------
-const renderer = new THREE.WebGLRenderer({ antialias: true });
+// Schwache (integrierte/mobile) GPU vorab erkennen: Antialiasing lässt sich nach dem Anlegen nicht mehr abschalten
+const WEAK_GPU = (() => { try { const gl = document.createElement('canvas').getContext('webgl2'); const ext = gl && gl.getExtension('WEBGL_debug_renderer_info'); const g = String(gl ? (ext ? gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER)) : '').toLowerCase(); const lose = gl && gl.getExtension('WEBGL_lose_context'); if (lose) lose.loseContext(); return /intel.*(uhd|hd graphics|iris)|mali|adreno|powervr|videocore/.test(g) && !/\barc\b/.test(g); } catch (e) { return false; } })();
+const renderer = new THREE.WebGLRenderer({ antialias: !WEAK_GPU, powerPreference: 'high-performance' });
 renderer.setPixelRatio(1);
 renderer.setSize(innerWidth, innerHeight);
 renderer.shadowMap.enabled = true;
@@ -148,8 +150,8 @@ function autoQuality(gpu) { const g = gpu.toLowerCase();
   if (/rtx\s*(30[6-9]0|40[6-9]0|50\d0)|rx\s*(6[7-9]|7[7-9]|9[0-9])\d\d|apple m[2-9] (pro|max|ultra)/.test(g)) return 'ultra';
   if (/nvidia|geforce|rtx|gtx|radeon rx|radeon pro|apple m\d/.test(g)) return 'hoch';
   return 'mittel'; }
-const GPU = detectGPU(); let QUALITY = 'mittel', QUALITY_AUTO = false;
-try { const o = JSON.parse(localStorage.getItem('notgta.opts') || '{}'); if (o.quality) QUALITY = o.quality; else { QUALITY = autoQuality(GPU); QUALITY_AUTO = true; } } catch (e) {}
+const GPU = detectGPU(); let QUALITY = 'mittel', QUALITY_AUTO = false, WEAK_VIEW = false;
+try { const o = JSON.parse(localStorage.getItem('notgta.opts') || '{}'); if (o.quality) QUALITY = o.quality; else { QUALITY = autoQuality(GPU); QUALITY_AUTO = true; } if (WEAK_GPU && !o.weakTuned) WEAK_VIEW = true; } catch (e) {}
 const loadingEl = document.getElementById('loading'); const setLoading = t => { if (loadingEl) loadingEl.textContent = t; };
 setLoading('lade Modelle und Texturen…');
 const gltfLoader = new GLTFLoader(); const texLoader = new THREE.TextureLoader();
@@ -1332,7 +1334,7 @@ const player = { pos: new THREE.Vector3(0, 0, 0), yaw: 0, vy: 0, hp: 100, busted
 const camYaw = { v: 0 }, camPitch = { v: 0.2 };
 const keys = {};
 const opts = { sens: 1, vol: 0.8, shadows: true, timeSpeed: 1, headlights: true, weather: 'auto', traffic: 1, quality: QUALITY, scale: 1, view: 700, bloom: 1, ao: true, fps: false, fov: 65, camdist: 1, invy: false, shake: true, peds: 1, police: true, god: false, ammo: false, fall: true, grip: 1, minimap: true, hud: true, tts: true, demos: true, firebrigade: true };
-function loadOpts() { try { Object.assign(opts, JSON.parse(localStorage.getItem('notgta.opts') || '{}')); } catch (e) {} applyOpts(); }
+function loadOpts() { try { Object.assign(opts, JSON.parse(localStorage.getItem('notgta.opts') || '{}')); } catch (e) {} if (WEAK_VIEW) { opts.view = Math.min(opts.view || 700, 425); opts.weakTuned = true; } applyOpts(); } // einmalig: kürzere Sichtweite auf schwacher GPU, danach frei änderbar
 function applyOpts() { camera.far = (opts.view || 700) + 200; camera.updateProjectionMatrix(); const mm = document.getElementById('minimap'); if (mm) mm.style.display = opts.minimap === false ? 'none' : ''; const hd = document.getElementById('hud'); if (hd) hd.style.visibility = opts.hud === false ? 'hidden' : 'visible'; const fe = document.getElementById('fps'); if (fe) fe.style.display = opts.fps ? 'block' : 'none'; renderer.shadowMap.enabled = !!opts.shadows && opts.quality !== 'niedrig'; applyQuality(); scene.traverse(o => { if (o.material) { const ms = Array.isArray(o.material) ? o.material : [o.material]; for (const m of ms) m.needsUpdate = true; } }); world.speed = opts.timeSpeed / 60; SND.vol = opts.vol; if (SND.master) SND.master.gain.value = opts.vol; try { localStorage.setItem('notgta.opts', JSON.stringify(opts)); } catch (e) {} }
 function saveGame() {
   const c = player.car; const data = { v: 1, pos: [player.pos.x, player.pos.y, player.pos.z], yaw: camYaw.v, hp: player.hp, inv: WPN.save(), story: STORY ? STORY.S : null, money: player.money, score: player.score, wanted: player.wanted, female: player.female, hour: world.hour, car: c ? { x: c.position.x, z: c.position.z, h: c.userData.heading, col: c.userData.col ?? 0xffffff, type: c.userData.type } : null, when: Date.now() };
@@ -1762,7 +1764,7 @@ function update(dt) {
   if (shakeT > 0 && opts.shake !== false) { shakeT = Math.max(0, shakeT - dt); const a = shakeT * 0.35; camera.position.x += rnd(-a, a); camera.position.y += rnd(-a, a); camera.position.z += rnd(-a, a); }
   { const sx = Math.round(player.pos.x / 8) * 8, sz = Math.round(player.pos.z / 8) * 8, sy = player.pos.y; const moved = sx !== shadowSnap.x || sz !== shadowSnap.z; shadowSnap.x = sx; shadowSnap.z = sz; shadowSnap.n++;
     sun.position.set(sx + world.sunDir.x, world.sunDir.y + sy, sz + world.sunDir.z); sun.target.position.set(sx, sy, sz);
-    renderer.shadowMap.autoUpdate = false; renderer.shadowMap.needsUpdate = opts.quality === 'hoch' || opts.quality === 'ultra' || moved || shadowSnap.n % 2 === 0; } updateSky(dt); updateParkedLOD();
+    renderer.shadowMap.autoUpdate = false; renderer.shadowMap.needsUpdate = opts.quality === 'hoch' || opts.quality === 'ultra' || moved || shadowSnap.n % (WEAK_GPU ? 4 : 2) === 0; } updateSky(dt); updateParkedLOD();
   // KI-Autos
   for (const c of cars) {
     const u = c.userData;
