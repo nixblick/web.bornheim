@@ -1,0 +1,41 @@
+# Veröffentlicht die Webseite und das Spiel auf GitHub Pages.
+# Hochgeladen werden nur die Dateien, die der Browser braucht (keine Werkzeuge, Tests oder Notizen).
+name: Seite veröffentlichen
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Spieldateien zusammenstellen
+        run: |
+          mkdir _site
+          cp index.html play.html credits.html impressum.html manifest.webmanifest _site/
+          cp game.js weapons.js demo.js fire.js story.js story2.js _site/
+          cp -r assets vendor _site/
+          mkdir _site/data && cp data/city.json data/dem.json _site/data/
+          touch _site/.nojekyll
+          du -sh _site
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+      - id: deploy
+        uses: actions/deploy-pages@v4

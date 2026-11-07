@@ -1,0 +1,169 @@
+// Selbsttest für Bornheim — im Browser laden mit:
+//   await import('/tools/selftest.js?' + Date.now()); const r = await T.checks(); r
+// Liefert eine Liste { name, ok, detail }. Jeder rote Punkt ist ein Bug, den Claude selbst beheben soll.
+const G = window.G;
+const THREE = G.THREE;
+const run = (n, dt = 1 / 60) => { for (let i = 0; i < n; i++) G.update(dt); };
+
+function snap(px, py, pz, tx, ty, tz) {
+  const cam = G.camera, op = cam.position.clone(), oq = cam.quaternion.clone();
+  cam.position.set(px, py, pz); cam.lookAt(tx, ty, tz); cam.updateMatrixWorld(); G.renderer.render(G.scene, cam);
+  let ov = document.getElementById('snapov');
+  if (!ov) { ov = document.createElement('canvas'); ov.id = 'snapov'; ov.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;z-index:99;pointer-events:none'; document.body.appendChild(ov); }
+  ov.width = G.renderer.domElement.width; ov.height = G.renderer.domElement.height; ov.getContext('2d').drawImage(G.renderer.domElement, 0, 0); ov.style.display = 'block';
+  cam.position.copy(op); cam.quaternion.copy(oq); return 'snap';
+}
+function unsnap() { const ov = document.getElementById('snapov'); if (ov) ov.style.display = 'none'; }
+function ms() {
+  const gl = G.renderer.getContext(), px = new Uint8Array(4); G.renderer.render(G.scene, G.camera); const t0 = performance.now();
+  for (let i = 0; i < 10; i++) { G.renderer.render(G.scene, G.camera); gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, px); }
+  return { ms: +((performance.now() - t0) / 10).toFixed(1), calls: G.renderer.info.render.calls, tris: G.renderer.info.render.triangles };
+}
+function clear() { G.opts.weather = 'clear'; G.weather.kind = 'clear'; G.weather.rain = 0; G.weather.cloud = 0.2; G.weather.fog = 0; G.world.hour = 13; if (G.creative.on) G.toggleCreative(); if (G.player.car) G.toggleCar(); }
+function openPlace() { const pg = G.CITY.green.filter(g => g.k === 'playground').sort((a, b) => b.p.length - a.p.length)[0]; const xs = pg.p.map(p => p[0]), zs = pg.p.map(p => p[1]); return [(Math.min(...xs) + Math.max(...xs)) / 2, (Math.min(...zs) + Math.max(...zs)) / 2]; }
+function worldCenter(o, pred) { let res = null; o.updateMatrixWorld(true); o.traverse(m => { if (!res && m.isMesh && pred(m)) { const b = new THREE.Box3().setFromObject(m); res = b.getCenter(new THREE.Vector3()); } }); return res; }
+
+async function checks() {
+  const R = []; const add = (name, ok, detail = '') => R.push({ name, ok: !!ok, detail });
+  if (document.getElementById('start').style.display !== 'none') { document.getElementById('go').click(); await new Promise(r => setTimeout(r, 800)); }
+  window.__noAutoMenu = true; if (document.getElementById('menu').style.display === 'flex') G.X.closeMenu();
+  // Nichts Festes auf der Fahrbahn: Ampelmasten, Bäume, Laternen
+  { const onRoad = ([x, z]) => G.CITY.roads.some(r => !r.ped && r.p.some((q, i) => { if (i === r.p.length - 1) return false; const [ax, az] = q, [bx, bz] = r.p[i + 1]; const dx = bx - ax, dz = bz - az, L2 = dx * dx + dz * dz || 1; const t = Math.max(0, Math.min(1, ((x - ax) * dx + (z - az) * dz) / L2)); const ex = x - ax - dx * t, ez = z - az - dz * t; return ex * ex + ez * ez < (r.w / 2 - 0.1) ** 2; }));
+    { let bad = 0, n = 0; for (const r of G.CITY.roads) { if (r.ry) continue; for (let i = 0; i < r.p.length - 1; i++) { const [ax, az] = r.p[i], [bx, bz] = r.p[i + 1]; const l = Math.hypot(bx - ax, bz - az), ns = Math.max(1, Math.ceil(l / 3)); for (let q = 0; q < ns; q++) { const t0 = q / ns, t1 = (q + 1) / ns, tm = (t0 + t1) / 2; const h0 = G.TH(ax + (bx - ax) * t0, az + (bz - az) * t0), h1 = G.TH(ax + (bx - ax) * t1, az + (bz - az) * t1), hm = G.TH(ax + (bx - ax) * tm, az + (bz - az) * tm); n++; if (hm - (h0 + h1) / 2 > 0.1) bad++; } } }
+      add('Gelände ragt nicht durch die Fahrbahn', bad / n < 0.002, bad + ' von ' + n + ' Stichproben'); }
+    { // Frontal gegen ein Haus: Auto darf nicht in der Wand stecken und bekommt eine Delle
+      const c = G.cars.find(c => !c.userData.police && c.userData.wheels && c.userData.mode === 'ai'); if (c) { const god = G.opts.god; G.opts.god = true; if (G.player.car) G.toggleCar(); G.player.pos.copy(c.position).add(new G.THREE.Vector3(1.5, 0, 0)); G.player.mesh.position.copy(G.player.pos); G.toggleCar(); const car = G.player.car, u = car.userData;
+        let best = null, bd = 1e9; for (const b of G.CITY.buildings) { const cx = b.p.reduce((a, p) => a + p[0], 0) / b.p.length, cz = b.p.reduce((a, p) => a + p[1], 0) / b.p.length; const d = Math.hypot(cx - car.position.x, cz - car.position.z); if (d < bd && d > 20 && d < 60 && freePath(car.position, cx, cz)) { bd = d; best = [cx, cz]; } } if (!best) { const [ox, oz] = openPlace(); car.position.set(ox, G.TH(ox, oz), oz); for (const b of G.CITY.buildings) { const cx = b.p.reduce((a, p) => a + p[0], 0) / b.p.length, cz = b.p.reduce((a, p) => a + p[1], 0) / b.p.length; const d = Math.hypot(cx - ox, cz - oz); if (d < bd && d > 15 && d < 90) { bd = d; best = [cx, cz]; } } }
+        u.heading = Math.atan2(best[0] - car.position.x, best[1] - car.position.z); car.rotation.y = u.heading; u.speed = 0; if (u.vel) u.vel.set(0, 0, 0); G.keys.KeyW = true; for (let f = 0; f < 480 && !(u.dents > 0); f++) G.update(1 / 60); G.keys.KeyW = false;
+        const fx = Math.sin(u.heading), fz = Math.cos(u.heading), L = u.dims.l / 2 - 0.15; const stuck = G.solidAt(car.position.x + fx * L, car.position.z + fz * L) >= 0;
+        add('Auto steckt nach Aufprall nicht in der Wand', !stuck, 'Delle: ' + (u.dents || 0)); add('Aufprall verformt die Karosserie', (u.dents || 0) > 0, ''); G.toggleCar(); G.opts.god = god; } }
+    { // Gröberes Gelände (Mittel 8 m, Niedrig 12 m) liegt tiefer und darf nicht durch Straßen ragen
+      const D = G.DEM; for (const [mul, drop, nm] of [[2, 0.06, 'Mittel'], [3, 0.06, 'Niedrig']]) { const st = D.step * mul; let bad = 0, n = 0;
+        const gh = (x, z) => { const fx = (x - D.x0) / st, fz = (z - D.z0) / st, ix = Math.floor(fx), iz = Math.floor(fz), tx = fx - ix, tz = fz - iz; const h = (i, j) => G.groundH(D.x0 + i * st, D.z0 + j * st, mul); return (h(ix, iz) * (1 - tx) + h(ix + 1, iz) * tx) * (1 - tz) + (h(ix, iz + 1) * (1 - tx) + h(ix + 1, iz + 1) * tx) * tz - drop; };
+        for (const r of G.CITY.roads) { if (r.ry) continue; for (const [x, z] of r.p) { n++; if (gh(x, z) > G.TH(x, z) + 0.03) bad++; } }
+        add('Gelände ' + nm + ' ragt nicht durch Straßen', bad / n < 0.01, bad + ' von ' + n); } }
+    { // Kamera: Rücken zur Hauswand und Auto direkt hinter der Figur
+      if (G.player.car) G.toggleCar(); const b = G.CITY.buildings.find(b => b.h > 8 && b.p.length >= 4); const [ax, az] = b.p[0], [bx, bz] = b.p[1]; const l = Math.hypot(bx - ax, bz - az); let nx = -(bz - az) / l, nz = (bx - ax) / l; const mx = (ax + bx) / 2, mz = (az + bz) / 2; if (G.solidAt(mx + nx * 2, mz + nz * 2) >= 0) { nx = -nx; nz = -nz; }
+      const px = mx + nx * 1.6, pz = mz + nz * 1.6; G.player.pos.set(px, G.TH(px, pz), pz); G.player.mesh.position.copy(G.player.pos); G.camYaw.v = Math.atan2(nx, nz); G.camPitch.v = 0; for (let i = 0; i < 40; i++) G.update(1 / 60);
+      const cp = G.camera.position; add('Kamera steckt nicht in der Wand', G.solidAt(cp.x, cp.z) < 0, 'Abstand zur Figur ' + Math.hypot(cp.x - px, cp.z - pz).toFixed(1) + ' m');
+      const c = G.cars.find(c => c.userData.mode === 'parked' || c.userData.mode === 'ai'); if (c) { const fx = Math.sin(G.camYaw.v), fz = Math.cos(G.camYaw.v); const qx = mx + nx * 12, qz = mz + nz * 12; G.player.pos.set(qx, G.TH(qx, qz), qz); G.player.mesh.position.copy(G.player.pos); const mode = c.userData.mode; c.userData.mode = 'parked'; c.position.set(qx - fx * 3, G.TH(qx, qz), qz - fz * 3); c.userData.heading = G.camYaw.v + Math.PI / 2; c.rotation.y = c.userData.heading; for (let i = 0; i < 40; i++) G.update(1 / 60);
+        const u = c.userData, hx = Math.sin(u.heading), hz = Math.cos(u.heading), dx = G.camera.position.x - c.position.x, dz = G.camera.position.z - c.position.z; const inside = Math.abs(dx * hx + dz * hz) < u.dims.l / 2 && Math.abs(dx * hz - dz * hx) < 1.0 && G.camera.position.y < c.position.y + Math.min(u.dims.h, 1.6); add('Kamera steckt nicht im Auto', !inside, ''); c.userData.mode = mode; } }
+    { // Von oben auf die Straßenmitte: zuerst muss die Fahrbahn kommen, nicht Gehweg oder Gelände
+      const rc = new G.THREE.Raycaster(); const statics = G.scene.children.filter(m => m.isMesh && !m.isInstancedMesh && !m.isSkinnedMesh && m.visible); const roads = G.CITY.roads.filter(r => !r.ped && !r.ry && r.w >= 6); let bad = 0, n = 0; const ex = [];
+      for (let i = 0; i < 15; i++) { const r = roads[(i * 53) % roads.length]; const k = Math.floor(r.p.length / 2) - (r.p.length > 2 ? 0 : 1); const [ax, az] = r.p[Math.max(0, k)], [bx, bz] = r.p[Math.min(r.p.length - 1, k + 1)]; const x = (ax + bx) / 2, z = (az + bz) / 2; if (G.solidAt(x, z) >= 0) continue;
+        rc.set(new G.THREE.Vector3(x, G.TH(x, z) + 3, z), new G.THREE.Vector3(0, -1, 0)); rc.far = 6; const h = rc.intersectObjects(statics, false).find(h => !h.object.material.isMeshBasicMaterial); /* Markierungen dürfen obenauf liegen */ if (!h) continue; n++; if (!(h.object.material && h.object.material.userData && h.object.material.userData.pud)) { bad++; ex.push(Math.round(x) + '/' + Math.round(z)); } }
+      add('Fahrbahn liegt obenauf', bad === 0, bad + ' von ' + n + (ex.length ? ' z.B. ' + ex.slice(0, 3).join(' ') : '')); }
+    { // Auto auf der Spur direkt neben einer Parkreihe klauen: muss losfahren
+      if (G.player.car) G.toggleCar(); const clear = (x, z) => { for (const r of [0, 1.2, 2.4]) for (let a = 0; a < 8; a++) if (G.solidAt(x + Math.sin(a * 0.785) * r, z + Math.cos(a * 0.785) * r) >= 0) return false; return true; }; let sp = null, x = 0, z = 0; for (const s of G.staticParked) { if (!s.active || G.solidAt(s.x, s.z) >= 0) continue; const hx = Math.sin(s.h), hz = Math.cos(s.h); const rd = (x, z) => { let best = 1e9; for (const r of G.CITY.roads) { if (r.ped || r.ry) continue; for (let k = 0; k < r.p.length - 1; k++) { const [a, b] = r.p[k], [c, d] = r.p[k + 1]; const L = (c - a) ** 2 + (d - b) ** 2; let t = L ? ((x - a) * (c - a) + (z - b) * (d - b)) / L : 0; t = Math.max(0, Math.min(1, t)); best = Math.min(best, Math.hypot(a + t * (c - a) - x, b + t * (d - b) - z)); } } return best; }; const sgn = rd(s.x + hz * 2.2, s.z - hx * 2.2) < rd(s.x - hz * 2.2, s.z + hx * 2.2) ? 1 : -1; for (const sg of [sgn]) { const qx = s.x + hz * 2.2 * sg, qz = s.z - hx * 2.2 * sg; const free = !G.staticParked.some(o => o.active && o !== s && (() => { const ox = o.x - qx, oz = o.z - qz, al = ox * hx + oz * hz, ac = ox * hz - oz * hx; return al > -3 && al < 14 && Math.abs(ac) < 2.9; })()); if (free && clear(qx, qz) && [0, 2, 4, 6, 8, 10, 12].every(d => [-1.6, 0, 1.6].every(w => G.solidAt(qx + hx * d + hz * w, qz + hz * d - hx * w) < 0))) { sp = s; x = qx; z = qz; break; } } if (sp) break; } if (sp) { const hx = Math.sin(sp.h), hz = Math.cos(sp.h); const c = G.cars.find(c => c.userData.mode === 'ai' && c.userData.wheels && c !== G.player.car);
+        if (c && G.solidAt(x, z) < 0) { c.position.set(x, G.TH(x, z), z); c.userData.heading = sp.h; c.rotation.y = sp.h; c.userData.speed = 0; if (c.userData.vel) c.userData.vel.set(0, 0, 0); G.player.pos.set(x + hz * 1.6, G.TH(x, z), z - hx * 1.6); G.player.mesh.position.copy(G.player.pos); G.toggleCar(); const car = G.player.car; const p0 = car.position.clone(); G.keys.KeyW = true; for (let f = 0; f < 90; f++) G.update(1 / 60); G.keys.KeyW = false;
+          add('Geklautes Auto neben Parkreihe fährt los', car.position.distanceTo(p0) > 4, car.position.distanceTo(p0).toFixed(1) + ' m in 1,5 s'); G.toggleCar(); } } }
+    { const n = G.CITY.signals.length, m = G.signalPoles.length; add('Zwei Ampelmasten je Ampel (StVO)', m >= n * 1.8, m + ' Masten für ' + n + ' Ampeln'); }
+    for (const [nm, list] of [['Ampelmasten', G.signalPoles], ['Bäume', G.treeSpots], ['Laternen', G.lampSpots]]) { const bad = list.filter(onRoad); add(nm + ' nicht auf der Fahrbahn', bad.length === 0, bad.length + ' von ' + list.length + (bad.length ? ', z.B. ' + bad.slice(0, 3).map(b => b.map(v => v.toFixed(0)).join('/')).join(' ') : '')); } }
+  if (!document.getElementById('start') || document.getElementById('start').style.display !== 'none') { document.getElementById('go').click(); await new Promise(r => setTimeout(r, 800)); }
+  clear();
+  // 1) Autos: Front (Scheinwerfer) zeigt in Fahrtrichtung (+z lokal), Rücklichter hinten, Blaulicht oben
+  for (const t of Object.keys(G.CAR_TPL)) {
+    const c = G.makeCar(t === 'police', t); c.position.set(0, 0, 0); c.rotation.set(0, 0, 0); c.userData.heading = 0; G.scene.add(c); c.updateMatrixWorld(true);
+    const head = worldCenter(c, m => /Headlights/.test(m.material.name)); const tail = worldCenter(c, m => /TailLights/.test(m.material.name));
+    if (head && tail) add(`Auto ${t}: Scheinwerfer vorn`, head.z > tail.z, `vorn z=${head.z.toFixed(2)} hinten z=${tail.z.toFixed(2)}`);
+    else add(`Auto ${t}: Lichter gefunden`, true, 'Textur-Atlas, keine Lichtmaterialien (nur Sichtprüfung)');
+    if (t === 'police') { const bar = c.userData.bar; const b = bar ? new THREE.Box3().setFromObject(bar) : null; add('Streifenwagen: Blaulicht auf dem Dach', b && b.min.y > c.userData.dims.h * 0.6, b ? `Unterkante ${b.min.y.toFixed(2)} m, Wagenhöhe ${c.userData.dims.h.toFixed(2)} m` : 'kein Blaulicht'); }
+    G.scene.remove(c);
+  }
+  // 2) Fahrende KI-Autos: Bewegung in kurzen Fenstern muss zur Fahrzeugfront passen (Sprünge durch Neueinsetzen zählen nicht)
+  { const ai = G.cars.filter(c => c.userData.mode === 'ai'); let good = 0, bad = 0; const badT = new Set();
+    for (let w = 0; w < 12; w++) { const before = ai.map(c => c.position.clone()); run(5);
+      ai.forEach((c, i) => { const mv = c.position.clone().sub(before[i]).setY(0); const L = mv.length(); if (L < 0.2 || L > 4) return; c.updateMatrixWorld(true); const fwd = new THREE.Vector3(0, 0, 1).applyQuaternion(c.quaternion).setY(0).normalize(); if (mv.normalize().dot(fwd) > 0.3) good++; else { bad++; badT.add(c.userData.type); } }); }
+    add('KI-Autos fahren vorwärts', bad <= good * 0.02, `${good} Messungen vorwärts, ${bad} rückwärts/quer ${[...badT].join(',')}`); }
+  // 3) Figuren stehen auf dem Boden
+  { const off = G.peds.filter(p => p.userData.state === 'walk' && Math.abs(p.position.y - G.TH(p.position.x, p.position.z)) > 0.35); add('Passanten auf dem Boden', off.length === 0, `${off.length} schweben/versinken`); }
+  // 4) Waffe in der Hand des Spielers
+  { G.player.aimHold = true; run(20); const gun = G.player.mesh.userData.gun; const gp = new THREE.Vector3(); gun.getWorldPosition(gp); const d = gp.distanceTo(G.player.mesh.position.clone().setY(G.player.mesh.position.y + 1.3)); add('Waffe in Handhöhe', d < 0.9, `Abstand zur Brust ${d.toFixed(2)} m`); G.player.aimHold = false; }
+  // 5) Auf einem Dach stehen und landen
+  { const b = G.CITY.buildings.find(b => b.h > 8 && b.h < 25 && !b.r && Math.abs(polyArea(b.p)) > 120) || G.CITY.buildings.find(b => b.h > 8); const cx = b.p.reduce((a, p) => a + p[0], 0) / b.p.length, cz = b.p.reduce((a, p) => a + p[1], 0) / b.p.length;
+    const roof = G.roofHeight(b, cx, cz); G.toggleCreative(); G.player.pos.set(cx, roof + 6, cz); run(5); G.toggleCreative(); run(120);
+    add('Landen auf Flachdach', Math.abs(G.player.pos.y - roof) < 0.3, `Dach ${roof.toFixed(1)} m, Figur ${G.player.pos.y.toFixed(1)} m`);
+    const y0 = G.player.pos.y; G.keys.KeyW = true; run(30); G.keys.KeyW = false; add('Auf dem Dach laufen', Math.abs(G.player.pos.y - y0) < 0.6 || G.player.pos.y < y0 - 2, `Höhe ${y0.toFixed(1)} → ${G.player.pos.y.toFixed(1)}`);
+    G.player.pos.set(cx, G.TH(cx, cz) + 0, cz); }
+  // 6) Steildach: auf First landen
+  { const b = G.CITY.buildings.find(b => b.r === 'gabled' && b.rh > 0 && b.p.length <= 6 && G.roofHeight(b, b.p[0][0], b.p[0][1]) !== undefined); if (b) { const cx = b.p.reduce((a, p) => a + p[0], 0) / b.p.length, cz = b.p.reduce((a, p) => a + p[1], 0) / b.p.length; const rh = G.roofHeight(b, cx, cz);
+    G.toggleCreative(); G.player.pos.set(cx, rh + 4, cz); run(5); G.toggleCreative(); run(120); add('Landen auf Steildach', Math.abs(G.player.pos.y - rh) < 0.5, `Dach ${rh.toFixed(1)} m, Figur ${G.player.pos.y.toFixed(1)} m`); } }
+  // 7) Nicht durch Wände laufen
+  { const b = G.CITY.buildings.find(b => b.h > 6 && Math.abs(polyArea(b.p)) > 150); const [ax, az] = b.p[0], [bx, bz] = b.p[1]; const mx = (ax + bx) / 2, mz = (az + bz) / 2; const cx = b.p.reduce((a, p) => a + p[0], 0) / b.p.length, cz = b.p.reduce((a, p) => a + p[1], 0) / b.p.length;
+    const ox = mx + (mx - cx) * 0.25, oz = mz + (mz - cz) * 0.25; G.player.pos.set(ox, G.TH(ox, oz), oz); G.camYaw.v = Math.atan2(cx - ox, cz - oz); G.keys.KeyW = true; run(120); G.keys.KeyW = false;
+    add('Wände halten auf', G.solidAtH(G.player.pos.x, G.player.pos.z, G.player.pos.y) === -1, `steht in Gebäude: ${G.solidAtH(G.player.pos.x, G.player.pos.z, G.player.pos.y) !== -1}`); }
+  // 8) Fahrphysik: Handbremse erzeugt Drift, Bremsspuren
+  { const [cx, cz] = openPlace(); const c = G.makeCar(false, 'sedan'); c.position.set(cx, G.TH(cx, cz), cz); G.scene.add(c); G.cars.push(c); G.player.pos.copy(c.position); G.player.mesh.position.copy(G.player.pos); G.toggleCar();
+    const ok = G.player.car === c; G.keys.KeyW = true; run(120); G.keys.KeyA = true; G.keys.Space = true; run(40); G.keys.KeyA = false; G.keys.Space = false; G.keys.KeyW = false; const slip = c.userData.vel ? Math.abs(new THREE.Vector2(Math.sin(c.userData.heading), Math.cos(c.userData.heading)).dot(c.userData.vel.clone().normalize())) : 1;
+    add('Auto übernommen', ok); add('Handbremse lässt das Heck kommen', slip < 0.97, `Ausrichtung Fahrtrichtung zu Bewegung ${slip.toFixed(2)}`); G.toggleCar(); }
+  // 8a) Zäune/Mauern/Hecken halten Autos auf
+  { const segs = []; for (const b of G.CITY.barriers.concat(G.CITY.areas.map(a => ({ p: a.p.concat([a.p[0]]) })))) for (let i = 0; i < b.p.length - 1; i++) { const [ax, az] = b.p[i], [bx, bz] = b.p[i + 1]; const l = Math.hypot(bx - ax, bz - az); if (l > 12 && G.solidAt((ax + bx) / 2, (az + bz) / 2) < 0) segs.push([ax, az, bx, bz, l]); }
+    let crossed = 0, tried = 0; for (const [ax, az, bx, bz, l] of segs.slice(0, 6)) { const mx = (ax + bx) / 2, mz = (az + bz) / 2, nx = -(bz - az) / l, nz = (bx - ax) / l; const sx = mx + nx * 8, sz = mz + nz * 8; if (G.solidAt(sx, sz) >= 0) continue; tried++;
+      const c = G.makeCar(false, 'sedan'); c.position.set(sx, G.TH(sx, sz), sz); c.userData.heading = Math.atan2(-nx, -nz); c.rotation.y = c.userData.heading; G.scene.add(c); G.cars.push(c); G.player.pos.copy(c.position); G.toggleCar(); G.keys.KeyW = true; run(150); G.keys.KeyW = false;
+      const side = (c.position.x - mx) * nx + (c.position.z - mz) * nz; if (side < -0.5) crossed++; G.toggleCar(); }
+    add('Zäune und Mauern halten Autos auf', tried > 0 && crossed === 0, `${crossed} von ${tried} Versuchen durchgefahren`); }
+  // 8b) Lichtkegel nur nachts und nur bei fahrenden Autos
+  { G.world.hour = 13; run(5); const lit = G.cars.filter(c => c.userData.cone && c.userData.cone.visible); add('Keine Scheinwerferkegel am Tag', lit.length === 0, `${lit.length} Autos mit Lichtkegel um 13 Uhr`); }
+  // 9) Konsole und Leistung
+  clear(); const bs = G.CITY.roads.filter(r => r.n === 'Berger Straße'); const r = bs[Math.floor(bs.length * 0.4)]; G.player.pos.set(r.p[0][0], G.TH(r.p[0][0], r.p[0][1]), r.p[0][1]); G.player.mesh.position.copy(G.player.pos); G.camera.userData.init = false; run(20);
+  const m = ms(); G.renderer.shadowMap.needsUpdate = false; const m2 = [ms(), ms(), ms()].sort((a, b) => a.ms - b.ms)[0];
+  const hidden = []; G.scene.children.forEach(o => { if (o.visible && (o.isMesh || o.isSprite || o.isPoints || o.isGroup)) { hidden.push(o); o.visible = false; } }); const base = [ms(), ms(), ms()].sort((a, b) => a.ms - b.ms)[0]; hidden.forEach(o => o.visible = true);
+  const real = +(m2.ms - base.ms).toFixed(1); add('Renderzeit Berger Straße (nur Hinweis, im versteckten Pane gedrosselt)', true, `${real} ms für die Szene (gesamt ${m2.ms} ms minus leere Szene ${base.ms} ms), ${m.calls} Aufrufe, ${Math.round(m.tris / 1000)}k Dreiecke`);
+  // 10) Waffen, Demo, Polizei, Wasserwerfer, Story
+  { const W = G.WPN, T3 = G.THREE, P = G.player; const god = G.opts.god; G.opts.god = true; G.opts.tts = false; if (G.player.car) G.toggleCar();
+    const save = { inv: W.save(), story: localStorage.getItem('notgta.story') };
+    const bs = G.CITY.roads.filter(r => r.n === 'Berger Straße'); const rr = bs[Math.floor(bs.length * 0.4)]; P.pos.set(rr.p[0][0], G.TH(rr.p[0][0], rr.p[0][1]), rr.p[0][1]); P.mesh.position.copy(P.pos); G.camYaw.v = Math.atan2(rr.p[1][0] - rr.p[0][0], rr.p[1][1] - rr.p[0][1]); G.camPitch.v = 0.12; G.camera.userData.init = false; run(5);
+    for (const k of W.ORDER) W.give(k); let held = 0; for (const k of W.ORDER) { W.select(k, true); const g = P.mesh.userData.gun; if (g && g.parent === P.mesh.userData.hand) held++; } add('Alle Waffen wählbar und in der Hand', held === W.ORDER.length, held + ' von ' + W.ORDER.length);
+    const onRay = d => { const r = new T3.Raycaster(); r.setFromCamera(new T3.Vector2(0, 0), G.camera); const p = r.ray.at(d, new T3.Vector3()); const h = G.X.spawnPedAt(p.x, p.z); if (h) h.userData.state = 'npc'; return h; };
+    { let hit = 0; for (const k of ['smg', 'shotgun', 'rifle']) { const h = onRay(11); W.select(k, true); run(70); G.scene.updateMatrixWorld(true); W.press(true); run(k === 'shotgun' ? 1 : 18); W.press(false); if (h && h.userData.hp < 100) hit++; } add('Schusswaffen treffen am Fadenkreuz', hit >= 2, hit + ' von 3 Waffen getroffen'); }
+    { const h = onRay(8); W.select('taser', true); run(80); G.scene.updateMatrixWorld(true); W.press(true); W.press(false); run(3); add('Taser betäubt', h && h.userData.state === 'stunned', h ? h.userData.state : 'kein Ziel'); }
+    { const b = G.CITY.buildings.find(b => b.h > 8 && Math.abs(polyArea(b.p)) > 150 && Math.hypot(b.p[0][0] - P.pos.x, b.p[0][1] - P.pos.z) < 400) || G.CITY.buildings.find(b => b.h > 8); const [ax, az] = b.p[0], [bx, bz] = b.p[1]; const mx = (ax + bx) / 2, mz = (az + bz) / 2; const cx = b.p.reduce((a, p) => a + p[0], 0) / b.p.length, cz = b.p.reduce((a, p) => a + p[1], 0) / b.p.length; const ox = mx + (mx - cx) / Math.hypot(mx - cx, mz - cz) * 7, oz = mz + (mz - cz) / Math.hypot(mx - cx, mz - cz) * 7;
+      const n0 = G.scene.children.length; const from = new T3.Vector3(ox, G.TH(ox, oz) + 1.6, oz); const v = new T3.Vector3(mx - ox, 0.5, mz - oz).normalize().multiplyScalar(16); W.spawnProj('paint', from, v, 'player'); run(60); const splat = G.scene.children.slice(n0).some(o => o.isMesh && o.material && o.material.alphaTest === 0.35); add('Farbbeutel hinterlässt Farbe an der Wand', splat, ''); }
+    { const c = G.makeCar(false, 'sedan'); const x = P.pos.x + 30, z = P.pos.z; c.position.set(x, G.TH(x, z), z); G.scene.add(c); G.cars.push(c); W.boom(c.position.clone(), 'test'); add('Granate zerstört Auto', c.userData.mode === 'wreck', c.userData.mode); }
+    // Straßenbahn bremst vor Menschen (nur Fälle, in denen der Mensch wirklich auf dem Gleis vor der Bahn bleibt)
+    { let valid = 0, stopped = 0; for (const t of G.trams) { const u = t.userData; const fx = Math.sin(u.heading), fz = Math.cos(u.heading); const h = G.X.spawnPedAt(t.position.x + fx * 22, t.position.z + fz * 22); if (!h) continue; h.userData.state = 'npc'; u.speed = 6; u.stopT = 0; P.pos.copy(t.position); P.pos.x += 30; P.pos.y = G.TH(P.pos.x, P.pos.z); run(150);
+        const f2x = Math.sin(u.heading), f2z = Math.cos(u.heading); const rx = h.position.x - t.position.x, rz = h.position.z - t.position.z; const a = rx * f2x + rz * f2z, lat = Math.abs(rx * f2z - rz * f2x); if (a < 10 || a > 30 || lat > 2) { G.DEMO.removePed(h); continue; } valid++; if (u.speed < 1 && h.userData.state !== 'dead') stopped++; G.DEMO.removePed(h); }
+      add('Straßenbahn hält vor Menschen', valid > 0 && stopped === valid, stopped + ' von ' + valid + ' gültigen Versuchen gehalten'); }
+    // Demozug: läuft los, niemand stirbt ohne Zutun des Spielers
+    { const pl = G.STORY.places; P.pos.set(pl.GATE[0] + 5, G.TH(pl.GATE[0] + 5, pl.GATE[1]), pl.GATE[1]); P.mesh.position.copy(P.pos); const w0 = P.wanted = 0; const d = G.DEMO.spawnDemo({ x: pl.GATE[0], z: pl.GATE[1], n: 20, dest: [pl.UHR[0], pl.UHR[1]] }); for (let k = 0; k < 6; k++) { const f = G.DEMO.posAt(d.trail, d.s + 4); P.pos.set(f.x, G.TH(f.x, f.z), f.z); run(300); }
+      add('Demozug läuft die Route', d.s > 25 && d.state === 'march', d.s.toFixed(0) + ' m, ' + d.state); add('Demo: keine Toten, keine Fahndung ohne Zutun', !d.members.some(h => h.userData.state === 'dead') && d.members.length >= 18 && P.wanted === 0, d.members.length + ' dabei, Fahndung ' + P.wanted.toFixed(1));
+      // Polizeikette und Deeskalation
+      G.DEMO.setStage(d, 1); G.DEMO.setStage(d, 2); for (let k = 0; k < 14 && d.state !== 'halt'; k++) { const f = G.DEMO.posAt(d.trail, d.s + 4); P.pos.set(f.x, G.TH(f.x, f.z), f.z); run(200); } let opened = false; for (let k = 0; k < 45 && !opened; k++) { run(100); G.DEMO.rally(); opened = d.pol.lineOpened; } add('Polizeikette lässt bei Deeskalation durch', opened, 'Spannung ' + d.tension.toFixed(2) + ', ruhig ' + d.pol.calmT.toFixed(0) + ' s');
+      d.tension = 0.8; G.DEMO.setStage(d, 3); G.DEMO.setStage(d, 4); let sprayed = false; for (let k = 0; k < 30 && !sprayed; k++) { run(60); sprayed = !!(d.pol.cannon && G.peds.some(p => p.userData.state === 'stunned' && p.userData.stunKind === 'water')); } add('Wasserwerfer rückt an und spritzt', sprayed, d.pol.cannon ? 'Abstand ' + Math.hypot(d.pol.cannon.position.x - d.cx, d.pol.cannon.position.z - d.cz).toFixed(0) + ' m' : 'kein Wasserwerfer'); G.DEMO.endDemo(d, 'faded'); P.wanted = 0; }
+    // Wasserwerfer selbst fahren
+    { const c = G.DEMO.spawnCannon(P.pos.x + 4, P.pos.z, 0, 'parked'); P.pos.set(c.position.x + 3.5, c.position.y, c.position.z); run(2); G.toggleCar(); add('Wasserwerfer übernehmen', P.car === c, ''); if (P.car === c) { G.toggleCar(); } P.wanted = 0; }
+    // Story: Kapitel 1 startet mit Ziel und Kim
+    { const S = G.STORY.S, st0 = S.state; S.state = 'active'; G.STORY.beginChapter(0); run(1300); const obj = document.getElementById('obj').innerText; add('Story Kapitel 1 startet mit Missionsziel', /Kim/.test(obj) && !!G.STORY.kim, obj); G.STORY.stop(); if (save.story) localStorage.setItem('notgta.story', save.story); else localStorage.removeItem('notgta.story'); S.state = st0; }
+    W.load(save.inv); G.opts.god = god; P.wanted = 0; clear(); }
+  // 11) Feuer, Feuerwehr, Flächen auf dem Gelände, Story 2
+  { const T3 = G.THREE, P = G.player, F = G.FIRE, W = G.WPN; const god = G.opts.god; G.opts.god = true; if (P.car) G.toggleCar(); G.X.closeMenu();
+    // Belag von Schulhöfen und Grünflächen schwebt nicht über dem Gelände
+    { const list = []; G.scene.traverse(o => { if (o.isMesh && !o.isSkinnedMesh && !o.isInstancedMesh) list.push(o); }); const rc = new T3.Raycaster(); let bad = 0, n = 0; const ex = [];
+      for (const a of G.CITY.areas.concat(G.CITY.green.filter((g, i) => i % 9 === 0)).slice(0, 60)) { const xs = a.p.map(p => p[0]), zs = a.p.map(p => p[1]); for (let k = 0; k < 3; k++) { const x = Math.min(...xs) + Math.random() * (Math.max(...xs) - Math.min(...xs)), z = Math.min(...zs) + Math.random() * (Math.max(...zs) - Math.min(...zs)); if (!G.X.pointInPoly(x, z, a.p) || G.solidAt(x, z) >= 0) continue; const t = G.TH(x, z); rc.set(new T3.Vector3(x, t + 1.2, z), new T3.Vector3(0, -1, 0)); rc.far = 1.5; const hs = rc.intersectObjects(list, false).filter(h => { const m = Array.isArray(h.object.material) ? h.object.material[0] : h.object.material; return !m.transparent && !(m.color && m.color.getHex() === 0xffffff); }); if (!hs.length) continue; const h = hs.reduce((a, b) => a.point.y < b.point.y ? a : b); /* niedrigste Fläche: Hecken und Bänke stehen darauf */ n++; if (h.point.y - t > 0.2) { bad++; if (ex.length < 3) ex.push(x.toFixed(0) + ',' + z.toFixed(0) + ' +' + (h.point.y - t).toFixed(2)); } } }
+      add('Schulhöfe und Grünflächen liegen auf dem Gelände', bad === 0, bad + ' von ' + n + ' Stichproben schweben' + (ex.length ? ': ' + ex.join(' ') : '')); }
+    const [ox, oz] = openPlace(); P.pos.set(ox, G.TH(ox, oz), oz); P.mesh.position.copy(P.pos); run(5);
+    const mkCar = (dx, dz) => { const c = G.makeCar(false, 'sedan'); const x = ox + dx, z = oz + dz; c.position.set(x, G.TH(x, z), z); c.userData.mode = 'parked'; G.scene.add(c); G.cars.push(c); G.X.shootables.push(c); return c; };
+    { const c = mkCar(14, 0); const from = new T3.Vector3(ox, G.TH(ox, oz) + 1.6, oz); const v = c.position.clone().setY(c.position.y + 0.8).sub(from); const L = v.length(); v.normalize().multiplyScalar(16); v.y += 9.8 * (L / 16) / 2; W.give('molotov', 2); W.spawnProj('molotov', from, v, 'test'); run(90); add('Brandsatz setzt Auto in Brand', !!c.userData.fire, c.userData.fire ? 'brennt' : 'kein Feuer'); }
+    { const c = mkCar(-14, 6); F.ignite(c, { I: 0.8, by: 'test' }); const ww = G.DEMO.spawnCannon(ox - 14, oz - 12, 0, 'parked'); run(2); let out = false; for (let k = 0; k < 360 && !out; k++) { G.DEMO.aimTurret(ww, c.position.x, c.position.y + 0.6, c.position.z, 1 / 60); G.DEMO.cannonSpray(ww, 1 / 60); G.update(1 / 60); out = !c.userData.fire; } add('Wasserstrahl löscht brennendes Auto', out, out ? '' : 'Feuer noch ' + (c.userData.fire ? c.userData.fire.I.toFixed(2) : '?')); G.DEMO.removeCar(ww); }
+    { const c = mkCar(0, 16); const f = F.ignite(c, { I: 0.6, by: 'test' }); let arrived = false, out = false; for (let k = 0; k < 75 && !out; k++) { run(60); const b = F.brigades.find(b => b.fire === f); if (b && b.state === 'work' && b.crew.length) arrived = true; out = !F.fires.includes(f); }
+      add('Feuerwehr kommt und löscht', arrived && out, (arrived ? 'vor Ort' : 'nicht angekommen') + ', ' + (out ? 'gelöscht' : 'brennt noch')); }
+    for (const f of [...F.fires]) F.douse(F.fireAt(f).x, F.fireAt(f).y, F.fireAt(f).z, 5); run(30);
+    // Story 2 startet mit Selin und Ziel
+    { const st0 = { s1: localStorage.getItem('notgta.story'), s2: localStorage.getItem('notgta.story2') }; const sid0 = G.STORY.sid; G.STORY.useStory('s2'); const S = G.STORY.S, state0 = S.state; S.state = 'active'; G.STORY.beginChapter(0); run(1100); const obj = document.getElementById('obj').innerText;
+      add('Story 2 Kapitel 1 startet mit Missionsziel', /Selin/.test(obj) && !!S.selin, obj); G.STORY.stop(); S.state = state0; G.STORY.useStory(sid0); for (const [k, v] of [['notgta.story', st0.s1], ['notgta.story2', st0.s2]]) { if (v) localStorage.setItem(k, v); else localStorage.removeItem(k); } }
+    G.opts.god = god; P.wanted = 0; clear(); }
+  window.__noAutoMenu = false;
+  return R;
+}
+// Gerade Strecke ohne Zaun und Parkreihe bis kurz vor das Gebäude
+function freePath(p, tx, tz) { const L = Math.hypot(tx - p.x, tz - p.z); for (let k = 3; k < L; k += 1.5) { const x = p.x + (tx - p.x) * k / L, z = p.z + (tz - p.z) * k / L; if (G.solidAt(x, z) >= 0) return k > 12; if (G.X.barrierNear(x, z, 1.3) || G.staticParked.some(sp => Math.hypot(sp.x - x, sp.z - z) < 3)) return false; } return false; }
+function polyArea(p) { let a = 0; for (let i = 0, j = p.length - 1; i < p.length; j = i++) a += (p[j][0] * p[i][1] - p[i][0] * p[j][1]); return a / 2; }
+window.T = { run, snap, unsnap, ms, checks, clear, openPlace };
+export default window.T;
+// Echte GPU-Zeit eines Bildes (Median aus n Messungen), unabhängig davon, ob das Fenster sichtbar ist
+async function gpu(n = 5) { const gl = G.renderer.getContext(), ext = gl.getExtension('EXT_disjoint_timer_query_webgl2'); if (!ext) return null; const res = [];
+  for (let i = 0; i < n; i++) { const q = gl.createQuery(); gl.beginQuery(ext.TIME_ELAPSED_EXT, q); G.renderer.render(G.scene, G.camera); gl.endQuery(ext.TIME_ELAPSED_EXT); let t = 0; while (!gl.getQueryParameter(q, gl.QUERY_RESULT_AVAILABLE) && t < 100) { await new Promise(r => setTimeout(r, 10)); t++; } res.push(gl.getQueryParameter(q, gl.QUERY_RESULT) / 1e6); gl.deleteQuery(q); }
+  res.sort((a, b) => a - b); return +res[Math.floor(n / 2)].toFixed(1); }
+async function perf() { clear(); const bs = G.CITY.roads.filter(r => r.n === 'Berger Straße'); const r = bs[Math.floor(bs.length * 0.4)]; G.player.pos.set(r.p[0][0], G.TH(r.p[0][0], r.p[0][1]), r.p[0][1]); G.player.mesh.position.copy(G.player.pos); G.camera.userData.init = false; run(20);
+  const o = {}; G.renderer.shadowMap.autoUpdate = true; o.mitSchatten = await gpu(); G.renderer.shadowMap.autoUpdate = false; G.renderer.shadowMap.needsUpdate = false; o.ohneSchattenUpdate = await gpu(); o.calls = G.renderer.info.render.calls; o.meshes = G.scene.children.filter(x => x.isMesh).length; return o; }
+window.T.gpu = gpu; window.T.perf = perf;

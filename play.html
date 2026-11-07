@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>Bornheim – Spielen</title>
+<meta name="description" content="Open-World-Spiel im Browser: Frankfurt-Bornheim.">
+<meta name="theme-color" content="#0b0d12">
+<link rel="icon" href="assets/site/icon.svg" type="image/svg+xml">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+  html,body{margin:0;height:100%;background:#0b0d12;color:#eee;font-family:system-ui,Segoe UI,sans-serif;overflow:hidden}
+  canvas{display:block}
+  #hud{position:fixed;inset:0;pointer-events:none}
+  #hud .tl{position:absolute;left:16px;top:14px;font-size:14px;line-height:1.5;text-shadow:0 1px 3px #000}
+  #hud .bl{position:absolute;left:16px;bottom:16px}
+  #minimap{width:220px;height:220px;border-radius:50%;border:2px solid #fff6;box-shadow:0 0 0 4px #0008;background:#111}
+  #street{position:absolute;right:20px;bottom:22px;font-size:26px;font-weight:700;letter-spacing:.5px;text-shadow:0 2px 6px #000;text-align:right}
+  #hint{position:absolute;left:50%;bottom:70px;transform:translateX(-50%);font-size:15px;background:#000a;padding:6px 14px;border-radius:8px}
+  #stars{position:absolute;right:20px;top:16px;font-size:26px;letter-spacing:4px;color:#ffd84a;text-shadow:0 1px 4px #000}
+  #health{width:180px;height:8px;background:#0008;border-radius:4px;margin-top:6px}
+  #health i{display:block;height:100%;width:100%;background:#62d26f;border-radius:4px}
+  #cross{position:absolute;left:50%;top:50%;width:26px;height:26px;transform:translate(-50%,-50%);display:none;border:2px solid #fff9;border-radius:50%;box-shadow:0 0 4px #000}
+  #cross:before,#cross:after{content:"";position:absolute;background:#fffc}
+  #cross:before{left:11px;top:11px;width:4px;height:4px;border-radius:50%;background:#ffd84a}#cross:after{display:none}
+  #start{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:radial-gradient(ellipse at center,#1b2030,#07080c 70%);z-index:10}
+  #start .box{text-align:center;max-width:560px;padding:30px}
+  #start h1{font-size:56px;margin:0;letter-spacing:2px}
+  #start h1 small{display:block;font-size:16px;letter-spacing:6px;opacity:.7;font-weight:400}
+  .who{display:flex;gap:18px;justify-content:center;margin:28px 0}
+  .who button{background:#161a24;border:2px solid #333a4a;color:#eee;padding:18px 28px;border-radius:12px;font-size:18px;cursor:pointer;min-width:160px}
+  .who button.sel{border-color:#ffd84a;background:#2a2a1e}
+  #go{background:#ffd84a;color:#111;border:0;padding:14px 40px;border-radius:30px;font-size:18px;font-weight:700;cursor:pointer}
+  #start p{opacity:.75;font-size:14px;line-height:1.6}
+  #loading{opacity:.6;font-size:13px;margin-top:14px}
+  #mode{position:absolute;left:50%;top:14px;transform:translateX(-50%);font-size:13px;letter-spacing:1px;color:#ffd84a;text-shadow:0 1px 3px #000}
+  #hotbar{position:absolute;left:50%;bottom:72px;transform:translateX(-50%);display:none;gap:6px;background:#000a;padding:6px;border-radius:10px}
+  #hotbar .slot{width:58px;height:58px;border:2px solid #555;border-radius:8px;position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:10px;color:#ddd}
+  #hotbar .slot.sel{border-color:#ffd84a;background:#2a2a1e}
+  #hotbar .slot i{display:block;width:22px;height:22px;border-radius:4px;margin-bottom:4px}
+  #hotbar .slot b{position:absolute;left:4px;top:2px;font-size:10px;color:#aaa}
+  #flash{position:fixed;inset:0;background:#ff2020;opacity:0;pointer-events:none;transition:opacity .25s}
+  #money{position:absolute;right:20px;top:52px;font-size:20px;font-weight:700;color:#8fe08f;text-shadow:0 1px 4px #000}
+  #bigmap{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);display:none;border:2px solid #fff6;border-radius:12px;box-shadow:0 0 40px #000;z-index:5}
+  #menu{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:#000a;z-index:20}
+  #menu .box{background:#161a24;border:1px solid #333a4a;border-radius:14px;padding:26px 30px;min-width:340px;color:#eee}
+  #menu h2{margin:0 0 14px;font-size:22px;letter-spacing:2px}
+  #menu button{display:block;width:100%;margin:6px 0;padding:10px;border:0;border-radius:8px;background:#2a3040;color:#eee;font-size:15px;cursor:pointer}
+  #menu button:disabled{opacity:.4}
+  #menu button.y{background:#ffd84a;color:#111;font-weight:700}
+  #menu label{display:flex;justify-content:space-between;align-items:center;font-size:13px;margin:8px 0;gap:12px}
+  #menu input[type=range]{width:160px}
+  #menu select{background:#2a3040;color:#eee;border:0;padding:4px 8px;border-radius:6px}
+  #menu .opts{border-top:1px solid #333a4a;margin-top:14px;padding-top:10px}
+  #menu small{opacity:.6;font-size:11px}
+  #cont{background:#2a3040;color:#eee;border:0;padding:14px 28px;border-radius:30px;font-size:16px;cursor:pointer;margin-left:10px;display:none}
+  #menu .tabs{display:flex;gap:4px;margin-bottom:10px;flex-wrap:wrap}
+  #menu .tabs button{display:inline-block;width:auto;margin:0;padding:6px 10px;font-size:13px;background:#202533}
+  #menu .tabs button.on{background:#ffd84a;color:#111}
+  #menu .pane{min-height:210px}
+  #menu label span{display:flex;align-items:center;gap:8px}
+  #menu output{min-width:44px;text-align:right;font-variant-numeric:tabular-nums;opacity:.8}
+  #menu .box{max-height:92vh;overflow:auto;min-width:420px}
+  #start .sub{margin-top:16px;display:flex;gap:10px;justify-content:center;align-items:center;flex-wrap:wrap}
+  #start .sub button{background:transparent;color:#cfd2da;border:1px solid #333a4a;padding:8px 14px;border-radius:20px;font-size:13px;cursor:pointer}
+  #start .sub a{color:#9aa0ad;font-size:13px;text-decoration:none;margin-left:6px}
+  #gpuinfo{opacity:.45;font-size:11px;margin-top:10px}
+  #menu .row2{display:flex;gap:8px}#menu .row2 button{flex:1}
+  #mobile{position:fixed;inset:0;z-index:50;background:#0b0d12;display:none;align-items:center;justify-content:center;text-align:center;padding:30px}
+  #fps{position:absolute;left:16px;top:72px;font:12px monospace;color:#9f9;text-shadow:0 1px 2px #000;display:none}
+  #weapon{font-size:13px;margin-top:6px;opacity:.95}#weapon b{font-size:16px;margin-right:4px}#weapon span{opacity:.75;margin-left:6px;font-variant-numeric:tabular-nums}
+  #wbar{position:absolute;left:50%;top:92px;transform:translateX(-50%);display:none;gap:4px;background:#000b;padding:6px;border-radius:12px}
+  #wbar div{width:64px;height:58px;border:2px solid #444;border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;font-size:9px;color:#ccc;text-align:center;line-height:1.1}
+  #wbar div i{font-style:normal;font-size:20px;margin-bottom:3px}#wbar div small{position:absolute;left:4px;top:2px;color:#888}#wbar div.sel{border-color:#ffd84a;background:#2a2a1e;color:#fff}#wbar div.off{opacity:.25}
+  #hotbar .slot i{font-style:normal;font-size:20px;background:none!important;width:auto;height:auto}#hotbar .slot.sp{border-color:#5a3d7a}#hotbar .slot.sp.sel{border-color:#c86bff;background:#2a1e33}#hotbar .slot{width:52px;height:56px}#hotbar{pointer-events:auto;flex-wrap:wrap;justify-content:center;max-width:calc(100vw - 32px);width:max-content;box-sizing:border-box}#hotbar .slot{cursor:pointer}#hotbar .slot b{color:#ffd84a;font-weight:700}
+  #obj{position:absolute;left:50%;top:40px;transform:translateX(-50%);display:none;background:#000a;padding:7px 16px;border-radius:10px;font-size:15px;max-width:70vw;text-align:center;border-left:3px solid #ffd84a}#obj b{color:#ffd84a}
+  #sub{position:absolute;left:50%;bottom:118px;transform:translateX(-50%);display:none;background:#000b;padding:8px 16px;border-radius:10px;font-size:16px;max-width:64vw;text-align:center;line-height:1.4}#sub b{color:#7dff9a;margin-right:6px}
+  #feed{position:absolute;right:16px;top:86px;width:300px;display:flex;flex-direction:column;gap:6px}
+  #feed div{background:#0b0d12d9;border-radius:10px;padding:7px 10px;font-size:12px;line-height:1.35;transition:opacity .4s;border:1px solid #ffffff14}#feed div b{margin-right:4px}#feed div i{display:block;font-style:normal;opacity:.45;font-size:10px;margin-top:2px}
+  #chant{position:absolute;transform:translate(-50%,-100%);display:none;font-size:18px;font-weight:800;color:#fff;text-shadow:0 2px 6px #000,0 0 14px #c86bff;white-space:nowrap;pointer-events:none}
+  #card{position:fixed;left:50%;top:30%;transform:translate(-50%,-50%);display:none;text-align:center;z-index:6;transition:opacity .6s;pointer-events:none}
+  #card h2{font-size:44px;margin:0;letter-spacing:3px;color:#fff;text-shadow:0 4px 18px #000}#card p{font-size:17px;margin:8px 0 0;color:#e8e8e8;text-shadow:0 2px 8px #000}
+  #rec{position:absolute;inset:18px;border:2px solid #ffffff55;border-radius:18px;display:none;font:700 14px monospace;color:#ff4040;padding:10px 14px;pointer-events:none}
+  .fx{position:fixed;inset:0;pointer-events:none;opacity:0}
+  #fx_spray{background:radial-gradient(ellipse at center,#ff7a1a00 30%,#ff7a1a88 100%);backdrop-filter:blur(3px)}
+  #fx_water{background:radial-gradient(ellipse at center,#cfe8ff10 20%,#cfe8ff70 100%);backdrop-filter:blur(2px)}
+  #menu .story h3{margin:6px 0;font-size:16px}#menu .story h3 small{opacity:.5;font-weight:400;margin-left:6px}#menu .story p{font-size:13px;margin:4px 0 8px;opacity:.85}
+  #menu .story .chaps{display:flex;flex-wrap:wrap;gap:4px}#menu .story .chaps button{width:auto;flex:1 1 45%;font-size:12px;padding:7px;margin:0}
+  #menu .rep{display:flex;align-items:center;gap:8px;font-size:12px;margin:4px 0}#menu .rep span{width:80px}#menu .rep i{flex:1;height:7px;background:#0006;border-radius:4px;overflow:hidden;display:block}#menu .rep i b{display:block;height:100%}#menu .rep em{width:34px;text-align:right;font-style:normal;opacity:.7}
+  #msg{position:absolute;left:50%;top:38%;transform:translateX(-50%);font-size:44px;font-weight:800;color:#ff5b5b;text-shadow:0 3px 10px #000;display:none}
+</style>
+</head>
+<body>
+<div id="start"><div class="box">
+  <h1>BORNHEIM<small>FRANKFURT AM MAIN</small></h1>
+  <div class="who">
+    <button id="bm" class="sel">♂ Mann</button>
+    <button id="bf">♀ Frau</button>
+  </div>
+  <button id="go">Rein da</button><button id="cont">Fortsetzen</button>
+  <div class="sub"><button id="s_opts">Einstellungen</button><button id="s_import">Spielstand importieren</button><a href="./">← Startseite</a></div>
+  <div id="gpuinfo"></div>
+  <p>WASD laufen · Maus umschauen · Shift rennen · Leertaste springen<br>
+     E Auto klauen / aussteigen · Linksklick angreifen · 1–0 / Mausrad Waffen · R nachladen<br>G Leute sammeln / Sprechchor · V filmen · C Kreativmodus · M Karte · Esc Menü</p>
+  <div id="loading">lade Stadt…</div>
+</div></div>
+<div id="mobile"><div><h2>Bornheim braucht Tastatur und Maus</h2><p>Öffne das Spiel am Rechner. Auf Handys und Tablets ist es nicht spielbar.</p><p><a href="./" style="color:#ffd84a">Zur Startseite</a> · <a href="#" id="mobile_anyway" style="color:#9aa0ad">Trotzdem laden</a></p></div></div>
+<div id="flash"></div><div class="fx" id="fx_spray"></div><div class="fx" id="fx_water"></div><div class="fx" id="fx_paint"></div><div id="card"></div>
+<canvas id="bigmap"></canvas>
+<div id="menu"><div class="box">
+  <h2>PAUSE</h2>
+  <button id="m_resume" class="y">Weiter</button>
+  <button id="m_save">Speichern (F6)</button>
+  <button id="m_load">Laden (F9)</button>
+  <button id="m_restart">Neu starten</button>
+  <div class="row2"><button id="m_export">Spielstand exportieren</button><button id="m_import">Importieren</button></div>
+  <button id="m_home">Zur Startseite</button>
+  <input type="file" id="importfile" accept=".json,application/json" style="display:none">
+  <div class="opts">
+    <div class="tabs"><button data-tab="grafik" class="on">Grafik</button><button data-tab="kamera">Kamera</button><button data-tab="welt">Welt</button><button data-tab="spiel">Spiel</button><button data-tab="ton">Ton &amp; HUD</button><button data-tab="story">Story</button></div>
+    <div class="pane" data-tab="grafik">
+      <label>Grafikqualität <select id="o_quality"><option value="niedrig">Niedrig</option><option value="mittel">Mittel</option><option value="hoch">Hoch (Leuchten, feine Schatten)</option><option value="ultra">Ultra (starke Grafikkarte)</option></select></label>
+      <label>Renderauflösung <span><input id="o_scale" type="range" min="0.5" max="1.5" step="0.05" data-pct="1"><output></output></span></label>
+      <label>Sichtweite (m) <span><input id="o_view" type="range" min="250" max="900" step="25"><output></output></span></label>
+      <label>Schatten <input id="o_shadows" type="checkbox"></label>
+      <label>Leuchteffekt (Hoch / Ultra) <span><input id="o_bloom" type="range" min="0" max="2.5" step="0.1" data-pct="1"><output></output></span></label>
+      <label>Umgebungsverdeckung (Hoch / Ultra) <input id="o_ao" type="checkbox"></label>
+      <label>Bildrate anzeigen <input id="o_fps" type="checkbox"></label>
+    </div>
+    <div class="pane" data-tab="kamera" style="display:none">
+      <label>Sichtfeld (Grad) <span><input id="o_fov" type="range" min="50" max="100" step="1"><output></output></span></label>
+      <label>Kameraabstand <span><input id="o_camdist" type="range" min="0.6" max="2" step="0.05" data-pct="1"><output></output></span></label>
+      <label>Mausempfindlichkeit <span><input id="o_sens" type="range" min="0.3" max="2.5" step="0.1"><output></output></span></label>
+      <label>Maus Y umkehren <input id="o_invy" type="checkbox"></label>
+      <label>Kamerawackeln <input id="o_shake" type="checkbox"></label>
+    </div>
+    <div class="pane" data-tab="welt" style="display:none">
+      <label>Uhrzeit <span><input id="o_hour" type="range" min="0" max="23" step="1"><output></output></span></label>
+      <label>Zeitlauf (Std. je Minute) <span><input id="o_time" type="range" min="0" max="10" step="0.5"><output></output></span></label>
+      <label>Wetter <select id="o_weather"><option value="auto">Automatisch</option><option value="clear">Klar</option><option value="cloudy">Bewölkt</option><option value="rain">Regen</option><option value="storm">Gewitter</option><option value="fog">Nebel</option></select></label>
+      <label>Verkehrsdichte <span><input id="o_traffic" type="range" min="0.2" max="2" step="0.1" data-pct="1"><output></output></span></label>
+      <label>Passanten <span><input id="o_peds" type="range" min="0" max="2" step="0.1" data-pct="1"><output></output></span></label>
+      <label>Polizei <input id="o_police" type="checkbox"></label>
+      <label>Spontane Demos <input id="o_demos" type="checkbox"></label>
+    </div>
+    <div class="pane" data-tab="spiel" style="display:none">
+      <label>Unverwundbar <input id="o_god" type="checkbox"></label>
+      <label>Unendlich Munition <input id="o_ammo" type="checkbox"></label>
+      <label>Fallschaden <input id="o_fall" type="checkbox"></label>
+      <label>Reifenhaftung <span><input id="o_grip" type="range" min="0.4" max="2" step="0.05" data-pct="1"><output></output></span></label>
+    </div>
+    <div class="pane" data-tab="ton" style="display:none">
+      <label>Lautstärke <span><input id="o_vol" type="range" min="0" max="1" step="0.05" data-pct="1"><output></output></span></label>
+      <label>Minikarte <input id="o_minimap" type="checkbox"></label>
+      <label>HUD anzeigen <input id="o_hud" type="checkbox"></label>
+      <label>Sprechchöre und Durchsagen vorlesen <input id="o_tts" type="checkbox"></label>
+    </div>
+    <div class="pane" data-tab="story" style="display:none" id="storypane"></div>
+    <small>Esc Menü · M Karte · H Hupe · C Kreativmodus (Auswahl 1–0, Shift+1–0, ß, Mausrad, Klick) · 1–0 Waffen · Q letzte Waffe · G Leute sammeln / Sprechchor · V filmen · X Dialog weiter · Rechtsklick: Zielen</small>
+  </div>
+</div></div>
+<div id="hud">
+  <div id="fps"></div>
+  <div class="tl"><div id="who"></div><div id="ammo"></div><div id="health"><i></i></div><div id="weapon"></div></div>
+  <div id="wbar"></div><div id="obj"></div><div id="sub"></div><div id="feed"></div><div id="chant"></div><div id="rec"></div>
+  <div id="stars"></div>
+  <div id="money"></div>
+  <div class="bl"><canvas id="minimap" width="220" height="220"></canvas></div>
+  <div id="street"></div>
+  <div id="hint"></div>
+  <div id="cross"></div>
+  <div id="msg"></div>
+  <div id="mode"></div>
+  <div id="hotbar"></div>
+</div>
+<script type="importmap">{"imports":{
+  "three":"./vendor/three/build/three.module.js",
+  "three/addons/":"./vendor/three/examples/jsm/"
+}}</script>
+<script type="module" src="game.js"></script>
+</body>
+</html>

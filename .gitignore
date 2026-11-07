@@ -1,0 +1,15 @@
+# OpenStreetMap-Rohdaten (5+ MB, werden mit tools/fetch_osm.py geholt)
+data/bornheim.osm.json
+data/*.osm.json
+data/*.osm
+data/*.pbf
+# erzeugte Spielgeometrie wird eingecheckt (data/city.json), damit das Spiel überall sofort läuft
+
+node_modules/
+dist/
+.vite/
+*.log
+.DS_Store
+Thumbs.db
+.claude/settings.local.json
+.claude/

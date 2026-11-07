@@ -1,0 +1,13 @@
+{
+  "name": "Bornheim – Open World Frankfurt",
+  "short_name": "Bornheim",
+  "description": "Open-World-Spiel im Browser: Frankfurt-Bornheim aus echten Karten- und Geländedaten.",
+  "lang": "de",
+  "start_url": "./play.html",
+  "scope": "./",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "background_color": "#0b0d12",
+  "theme_color": "#0b0d12",
+  "icons": [{ "src": "assets/site/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
+}
