@@ -89,6 +89,7 @@
   #menu .rep{display:flex;align-items:center;gap:8px;font-size:12px;margin:4px 0}#menu .rep span{width:80px}#menu .rep i{flex:1;height:7px;background:#0006;border-radius:4px;overflow:hidden;display:block}#menu .rep i b{display:block;height:100%}#menu .rep em{width:34px;text-align:right;font-style:normal;opacity:.7}
   #msg{position:absolute;left:50%;top:38%;transform:translateX(-50%);font-size:44px;font-weight:800;color:#ff5b5b;text-shadow:0 3px 10px #000;display:none}
 </style>
+<script async src="https://static.nixblick.de/analytics/tracker.js?v=3" data-site="nixblick.github.io"></script>
 </head>
 <body>
 <div id="start"><div class="box">
@@ -97,7 +98,7 @@
     <button id="bm" class="sel">♂ Mann</button>
     <button id="bf">♀ Frau</button>
   </div>
-  <button id="go">Rein da</button><button id="cont">Fortsetzen</button>
+  <button id="go" data-track="spiel-start">Rein da</button><button id="cont" data-track="spiel-fortsetzen">Fortsetzen</button>
   <div class="sub"><button id="s_opts">Einstellungen</button><button id="s_import">Spielstand importieren</button><button id="s_feedback">🐞 Fehler melden</button><a href="./">← Startseite</a></div>
   <div id="gpuinfo"></div>
   <p>WASD laufen · Maus umschauen · Shift rennen · Leertaste springen<br>

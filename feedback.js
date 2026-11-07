@@ -46,3 +46,7 @@ $('fb_gh').onclick = () => { const c = compose(); const url = `${REPO}/issues/ne
 $('fb_mail').onclick = () => { const c = compose(); location.href = `mailto:${MAIL}?subject=${encodeURIComponent('Bornheim: ' + c.title)}&body=${encodeURIComponent(c.body.slice(0, 1800))}`; close(); };
 for (const id of ['m_feedback', 's_feedback']) { const b = $(id); if (b) b.onclick = openFeedback; }
 window.openFeedback = openFeedback;
+
+// Spielzeit-Marken für die anonyme Zählung (nixblick Analytics zählt Klicks auf Elemente mit data-track)
+{ const marks = [10, 30, 60]; let sec = 0; const btn = document.createElement('button'); btn.style.display = 'none'; document.body.appendChild(btn);
+  setInterval(() => { const G = window.G; if (!G || !G.player || !G.player.mesh || document.hidden) return; sec += 15; const m = marks.find(m => sec === m * 60); if (m) { btn.setAttribute('data-track', 'spielzeit-' + m); btn.click(); } }, 15000); }
