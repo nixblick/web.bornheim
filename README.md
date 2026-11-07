@@ -13,6 +13,7 @@ Figur (Mann/Frau), Autos klauen, Waffe, Passanten, Polizei. Kein Nachbau, keine 
 - `demo.js`: Demos, Polizei-Eskalation (Begleitung, Kette, Kessel, Wasserwerfer, Räumung), Social Feed, Ruf, Leute sammeln, Filmen
 - `story.js`: Story-Engine (Kapitel, Ziele, Marker, GPS, Dialoge, Menü) und Story 1 „Bornheim bleibt“ (fünf Kapitel, drei Enden)
 - `story2.js`: Story 2 „Freitag ist Pflicht“ (Schulstreik, sechs Kapitel, drei Enden), Plan in `docs/story2-schulstreik.md`
+- `story3.js`: Story 3 „Der Kanzler kommt“ (Sicherheitszone, Bürgerdialog mit Gästeliste, Kolonne gegen Fragen; drei Kapitel, drei Enden). In allen Story-Kapiteln sperrt die Engine Waffen (`WPN.lock`): Story 1 und 2 lassen Fäuste und Demo-Zubehör zu, Story 3 nur Fäuste
 - `fire.js`: Feuer (Autos, Mülltonnen, Brandflächen, Ausbreitung) und Feuerwehr (Löschfahrzeug, Trupp mit Schlauch, Absperrung, Rückzug bei Angriffen)
 - `credits.html`, `impressum.html`: Lizenzen, Impressum und Datenschutz (Impressum vor Veröffentlichung ausfüllen!)
 - `vendor/three/`: three.js 0.170 lokal (`tools/vendor_three.py`), kein CDN, keine Drittanbieter
@@ -68,6 +69,8 @@ Linksklick schießen, R nachladen, Enter nach dem Tod, C Kreativmodus. Start: Ma
 - Selbsttest: `tools/selftest.js` (siehe Skill)
 - Test-Skill für Claude: `.claude/skills/spieltest/SKILL.md`
 - Story 2 „Freitag ist Pflicht“: Flyer verteilen am Schulhof (Blickfeld der Aufsicht), Schulstreik anführen, Sternmarsch dreier Schulen, Nacht mit Brandsatz und Feuerwehr, Selin aus dem Kessel holen, Großdemo mit drei Enden
+- Story 3 „Der Kanzler kommt“: Fragen am Kiosk sammeln, am Checkpoint abgenommen bekommen, beim Bürgerdialog hinter der Absperrung reinrufen, mit der Demo vor der Kolonne stehen: ruhig bleiben (Fenster geht runter), Hintereingang (Karten ans Fenster) oder Eskalation (Schlagzeile „Ausschreitungen“)
+- Neues Spiel startet mit Fäusten (Pistole bleibt im Inventar), Schwach-GPU-Modus (integrierte Grafik: kein Antialiasing, kürzere Sichtweite, seltenere Schatten), Ladebalken mit Phasen, Start-Knopf erst nach dem Laden, Handy-Hinweis vor dem Laden, Fehlerseite statt ewigem „Lade Stadt“, Autosave alle zwei Minuten und nach jedem Kapitel, Rückfrage vor Laden/Neustart, Polizei-Obergrenze (22)
 - Noch nicht: Innenräume
 
 ## Starten

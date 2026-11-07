@@ -156,7 +156,19 @@ async function checks() {
     for (const f of [...F.fires]) F.douse(F.fireAt(f).x, F.fireAt(f).y, F.fireAt(f).z, 5); run(30);
     // Story 2 startet mit Selin und Ziel
     { const st0 = { s1: localStorage.getItem('notgta.story'), s2: localStorage.getItem('notgta.story2') }; const sid0 = G.STORY.sid; G.STORY.useStory('s2'); const S = G.STORY.S, state0 = S.state; S.state = 'active'; G.STORY.beginChapter(0); run(1100); const obj = document.getElementById('obj').innerText;
-      add('Story 2 Kapitel 1 startet mit Missionsziel', /Selin/.test(obj) && !!S.selin, obj); G.STORY.stop(); S.state = state0; G.STORY.useStory(sid0); for (const [k, v] of [['notgta.story', st0.s1], ['notgta.story2', st0.s2]]) { if (v) localStorage.setItem(k, v); else localStorage.removeItem(k); } }
+      add('Story 2 Kapitel 1 startet mit Missionsziel', /Selin/.test(obj) && !!S.selin, obj);
+      add('Story 2 sperrt Schusswaffen (nur Fäuste und Demo-Zubehör)', G.WPN.locked === 'protest' && !G.WPN.allowed('pistol') && G.WPN.allowed('paint'), 'lock=' + G.WPN.locked);
+      G.STORY.stop(); S.state = state0; G.STORY.useStory(sid0); for (const [k, v] of [['notgta.story', st0.s1], ['notgta.story2', st0.s2]]) { if (v) localStorage.setItem(k, v); else localStorage.removeItem(k); } }
+    add('Waffensperre hebt sich nach Story-Stopp auf', G.WPN.locked === null && G.WPN.allowed('pistol'), 'lock=' + G.WPN.locked);
+    // Story 3: Kanzler – Orte liegen in der Welt, Kapitel 1 startet mit Yusuf, alle Waffen zu
+    { const st0 = localStorage.getItem('notgta.story3'); const sid0 = G.STORY.sid; const P3 = G.STORY.places; const inWorld = p => p && Number.isFinite(p[0]) && Number.isFinite(p[1]) && Math.hypot(p[0], p[1]) < 6000;
+      add('Story 3 Orte berechnet (Saalbau, Checkpoint, Kiosk, Hintereingang)', inWorld(P3.SAAL) && inWorld(P3.CP) && inWorld(P3.KIOSK) && inWorld(P3.BACK) && Math.hypot(P3.CP[0] - P3.SAAL[0], P3.CP[1] - P3.SAAL[1]) > 30, JSON.stringify({ SAAL: P3.SAAL, CP: P3.CP }));
+      G.STORY.useStory('s3'); const S = G.STORY.S, state0 = S.state; S.state = 'active'; G.STORY.beginChapter(0); run(1100); const obj = document.getElementById('obj').innerText;
+      add('Story 3 Kapitel 1 startet mit Missionsziel', /Yusuf/.test(obj) && !!S.yusuf, obj);
+      add('Story 3 sperrt alle Waffen', G.WPN.locked === 'all' && G.WPN.cur === 'fists' && !G.WPN.select('pistol') && G.WPN.cur === 'fists', 'lock=' + G.WPN.locked + ' cur=' + G.WPN.cur);
+      G.STORY.stop(); S.state = state0; G.STORY.useStory(sid0); if (st0) localStorage.setItem('notgta.story3', st0); else localStorage.removeItem('notgta.story3'); }
+    add('Neues Spiel beginnt mit Fäusten', (() => { const sv = G.WPN.save(); G.WPN.reset(); const ok = G.WPN.cur === 'fists' && !!G.WPN.inv.pistol; G.WPN.load(sv); return ok; })(), 'cur=' + G.WPN.cur);
+    add('Nicht mehr als 22 Polizisten gleichzeitig', G.peds.filter(p => p.userData.cop && p.userData.state !== 'dead').length <= Math.round(22 * Math.min(1.4, Math.max(0.5, G.opts.peds ?? 1))), G.peds.filter(p => p.userData.cop).length + ' Polizisten');
     G.opts.god = god; P.wanted = 0; clear(); }
   window.__noAutoMenu = false;
   return R;

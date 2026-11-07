@@ -33,7 +33,11 @@ export function initWeapons(X) {
     else if (d.kind === 'throw') it.res += n ?? d.give;
     return fresh;
   }
-  function reset() { for (const k of Object.keys(inv)) delete inv[k]; give('fists'); give('pistol', 84); give('paint', 4); select('pistol', true); }
+  function reset() { for (const k of Object.keys(inv)) delete inv[k]; give('fists'); give('pistol', 84); give('paint', 4); select('fists', true); }
+  // Sperre in Story-Kapiteln: 'all' = nur Fäuste, 'protest' = Fäuste und Demo-Zubehör (Farbe, Böller, Rauch, Bengalo)
+  let lockMode = null; const PROTEST = new Set(['fists', 'paint', 'banger', 'smoke', 'flare']);
+  const allowed = id => !lockMode || id === 'fists' || (lockMode === 'protest' && PROTEST.has(id));
+  function lock(mode) { if (lockMode === (mode || null)) return; lockMode = mode || null; if (!allowed(cur)) select('fists', true); trigger = false; barT = 2.5; drawBar(); if (lockMode) showMsg(lockMode === 'all' ? 'WAFFEN WEGGESCHLOSSEN' : 'NUR FÄUSTE UND DEMO-ZUBEHÖR', 1800); }
   function save() { return { cur, inv: JSON.parse(JSON.stringify(inv)) }; }
   function load(d) { if (!d || !d.inv) { reset(); return; } for (const k of Object.keys(inv)) delete inv[k]; for (const [k, v] of Object.entries(d.inv)) if (DEF[k]) inv[k] = { mag: +v.mag || 0, res: +v.res || 0 }; if (!inv.fists) give('fists'); select(inv[d.cur] ? d.cur : 'fists', true); }
   // Festnahme: Schusswaffen und Pyro weg, Fäuste und Schläger bleiben
@@ -73,13 +77,13 @@ export function initWeapons(X) {
     model = buildModel(cur); if (cur === 'fists') model.visible = false; hand.add(model); pm.userData.gun = model;
   }
   function select(id, quiet) {
-    if (!inv[id]) return false; if (id !== cur) { last = cur; cur = id; } attach(); swingT = 0; meleeT = -1; trigger = false; cool = Math.max(cool, 0.15);
+    if (!inv[id] || !allowed(id)) { if (inv[id] && !quiet) { barT = 1.5; drawBar(); } return false; } if (id !== cur) { last = cur; cur = id; } attach(); swingT = 0; meleeT = -1; trigger = false; cool = Math.max(cool, 0.15);
     if (!quiet) { sfx('click'); barT = 2; } drawBar(); return true;
   }
   // Ziffern: 1 Nahkampf, 2 Pistole, 3 MP, 4 Schrotflinte, 5 Gewehr, 6 Spray/Taser, 7 Farbe, 8 Böller, 9 Rauch/Bengalo, 0 Granate
-  function slotKey(n) { const ids = ORDER.filter(k => DEF[k].slot === n && inv[k]); if (!ids.length) { barT = 1.5; drawBar(); return; } const i = ids.indexOf(cur); select(ids[(i + 1) % ids.length]); }
-  function quick() { select(inv[last] ? last : 'fists'); }
-  function cycle(dir) { const own = ORDER.filter(k => inv[k]); const i = own.indexOf(cur); select(own[(i + dir + own.length) % own.length]); }
+  function slotKey(n) { const ids = ORDER.filter(k => DEF[k].slot === n && inv[k] && allowed(k)); if (!ids.length) { barT = 1.5; drawBar(); return; } const i = ids.indexOf(cur); select(ids[(i + 1) % ids.length]); }
+  function quick() { select(inv[last] && allowed(last) ? last : 'fists'); }
+  function cycle(dir) { const own = ORDER.filter(k => inv[k] && allowed(k)); const i = own.indexOf(cur); select(own[(i + dir + own.length) % own.length]); }
   function canAim() { const k = DEF[cur].kind; return k !== 'melee'; }
 
   // ---------- HUD ----------
@@ -87,14 +91,14 @@ export function initWeapons(X) {
   function ammoText(id) { const d = DEF[id], it = inv[id]; if (!it) return ''; if (unlimited()) return d.kind === 'melee' ? '' : '∞';
     if (d.kind === 'gun') return it.mag + ' / ' + it.res; if (d.kind === 'spray') return Math.ceil(it.mag) + ' %' + (it.res ? ' +' + it.res : ''); if (d.kind === 'taser') return it.mag + ' / ' + it.res; if (d.kind === 'throw') return '× ' + it.res; return ''; }
   function drawBar() {
-    if (wEl) wEl.innerHTML = `<b>${DEF[cur].ic}</b> ${DEF[cur].n} <span>${ammoText(cur)}</span>`;
+    if (wEl) wEl.innerHTML = `<b>${DEF[cur].ic}</b> ${DEF[cur].n} <span>${ammoText(cur)}</span>${lockMode ? ' <span title="In diesem Kapitel gesperrt">🔒</span>' : ''}`;
     if (!barEl) return; barEl.style.display = barT > 0 ? 'flex' : 'none'; if (barT <= 0) return;
-    barEl.innerHTML = ORDER.map(k => `<div class="${k === cur ? 'sel' : ''}${inv[k] ? '' : ' off'}"><i>${DEF[k].ic}</i><small>${(DEF[k].slot)}</small><span>${DEF[k].n}</span></div>`).join('');
+    barEl.innerHTML = ORDER.map(k => `<div class="${k === cur ? 'sel' : ''}${inv[k] && allowed(k) ? '' : ' off'}"><i>${inv[k] && !allowed(k) ? '🔒' : DEF[k].ic}</i><small>${(DEF[k].slot)}</small><span>${DEF[k].n}</span></div>`).join('');
   }
   function hud() { return player.car ? null : ammoText(cur); }
 
   // ---------- Feuern ----------
-  function press(down) { trigger = down; if (down) tryFire(true); }
+  function press(down) { if (!allowed(cur)) { select('fists', true); } trigger = down; if (down) tryFire(true); }
   function tryFire(first) {
     if (player.car || player.dead || cool > 0) return false; const d = DEF[cur]; if (!d.auto && !first) return false;
     if (d.kind === 'gun') fireGun(d); else if (d.kind === 'melee') melee(d); else if (d.kind === 'throw') throwIt(d); else if (d.kind === 'spray') sprayTick(d); else if (d.kind === 'taser') taser(d);
@@ -263,13 +267,14 @@ export function initWeapons(X) {
     for (let i = puffs.length - 1; i >= 0; i--) { const s = puffs[i], u = s.userData; u.t += dt; s.position.addScaledVector(u.v, dt); u.v.multiplyScalar(Math.pow(0.55, dt)); u.v.y += 0.25 * dt; const k = u.t / u.life; s.scale.addScalar(u.grow * dt * (1 - k * 0.6)); s.material.opacity = u.op * Math.min(1, u.t * 4) * (1 - k) * (1 - k * 0.3);
       if (u.t >= u.life) { scene.remove(s); s.material.dispose(); puffs.splice(i, 1); } }
   }
-  const lights = []; for (let i = 0; i < 2; i++) { const l = new THREE.PointLight(0xffffff, 0, 26, 2); l.castShadow = false; scene.add(l); lights.push({ l, t: 0, dur: 1, peak: 0, busy: 0 }); }
+  // Lichter nur sichtbar, solange sie leuchten: unsichtbare Punktlichter kosten im Shader nichts
+  const lights = []; for (let i = 0; i < 2; i++) { const l = new THREE.PointLight(0xffffff, 0, 26, 2); l.castShadow = false; l.visible = false; scene.add(l); lights.push({ l, t: 0, dur: 1, peak: 0, busy: 0 }); }
   function flashLight(pos, color, peak, dur) { const L = lights.filter(x => !x.busy).sort((a, b) => a.t - b.t)[0]; if (!L) return; L.l.position.copy(pos).setY(pos.y + 1); L.l.color.setHex(color); L.peak = peak; L.dur = dur; L.t = dur; }
-  function updateLights(dt) { for (const L of lights) { if (L.busy) continue; L.t = Math.max(0, L.t - dt); L.l.intensity = L.peak * (L.t / L.dur) ** 1.5; } }
+  function updateLights(dt) { for (const L of lights) { if (L.busy) continue; L.t = Math.max(0, L.t - dt); L.l.intensity = L.peak * (L.t / L.dur) ** 1.5; L.l.visible = L.l.intensity > 0.05; } }
   function flareFx(p, dt) {
     const pos = p.m.position; const fl = 0.75 + Math.random() * 0.5;
     if (!p.light) { const L = lights.find(x => !x.busy) || lights[0]; L.busy = 1; p.light = L; sfx('hiss', 0.7); emit('flare', pos, {}); }
-    p.light.l.position.set(pos.x, pos.y + 0.6, pos.z); p.light.l.color.setHex(0xff3018); p.light.l.intensity = 60 * fl * (p.t > 26 ? (28 - p.t) / 2 : 1);
+    p.light.l.position.set(pos.x, pos.y + 0.6, pos.z); p.light.l.color.setHex(0xff3018); p.light.l.intensity = 60 * fl * (p.t > 26 ? (28 - p.t) / 2 : 1); p.light.l.visible = p.light.l.intensity > 0.05;
     p.e = (p.e || 0) + dt; while (p.e > 0.05) { p.e -= 0.05; puff(pos.clone().setY(pos.y + 0.15), 0xff5a2a, 0.35, 0.35, new V3(rnd(-1.5, 1.5), rnd(1.5, 3.5), rnd(-1.5, 1.5)), 0.2, 1, true); if (Math.random() < 0.4) puff(pos.clone().setY(pos.y + 0.4), 0xc8504a, 0.8, 5, new V3(rnd(-0.5, 0.5), rnd(0.8, 1.6), rnd(-0.5, 0.5)), 1.4, 0.5); }
     if (Math.random() < dt * 4) sfx('crackle', 0.15);
   }
@@ -333,5 +338,5 @@ export function initWeapons(X) {
   function inSmoke(pos) { for (const p of projs) if (p.kind === 'smoke' && p.t > 2 && p.t < 24 && p.m.position.distanceTo(pos) < 5.5) return true; return false; }
 
   reset();
-  return { quick, DEF, ORDER, inv, give, reset, save, load, confiscate, select, slotKey, cycle, press, update, reload, addAmmo, attach, hud, canAim, stun, spawnProj, sprayCone, puff, sparks, bang, boom, flashLight, firework, addSplat, paintTargets, inSmoke, buildModel, PAINT, get cur() { return cur; }, get trigger() { return trigger; }, projs, puffs };
+  return { quick, DEF, ORDER, inv, give, reset, save, load, confiscate, lock, allowed, get locked() { return lockMode; }, select, slotKey, cycle, press, update, reload, addAmmo, attach, hud, canAim, stun, spawnProj, sprayCone, puff, sparks, bang, boom, flashLight, firework, addSplat, paintTargets, inSmoke, buildModel, PAINT, get cur() { return cur; }, get trigger() { return trigger; }, projs, puffs };
 }

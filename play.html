@@ -32,7 +32,19 @@
   .who button.sel{border-color:#ffd84a;background:#2a2a1e}
   #go{background:#ffd84a;color:#111;border:0;padding:14px 40px;border-radius:30px;font-size:18px;font-weight:700;cursor:pointer}
   #start p{opacity:.75;font-size:14px;line-height:1.6}
-  #loading{opacity:.6;font-size:13px;margin-top:14px}
+  #loadwrap{margin-top:22px;background:#161a24;border:1px solid #333a4a;border-radius:12px;padding:14px 18px;text-align:left}
+  #loadwrap .bar{height:14px;background:#0008;border-radius:7px;overflow:hidden;margin-bottom:8px}
+  #loadwrap .bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,#ffd84a,#ffb020);border-radius:7px;transition:width .25s}
+  #loadwrap.done{border-color:#62d26f66}#loadwrap.done .bar i{background:#62d26f}
+  #loading{font-size:15px;font-weight:600;color:#fff}
+  #loadwrap small{display:block;opacity:.55;font-size:12px;margin-top:4px}
+  #go:disabled,#cont:disabled{opacity:.45;cursor:wait;background:#3a3a3a;color:#aaa}
+  #msg.ok{color:#8fe08f;font-size:24px;top:30%}#msg.info{color:#ffd84a;font-size:24px;top:30%}
+  #build{position:absolute;left:50%;top:40%;transform:translate(-50%,-50%);display:none;background:#0b0d12e6;border:1px solid #ffd84a88;border-radius:14px;padding:18px 28px;min-width:320px;text-align:center;box-shadow:0 0 40px #000}
+  #build h3{margin:0 0 10px;font-size:26px;letter-spacing:3px;color:#ffd84a}#build .bar{height:12px;background:#0008;border-radius:6px;overflow:hidden}#build .bar i{display:block;height:100%;background:#ffd84a;transition:width .2s}#build p{margin:8px 0 0;font-size:13px;opacity:.75}
+  #loaderr{position:fixed;inset:0;z-index:60;background:#0b0d12f2;display:none;align-items:center;justify-content:center;text-align:center;padding:30px}
+  #loaderr .box{max-width:560px;background:#161a24;border:1px solid #e05050;border-radius:14px;padding:26px 30px}#loaderr h2{margin:0 0 10px;color:#ff7070}#loaderr p{opacity:.85;line-height:1.5}#loaderr code{display:block;background:#0008;padding:8px;border-radius:6px;font-size:12px;margin:12px 0;white-space:pre-wrap;text-align:left;max-height:140px;overflow:auto}
+  #loaderr button,#loaderr a.b{display:inline-block;margin:4px;padding:10px 18px;border-radius:20px;border:0;background:#ffd84a;color:#111;font-weight:700;cursor:pointer;text-decoration:none;font-size:14px}
   #mode{position:absolute;left:50%;top:14px;transform:translateX(-50%);font-size:13px;letter-spacing:1px;color:#ffd84a;text-shadow:0 1px 3px #000}
   #hotbar{position:absolute;left:50%;bottom:72px;transform:translateX(-50%);display:none;gap:6px;background:#000a;padding:6px;border-radius:10px}
   #hotbar .slot{width:58px;height:58px;border:2px solid #555;border-radius:8px;position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:10px;color:#ddd}
@@ -98,21 +110,23 @@
     <button id="bm" class="sel">♂ Mann</button>
     <button id="bf">♀ Frau</button>
   </div>
-  <button id="go" data-track="spiel-start">Rein da</button><button id="cont" data-track="spiel-fortsetzen">Fortsetzen</button>
+  <button id="go" data-track="spiel-start" disabled>Lädt …</button><button id="cont" data-track="spiel-fortsetzen" disabled>Fortsetzen</button>
+  <div id="loadwrap"><div class="bar"><i id="loadbar"></i></div><div id="loading">Lade Stadt …</div><small>Beim ersten Mal etwa 25 MB. Die Stadt baut sich danach beim Laufen und Fahren weiter auf.</small></div>
   <div class="sub"><button id="s_opts">Einstellungen</button><button id="s_import">Spielstand importieren</button><button id="s_feedback">🐞 Fehler melden</button><a href="./">← Startseite</a></div>
   <div id="gpuinfo"></div>
-  <p>WASD laufen · Maus umschauen · Shift rennen · Leertaste springen<br>
-     E Auto klauen / aussteigen · Linksklick angreifen · 1–0 / Mausrad Waffen · R nachladen<br>G Leute sammeln / Sprechchor · V filmen · C Kreativmodus · M Karte · Esc Menü</p>
-  <div id="loading">lade Stadt…</div>
+  <p>WASD laufen · Maus umschauen · Shift rennen · Leertaste springen · E Auto klauen / aussteigen<br>
+     Linksklick angreifen · 1–0 / Mausrad Waffen · R nachladen · F Geschäft betreten · M Karte<br>G Leute sammeln / Sprechchor · V filmen · X Dialog weiter · C Kreativmodus · Esc Menü (Story, Einstellungen)</p>
 </div></div>
 <div id="mobile"><div><h2>Bornheim braucht Tastatur und Maus</h2><p>Öffne das Spiel am Rechner. Auf Handys und Tablets ist es nicht spielbar.</p><p><a href="./" style="color:#ffd84a">Zur Startseite</a> · <a href="#" id="mobile_anyway" style="color:#9aa0ad">Trotzdem laden</a></p></div></div>
+<div id="loaderr"><div class="box"><h2 id="loaderr_t">Das Spiel konnte nicht starten</h2><p id="loaderr_p"></p><code id="loaderr_c"></code><button onclick="location.reload()">Neu laden</button> <a class="b" href="./">Zur Startseite</a> <button id="loaderr_fb">🐞 Fehler melden</button></div></div>
 <div id="flash"></div><div class="fx" id="fx_spray"></div><div class="fx" id="fx_water"></div><div class="fx" id="fx_paint"></div><div id="card"></div>
 <canvas id="bigmap"></canvas>
 <div id="menu"><div class="box">
   <h2>PAUSE</h2>
   <button id="m_resume" class="y">Weiter</button>
+  <button id="m_story">📖 Story wählen</button>
   <button id="m_save">Speichern (F6)</button>
-  <button id="m_load">Laden (F9)</button>
+  <button id="m_load">Spielstand laden (F9)</button>
   <button id="m_restart">Neu starten</button>
   <div class="row2"><button id="m_export">Spielstand exportieren</button><button id="m_import">Importieren</button></div>
   <button id="m_feedback">🐞 Fehler melden / Idee schicken</button>
@@ -158,7 +172,7 @@
       <label>Sprechchöre und Durchsagen vorlesen <input id="o_tts" type="checkbox"></label>
     </div>
     <div class="pane" data-tab="story" style="display:none" id="storypane"></div>
-    <small>Esc Menü · M Karte · H Hupe · F Laden (einkaufen) · C Kreativmodus (Auswahl 1–0, Shift+1–0, ß, Mausrad, Klick) · 1–0 Waffen · Q letzte Waffe · G Leute sammeln / Sprechchor · V filmen · X Dialog weiter · Rechtsklick: Zielen</small>
+    <small style="display:block;line-height:1.7;margin-top:10px"><b style="color:#eee">Tasten</b> · WASD laufen · Shift rennen · Leertaste springen · E Auto klauen / aussteigen · H Hupe · F Geschäft betreten · M Karte<br>Linksklick angreifen · Rechtsklick zielen · 1–0 / Mausrad Waffe · Q letzte Waffe · R nachladen<br>G Leute sammeln / Sprechchor · V filmen · X Dialog weiter · C Kreativmodus (Auswahl 1–0, Shift+1–0, ß, Mausrad, Klick) · F6 speichern · F9 laden · Esc Menü</small>
   </div>
 </div></div>
 <div id="hud">
@@ -172,6 +186,7 @@
   <div id="hint"></div>
   <div id="cross"></div>
   <div id="msg"></div>
+  <div id="build"></div>
   <div id="mode"></div>
   <div id="hotbar"></div>
 </div>
@@ -179,7 +194,23 @@
   "three":"./vendor/three/build/three.module.js",
   "three/addons/":"./vendor/three/examples/jsm/"
 }}</script>
-<script type="module" src="game.js"></script>
+<script>
+// Vor dem Laden: Handy? WebGL 2 da? Fehler beim Start sichtbar machen statt ewig „Lade Stadt …“
+(function () {
+  var err = document.getElementById('loaderr');
+  function fail(title, text, detail) { if (window.__started || err.style.display === 'flex') return; /* erste Meldung bleibt stehen */ document.getElementById('loaderr_t').textContent = title; document.getElementById('loaderr_p').innerHTML = text; var c = document.getElementById('loaderr_c'); c.textContent = detail || ''; c.style.display = detail ? 'block' : 'none'; err.style.display = 'flex'; }
+  window.__fail = fail;
+  addEventListener('error', function (e) { if (!window.__started) fail('Das Spiel konnte nicht starten', 'Beim Laden ist ein Fehler aufgetreten. Neu laden hilft oft. Bleibt es, melde den Fehler bitte mit dem Knopf unten.', (e.message || '') + (e.filename ? '\n' + e.filename.split('/').pop() + ':' + e.lineno : '')); });
+  addEventListener('unhandledrejection', function (e) { if (!window.__started) fail('Das Spiel konnte nicht laden', 'Eine Datei ließ sich nicht laden (Verbindung, Werbeblocker oder Server). Neu laden hilft oft.', String(e.reason && (e.reason.stack || e.reason.message || e.reason))); });
+  document.getElementById('loaderr_fb').onclick = function () { if (window.__openFeedback) window.__openFeedback(); else location.href = 'https://github.com/nixblick/web.bornheim/issues/new'; };
+  var gl = null; try { gl = document.createElement('canvas').getContext('webgl2'); } catch (e) {}
+  if (!gl) { fail('Dein Browser kann kein WebGL 2', 'Das Spiel braucht WebGL 2. Aktualisiere Chrome, Edge, Firefox oder Safari und schalte die Hardwarebeschleunigung in den Browser-Einstellungen ein.'); return; }
+  var mobile = matchMedia('(pointer: coarse)').matches && !matchMedia('(pointer: fine)').matches;
+  function start() { var s = document.createElement('script'); s.type = 'module'; s.src = 'game.js'; document.body.appendChild(s); }
+  if (mobile) { var m = document.getElementById('mobile'); m.style.display = 'flex'; document.getElementById('mobile_anyway').onclick = function (e) { e.preventDefault(); m.style.display = 'none'; start(); }; }
+  else start();
+})();
+</script>
 <script type="module" src="feedback.js"></script>
 </body>
 </html>

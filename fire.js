@@ -19,7 +19,7 @@ export function initFire(X, W, D) {
   }
   function douse(x, y, z, amt) { let hit = false; for (const f of fires) { const p = fireAt(f); const dx = p.x - x, dz = p.z - z; if (dx * dx + dz * dz > 10 || y > p.y + 4) continue; f.I -= amt; f.wetT = 0.4; hit = true; } return hit; }
   function endFire(f, i) { scene.remove(f.g); f.g.userData.mat.dispose(); if (f.car) f.car.userData.fire = null; if (f.bin) f.bin.userData.fire = null; fires.splice(i, 1); const p = fireAt(f); for (let k = 0; k < 8; k++) W.puff(p.clone().setY(p.y + 1), 0xdddddd, 0.8, 3, new V3(rnd(-0.6, 0.6), rnd(1.5, 2.6), rnd(-0.6, 0.6)), 1.6, 0.5); emit('fireOut', p, { fire: f }); }
-  const lights = []; for (let i = 0; i < 2; i++) { const l = new THREE.PointLight(0xff7a2a, 0, 22, 2); scene.add(l); lights.push(l); }
+  const lights = []; for (let i = 0; i < 2; i++) { const l = new THREE.PointLight(0xff7a2a, 0, 22, 2); l.visible = false; scene.add(l); lights.push(l); } // unsichtbar, solange kein Feuer brennt: spart Shader-Arbeit
   let scanT = 0, crackT = 0;
   function updateFires(dt) {
     scanT -= dt; if (scanT <= 0) { scanT = 0.4; // Bengalos zünden, was daneben steht
@@ -46,7 +46,7 @@ export function initFire(X, W, D) {
       if (dPl < 120) lit.push([dPl, f, p]);
     }
     lit.sort((a, b) => a[0] - b[0]); const T = performance.now() / 1000;
-    lights.forEach((l, k) => { const e = lit[k]; if (!e) { l.intensity = 0; return; } l.position.set(e[2].x, e[2].y + e[1].h + 1.5, e[2].z); l.intensity = 70 * e[1].I * (0.8 + 0.2 * Math.sin(T * 17 + k) + 0.1 * Math.sin(T * 41)); });
+    lights.forEach((l, k) => { const e = lit[k]; if (!e) { l.intensity = 0; l.visible = false; return; } l.position.set(e[2].x, e[2].y + e[1].h + 1.5, e[2].z); l.intensity = 70 * e[1].I * (0.8 + 0.2 * Math.sin(T * 17 + k) + 0.1 * Math.sin(T * 41)); l.visible = l.intensity > 0.5; });
     crackT -= dt; if (crackT <= 0 && lit.length && lit[0][0] < 40) { crackT = rnd(0.4, 1.2); sfx('crackle', clamp(0.5 - lit[0][0] / 80, 0.05, 0.45)); }
   }
 

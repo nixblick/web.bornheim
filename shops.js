@@ -59,8 +59,9 @@ export function initShops(X, W) {
     sfx('click', 0.6); X.emit && X.emit('bought', player.pos, { id, price: it.p }); render();
   }
   let wasLocked = false;
-  function open(s) { cur = s; if (document.pointerLockElement) { wasLocked = true; document.exitPointerLock(); } for (const k in keys) keys[k] = false; render(); el.style.display = 'flex'; X.shopOpen = true; sfx('click', 0.5); }
-  function close() { el.style.display = 'none'; X.shopOpen = false; cur = null; }
+  // Während der Laden offen ist, darf das Loslassen der Maus nicht das Pausemenü öffnen; danach die Maus wieder fangen
+  function open(s) { cur = s; X.shopOpen = true; window.__noAutoMenu = true; wasLocked = !!document.pointerLockElement; if (wasLocked) document.exitPointerLock(); for (const k in keys) keys[k] = false; render(); el.style.display = 'flex'; sfx('click', 0.5); }
+  function close() { el.style.display = 'none'; X.shopOpen = false; cur = null; window.__noAutoMenu = false; if (wasLocked) { wasLocked = false; try { X.renderer.domElement.requestPointerLock(); } catch (e) {} } }
   addEventListener('keydown', e => { if (!X.shopOpen) return; if (e.code === 'Escape' || e.code === 'KeyF') { close(); e.stopImmediatePropagation(); } }, true);
   // Nähe prüfen, Hinweis zeigen, Taste F
   let near = null, scanT = 0;

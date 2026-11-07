@@ -1,5 +1,7 @@
-// Story-Engine mit Story 1 „Bornheim bleibt" (Hitzesommer, Investor, Demo, Polizei) und Story 2 aus story2.js. Alle Personen, Firmen und Accounts sind erfunden.
+// Story-Engine mit Story 1 „Bornheim bleibt" (Hitzesommer, Investor, Demo, Polizei), Story 2 aus story2.js und Story 3 aus story3.js. Alle Personen, Firmen und Accounts sind erfunden.
+// Waffen: In Story 1 und 2 bleiben nur Fäuste und Demo-Zubehör (W.lock 'protest'), in Story 3 nur Fäuste (W.lock 'all').
 import { story2Chapters } from './story2.js';
+import { story3Chapters } from './story3.js';
 export function initStory(X, W, D, F) {
   const { THREE, scene, camera, player, peds, cars, opts, world, weather, CITY, TH, solidAt, makeHuman, playAnim, sfx, showMsg, raiseWanted, canvasTex, rnd, clamp, pick, distSegSq, pointInPoly } = X;
   const V3 = THREE.Vector3; const $ = id => document.getElementById(id);
@@ -19,8 +21,8 @@ export function initStory(X, W, D, F) {
 
   // ---------- Zustand ----------
   const fresh = () => ({ state: 'new', chap: 0, done: [], endings: [], flags: {} });
-  const KEYS = { s1: 'notgta.story', s2: 'notgta.story2' };
-  const S1 = fresh(), S2 = fresh(); try { Object.assign(S1, JSON.parse(localStorage.getItem(KEYS.s1) || '{}')); Object.assign(S2, JSON.parse(localStorage.getItem(KEYS.s2) || '{}')); } catch (e) {}
+  const KEYS = { s1: 'notgta.story', s2: 'notgta.story2', s3: 'notgta.story3' };
+  const S1 = fresh(), S2 = fresh(), S3 = fresh(); try { Object.assign(S1, JSON.parse(localStorage.getItem(KEYS.s1) || '{}')); Object.assign(S2, JSON.parse(localStorage.getItem(KEYS.s2) || '{}')); Object.assign(S3, JSON.parse(localStorage.getItem(KEYS.s3) || '{}')); } catch (e) {}
   let S = S1, sid = 's1';
   try { const r = JSON.parse(localStorage.getItem('notgta.rep') || 'null') || { rep: S1.rep, stats: S1.stats }; if (r.rep) Object.assign(D.rep, r.rep); if (r.stats) Object.assign(D.stats, r.stats); } catch (e) {}
   // Nur einfache Werte speichern (keine Figuren, Demos oder Mengen)
@@ -39,7 +41,8 @@ export function initStory(X, W, D, F) {
     const m = markPos(); if (m) { let [x, y] = P(m[0], m[1]); const L = Math.hypot(x, y); if (L > R) { x *= R / L; y *= R / L; } ctx.fillStyle = '#ffd84a'; ctx.strokeStyle = '#000'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(x, y, 5, 0, 7); ctx.fill(); ctx.stroke(); }
     for (const st of Object.values(STORIES)) { if (!st.beacon || !st.beacon.visible) continue; let [x, y] = P(st.at[0], st.at[1]); const L = Math.hypot(x, y); if (L > R) { x *= R / L; y *= R / L; } ctx.fillStyle = st.color; ctx.font = 'bold 13px system-ui'; ctx.beginPath(); ctx.arc(x, y, 7, 0, 7); ctx.fill(); ctx.fillStyle = '#fff'; ctx.fillText(st.letter, x - 4.3, y + 4.5); } });
   function updateMarker(dt) {
-    const m = markPos(); beam.visible = !!m && S.state === 'active'; if (beam.visible) { const y = markObj ? markObj.position.y : TH(m[0], m[1]); beam.position.set(m[0], y, m[1]); beam.userData.arrow.position.y = 3.2 + Math.sin(performance.now() / 300) * 0.25; beam.userData.arrow.rotation.y += dt * 2; const far = Math.hypot(m[0] - player.pos.x, m[1] - player.pos.z); beam.children[2].visible = far > 25; beam.children[0].visible = beam.children[3].visible = far > 14; }
+    if (intro) { introT -= dt; if (introT <= 0 || S.state === 'active') endIntro(); }
+    const m = markPos(); beam.visible = !!m && (S.state === 'active' || intro); if (beam.visible) { const y = markObj ? markObj.position.y : TH(m[0], m[1]); beam.position.set(m[0], y, m[1]); beam.userData.arrow.position.y = 3.2 + Math.sin(performance.now() / 300) * 0.25; beam.userData.arrow.rotation.y += dt * 2; const far = Math.hypot(m[0] - player.pos.x, m[1] - player.pos.z); beam.children[2].visible = far > 25; beam.children[0].visible = beam.children[3].visible = far > 14; }
     gpsT -= dt; if (m && gpsT <= 0) { gpsT = 2.5; const far = Math.hypot(m[0] - player.pos.x, m[1] - player.pos.z); gps = far > 40 ? D.route(player.pos.x, player.pos.z, m[0], m[1]) : null; }
     const anyOn = S.state === 'active'; for (const st of Object.values(STORIES)) { const b = st.beacon; if (!b) continue; b.visible = !anyOn && !st.S.finishedAll && !X.creative.on; if (!b.visible) continue; const d = Math.hypot(st.at[0] - player.pos.x, st.at[1] - player.pos.z); if (d < 2.2 && !player.car) { useStory(st.id); if (S.state === 'done') { S.state = 'new'; S.chap = 0; } start('beacon'); break; } }
   }
@@ -55,7 +58,7 @@ export function initStory(X, W, D, F) {
   // ---------- Hilfen ----------
   let spawned = [];
   const track = o => { spawned.push(o); return o; };
-  function cleanup() { X.onG = null; X.rallyLimit = 8; for (const o of spawned) { if (o.isDemo) { if (!o.result) D.endDemo(o, 'faded'); continue; } if (peds.includes(o)) D.removePed(o); else if (cars.includes(o)) { if (o !== player.car) D.removeCar(o); } else if (o.parent) o.parent.remove(o); if (o.isTarget) W.paintTargets.splice(W.paintTargets.indexOf(o.isTarget), 1); } spawned = []; kim = null; }
+  function cleanup() { X.onG = null; X.rallyLimit = 8; W.lock(null); for (const o of spawned) { if (o.isDemo) { if (!o.result) D.endDemo(o, 'faded'); continue; } if (peds.includes(o)) D.removePed(o); else if (cars.includes(o)) { if (o !== player.car) D.removeCar(o); } else if (o.parent) o.parent.remove(o); if (o.isTarget) W.paintTargets.splice(W.paintTargets.indexOf(o.isTarget), 1); } spawned = []; kim = null; }
   function nameTag(h, text, col = '#7dff9a') { const t = canvasTex(256, 64, (ctx, w, hh) => { ctx.fillStyle = 'rgba(0,0,0,0.55)'; ctx.fillRect(40, 8, 176, 48); ctx.fillStyle = col; ctx.font = 'bold 34px system-ui'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(text, w / 2, 33); }); const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: t, depthTest: false, transparent: true })); s.scale.set(1.2, 0.3, 1); s.position.y = 2.25; s.renderOrder = 5; h.add(s); }
   let kim = null;
   function npc(model, x, z, face, name, col, o = {}) { const h = makeHuman(/woman/.test(model), { model, keepColors: !!o.keep }); if (o.top || o.hair) h.traverse(m => { if (!m.isMesh || !m.material) return; const nm = m.material.name || ''; if (o.top && /Shirt|Main|Dress|Jacket|Top/i.test(nm)) { m.material = m.material.clone(); m.material.color.setHex(o.top); } if (o.hair && /Hair/i.test(nm)) { m.material = m.material.clone(); m.material.color.setHex(o.hair); } }); if (o.student) h.scale.multiplyScalar(0.92);
@@ -159,21 +162,23 @@ export function initStory(X, W, D, F) {
       setTimeout(() => { X.card('BORNHEIM BLEIBT', 'Story 1 abgeschlossen. Story 2 „Freitag ist Pflicht" wartet am blauen S vor der Schule.', 7); next(); }, 7500); } });
 
   // ---------- Story 2 ----------
-  const K = { X, W, D, F, talk, track, near, nameTag, npc, cleanup, nearestOn, berger, busy, get S() { return S; }, places: { UHR, U0, GATE, PARKC } };
-  const ST2 = story2Chapters(K);
+  const K = { X, W, D, F, talk, track, near, nameTag, npc, cleanup, nearestOn, berger, busy, get S() { return S; }, get sid() { return sid; }, places: { UHR, U0, GATE, PARKC } };
+  const ST2 = story2Chapters(K); const ST3 = story3Chapters(K);
   const STORIES = { s1: { id: 's1', S: S1, CH: CH1, title: 'Bornheim bleibt', sub: 'Story 1', letter: 'B', color: '#c86bff', at: UHR, ends: { friedlich: 'Friedlich und laut', krawall: 'Krawall', kompromiss: 'Kompromiss' }, hint: 'Startet, wenn du eine Demo anführst oder mitläufst – oder am lila B am Uhrtürmchen.' },
     s2: { id: 's2', S: S2, CH: ST2.CH, title: 'Freitag ist Pflicht', sub: 'Story 2 · Schulstreik', letter: 'S', color: '#4fd6ff', at: ST2.START, ends: ST2.ends, hint: 'Startet am blauen S vor der ' + ST2.schoolName + '.' } };
-  STORIES.s1.beacon = makeBeacon('B', 0xc86bff, UHR); STORIES.s2.beacon = makeBeacon('S', 0x4fd6ff, ST2.START);
+  STORIES.s3 = { id: 's3', S: S3, CH: ST3.CH, title: 'Der Kanzler kommt', sub: 'Story 3 · Bürgerdialog', letter: 'K', color: '#ff8c3a', at: ST3.START, ends: ST3.ends, lock: 'all', prefix: 'KANZLER · ', hint: 'Startet am orangen K vor dem Saalbau Bornheim. Ohne Waffen: Fragen statt Fotos.' };
+  STORIES.s1.lock = STORIES.s2.lock = 'protest'; STORIES.s2.prefix = 'SCHULSTREIK · ';
+  STORIES.s1.beacon = makeBeacon('B', 0xc86bff, UHR); STORIES.s2.beacon = makeBeacon('S', 0x4fd6ff, ST2.START); STORIES.s3.beacon = makeBeacon('K', 0xff8c3a, ST3.START);
   function useStory(id) { if (id === sid) return; sid = id; S = STORIES[id].S; CH = STORIES[id].CH; }
-  if (S2.state === 'active' && S1.state !== 'active') useStory('s2');
+  for (const id of ['s2', 's3']) if (STORIES[id].S.state === 'active' && S1.state !== 'active') useStory(id);
 
   // ---------- Ablauf ----------
   let stepIdx = 0, stepT = 0, failT = 0, waitT = 0, chapActive = false;
   function start(via, id) { if (id && id !== sid) { if (S.state === 'active') stop(); useStory(id); } if (S.state === 'active') return; if (S.state === 'done') { S.chap = 0; } S.state = 'active'; S.flags.viaDemo = via === 'demo'; persist(); beginChapter(S.chap || 0); }
   let begun = false;
-  function beginChapter(i) { begun = true; cleanup(); S.chap = i; S.demo = null; S.flags.demoRes = null; stepIdx = -1; chapActive = false; setObj(''); setMark(null); const C = CH[i]; X.card((sid === 's2' ? 'SCHULSTREIK · ' : '') + 'KAPITEL ' + (i + 1) + ' · ' + C.title, C.tag, 4); persist(); waitT = 2.2; }
+  function beginChapter(i) { begun = true; cleanup(); S.chap = i; S.demo = null; S.flags.demoRes = null; stepIdx = -1; chapActive = false; setObj(''); setMark(null); const C = CH[i]; endIntro(); W.lock(C.weapons === 'free' ? null : (C.lock ?? STORIES[sid].lock ?? null)); X.card((STORIES[sid].prefix || '') + 'KAPITEL ' + (i + 1) + ' · ' + C.title, C.tag, 4); persist(); waitT = 2.2; }
   function nextStep() { const C = CH[S.chap]; stepIdx++; stepT = 0; failT = 0; const st = C.steps[stepIdx]; if (!st) { chapActive = false; setObj(''); setMark(null); C.finish(() => completeChapter()); return; } if (st.enter) st.enter(); }
-  function completeChapter() { const i = S.chap; if (!S.done.includes(i)) S.done.push(i); if (i + 1 < CH.length) { S.chap = i + 1; persist(); waitT = 0; setTimeout(() => { if (S.state === 'active') beginChapter(S.chap); }, 2500); } else { S.state = 'done'; S.finishedAll = true; S.chap = 0; persist(); setObj(''); setMark(null); setTimeout(cleanup, 20000); } }
+  function completeChapter() { const i = S.chap; if (!S.done.includes(i)) S.done.push(i); if (X.saveGame) setTimeout(() => { if (!player.dead) X.saveGame(true); }, 1500); if (i + 1 < CH.length) { S.chap = i + 1; persist(); waitT = 0; setTimeout(() => { if (S.state === 'active') beginChapter(S.chap); }, 2500); } else { S.state = 'done'; S.finishedAll = true; S.chap = 0; persist(); setObj(''); setMark(null); W.lock(null); setTimeout(cleanup, 20000); } }
   function failChapter(why) { if (!chapActive) return; chapActive = false; X.card('MISSION GESCHEITERT', why, 3.5); setObj(''); setMark(null); setTimeout(() => { if (S.state === 'active') beginChapter(S.chap); }, 3800); }
   function stop() { if (S.state !== 'active') return; cleanup(); S.state = 'paused'; setObj(''); setMark(null); chapActive = false; X.rallyLimit = 8; persist(); showMsg('STORY PAUSIERT', 1200); }
   function update(dt) {
@@ -203,7 +208,12 @@ export function initStory(X, W, D, F) {
     for (const b of el.querySelectorAll('[data-ch]')) b.onclick = () => { const id = b.dataset.sid, i = +b.dataset.ch; if (S.state === 'active' && sid !== id) stop(); useStory(id); S.state = 'active'; S.declined = false; beginChapter(i); X.closeMenu(); }; }
   X.menuHooks.push(renderMenu);
   // Nach dem Laden: aktive Story setzt das Kapitel fort
-  function resume() { if (S.state === 'active' && !begun) { beginChapter(S.chap || 0); } }
+  function resume() { if (S.state === 'active' && !begun) { beginChapter(S.chap || 0); return; } startIntro(); }
+  // Einstieg für neue Spieler: Wegweiser zur ersten Story, solange noch keine begonnen wurde (höchstens drei Spielstarts lang)
+  let intro = false, introT = 0;
+  function startIntro() { if (S.state === 'active') return; const none = Object.values(STORIES).every(st => st.S.state === 'new' && !st.S.done.length && !st.S.finishedAll); let seen = 0; try { seen = +localStorage.getItem('notgta.introSeen') || 0; } catch (e) {} if (!none || seen >= 3) return; try { localStorage.setItem('notgta.introSeen', seen + 1); } catch (e) {}
+    intro = true; introT = 240; setMark(UHR); setObj('Willkommen! Für die <b>Story</b> folge der gelben Linie zum lila <b>B</b> am Uhrtürmchen · oder Esc › Story wählen'); X.card('BORNHEIM', 'Freies Spiel – oder zur Story: dem gelben Strahl folgen', 5); }
+  function endIntro() { if (!intro) return; intro = false; setMark(null); setObj(''); }
 
-  return { update, start, stop, resume, skipLine, renderMenu, get S() { return S; }, get CH() { return CH; }, get sid() { return sid; }, useStory, STORIES, ST2, persist, get busy() { return S.state === 'active'; }, places: { UHR, GATE, SITE, EIS, PARKC, ...ST2.places }, beginChapter, get kim() { return kim; } };
+  return { update, start, stop, resume, skipLine, renderMenu, get S() { return S; }, get CH() { return CH; }, get sid() { return sid; }, useStory, STORIES, ST2, persist, get busy() { return S.state === 'active'; }, places: { UHR, GATE, SITE, EIS, PARKC, ...ST2.places, ...ST3.places }, beginChapter, get kim() { return kim; } };
 }
