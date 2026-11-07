@@ -193,6 +193,7 @@ export function initInteriors(X, W, D, SH) {
   let curT = null; let t = 0;
   function update(dt) {
     t += dt; updateEntrances(dt); curT = null;
+    if (inside && !riding && X.inPocket && !X.inPocket(player.pos.x, player.pos.z)) { console.warn('Innenraum ohne leave() verlassen', inside.label || ''); leaveSilent(); } /* Spieler wurde aus dem Innenraum versetzt (Festnahme, Teleport): Zustand aufräumen, sonst hängt Fahren und F */
     if (inside) { if (inside.update) inside.update(dt); for (const n of inside.npc || []) { try { animateWalk(n, t, 0); } catch (e) {} }
       let bd = 1e9; for (const tr of inside.triggers) { const d = Math.hypot(player.pos.x - PX - tr.x, player.pos.z - PZ - tr.z); if (d < tr.r && d < bd) { bd = d; curT = tr; } }
       if (!curT && inside.trainNear && inside.trainNear()) curT = { label: 'F · Einsteigen: Ziel wählen (3 €)', act: () => travelMenu(inside.station) };

@@ -10,7 +10,7 @@ const sleep0 = () => new Promise(r => setTimeout(r, 0));
 
 export function start(opt = {}) {
   if (window.__bj && window.__bj.running) return window.__bj;
-  const S = window.__bj = { running: true, t: 0, frames: 0, actions: {}, action: '', findings: [], log: [], maxFrameMs: 0, slowFrames: 0, stop: false, opt };
+  const S = window.__bj = { started: Date.now(), running: true, t: 0, frames: 0, actions: {}, action: '', findings: [], log: [], maxFrameMs: 0, slowFrames: 0, stop: false, opt };
   // Spielstand, Story, Fortschritt und Kreativbauten liegen im localStorage: vorher sichern, danach genau so zurückschreiben
   const snap = {}; try { for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); snap[k] = localStorage.getItem(k); } } catch (e) {}
   const origErr = console.error; S.cleanup = []; let godBefore = false;
@@ -18,7 +18,8 @@ export function start(opt = {}) {
     for (const f of S.cleanup) try { f(); } catch (e) {} console.error = origErr; if (G) G.opts.god = godBefore;
     try { for (const k of Object.keys(localStorage)) if (!(k in snap)) localStorage.removeItem(k); for (const [k, v] of Object.entries(snap)) localStorage.setItem(k, v); } catch (e) {}
     /* das Spiel in diesem Tab hat noch den Teststand im Speicher: weitere (Auto-)Speicherungen bis zum Neuladen verwerfen */ const setI = Storage.prototype.setItem; if (!setI.__bj) { const f = function (k, v) { if (/^notgta/.test(k)) return; return setI.call(this, k, v); }; f.__bj = true; Storage.prototype.setItem = f; }
-    S.running = false; S.summary = summary(S); });
+    try { const now = {}; for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); now[k] = localStorage.getItem(k); } S.storeSame = JSON.stringify(Object.keys(now).sort().map(k => [k, now[k]])) === JSON.stringify(Object.keys(snap).sort().map(k => [k, snap[k]])); } catch (e) {}
+    S.running = false; S.summary = summary(S); S.report = report(S); });
   return S;
 }
 export function stop() { if (window.__bj) window.__bj.stop = true; }
@@ -27,9 +28,23 @@ function where(o) { if (!G || !G.player) return { x: 0, z: 0, str: "" }; const p
 function add(S, typ, detail, pos) {
   const w = where(pos); const key = typ + '|' + Math.round(w.x / 60) + ',' + Math.round(w.z / 60);
   let f = S.findings.find(f => f.key === key);
-  if (!f) { f = { key, typ, n: 0, erstesMal: Math.round(S.t) + ' s', wo: `${w.x},${w.z} ${w.str}`, detail: String(detail).slice(0, 300), aktion: S.action }; S.findings.push(f); S.log.push(`${Math.round(S.t)}s ${typ}: ${f.detail} @ ${f.wo} (${S.action})`); }
-  f.n++;
+  if (!f) { f = { key, typ, n: 0, t0: S.t, erstesMal: mmss(S.t), wo: `${w.x},${w.z} ${w.str}`, str: w.str, xz: [w.x, w.z], detail: String(detail).slice(0, 300), aktion: S.action, vorher: (S.hist || []).slice(-4, -1).join(' → ') }; S.findings.push(f); S.log.push(`${mmss(S.t)} ${typ}: ${f.detail} @ ${f.wo} (${S.action})`); }
+  f.n++; f.zuletzt = mmss(S.t);
 }
+const mmss = t => `${String(Math.floor(t / 60)).padStart(2, '0')}:${String(Math.round(t % 60)).padStart(2, '0')}`;
+// Schwere eines Fundes: rot = Absturz/Datenverlust, orange = Spielfehler, gelb = Kartendaten, grau = Hinweis
+function sev(typ) { if (/Fehler in|JS-Fehler|Konsolenfehler|Absturz|ungültig|NaN|Speichern fehlgeschlagen|LADE STADT|Anzeige kaputt|Innenraum-Zustand/.test(typ)) return 0; if (/Kartendaten/.test(typ)) return 2; if (/Sehr langes Bild|Zu viele|Speicher wächst|steht über 60 s/.test(typ)) return 3; return 1; }
+const SEV = ['🔴 Absturz / Fehler', '🟠 Spielfehler', '🟡 Kartendaten', '⚪ Hinweise'];
+// Lesbarer Bericht (Markdown): Kopf, Funde nach Schwere, Fahrten und Flüge, Ablauf
+export function report(S = window.__bj) { if (!S) return ''; const sm = S.summary || summary(S); const L = [];
+  L.push(`# Bug-Jäger-Bericht · ${new Date(S.started || Date.now()).toLocaleString('de-DE')}`, '', `Spielzeit ${mmss(S.t)} · ${S.frames} Bilder · längstes Bild ${sm.langsamsteBild} · ${Object.values(S.actions).reduce((a, b) => a + b, 0)} Aktionen · Spielstand danach ${S.storeSame === undefined ? 'unbekannt' : S.storeSame ? 'unverändert ✓' : 'VERÄNDERT ✗'}`, '');
+  const by = [[], [], [], []]; for (const f of S.findings) by[sev(f.typ)].push(f);
+  L.push(`**Funde:** ${by.map((a, i) => `${SEV[i].split(' ')[0]} ${a.length}`).join(' · ')}`, '');
+  by.forEach((arr, i) => { if (!arr.length) return; L.push(`## ${SEV[i]}`, ''); arr.sort((a, b) => b.n - a.n).forEach((f, k) => { L.push(`${k + 1}. **${f.typ}** · ${f.n}× · ${f.erstesMal}${f.zuletzt && f.zuletzt !== f.erstesMal ? '–' + f.zuletzt : ''}`, `   - Ort: ${f.str || '?'} (${f.xz ? f.xz.join(', ') : f.wo})`, `   - Aktion: ${f.aktion}${f.vorher ? ` · davor: ${f.vorher}` : ''}`, `   - Detail: ${f.detail || '–'}`); }); L.push(''); });
+  if (S.rides && S.rides.length) { L.push('## Fahrten', '', '| Fahrzeug | Strecke | max. km/h | Abzweige | gestürzt |', '|---|---:|---:|---:|:---:|'); for (const r of S.rides) L.push(`| ${r[0]} | ${r[1]} m | ${r[2]} | ${r[3]} | ${r[4] ? '✗' : ''} |`); L.push(''); }
+  const fl = S.log.filter(l => /Flug:|Stau hinter/.test(l)); if (fl.length) { L.push('## Flüge und Staus', '', ...fl.map(l => '- ' + l), ''); }
+  L.push('## Aktionen', '', Object.entries(S.actions).sort((a, b) => b[1] - a[1]).map(([k, v]) => `${k} ${v}×`).join(' · '), '');
+  L.push('<details><summary>Ablauf</summary>', '', ...(S.hist || []).map(h => '- ' + h), '', '</details>'); return L.join('\n'); }
 function summary(S) {
   const by = {}; for (const f of S.findings) by[f.typ] = (by[f.typ] || 0) + f.n;
   return { spielzeit: Math.round(S.t) + ' s', bilder: S.frames, aktionen: S.actions, langsamsteBild: Math.round(S.maxFrameMs) + ' ms', bilderUeber100ms: S.slowFrames, funde: by };
@@ -41,7 +56,7 @@ async function run(S, opt) {
   G.opts.god = !!opt.god; const P = G.player;
   // Fehler im Konsolen-Log mitschneiden
   const origErr = console.error; console.error = (...a) => { add(S, 'Konsolenfehler', a.map(String).join(' ')); origErr.apply(console, a); };
-  const origWarn = console.warn; console.warn = (...a) => { if (/Speichern/.test(String(a[0]))) add(S, 'Speichern fehlgeschlagen', a.map(String).join(' ')); origWarn.apply(console, a); };
+  const origWarn = console.warn; console.warn = (...a) => { if (/Speichern/.test(String(a[0]))) add(S, 'Speichern fehlgeschlagen', a.map(String).join(' ')); if (/Innenraum ohne leave/.test(String(a[0]))) add(S, 'Innenraum-Zustand verloren (Teleport ohne leave)', a.map(String).join(' ')); origWarn.apply(console, a); };
   const onErr = e => add(S, 'JS-Fehler', (e.message || e.reason || e) + (e.filename ? ' @ ' + e.filename.split('/').pop() + ':' + e.lineno : ''));
   addEventListener('error', onErr); addEventListener('unhandledrejection', onErr);
   S.cleanup.push(() => { console.warn = origWarn; removeEventListener('error', onErr); removeEventListener('unhandledrejection', onErr); });
@@ -71,6 +86,7 @@ async function run(S, opt) {
     const hud = ((document.getElementById('money') || {}).textContent || '') + ((document.getElementById('hp') || {}).textContent || ''); if (/NaN|undefined/.test(hud)) add(S, 'Anzeige kaputt', hud);
     // Passanten, die auf der Stelle laufen (gegen eine Wand, festgehakt)
     for (const h of G.peds) { const u = h.userData; if (u.state !== 'walk' || h.position.distanceTo(P.pos) > 120) { pedPos.delete(h); continue; } const e = pedPos.get(h); if (!e) { pedPos.set(h, { x: h.position.x, z: h.position.z, t: S.t }); continue; } if (Math.hypot(h.position.x - e.x, h.position.z - e.z) > 1) { e.x = h.position.x; e.z = h.position.z; e.t = S.t; } else if (S.t - e.t > 20) { add(S, 'Passant läuft auf der Stelle', `${u.road && u.road.n || ''} seg ${u.seg}`, h.position); e.t = S.t + 1e9; } }
+    if (G.INTERIORS && G.INTERIORS.inside && !inPocket) add(S, 'Innenraum-Zustand ohne Innenraum', `${G.INTERIORS.inside.label || G.INTERIORS.inside.kind || ''}`);
     const jump = lastPos.distanceTo(p); if (jump > 40 && !expectJump) add(S, 'Plötzlich versetzt', `${Math.round(jump)} m in einem Schritt`); lastPos.copy(p);
     const msg = document.getElementById('msg'); if (msg && msg.style.display !== 'none' && /LADE STADT/.test(msg.textContent)) { loadT += dt; if (loadT > 12) { add(S, '„LADE STADT“ hängt', `${Math.round(loadT)} s`); loadT = 0; } } else loadT = 0;
     if (/FEHLGESCHLAGEN/.test((msg || {}).textContent || '') && msg.style.display !== 'none') add(S, 'Meldung „fehlgeschlagen“', msg.textContent);
@@ -126,7 +142,7 @@ async function run(S, opt) {
       await frames(5); vmax = Math.max(vmax, sp); dist += lastP.distanceTo(c.position); lastP.copy(c.position);
       const surf = G.surfAt(c.position.x, c.position.z, c.position.y + 2); if (c.position.y < surf - 1.5) add(S, `${o.name}: unter der Fahrbahn`, `${(surf - c.position.y).toFixed(1)} m darunter`);
       if (lastY - c.position.y > 4) add(S, `${o.name}: stürzt ab`, `${(lastY - c.position.y).toFixed(1)} m in 5 Bildern`); lastY = c.position.y;
-      const loading = /LADE STADT/.test((document.getElementById('msg') || {}).textContent || '') && (document.getElementById('msg') || {}).style?.display !== 'none'; if (loading && (loadF += 5) < 1800) { await frames(5); f -= 5; slowT = 0; continue; } if (sp < (o.bike ? 0.8 : 2) && f > 120) { slowT += 5 / 60; if (slowT > 6) { const fx = Math.sin(u.heading), fz = Math.cos(u.heading); const wall = G.solidAtH(c.position.x + fx * 2, c.position.z + fz * 2, c.position.y + 0.5); const block = G.cars.filter(o => o !== c && o.position.distanceTo(c.position) < 5).map(o => `${o.userData.type || 'car'}/${o.userData.mode}`).join(','); add(S, `${o.name}: bleibt hängen`, `nach ${Math.round(dist)} m, ${r.n || 'ohne Namen'} w${r.w} · vorn Wand ${wall !== -1} · Fahrzeuge <5 m: ${block || '-'} · Ziel-Winkel ${(Math.atan2(Math.sin(want - u.heading), Math.cos(want - u.heading))).toFixed(2)}`, c.position); break; } } else slowT = 0;
+      const loading = /LADE STADT/.test((document.getElementById('msg') || {}).textContent || '') && (document.getElementById('msg') || {}).style?.display !== 'none'; if (loading && (loadF += 5) < 1800) { await frames(5); f -= 5; slowT = 0; continue; } if (sp < (o.bike ? 0.8 : 2) && f > 120) { slowT += 5 / 60; if (slowT > 6) { const fx = Math.sin(u.heading), fz = Math.cos(u.heading); const wall = G.solidAtH(c.position.x + fx * 2, c.position.z + fz * 2, c.position.y + 0.5); const block = G.cars.filter(o => o !== c && o.position.distanceTo(c.position) < 5).map(o => `${o.userData.type || 'car'}/${o.userData.mode}`).join(','); const fence = G.barrierHit ? G.barrierHit(c.position.x + fx * 1.5, c.position.z + fz * 1.5, 1, c.position.y) : false; const pedsF = G.peds.filter(h => h.userData.state !== 'dead' && h.position.distanceTo(c.position) < 3).length; if (block && wall === -1) { S.log.push(`${Math.round(S.t)}s ${o.name}: Stau hinter ${block} (${r.n || ''})`); break; } add(S, `${o.name}: bleibt hängen`, `nach ${Math.round(dist)} m, ${r.n || 'ohne Namen'} w${r.w} · vorn Wand ${wall !== -1} · Zaun/Mauer ${fence ? 'ja' : 'nein'} · Passanten <3 m: ${pedsF} · Tempo ${(u.speed || 0).toFixed(1)} · Fahrzeuge <5 m: ${block || '-'} · Ziel-Winkel ${(Math.atan2(Math.sin(want - u.heading), Math.cos(want - u.heading))).toFixed(2)}`, c.position); break; } } else slowT = 0;
     }
     keysOff(); const st = { dist: Math.round(dist), vmax: Math.round(vmax * 3.6), turns, crashed: u.mode === 'wreck' };
     S.log.push(`${Math.round(S.t)}s ${o.name}: ${st.dist} m, max ${st.vmax} km/h, ${turns} Abzweige${st.crashed ? ', gestürzt' : ''}`); (S.rides = S.rides || []).push([o.name, st.dist, st.vmax, turns, st.crashed ? 'X' : '']); return st;
@@ -206,7 +222,7 @@ async function run(S, opt) {
   const weights = opt.weights || { laufen: 3, fahren: 5, reisen: 2, ubahn: 1.5, laden: 1, haus: 1, explosion: 2, feuer: 1, schiessen: 1.5, demo: 1.5, story: 1, speichern: 1, kreativ: 0.5, wetter: 1, sondersignal: 0.7, tasten: 1.5, menue: 0.7, autobahn: 1.5, fliegen: 1.2, rad: 1.5, motorrad: 1.2 };
   const bag = Object.entries(weights).flatMap(([k, w]) => Array(Math.round(w * 2)).fill(k));
   while (S.t < end && !S.stop) {
-    const name = opt.only ? pick(opt.only) : pick(bag); S.action = name; S.actions[name] = (S.actions[name] || 0) + 1;
+    const name = opt.only ? pick(opt.only) : pick(bag); S.action = name; S.actions[name] = (S.actions[name] || 0) + 1; (S.hist = S.hist || []).push(`${mmss(S.t)} ${name}`);
     if (P.dead) { G.keys.Enter = true; await frames(10); G.keys.Enter = false; jumpOk(); }
     try { await ACTIONS[name](); } catch (e) { add(S, 'Fehler in Aktion ' + name, String(e && e.stack || e).slice(0, 300)); }
     keysOff(); window.__noAutoMenu = true; await frames(20);
