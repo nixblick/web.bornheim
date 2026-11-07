@@ -9,7 +9,7 @@ export function story3Chapters(K) {
   // ---------- Orte aus den Kartendaten ----------
   const roads6 = CITY.roads.filter(r => !r.mw && !r.ry && r.w >= 6);
   const cen = poly => poly.reduce((a, p) => [a[0] + p[0] / poly.length, a[1] + p[1] / poly.length], [0, 0]);
-  const sb = CITY.buildings.find(b => /Saalbau/.test(b.n || '')); const sbc = sb ? cen(sb.p) : [UHR[0] + 120, UHR[1] - 40];
+  const sb = CITY.buildings.find(b => b && /Saalbau/.test(b.n || '')); const sbc = sb ? cen(sb.p) : [UHR[0] + 120, UHR[1] - 40];
   const sr = K.nearestOn(roads6, sbc[0], sbc[1]) || U0; const SAAL_ROAD = [sr.x, sr.z, sr.h];
   // Vorplatz: vom Straßenpunkt Richtung Gebäude, erste freie Stelle
   const toward = (from, to, ks) => { const dx = to[0] - from[0], dz = to[1] - from[1], L = Math.hypot(dx, dz) || 1; for (const k of ks) { const x = from[0] + dx / L * k, z = from[1] + dz / L * k; if (solidAt(x, z) < 0 && !X.barrierNear(x, z, 1.5)) return [x, z]; } return D.freeSpot(from[0] + dx / L * ks[0], from[1] + dz / L * ks[0], 2); };

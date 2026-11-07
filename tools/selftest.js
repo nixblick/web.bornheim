@@ -196,7 +196,7 @@ async function physikChecks(add) {
   const P = G.player, T3 = G.THREE; const god = G.opts.god; G.opts.god = true; if (P.car) G.toggleCar(); clear();
   const rmCar = c => { if (P.car === c) G.toggleCar(); G.scene.remove(c); const i = G.cars.indexOf(c); if (i >= 0) G.cars.splice(i, 1); };
   // Lange freie Hauswand (≥ 25 m, 7 m Streifen davor ohne Zaun und Parkreihe)
-  const wall = (() => { for (const b of C.buildings) { if (b.h <= 5) continue; for (let e = 0; e < b.p.length; e++) { const [ax, az] = b.p[e], [bx, bz] = b.p[(e + 1) % b.p.length]; const l = Math.hypot(bx - ax, bz - az); if (l < 25) continue; let nx = -(bz - az) / l, nz = (bx - ax) / l; if (G.solidAt((ax + bx) / 2 + nx * 2, (az + bz) / 2 + nz * 2) >= 0) { nx = -nx; nz = -nz; }
+  const wall = (() => { for (const b of C.buildings) { if (b.h <= 5) continue; for (let e = 0; e < b.p.length; e++) { const [ax, az] = b.p[e], [bx, bz] = b.p[(e + 1) % b.p.length]; const l = Math.hypot(bx - ax, bz - az); if (l < 25) continue; let nx = -(bz - az) / l, nz = (bx - ax) / l; if (G.solidAt((ax + bx) / 2 + nx * 2, (az + bz) / 2 + nz * 2) >= 0) { nx = -nx; nz = -nz; } if (G.solidAt((ax + bx) / 2 - nx, (az + bz) / 2 - nz) < 0 || G.solidAt((ax + bx) / 2 - nx * 2, (az + bz) / 2 - nz * 2) < 0) continue; /* Innenseite muss wirklich im Haus liegen */
     let free = true; for (let s = 0.05; s <= 0.96 && free; s += 0.1) for (let d = 0.8; d <= 7 && free; d += 1) { const x = ax + (bx - ax) * s + nx * d, z = az + (bz - az) * s + nz * d; if (G.solidAt(x, z) >= 0 || G.X.barrierNear(x, z, 1.5) || G.staticParked.some(sp => sp.active && Math.hypot(sp.x - x, sp.z - z) < 4)) free = false; }
     if (free && Math.hypot((ax + bx) / 2 - P.pos.x, (az + bz) / 2 - P.pos.z) < 600) return { ax, az, bx, bz, nx, nz, l }; } } return null; })();
   // 1) Auto schrammt im 10°-Winkel an der Wand entlang: kein Rückprall, bleibt in Fahrt, kommt voran
@@ -236,6 +236,17 @@ async function physikChecks(add) {
     else add('Normalmodus: Vorlagen PBR mit Umgebungslicht', nonL > 0 && !!G.scene.environment, `${mats.size} Materialien, ${nonL} PBR, Umgebung=${!!G.scene.environment}`);
     let bad = 0, n = 0; const ex = new Set(); G.scene.traverse(o => { const ms = o.material ? (Array.isArray(o.material) ? o.material : [o.material]) : []; for (const m of ms) for (const k of ['map', 'normalMap', 'roughnessMap', 'emissiveMap']) { const t = m[k]; if (!t) continue; n++; if (t.anisotropy !== G.ANISO) { bad++; ex.add(o.type + '/' + k + '=' + t.anisotropy); } } });
     add('Anisotropie überall gleich der Qualitätsstufe (' + G.ANISO + ')', n > 20 && bad === 0, `${bad} von ${n} Texturen abweichend${ex.size ? ': ' + [...ex].slice(0, 4).join(' ') : ''}`); }
+  // 7) Kachel-Speicher: ferne, ungebaute Kacheln werden samt DEM, Rastern und Minikarte freigegeben; eine lange Fahrt lässt Geometrien und Kachelzahl nicht wachsen
+  { const tk = (x, z) => Math.floor(x / G.TS) + '_' + Math.floor(z / G.TS); const ready = (x, z) => { for (let a = -1; a <= 1; a++) for (let b = -1; b <= 1; b++) { const k = (Math.floor(x / G.TS) + a) + '_' + (Math.floor(z / G.TS) + b); if (G.WIDX.tiles[k] && !(G.TILES.get(k) || {}).built) return false; } return true; }; // 3×3 gebaut: vergleichbarer Stand vor und nach der Tour
+    const settle = async (x, z) => { P.pos.set(x, G.TH(x, z), z); P.mesh.position.copy(P.pos); for (let k = 0; k < 400 && !ready(x, z); k++) { G.streamUpdate(0.5, true); run(2); await new Promise(r => setTimeout(r, 30)); } };
+    const geoms = () => { G.renderer.render(G.scene, G.camera); return G.renderer.info.memory.geometries; }; // erst ein Render lädt neue Geometrien hoch (versteckter Tab rendert sonst nicht)
+    if (P.car) G.toggleCar(); const x0 = P.pos.x, z0 = P.pos.z; await settle(x0, z0); const geo0 = geoms(), tiles0 = G.TILES.size;
+    const idx = G.WIDX.tiles; const reach = dir => { let s = 0; while (s < 7 && idx[tk(x0 + (s + 1) * dir * G.TS, z0)]) s++; return s; }; const dir = reach(1) >= reach(-1) ? 1 : -1; const far = reach(dir);
+    for (let s = 1; s <= far; s++) await settle(x0 + s * dir * G.TS, z0); const tilesFar = G.TILES.size, demFar = G.DEMN.size, bNull = G.WORLD.buildings.filter(b => !b).length;
+    for (let s = far - 1; s >= 0; s--) await settle(x0 + s * dir * G.TS, z0);
+    const geo1 = geoms(), cap = (2 * (G.R_DATA + 2) + 1) ** 2;
+    add('Kacheldaten außerhalb R_DATA+2 werden freigegeben', far >= 4 && tilesFar <= cap && G.TILES.size <= cap && G.DEMN.size <= cap && G.DEMT.size <= cap && bNull > 0, `${far} Kacheln weit: ${tilesFar} Kacheln, ${demFar} DEM geladen (Deckel ${cap}), ${bNull} Gebäudeplätze frei; zurück: ${G.TILES.size} Kacheln (Start ${tiles0})`);
+    add('Geometrien wachsen bei langer Fahrt nicht', geo1 <= geo0 + 40, `${geo0} → ${geo1} Geometrien nach ${far * 2 * G.TS / 1000} km`); }
   G.opts.god = god; clear();
 }
 // Gerade Strecke ohne Zaun und Parkreihe bis kurz vor das Gebäude
