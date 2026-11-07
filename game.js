@@ -376,7 +376,7 @@ function* buildDetails() {
   const runBarrier = (pts, k, autoFence = false) => {
     for (let i = 0; i < pts.length - 1; i++) { const [ax, az] = pts[i], [bx, bz] = pts[i + 1]; const l = Math.hypot(bx - ax, bz - az); if (l < 0.5) continue; const mx = (ax + bx) / 2, mz = (az + bz) / 2; if (solidAt(mx, mz) >= 0) continue; const ang = Math.atan2(bx - ax, bz - az); const ty = TH(mx, mz); const slope = Math.atan2(TH(ax, az) - TH(bx, bz), l);
       const box = (w, h, d, y, arr) => { const g = new THREE.BoxGeometry(w, h, d); g.rotateX(slope); g.rotateY(ang); g.translate(mx, ty + y, mz); arr.push(g); };
-      if (k === 'fence') { box(0.04, 0.06, l, 1.15, fenceRail); box(0.04, 0.06, l, 0.6, fenceRail); box(0.04, 0.06, l, 0.15, fenceRail); for (let d = 0; d <= l; d += 2.5) { const px = ax + (bx - ax) * d / l, pz = az + (bz - az) * d / l; const g = new THREE.BoxGeometry(0.08, 1.3, 0.08); g.translate(px, TH(px, pz) + 0.65, pz); fencePost.push(g); } }
+      if (k === 'fence') { box(0.04, 0.06, l, 1.15, fenceRail); box(0.04, 0.06, l, 0.6, fenceRail); box(0.04, 0.06, l, 0.15, fenceRail); if (opts.quality !== 'niedrig') for (let d = 0; d <= l; d += 2.5) { const px = ax + (bx - ax) * d / l, pz = az + (bz - az) * d / l; const g = new THREE.BoxGeometry(0.08, 1.3, 0.08); g.translate(px, TH(px, pz) + 0.65, pz); fencePost.push(g); } }
       else if (k === 'wall' || k === 'city_wall') box(0.3, 1.7, l, 0.85, wall);
       else if (k === 'retaining_wall') box(0.4, 1.0, l, 0.5, rwall);
       else if (k === 'hedge') box(0.8, 1.3, l, 0.65, hedge);
@@ -393,13 +393,13 @@ function* buildDetails() {
   addMerged(yard, new THREE.MeshLambertMaterial({ color: 0x8f8d88 }), false);
   // --- Balkone ---
   const slab = [], rail = [];
-  for (const b of CITY.buildings) { if (++YC % 10 === 0) yield; if ((b.k && b.k !== 'res') || b.h < 9 || Math.random() > 0.4) continue; let e = 0, best = 0; for (let i = 0; i < b.p.length; i++) { const l = edgeNormal(b.p, i).l; if (l > best) { best = l; e = i; } } if (best < 8) continue; const en = edgeNormal(b.p, e); const ux = en.dx / en.l, uz = en.dz / en.l; const floors = Math.min(5, Math.floor((b.h - 1) / 3.2)); const ang = Math.atan2(en.nx, en.nz);
+  if (opts.quality !== 'niedrig') for (const b of CITY.buildings) { if (++YC % 10 === 0) yield; if ((b.k && b.k !== 'res') || b.h < 9 || Math.random() > 0.4) continue; let e = 0, best = 0; for (let i = 0; i < b.p.length; i++) { const l = edgeNormal(b.p, i).l; if (l > best) { best = l; e = i; } } if (best < 8) continue; const en = edgeNormal(b.p, e); const ux = en.dx / en.l, uz = en.dz / en.l; const floors = Math.min(5, Math.floor((b.h - 1) / 3.2)); const ang = Math.atan2(en.nx, en.nz);
     for (let f = 1; f < floors; f++) for (let d = 3; d < en.l - 2; d += 5.5) { const x = en.ax + ux * d + en.nx * 0.6, z = en.az + uz * d + en.nz * 0.6; const y = (b.base || 0) + f * 3.2 + 0.1; const g = new THREE.BoxGeometry(2.2, 0.14, 1.2); g.rotateY(ang); g.translate(x, y, z); slab.push(g); const r = new THREE.BoxGeometry(2.2, 0.95, 0.05); r.rotateY(ang); r.translate(x + en.nx * 0.58, y + 0.55, z + en.nz * 0.58); rail.push(r); } }
   addMerged(slab, new THREE.MeshLambertMaterial({ color: 0xd8d2c8 })); addMerged(rail, new THREE.MeshLambertMaterial({ color: 0x3b3f44 }), false);
   // --- Büsche ---
   const bushPts = []; let tries = 0;
   while (CITY.green.length && bushPts.length < Math.min(900, CITY.green.length * 6) && tries++ < 20000) { const g = pick(CITY.green); if (!['garden', 'allotments', 'park', 'grass', 'scrub', 'wood', 'meadow', 'forest'].includes(g.k)) continue; const xs = g.p.map(p => p[0]), zs = g.p.map(p => p[1]); const x = rnd(Math.min(...xs), Math.max(...xs)), z = rnd(Math.min(...zs), Math.max(...zs)); if (pointInPoly(x, z, g.p) && solidAt(x, z) < 0) bushPts.push([x, z]); }
-  if (bushPts.length) { const bm = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(0.7, 1), new THREE.MeshLambertMaterial({ color: 0x4a7d3a }), bushPts.length); const o = new THREE.Object3D(); bushPts.forEach(([x, z], i) => { const sc = rnd(0.6, 1.3); o.position.set(x, TH(x, z) + sc * 0.45, z); o.scale.set(sc * rnd(0.9, 1.4), sc * 0.8, sc); o.rotation.y = Math.random() * 6; o.updateMatrix(); bm.setMatrixAt(i, o.matrix); }); bm.castShadow = true; scene.add(bm); }
+  if (bushPts.length) { const bm = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(0.7, opts.quality === 'niedrig' ? 0 : 1), new THREE.MeshLambertMaterial({ color: 0x4a7d3a }), bushPts.length); const o = new THREE.Object3D(); bushPts.forEach(([x, z], i) => { const sc = rnd(0.6, 1.3); o.position.set(x, TH(x, z) + sc * 0.45, z); o.scale.set(sc * rnd(0.9, 1.4), sc * 0.8, sc); o.rotation.y = Math.random() * 6; o.updateMatrix(); bm.setMatrixAt(i, o.matrix); }); bm.castShadow = true; scene.add(bm); }
   // --- Haltestellen ---
   const poles = [], signsB = [], signsT = [], shelterG = [], shelterRoof = [];
   for (const st of CITY.stops) { if (solidAt(st.x, st.z) >= 0) continue; const ty = TH(st.x, st.z); const p = new THREE.CylinderGeometry(0.05, 0.05, 3.0, 6); p.translate(st.x, ty + 1.5, st.z); poles.push(p); const sg = new THREE.BoxGeometry(0.55, 0.55, 0.05); sg.translate(st.x, ty + 2.75, st.z); (st.k === 'bus' ? signsB : signsT).push(sg);
@@ -480,7 +480,7 @@ function* buildDetails2() {
   const cor = Q(), band = Q(), curbF = Q(), curbT = Q(); const roofBox = [], chim = [];
   for (const b of CITY.buildings) { if (++YC % 10 === 0) yield;
     const base = b.base ?? 0, top = base + b.h, kind = b.k || 'res'; const sgn = polyArea(b.p) > 0 ? 1 : -1;
-    const doCor = kind === 'res' || kind === 'public' || kind === 'church' || kind === 'house'; const doBand = (kind === 'res' || kind === 'public') && b.h >= 7;
+    const lowQ = opts.quality === 'niedrig'; const doCor = !lowQ && (kind === 'res' || kind === 'public' || kind === 'church' || kind === 'house'); const doBand = !lowQ && (kind === 'res' || kind === 'public') && b.h >= 7;
     for (let i = 0; i < b.p.length; i++) { const [ax, az] = b.p[i], [bx, bz] = b.p[(i + 1) % b.p.length]; const dx = bx - ax, dz = bz - az, l = Math.hypot(dx, dz); if (l < 1.2) continue; const nx = dz / l * sgn, nz = -dx / l * sgn; const ex = dx / l * 0.3, ez = dz / l * 0.3;
       if (doCor) { const o = 0.34, h = 0.45; const A0 = [ax - ex, top - h, az - ez], B0 = [bx + ex, top - h, bz + ez], A1 = [ax - ex + nx * o, top - h, az - ez + nz * o], B1 = [bx + ex + nx * o, top - h, bz + ez + nz * o], A2 = [A1[0], top, A1[2]], B2 = [B1[0], top, B1[2]], A3 = [ax - ex, top, az - ez], B3 = [bx + ex, top, bz + ez];
         quad(cor, A1, B1, B2, A2, nx, 0, nz); quad(cor, A0, B0, B1, A1, 0, -1, 0); quad(cor, A2, B2, B3, A3, 0, 1, 0); }
@@ -537,16 +537,16 @@ function buildParked() {
   { const b = new THREE.BoxGeometry(1.8, 0.62, 4.3); b.translate(0, 0.6, 0); lp.push(lcol(b, 0xffffff)); const c = new THREE.BoxGeometry(1.6, 0.48, 2.2); c.translate(0, 1.15, -0.2); lp.push(lcol(c, 0xffffff)); const w = new THREE.BoxGeometry(1.62, 0.28, 2.22); w.translate(0, 1.17, -0.2); lp.push(lcol(w, 0x0c1018)); const t = new THREE.BoxGeometry(1.82, 0.3, 4.32); t.translate(0, 0.25, 0); lp.push(lcol(t, 0x161616)); }
   if (!PARK_LOW.geo) { PARK_LOW.geo = mergeGeometries(lp); PARK_LOW.geo.userData.shared = true; PARK_LOW.mat = new THREE.MeshLambertMaterial({ vertexColors: true }); PARK_LOW.mat.userData.shared = true; } const lowGeo = PARK_LOW.geo; const lowMat = PARK_LOW.mat;
   // Kacheln zu 100 m, Nah: Modelle, Fern: Kasten
-  const PT = 100; const tiles = new Map(); for (const sp of local) { const k = Math.floor(sp.x / PT) + ',' + Math.floor(sp.z / PT); if (!tiles.has(k)) tiles.set(k, { x0: Math.floor(sp.x / PT) * PT, z0: Math.floor(sp.z / PT) * PT, list: [] }); tiles.get(k).list.push(sp); }
+  const PT = opts.quality === 'niedrig' ? TS : 100; const lowOnly = opts.quality === 'niedrig'; const tiles = new Map(); for (const sp of local) { const k = Math.floor(sp.x / PT) + ',' + Math.floor(sp.z / PT); if (!tiles.has(k)) tiles.set(k, { x0: Math.floor(sp.x / PT) * PT, z0: Math.floor(sp.z / PT) * PT, list: [] }); tiles.get(k).list.push(sp); }
   const o = new THREE.Object3D(); const cc = new THREE.Color();
   const place = (im, list, colorize) => { list.forEach((sp, i) => { o.position.set(sp.x, TH(sp.x, sp.z), sp.z); o.rotation.set(0, sp.h, 0); o.scale.setScalar(1); o.updateMatrix(); im.setMatrixAt(i, o.matrix); if (colorize) im.setColorAt(i, cc.setHex(sp.col).convertSRGBToLinear()); sp.refs.push({ mesh: im, i }); }); im.userData.noChunk = true; im.computeBoundingSphere(); scene.add(im); };
   for (const [, t] of tiles) { const det = []; const byType = new Map(); for (const sp of t.list) { if (!byType.has(sp.type)) byType.set(sp.type, []); byType.get(sp.type).push(sp); }
-    for (const [type, list] of byType) { const G = TG[type]; if (!G) continue; if (G.body) { const im = new THREE.InstancedMesh(G.body, bodyMat, list.length); place(im, list, true); im.castShadow = true; det.push(im); } if (G.rest) { const im = new THREE.InstancedMesh(G.rest, G.restMat, list.length); place(im, list, false); im.castShadow = true; det.push(im); } }
+    for (const [type, list] of byType) { if (lowOnly) break; const G = TG[type]; if (!G) continue; if (G.body) { const im = new THREE.InstancedMesh(G.body, bodyMat, list.length); place(im, list, true); im.castShadow = true; det.push(im); } if (G.rest) { const im = new THREE.InstancedMesh(G.rest, G.restMat, list.length); place(im, list, false); im.castShadow = true; det.push(im); } }
     const low = new THREE.InstancedMesh(lowGeo, lowMat, t.list.length); place(low, t.list, true);
     parkedTiles.push({ x0: t.x0, z0: t.z0, det, low }); }
 }
 const parkedTiles = [];
-function updateParkedLOD() { const cx = camera.position.x, cz = camera.position.z; for (const t of parkedTiles) { const dx = Math.max(t.x0 - cx, 0, cx - (t.x0 + 100)), dz = Math.max(t.z0 - cz, 0, cz - (t.z0 + 100)); const near = dx * dx + dz * dz < 90 * 90; for (const m of t.det) m.visible = near; t.low.visible = !near; } }
+function updateParkedLOD() { const cx = camera.position.x, cz = camera.position.z; for (const t of parkedTiles) { const dx = Math.max(t.x0 - cx, 0, cx - (t.x0 + 100)), dz = Math.max(t.z0 - cz, 0, cz - (t.z0 + 100)); const near = dx * dx + dz * dz < 90 * 90; for (const m of t.det) m.visible = near; t.low.visible = !near || !t.det.length; } }
 // Geparkte Autos sind nur Instanzen; wo Explosion, Feuer, Schläge oder Schüsse sie treffen, werden sie zu echten Autos (mit Schaden, Brand, Wrack)
 function wakeParked(pos, r) { const out = []; for (const sp of staticParked) { if (!sp.active) continue; if ((sp.x - pos.x) ** 2 + (sp.z - pos.z) ** 2 < r * r) out.push(activateParked(sp)); } return out; }
 function wakeParkedRay(o, d, range) { const hits = []; for (const sp of staticParked) { if (!sp.active) continue; const rx = sp.x - o.x, rz = sp.z - o.z; const dl = Math.hypot(d.x, d.z) || 1; const along = (rx * d.x + rz * d.z) / dl; if (along < 0 || along > range) continue; const ry = TH(sp.x, sp.z) + 0.8 - (o.y + d.y / dl * along); const lat = Math.abs(rx * d.z - rz * d.x) / dl; if (lat < 2.4 && Math.abs(ry) < 2.5) hits.push([along, sp]); } hits.sort((a, b) => a[0] - b[0]); return hits.slice(0, 3).map(h => activateParked(h[1])); }
@@ -931,7 +931,7 @@ function* buildCity() {
   }
   if (dash.length) scene.add(new THREE.Mesh(mergeGeometries(dash), new THREE.MeshBasicMaterial({ color: 0xe9e2c8 })));
   // Bäume
-  const trunk = new THREE.CylinderGeometry(0.15, 0.2, 2.2, 5); const crown = mergeGeometries([new THREE.IcosahedronGeometry(1.75, 0), new THREE.IcosahedronGeometry(1.3, 0).translate(0.95, 0.45, 0.35), new THREE.IcosahedronGeometry(1.2, 0).translate(-0.75, 0.6, -0.55), new THREE.IcosahedronGeometry(1.05, 0).translate(0.1, 1.2, -0.2)]); crown.computeVertexNormals();
+  const trunk = new THREE.CylinderGeometry(0.15, 0.2, 2.2, 5); const crown = opts.quality === 'niedrig' ? new THREE.IcosahedronGeometry(1.9, 0) : mergeGeometries([new THREE.IcosahedronGeometry(1.75, 0), new THREE.IcosahedronGeometry(1.3, 0).translate(0.95, 0.45, 0.35), new THREE.IcosahedronGeometry(1.2, 0).translate(-0.75, 0.6, -0.55), new THREE.IcosahedronGeometry(1.05, 0).translate(0.1, 1.2, -0.2)]); crown.computeVertexNormals();
   const trees = CITY.trees.concat(extraTrees(Math.min(700, CITY.green.length * 5)), streetTrees()).map(([x, z]) => pushOffRoads(x, z, 0.9)).filter(([x, z]) => !Number.isNaN(x) && solidAt(x, z) < 0); treeSpots.push(...trees);
   const tm = new THREE.InstancedMesh(trunk, new THREE.MeshLambertMaterial({ color: 0x5a3f2a }), trees.length);
   if (!CROWN_MAT) { CROWN_MAT = new THREE.MeshLambertMaterial({ color: 0xffffff }); CROWN_MAT.userData.shared = true; } const cm = new THREE.InstancedMesh(crown, CROWN_MAT, trees.length);
@@ -1336,7 +1336,7 @@ function updatePickups(dt) {
 const player = { pos: new THREE.Vector3(0, 0, 0), yaw: 0, vy: 0, hp: 100, bustedT: 0, car: null, female: false, mesh: null, wanted: 0, wantedTimer: 0, dead: false, score: 0, money: 150 };
 const camYaw = { v: 0 }, camPitch = { v: 0.2 };
 const keys = {};
-const opts = { sens: 1, vol: 0.8, shadows: true, timeSpeed: 1, headlights: true, weather: 'auto', traffic: 1, quality: QUALITY, scale: 1, view: 700, bloom: 1, ao: true, fps: false, fov: 65, camdist: 1, invy: false, shake: true, peds: 1, police: true, god: false, ammo: false, fall: true, grip: 1, minimap: true, hud: true, tts: true, demos: true, firebrigade: true };
+const opts = { sens: 1, vol: 0.8, shadows: true, timeSpeed: 1, headlights: true, weather: 'auto', traffic: 1, quality: QUALITY, scale: 1, view: 700, bloom: 1, ao: true, fps: false, fov: 65, camdist: 1, invy: false, shake: true, peds: 1, police: true, god: false, ammo: false, dynres: true, lod: true, fall: true, grip: 1, minimap: true, hud: true, tts: true, demos: true, firebrigade: true };
 function loadOpts() { try { Object.assign(opts, JSON.parse(localStorage.getItem('notgta.opts') || '{}')); } catch (e) {} if (WEAK_VIEW) { opts.view = Math.min(opts.view || 700, 425); opts.weakTuned = true; } applyOpts(); } // einmalig: kürzere Sichtweite auf schwacher GPU, danach frei änderbar
 function applyOpts() { camera.far = (opts.view || 700) + 200; camera.updateProjectionMatrix(); const mm = document.getElementById('minimap'); if (mm) mm.style.display = opts.minimap === false ? 'none' : ''; const hd = document.getElementById('hud'); if (hd) hd.style.visibility = opts.hud === false ? 'hidden' : 'visible'; const fe = document.getElementById('fps'); if (fe) fe.style.display = opts.fps ? 'block' : 'none'; renderer.shadowMap.enabled = !!opts.shadows && opts.quality !== 'niedrig'; applyQuality(); scene.traverse(o => { if (o.material) { const ms = Array.isArray(o.material) ? o.material : [o.material]; for (const m of ms) m.needsUpdate = true; } }); world.speed = opts.timeSpeed / 60; SND.vol = opts.vol; if (SND.master) SND.master.gain.value = opts.vol; try { localStorage.setItem('notgta.opts', JSON.stringify(opts)); } catch (e) {} }
 function saveGame(quiet) {
@@ -1549,7 +1549,7 @@ function driveCar(c, dt, ctrl) {
   for (const sp of staticParked) { if (!sp.active) continue; const ox = p.x - sp.x, oz = p.z - sp.z; if (ox * ox + oz * oz > 30) continue; const hx = Math.sin(sp.h), hz = Math.cos(sp.h); const al = ox * hx + oz * hz, ac = ox * hz - oz * hx; const pa = 4.3 - Math.abs(al), pc = 1.85 - Math.abs(ac); if (pa > 0 && pc > 0) { if (pc < pa) { const sg = Math.sign(ac) || 1; p.x += hz * pc * sg; p.z -= hx * pc * sg; } else { const sg = Math.sign(al) || 1; p.x += hx * pa * sg; p.z += hz * pa * sg; } if (Math.abs(u.speed) > 5 && (u.dents || 0) < 12) { const sg = Math.sign(u.speed) || 1; const fx = Math.sin(u.heading) * sg, fz = Math.cos(u.heading) * sg; const L = (u.dims ? u.dims.l : 4.2) / 2; dentCar(c, new THREE.Vector3(p.x + fx * (L - 0.15), p.y + 0.6, p.z + fz * (L - 0.15)), new THREE.Vector3(-fx, 0, -fz), Math.min(0.28, Math.abs(u.speed) * 0.012)); if (c === player.car) camShake(Math.min(0.5, Math.abs(u.speed) / 40)); } if (Math.abs(u.speed) > 9) { u.hp -= Math.abs(u.speed) * 0.8; if (c === player.car) sfx('crash', 0.6); if (u.hp <= 0) explode(c); } u.speed *= -0.25; } }
   if (hit) { if (Math.abs(u.speed) > 5 && (u.dents || 0) < 12) { const sg = Math.sign(u.speed) || 1; const fx = Math.sin(u.heading) * sg, fz = Math.cos(u.heading) * sg; const L = (u.dims ? u.dims.l : 4.2) / 2; const side = (Math.random() - 0.5) * 1.2; const wp = new THREE.Vector3(c.position.x + fx * (L - 0.15) + fz * side, c.position.y + 0.65, c.position.z + fz * (L - 0.15) - fx * side); dentCar(c, wp, new THREE.Vector3(-fx, 0, -fz), Math.min(0.32, Math.abs(u.speed) * 0.013)); } u.pv = (u.pv || 0) + clamp(u.speed * 0.06, -1.5, 1.5); u.rv = (u.rv || 0) + (Math.random() - 0.5) * Math.abs(u.speed) * 0.04; u.hv = (u.hv || 0) + Math.abs(u.speed) * 0.02; if (u.vel) u.vel.multiplyScalar(-0.3); if (Math.abs(u.speed) > 6 && c === player.car) camShake(Math.min(0.6, Math.abs(u.speed) / 40)); if (Math.abs(u.speed) > 12) { if (c === player.car) sfx('crash'); u.hp -= Math.abs(u.speed) * 1.5; burst(p.clone().setY(0.8), 0xaaaaaa, 4, 2); if (u.hp <= 0) explode(c); } u.speed *= -0.3; }
   c.rotation.y = u.heading; carFx(c, dt, ctrl.brake || (ctrl.back && u.speed > 0)); carTerrain(c);
-  if (Math.abs(u.speed) > 3) for (const ped of peds) { if (ped.userData.state === 'dead') continue; if (ped.position.distanceTo(p) < 2.2) { const dir = new THREE.Vector3(dx, 0, dz).normalize(); if (c !== player.car) { /* KI-Fahrer weichen aus und schubsen nur */ const sx = ped.position.x - p.x, sz = ped.position.z - p.z, sl = Math.hypot(sx, sz) || 1; moveWithCollision(ped.position, sx / sl * 1.2, sz / sl * 1.2, 0.3); if (ped.userData.state !== 'stunned' && ped.userData.state !== 'cop') WPN.stun(ped, 'hit', 1.5); u.speed *= 0.5; continue; } damage(ped, 100, dir); const v = Math.abs(u.speed); ped.userData.fly = new THREE.Vector3(dir.x * v * 0.75 + rnd(-1, 1), 2.5 + v * 0.22, dir.z * v * 0.75 + rnd(-1, 1)); ped.userData.spin = rnd(-6, 6); sfx('hit', 0.9); if (c === player.car) raiseWanted(0.8); } }
+  if (Math.abs(u.speed) > 3) for (const ped of peds) { if (ped.userData.state === 'dead') continue; if (ped.position.distanceTo(p) < 3.5 && (() => { const D = u.dims || { l: 4.4, w: 1.9 }; const sg = Math.sign(u.speed) || 1; const hx = Math.sin(u.heading) * sg, hz = Math.cos(u.heading) * sg; const rx = ped.position.x - p.x, rz = ped.position.z - p.z; const al = rx * hx + rz * hz, ac = rx * hz - rz * hx; return al > -D.l / 2 + 0.6 && al < D.l / 2 + 0.3 && Math.abs(ac) < D.w / 2 + 0.25; })()) { const dir = new THREE.Vector3(dx, 0, dz).normalize(); if (c !== player.car) { /* KI-Fahrer weichen aus und schubsen nur */ const sx = ped.position.x - p.x, sz = ped.position.z - p.z, sl = Math.hypot(sx, sz) || 1; moveWithCollision(ped.position, sx / sl * 1.2, sz / sl * 1.2, 0.3); if (ped.userData.state !== 'stunned' && ped.userData.state !== 'cop') WPN.stun(ped, 'hit', 1.5); u.speed *= 0.5; continue; } damage(ped, 100, dir); const v = Math.abs(u.speed); ped.userData.fly = new THREE.Vector3(dir.x * v * 0.75 + rnd(-1, 1), 2.5 + v * 0.22, dir.z * v * 0.75 + rnd(-1, 1)); ped.userData.spin = rnd(-6, 6); sfx('hit', 0.9); if (c === player.car) raiseWanted(0.8); } }
   for (const o of cars) { if (o === c) continue; const d = o.position.distanceTo(p); if (d < 3.6 && d > 0.01) { const push = new THREE.Vector3().subVectors(o.position, p).setY(0).normalize().multiplyScalar((3.6 - d) * 0.5); if (o.userData.mode !== 'wreck') { o.position.add(push); if (solidAt(o.position.x, o.position.z) >= 0) o.position.sub(push); } p.sub(push.multiplyScalar(0.5)); if (Math.abs(u.speed) > 10) { u.hp -= 8; o.userData.hp -= 15; if (o.userData.hp <= 0) explode(o); if (u.hp <= 0) explode(c); } u.speed *= 0.6; if (o === player.car && u.police) player.hp -= 2; } }
 }
 
@@ -1631,14 +1631,16 @@ function* buildTileGround(t) {
 let YC = 0; const BUILD_STEPS = ['ground', 'city', 'det', 'det2', 'park'];
 const STEP_FN = { ground: t => buildTileGround(t), city: () => buildCity(), det: () => buildDetails(), det2: () => buildDetails2(), park: function* () { buildParked(); } };
 function finishTile(t, grp, owned) { t.grp = grp; t.owned = owned; scene.add(grp); t.built = true; t.mul = groundMul(); t.ms = Object.values(t.prof).reduce((a, b) => a + b, 0); }
-function makeJob(t) { t.prof = {}; return { t, steps: BUILD_STEPS.slice(), gen: null, grp: new THREE.Group(), owned: OWN_LISTS().map(() => []) }; }
+function makeJob(t, far = false) { t.prof = {}; t.lod = far ? 'far' : 'near'; return { t, steps: far ? ['ground', 'city'] : BUILD_STEPS.slice(), gen: null, grp: new THREE.Group(), owned: OWN_LISTS().map(() => []) }; }
+// Fernstufe nachrüsten: Details (Schilder, Zäune, Balkone, Gesimse, Möbel, Parkautos) in die vorhandene Gruppe bauen
+function makeUpgrade(t) { return { t, steps: ['det', 'det2', 'park'], gen: null, grp: t.grp, owned: t.owned, upgrade: true }; }
 // arbeitet am Job, bis das Zeitbudget (ms) verbraucht ist; true = Kachel fertig
 function runJob(j, budget) {
   const t0 = performance.now(); const d = j.t.data; const any = !!(d.buildings || d.roads || d.green);
   while (j.steps.length) { const st = j.steps[0]; if (!j.gen) j.gen = (st === 'ground' || any) ? STEP_FN[st](j.t) : null; let done = !j.gen; const a = performance.now();
     while (!done) { const res = withBuildSet(d, () => { done = j.gen.next().done; }, j.grp); res.owned.forEach((o, i) => { if (o.length) j.owned[i].push(...o); }); if (performance.now() - t0 > budget) break; }
     j.t.prof[st] = (j.t.prof[st] || 0) + Math.round(performance.now() - a); if (done) { j.steps.shift(); j.gen = null; } if (performance.now() - t0 > budget) break; }
-  if (j.steps.length) return false; finishTile(j.t, j.grp, j.owned); return true;
+  if (j.steps.length) return false; if (j.upgrade) { j.t.lod = 'near'; j.t.ms = Object.values(j.t.prof).reduce((a, b) => a + b, 0); return true; } finishTile(j.t, j.grp, j.owned); return true;
 }
 function buildTileNow(t) { runJob(makeJob(t), Infinity); }
 let job = null; // Kachel, die gerade schrittweise gebaut wird
@@ -1666,10 +1668,12 @@ function streamUpdate(dt, force = false) {
     want.sort((p, q) => p[0] - q[0]); for (const [, tx, tz] of want) { if (loadingTiles.size >= 6) break; loadTile(tx, tz); }
     let changed = false; for (const [, t] of TILES) if (t.built && (Math.abs(t.tx - ptx) > R_MESH + 1 || Math.abs(t.tz - ptz) > R_MESH + 1)) { unbuildTile(t); changed = true; }
     if (changed) refreshActive(); }
-  if (job) { if (Math.abs(job.t.tx - ptx) > R_MESH + 1 || Math.abs(job.t.tz - ptz) > R_MESH + 1) cancelJob(); else { stepJob(); return; } }
+  if (job) { if (!job.upgrade && (Math.abs(job.t.tx - ptx) > R_MESH + 1 || Math.abs(job.t.tz - ptz) > R_MESH + 1)) cancelJob(); else { stepJob(); return; } }
   buildT -= dt; if (buildT > 0 && !force) return;
   let best = null, bd = 1e9; for (let a = -R_MESH; a <= R_MESH; a++) for (let b = -R_MESH; b <= R_MESH; b++) { const t = TILES.get(tkey(ptx + a, ptz + b)); if (!t || t.built || !neighborsReady(t.tx, t.tz)) continue; const d = a * a + b * b; if (d < bd) { bd = d; best = t; } }
-  if (best) { if (bd === 0) { buildTileNow(best); refreshActive(); } else { job = makeJob(best); stepJob(); } buildT = 0.05; }
+  const lod = opts.lod !== false;
+  if (!best && lod) { for (let a = -1; a <= 1 && !best; a++) for (let b = -1; b <= 1; b++) { const t = TILES.get(tkey(ptx + a, ptz + b)); if (t && t.built && t.lod === 'far') { best = t; break; } } if (best) { job = makeUpgrade(best); stepJob(); buildT = 0.05; return; } }
+  if (best) { const far = lod && Math.max(Math.abs(best.tx - ptx), Math.abs(best.tz - ptz)) >= 2; if (bd === 0) { buildTileNow(best); refreshActive(); } else { job = makeJob(best, far); stepJob(); } buildT = 0.05; }
 }
 // Großer Hinweis mit Balken, solange der Boden unter dem Spieler noch nicht gebaut ist (Fortschritt: Kacheln im Umkreis)
 const buildEl = $('build');
@@ -1683,6 +1687,20 @@ async function streamInit() {
   let n = 0; for (let a = -1; a <= 1; a++) for (let b = -1; b <= 1; b++) { const t = TILES.get(tkey(ptx + a, ptz + b)); /* Rest baut sich beim Spielen */ if (t && !t.built) { setLoading(`Baue Stadt … ${n + 1} / 9`, 0.8 + 0.2 * n / 9); await new Promise(r => setTimeout(r, 0)); buildTileNow(t); n++; await new Promise(r => setTimeout(r, 0)); } }
   refreshActive();
 }
+// Automatische Auflösung: hält die Bildrate auf schwachen Grafikkarten, indem weniger Pixel gerendert werden
+let dynK = 1, dynBase = 0, dynSet = 0, dynLast = 0, dynAcc = 0, dynN = 0;
+function dynRes() {
+  const now = performance.now(), ft = now - dynLast; dynLast = now; if (document.hidden || ft > 250) return;
+  const pr = renderer.getPixelRatio(); if (Math.abs(pr - dynSet) > 1e-3) { dynBase = pr; dynK = 1; } // Einstellung wurde geändert
+  if (opts.dynres === false) { if (dynK !== 1) { dynK = 1; renderer.setPixelRatio(dynBase); if (composer) composer.setPixelRatio(dynBase); } dynSet = renderer.getPixelRatio(); return; }
+  dynAcc += ft; dynN++; if (dynAcc < 1000) { dynSet = renderer.getPixelRatio(); return; }
+  const avg = dynAcc / dynN; dynAcc = 0; dynN = 0; const k0 = dynK;
+  if (avg > 36 && dynK > 0.5) dynK = Math.max(0.5, dynK - 0.1); else if (avg < 22 && dynK < 1) dynK = Math.min(1, dynK + 0.05);
+  if (dynK !== k0) { renderer.setPixelRatio(dynBase * dynK); if (composer) composer.setPixelRatio(dynBase * dynK); }
+  dynSet = renderer.getPixelRatio();
+}
+// Ein Klick: alles auf sparsam für schwache Grafikkarten
+{ const b = $('o_lowgpu'); if (b) b.onclick = () => { Object.assign(opts, { quality: 'niedrig', shadows: false, ao: false, bloom: 0, view: Math.min(opts.view || 700, 350), scale: 0.85, peds: Math.min(opts.peds ?? 1, 0.6), traffic: Math.min(opts.traffic ?? 1, 0.7), dynres: true, lod: true }); for (const [id, k] of Object.entries(OPT_BIND)) { const el = $(id); if (el) { if (el.type === 'checkbox') el.checked = !!opts[k]; else el.value = opts[k]; } } for (const [id, k] of [['o_quality', 'quality'], ['o_shadows', 'shadows'], ['o_traffic', 'traffic']]) { const el = $(id); if (el) { if (el.type === 'checkbox') el.checked = !!opts[k]; else el.value = opts[k]; } } applyOpts(); updateOptLabels(); showMsg('SPARMODUS AKTIV', 1200); }; }
 addEventListener('wheel', e => { if (mapOpen) { mapZoom = clamp(mapZoom * (e.deltaY > 0 ? 1.25 : 0.8), 600, 16000); drawBigMap(); } });
 
 // ---------- Start ----------
@@ -1703,7 +1721,7 @@ $('gpuinfo').textContent = (QUALITY_AUTO ? 'Grafik automatisch gewählt: ' : 'Gr
 $('m_resume').onclick = () => { closeMenu(); if (started) lockMouse(); }; $('m_save').onclick = () => { saveGame(); closeMenu(); }; $('m_load').onclick = () => { if (confirm('Letzten Spielstand laden? Nicht gespeicherter Fortschritt geht verloren.')) { loadGame(); closeMenu(); } }; $('m_restart').onclick = () => { if (confirm('Neu starten? Nicht gespeicherter Fortschritt geht verloren.')) location.reload(); };
 for (const id of ['o_sens', 'o_vol', 'o_shadows', 'o_time']) $(id).oninput = () => { opts.sens = +$('o_sens').value; opts.vol = +$('o_vol').value; opts.shadows = $('o_shadows').checked; opts.timeSpeed = +$('o_time').value; applyOpts(); };
 $('o_hour').oninput = () => { world.hour = +$('o_hour').value; applyTime(); };
-const OPT_BIND = { o_ao: 'ao', o_scale: 'scale', o_view: 'view', o_bloom: 'bloom', o_fps: 'fps', o_fov: 'fov', o_camdist: 'camdist', o_invy: 'invy', o_shake: 'shake', o_peds: 'peds', o_police: 'police', o_god: 'god', o_ammo: 'ammo', o_fall: 'fall', o_grip: 'grip', o_minimap: 'minimap', o_hud: 'hud', o_tts: 'tts', o_demos: 'demos' };
+const OPT_BIND = { o_dynres: 'dynres', o_lod: 'lod', o_ao: 'ao', o_scale: 'scale', o_view: 'view', o_bloom: 'bloom', o_fps: 'fps', o_fov: 'fov', o_camdist: 'camdist', o_invy: 'invy', o_shake: 'shake', o_peds: 'peds', o_police: 'police', o_god: 'god', o_ammo: 'ammo', o_fall: 'fall', o_grip: 'grip', o_minimap: 'minimap', o_hud: 'hud', o_tts: 'tts', o_demos: 'demos' };
 for (const [id, k] of Object.entries(OPT_BIND)) { const el = $(id); if (!el) continue; el.oninput = el.onchange = () => { opts[k] = el.type === 'checkbox' ? el.checked : +el.value; if (k === 'police' && !opts.police) player.wanted = 0; applyOpts(); updateOptLabels(); }; }
 function updateOptLabels() { for (const el of document.querySelectorAll('#menu input[type=range]')) { const out = el.parentElement.querySelector('output'); if (out) out.textContent = el.dataset.pct ? Math.round(el.value * 100) + ' %' : el.value; } }
 for (const t of document.querySelectorAll('#menu .tabs button')) t.onclick = () => { for (const b of document.querySelectorAll('#menu .tabs button')) b.classList.toggle('on', b === t); for (const p of document.querySelectorAll('#menu .pane')) p.style.display = p.dataset.tab === t.dataset.tab ? 'block' : 'none'; };
@@ -1735,7 +1753,7 @@ $('go').onclick = () => { audioInit();
 // ---------- Schleife ----------
 function update(dt) {
   ANIM_DT = dt;
-  if (!started || menuOpen) return; streamUpdate(dt); if (!hereReady()) { showBuild(true); waitMsg = true; return; } else if (waitMsg) { waitMsg = false; showBuild(false); } updateWeather(dt); if (mapOpen && Math.floor(worldT * 2) !== Math.floor((worldT - dt) * 2)) drawBigMap(); worldT += dt; world.hour = (world.hour + dt * world.speed) % 24; applyTime();
+  dynRes(); if (!started || menuOpen) return; streamUpdate(dt); if (!hereReady()) { showBuild(true); waitMsg = true; return; } else if (waitMsg) { waitMsg = false; showBuild(false); } updateWeather(dt); if (mapOpen && Math.floor(worldT * 2) !== Math.floor((worldT - dt) * 2)) drawBigMap(); worldT += dt; world.hour = (world.hour + dt * world.speed) % 24; applyTime();
   for (const o of nightOnly) o.visible = world.night; for (const m of emissiveMats) m.emissiveIntensity = world.night ? 1.0 : 0.25 * (1 - world.day) ;
   for (const lm of signalMeshes) { const L = lm.userData.lights; const ph = worldT % 8; for (let i = 0; i < L.length; i++) { const l = L[i]; const red = signalRed(l.hd, worldT); const amber = !red && ph > 6.6, redAmber = red && ph > 7.2; const on = l.k === 0 ? red : l.k === 1 ? (amber || redAmber) : (!red && !amber); lm.setColorAt(i, SIG_C[l.k][on ? 1 : 0]); } lm.instanceColor.needsUpdate = true; }
   const ctrl = { fwd: keys.KeyW || keys.ArrowUp, back: keys.KeyS || keys.ArrowDown, left: keys.KeyA || keys.ArrowLeft, right: keys.KeyD || keys.ArrowRight, brake: keys.Space, run: keys.ShiftLeft || keys.ShiftRight };
@@ -1794,7 +1812,7 @@ function update(dt) {
       if (u.speed > 0.05) advanceAlongRoad(u, c.position, u.speed * dt, u.road.w * 0.25 * u.dir);
       if (u.vh === undefined) u.vh = u.heading; u.vh = lerpAngle(u.vh, u.heading, Math.min(1, dt * Math.max(2.5, u.speed * 0.9))); const hh = u.heading; u.heading = u.vh; c.rotation.y = u.vh; carFx(c, dt, block); carTerrain(c); u.heading = hh;
       if (u.respawn) { u.respawn = false; const q = randomRoadPoint(pick(roadsNear(player.pos.x, player.pos.z, 1, true))); if (Math.hypot(q.x - player.pos.x, q.z - player.pos.z) > 120) { u.road = q.road; u.seg = q.seg; u.dir = q.road.o || q.dir; u.heading = q.heading + (u.dir < 0 ? Math.PI : 0); c.position.set(q.x, TH(q.x, q.z), q.z); u.speed = 0; snapToLane(u, c.position, u.road.w * 0.25 * u.dir); u.vh = u.heading; c.rotation.y = u.heading; } else { u.dir *= -1; } }
-      if (!player.car && d < 2.4 && u.speed > 2.5) { player.hp -= 25; const kx = player.pos.x - c.position.x, kz = player.pos.z - c.position.z, kl = Math.hypot(kx, kz) || 1; moveWithCollision(player.pos, kx / kl * 2.5, kz / kl * 2.5, 0.35); player.vy = 4; u.speed *= 0.3; showMsg('ANGEFAHREN', 700); sfx('hit'); } }
+      if (!player.car && d < 4 && u.speed > 1) { const D = u.dims || { l: 4.4, w: 1.9 }; const rx = player.pos.x - c.position.x, rz = player.pos.z - c.position.z; const al = rx * fx + rz * fz, ac = rx * fz - rz * fx; if (al > 0 && al < D.l / 2 + 0.35 && Math.abs(ac) < D.w / 2 + 0.25) { const sg = Math.sign(ac) || 1; moveWithCollision(player.pos, fz * sg * 1.2, -fx * sg * 1.2, 0.35); if (u.speed > 4) { player.hp -= clamp(u.speed * 2.2, 8, 55); player.vy = 3; showMsg('ANGEFAHREN', 700); sfx('hit'); } u.speed = 0; } } }
     else if (u.mode === 'police') policeAI(c, dt);
     if (u.police && u.bar) u.bar.material.color.setHex(Math.floor(performance.now() / 250) % 2 ? 0x3b7bff : 0xff3b3b);
   }
