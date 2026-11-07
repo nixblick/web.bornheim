@@ -87,13 +87,14 @@ export function initWeapons(X) {
   function canAim() { const k = DEF[cur].kind; return k !== 'melee'; }
 
   // ---------- HUD ----------
-  const barEl = document.getElementById('wbar'), wEl = document.getElementById('weapon');
+  const barEl = document.getElementById('wbar'), wEl = document.getElementById('weapon'); let lastW = '', lastB = '', lastBarDisp = '';
   function ammoText(id) { const d = DEF[id], it = inv[id]; if (!it) return ''; if (unlimited()) return d.kind === 'melee' ? '' : '∞';
     if (d.kind === 'gun') return it.mag + ' / ' + it.res; if (d.kind === 'spray') return Math.ceil(it.mag) + ' %' + (it.res ? ' +' + it.res : ''); if (d.kind === 'taser') return it.mag + ' / ' + it.res; if (d.kind === 'throw') return '× ' + it.res; return ''; }
   function drawBar() {
-    if (wEl) wEl.innerHTML = `<b>${DEF[cur].ic}</b> ${DEF[cur].n} <span>${ammoText(cur)}</span>${lockMode ? ' <span title="In diesem Kapitel gesperrt">🔒</span>' : ''}`;
-    if (!barEl) return; barEl.style.display = barT > 0 ? 'flex' : 'none'; if (barT <= 0) return;
-    barEl.innerHTML = ORDER.map(k => `<div class="${k === cur ? 'sel' : ''}${inv[k] && allowed(k) ? '' : ' off'}"><i>${inv[k] && !allowed(k) ? '🔒' : DEF[k].ic}</i><small>${(DEF[k].slot)}</small><span>${DEF[k].n}</span></div>`).join('');
+    // DOM nur bei Änderung schreiben: drawBar läuft jedes Bild
+    const wh = `<b>${DEF[cur].ic}</b> ${DEF[cur].n} <span>${ammoText(cur)}</span>${lockMode ? ' <span title="In diesem Kapitel gesperrt">🔒</span>' : ''}`; if (wEl && wh !== lastW) { lastW = wh; wEl.innerHTML = wh; }
+    if (!barEl) return; const disp = barT > 0 ? 'flex' : 'none'; if (disp !== lastBarDisp) { lastBarDisp = disp; barEl.style.display = disp; } if (barT <= 0) return;
+    const bh = ORDER.map(k => `<div class="${k === cur ? 'sel' : ''}${inv[k] && allowed(k) ? '' : ' off'}"><i>${inv[k] && !allowed(k) ? '🔒' : DEF[k].ic}</i><small>${(DEF[k].slot)}</small><span>${DEF[k].n}</span></div>`).join(''); if (bh !== lastB) { lastB = bh; barEl.innerHTML = bh; }
   }
   function hud() { return player.car ? null : ammoText(cur); }
 
@@ -233,7 +234,7 @@ export function initWeapons(X) {
           else if (p.kind === 'paint') { const hp = new V3(ox, oy, oz); addSplat(hp, n, p.col, rnd(1.4, 2.0)); emit('paintWall', hp, { color: p.col }); gone = true; }
           else { const dot = p.v.x * n.x + p.v.z * n.z; p.v.x -= 2 * dot * n.x; p.v.z -= 2 * dot * n.z; p.v.multiplyScalar(0.4); }
         } else if (!gone) m.position.set(nx, ny, nz);
-        if (!gone) { const gy = floorAt(m.position.x, m.position.z, m.position.y + 0.3);
+        if (!gone) { const gy = floorAt(m.position.x, m.position.z, Math.max(m.position.y, oy) + 0.3); /* Höhe vor der Bewegung mitprüfen: sonst fällt ein schnelles Geschoss bei niedriger Bildrate durch Brückendecks */
           if (m.position.y <= gy + 0.06) { m.position.y = gy + 0.06; if (p.kind === 'molotov') { molotovHit(m.position.clone(), null, p); gone = true; } else if (p.kind === 'paint') { addSplat(m.position.clone().setY(gy + 0.01), new V3(0, 1, 0), p.col, rnd(1.5, 2.2)); emit('paintGround', m.position, {}); gone = true; }
             else if (Math.abs(p.v.y) < 1.6) { p.rest = Math.hypot(p.v.x, p.v.z) < 1; p.v.y = 0; p.v.x *= 0.7; p.v.z *= 0.7; } else { p.v.y = -p.v.y * 0.3; p.v.x *= 0.6; p.v.z *= 0.6; if (p.kind !== 'paint') sfx('bump', 0.15); } }
           m.rotation.x += p.spin.x * dt; m.rotation.z += p.spin.z * dt; if (p.rest) { m.rotation.x = Math.PI / 2; } }
@@ -243,7 +244,7 @@ export function initWeapons(X) {
       if (!gone && p.kind === 'grenade' && p.t >= p.fuse) { boom(m.position.clone(), p.who); gone = true; }
       if (!gone && p.kind === 'smoke') { if (p.t > 0.8 && p.t < 22) { p.e = (p.e || 0) + dt; while (p.e > 0.06) { p.e -= 0.06; const s = Math.min(1, (p.t - 0.8) / 2); puff(m.position.clone().add(new V3(0, 0.25, 0)), p.col, 0.6 * s + 0.4, 6.5, new V3(rnd(-1.4, 1.4), rnd(0.8, 2.0), rnd(-1.4, 1.4)), 0.95, 0.55); } if (p.t < 1 + dt) { sfx('hiss', 0.6); emit('smoke', m.position, {}); } } if (p.t > 26) gone = true; }
       if (!gone && p.kind === 'flare') { if (p.t > 0.2 && p.t < 28) { flareFx(p, dt); } if (p.t > 29) gone = true; }
-      if (gone) { scene.remove(m); projs.splice(i, 1); if (p.light) p.light.busy = 0; }
+      if (gone) { m.traverse(o => { if (o.isMesh) { o.geometry.dispose(); const ms = Array.isArray(o.material) ? o.material : [o.material]; for (const mm of ms) if (mm && !mm.userData.shared) mm.dispose(); } }); scene.remove(m); projs.splice(i, 1); if (p.light) p.light.busy = 0; }
     }
   }
 

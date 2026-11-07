@@ -62,9 +62,9 @@ export function initDemo(X, W) {
     if (opt.shield !== false && Math.random() < 0.6) { const s = new THREE.Mesh(shieldGeo, shieldMat); s.position.set(-0.32, 1.1, 0.38); s.rotation.y = 0.15; h.add(s); h.userData.shield = s; }
     Object.assign(h.userData, { road: pick(pedRoads()), seg: 0, dir: 1, side: 1, speed: 3.2, hp: 120, state: 'riot', t: Math.random() * 10, cop: true, riot: true, task: 'escort', tx: x, tz: z, face: 0, grab: 0, sprayT: rnd(3, 8), hitT: 0 });
     scene.add(h); peds.push(h); shootables.push(h); return h; }
-  function removePed(h) { scene.remove(h); const i = peds.indexOf(h); if (i >= 0) peds.splice(i, 1); const j = shootables.indexOf(h); if (j >= 0) shootables.splice(j, 1); }
+  function removePed(h) { h.traverse(o => { if (o.isSprite && o.material && o.material.map && o.material.map.isCanvasTexture) { o.material.map.dispose(); o.material.dispose(); } }); /* Namensschilder-Texturen freigeben */ scene.remove(h); const i = peds.indexOf(h); if (i >= 0) peds.splice(i, 1); const j = shootables.indexOf(h); if (j >= 0) shootables.splice(j, 1); }
   function addCar(c) { scene.add(c); cars.push(c); shootables.push(c); return c; }
-  function removeCar(c) { scene.remove(c); const i = cars.indexOf(c); if (i >= 0) cars.splice(i, 1); const j = shootables.indexOf(c); if (j >= 0) shootables.splice(j, 1); }
+  function removeCar(c) { if (X.disposeCar) X.disposeCar(c); scene.remove(c); const i = cars.indexOf(c); if (i >= 0) cars.splice(i, 1); const j = shootables.indexOf(c); if (j >= 0) shootables.splice(j, 1); }
   function freeSpot(x, z, r = 2) { if (solidAt(x, z) < 0) return [x, z]; for (let k = 1; k < 12; k++) { const a = k * 2.4, d = r * k * 0.5; const qx = x + Math.cos(a) * d, qz = z + Math.sin(a) * d; if (solidAt(qx, qz) < 0) return [qx, qz]; } return [x, z]; }
 
   // ---------- Wasserwerfer ----------
@@ -254,6 +254,7 @@ export function initDemo(X, W) {
       if (d.result) { d.endT += dt; const P = d.pol; for (let i = P.cops.length - 1; i >= 0; i--) { const c = P.cops[i]; if (c.position.distanceTo(player.pos) > 70 || d.endT > 60 || c.userData.state === 'dead') { if (c.userData.state !== 'dead') removePed(c); P.cops.splice(i, 1); } else if (c.userData.state === 'riot') { c.userData.t += dt; animateWalk(c, c.userData.t, 0); } }
         for (let i = P.cars.length - 1; i >= 0; i--) { const c = P.cars[i]; if (c !== player.car && (c.position.distanceTo(player.pos) > 90 || d.endT > 60)) { removeCar(c); P.cars.splice(i, 1); } }
         if (P.cannon && P.cannon !== player.car && P.cannon.userData.mode === 'cannonAI') { const c = P.cannon; const away = posAt(d.trail, 0); driveTo(c, away.x, away.z, dt, 8); if (c.position.distanceTo(player.pos) > 120 || d.endT > 70) { removeCar(c); P.cannon = null; } }
+        else if (P.cannon && P.cannon !== player.car && (P.cannon.position.distanceTo(player.pos) > 150 || d.endT > 180)) { removeCar(P.cannon); P.cannon = null; } // vom Spieler übernommener und abgestellter Werfer: sonst bleibt die Demo für immer in der Liste
         if (!P.cops.length && !P.cars.length && !P.cannon) demos.splice(k, 1); continue; }
       // Mitglieder
       for (let i = d.members.length - 1; i >= 0; i--) { const h = d.members[i]; const u = h.userData; if (u.state === 'dead' || u.hp <= 0) { leaveDemo(h); d.tension += 0.12; continue; } if (u.state === 'flee') { leaveDemo(h); continue; } }
