@@ -229,6 +229,13 @@ async function physikChecks(add) {
     G.renderer.render(G.scene, G.camera); const c1 = G.renderer.info.render.calls; G.FX.mesh.visible = false; G.renderer.render(G.scene, G.camera); const c0 = G.renderer.info.render.calls; G.FX.mesh.visible = true; G.camera.userData.init = false;
     add('Partikel (Explosion, Funken, Rauch, Spray) als ein Draw-Call aus dem Pool', n >= 60 && c1 - c0 === 1 && sprites1 === sprites0 && G.FX.count <= G.FX.max, `${n} Partikel im Pool (max ${G.FX.max}), ${c1 - c0} Draw-Call(s) für die Partikel, Sprites ${sprites0} → ${sprites1}`);
     run(600); add('Partikel-Pool leert sich wieder', G.FX.count < 20, G.FX.count + ' Partikel nach 10 s'); }
+  // 6) Sparmodus (Niedrig/schwache GPU): Figuren-, Auto- und Straßenmaterial Lambert, kein Umgebungslicht; Anisotropie überall aus der Stufe
+  { const mats = new Set(); for (const n of Object.keys(G.CHAR)) G.CHAR[n].scene.traverse(o => { if (o.isMesh) (Array.isArray(o.material) ? o.material : [o.material]).forEach(m => mats.add(m)); }); for (const n of Object.keys(G.CAR_TPL)) G.CAR_TPL[n].root.traverse(o => { if (o.isMesh) (Array.isArray(o.material) ? o.material : [o.material]).forEach(m => mats.add(m)); });
+    const nonL = [...mats].filter(m => !m.isMeshLambertMaterial && !m.isMeshBasicMaterial).length; const noMap = [...mats].filter(m => m.isMeshLambertMaterial && !m.map && !m.color).length; const road = G.roadMat;
+    if (G.LOW_GFX) add('Sparmodus: Vorlagen Lambert, Straße Lambert, kein Umgebungslicht', nonL === 0 && noMap === 0 && G.scene.environment === null && !!road && road.isMeshLambertMaterial && !!road.map, `${mats.size} Materialien, ${nonL} nicht Lambert, Umgebung=${!!G.scene.environment}, Straße=${road && road.type}`);
+    else add('Normalmodus: Vorlagen PBR mit Umgebungslicht', nonL > 0 && !!G.scene.environment, `${mats.size} Materialien, ${nonL} PBR, Umgebung=${!!G.scene.environment}`);
+    let bad = 0, n = 0; const ex = new Set(); G.scene.traverse(o => { const ms = o.material ? (Array.isArray(o.material) ? o.material : [o.material]) : []; for (const m of ms) for (const k of ['map', 'normalMap', 'roughnessMap', 'emissiveMap']) { const t = m[k]; if (!t) continue; n++; if (t.anisotropy !== G.ANISO) { bad++; ex.add(o.type + '/' + k + '=' + t.anisotropy); } } });
+    add('Anisotropie überall gleich der Qualitätsstufe (' + G.ANISO + ')', n > 20 && bad === 0, `${bad} von ${n} Texturen abweichend${ex.size ? ': ' + [...ex].slice(0, 4).join(' ') : ''}`); }
   G.opts.god = god; clear();
 }
 // Gerade Strecke ohne Zaun und Parkreihe bis kurz vor das Gebäude
