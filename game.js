@@ -1878,7 +1878,7 @@ function update(dt) {
   // Fahndung
   if (creative.on) player.wanted = 0;
   if (player.wanted > 0) { player.wantedTimer -= dt; if (player.wantedTimer <= 0) player.wanted = Math.max(0, player.wanted - dt * 0.25); const want = Math.min(Math.floor(player.wanted) + 1, 5); let n = 0; for (const c of cars) if (c.userData.mode === 'police') n++; if (n < want && Math.random() < dt * 0.5) spawnCar(true, player.pos); }
-  else { for (let i = cars.length - 1; i >= 0; i--) { const c = cars[i]; if (c.userData.mode === 'police' && c.position.distanceTo(player.pos) > 120) { scene.remove(c); cars.splice(i, 1); shootables.splice(shootables.indexOf(c), 1); } } }
+  else { for (let i = cars.length - 1; i >= 0; i--) { const c = cars[i]; if (c.userData.mode !== 'police') continue; if (c.position.distanceTo(player.pos) > 120) { scene.remove(c); cars.splice(i, 1); shootables.splice(shootables.indexOf(c), 1); } else { c.userData.mode = 'parked'; c.userData.speed = 0; c.userData.officer = null; } } } // nahe Streifenwagen bleiben stehen statt weiter Beamte abzusetzen
   // Tod
   if (opts.god) player.hp = 100;
   player.hp = clamp(player.hp, 0, 100); if (player.hp < lastHp - 0.5) { $('flash').style.opacity = 0.45; setTimeout(() => $('flash').style.opacity = 0, 120); } lastHp = player.hp;
@@ -1898,6 +1898,8 @@ function update(dt) {
   setSty(cross, 'display', (!player.car && !player.dead) ? 'block' : 'none');
   mmT -= dt; if (mmT <= 0) { mmT = 0.05; drawMinimap(); } // Minikarte mit 20 Hz statt jedem Bild
 }
+function despawnPed(h) { scene.remove(h); const i = peds.indexOf(h); if (i >= 0) peds.splice(i, 1); const j = shootables.indexOf(h); if (j >= 0) shootables.splice(j, 1); }
+function copCount() { let n = 0; for (const p of peds) if (p.userData.cop && p.userData.state !== 'dead') n++; return n; }
 function spawnOfficer(car) {
   const h = makeHuman(false, { model: 'swat', keepColors: true, top: 0x1f3a6b, pants: 0x1a2e52, style: 'jacket', hair: 'cap' }); const u = car.userData; const x = car.position.x + Math.cos(u.heading) * 2.2, z = car.position.z - Math.sin(u.heading) * 2.2;
   if (solidAt(x, z) >= 0) return null; h.position.set(x, TH(x, z), z); const gun = makeGun(); h.userData.hand.add(gun); h.userData.gun = gun; h.userData.aiming = true;
@@ -1906,7 +1908,8 @@ function spawnOfficer(car) {
 }
 function copAI(h, dt) {
   const u = h.userData; const to = _aiTo.subVectors(player.pos, h.position); const d = to.length();
-  if (player.wanted <= 0 || player.dead) { u.state = 'walk'; u.aiming = false; u.cop = false; if (u.car) u.car.userData.officer = null; return; }
+  // Fahndung vorbei: Beamter verschwindet (steigt ein). Vorher wurde er zum Passanten mit Pistole, das Auto bekam sofort den nächsten – hunderte „Polizisten“ in Sekunden (Issues #1, #2)
+  if (player.wanted <= 0 || player.dead) { if (u.car) { u.car.userData.officer = null; u.car.userData.officerT = 6; } despawnPed(h); return; }
   const dirx = to.x / (d || 1), dirz = to.z / (d || 1); h.rotation.y = Math.atan2(dirx, dirz);
   if (d > 9) { moveWithCollision(h.position, dirx * u.speed * dt, dirz * u.speed * dt, 0.3); h.position.y = TH(h.position.x, h.position.z); animateWalk(h, u.t, 4); }
   else animateWalk(h, u.t, 0);
@@ -1930,7 +1933,7 @@ function policeAI(c, dt) {
   if (Math.abs(u.speed) < 1 && d > 8) { u.stuck = (u.stuck || 0) + dt; if (u.stuck > 1.5) { ctrl.fwd = false; ctrl.back = true; ctrl.left = !ctrl.left; if (u.stuck > 3) u.stuck = 0; } } else u.stuck = 0;
   driveCar(c, dt, ctrl);
   if (!player.car && d < 2.6 && Math.abs(u.speed) > 4) player.hp -= 12 * dt;
-  if (!player.car && d < 24 && Math.abs(u.speed) < 3 && !u.officer && peds.filter(p => p.userData.cop).length < 4) spawnOfficer(c);
+  u.officerT = Math.max(0, (u.officerT || 0) - dt); if (player.wanted > 0 && !player.car && d < 24 && Math.abs(u.speed) < 3 && !u.officer && u.officerT <= 0 && copCount() < 4) { spawnOfficer(c); u.officerT = 4; }
 }
 // Effekte am Spieler: Pfefferspray, Wasser, Farbe, Schlagstock
 const fxEl = { spray: 0, water: 0, paint: 0 };

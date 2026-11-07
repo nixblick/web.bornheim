@@ -114,6 +114,8 @@ async function checks() {
   const real = +(m2.ms - base.ms).toFixed(1); add('Renderzeit Berger Straße (nur Hinweis, im versteckten Pane gedrosselt)', true, `${real} ms für die Szene (gesamt ${m2.ms} ms minus leere Szene ${base.ms} ms), ${m.calls} Aufrufe, ${Math.round(m.tris / 1000)}k Dreiecke`);
   // 10) Waffen, Demo, Polizei, Wasserwerfer, Story
   { const W = G.WPN, T3 = G.THREE, P = G.player; const god = G.opts.god; G.opts.god = true; G.opts.tts = false; if (G.player.car) G.toggleCar();
+    // Waffentests an einer offenen Stelle (Spielplatz), damit kein Haus und kein Hang den Strahl vor dem Ziel abfängt
+    { const [ox, oz] = openPlace(); P.pos.set(ox, G.TH(ox, oz), oz); P.mesh.position.copy(P.pos); G.X.camPitch.v = 0.06; G.streamUpdate(1, true); run(60); }
     const save = { inv: W.save(), story: localStorage.getItem('notgta.story') };
     const bs = C.roads.filter(r => r.n === 'Berger Straße'); const rr = bs[Math.floor(bs.length * 0.4)]; P.pos.set(rr.p[0][0], G.TH(rr.p[0][0], rr.p[0][1]), rr.p[0][1]); P.mesh.position.copy(P.pos); G.camYaw.v = Math.atan2(rr.p[1][0] - rr.p[0][0], rr.p[1][1] - rr.p[0][1]); G.camPitch.v = 0.12; G.camera.userData.init = false; run(5);
     for (const k of W.ORDER) W.give(k); let held = 0; for (const k of W.ORDER) { W.select(k, true); const g = P.mesh.userData.gun; if (g && g.parent === P.mesh.userData.hand) held++; } add('Alle Waffen wählbar und in der Hand', held === W.ORDER.length, held + ' von ' + W.ORDER.length);
@@ -180,6 +182,9 @@ async function checks() {
         add('Spieler fährt Rad (E, sichtbar, max. 32 km/h)', on && sp > 2 && sp <= 9.01 && G.player.mesh.visible, 'drauf=' + on + ' max=' + sp.toFixed(1) + ' sichtbar=' + G.player.mesh.visible);
         G.explode(b); add('Rad kippt um statt zu explodieren', b.userData.mode === 'wreck' && !G.player.car && Math.abs(b.rotation.z) > 1, 'mode=' + b.userData.mode + ' rotZ=' + b.rotation.z.toFixed(2)); G.opts.god = god; } }
     add('Standard-Grafikstufe ist Niedrig', (() => { try { const o = JSON.parse(localStorage.getItem('notgta.opts') || '{}'); return o.quality ? true : G.opts.quality === 'niedrig'; } catch (e) { return false; } })(), 'quality=' + G.opts.quality);
+    // Issues #1/#2: Nach einer Fahndung blieben Beamte als Passanten zurück und die Streifenwagen setzten jeden Frame neue ab
+    { const swat0 = G.peds.filter(p => p.userData.charName === 'swat').length; const god = G.opts.god; G.opts.god = true; if (G.player.car) G.toggleCar(); G.player.wanted = 3; G.player.wantedTimer = 999; run(900); const during = G.peds.filter(p => p.userData.charName === 'swat').length; G.player.wanted = 0; G.player.wantedTimer = 0; run(900); const after = G.peds.filter(p => p.userData.charName === 'swat').length; G.opts.god = god;
+      add('Fahndung hinterlässt keine Polizisten-Schwemme', during - swat0 <= 8 && after - swat0 <= 2, 'swat vorher=' + swat0 + ' während=' + during + ' danach=' + after); }
     add('Nicht mehr als 22 Polizisten gleichzeitig', G.peds.filter(p => p.userData.cop && p.userData.state !== 'dead').length <= Math.round(22 * Math.min(1.4, Math.max(0.5, G.opts.peds ?? 1))), G.peds.filter(p => p.userData.cop).length + ' Polizisten');
     G.opts.god = god; P.wanted = 0; clear(); }
   window.__noAutoMenu = false;
