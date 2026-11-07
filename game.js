@@ -1595,7 +1595,7 @@ function driveCar(c, dt, ctrl) {
 // ---------- Welt in Kacheln: ganz Frankfurt, geladen wird nur die Umgebung ----------
 // Daten (Gebäude, Straßen, Gelände) bleiben nach dem Laden im Speicher, Meshes nur im Umkreis R_MESH.
 let waitMsg = false; let FAC_CACHE = null, CROWN_MAT = null, LEAF_G = null, GLOW_TEX = null; let mapZoom = 3000;
-const R_DATA = 3; let R_MESH = 2; const GROUND_MAT = new THREE.MeshLambertMaterial({ vertexColors: true }); GROUND_MAT.userData.shared = true;
+const R_DATA = window.__touch ? 2 : 3; /* Handy: weniger Kacheldaten im Speicher */ let R_MESH = 2; const GROUND_MAT = new THREE.MeshLambertMaterial({ vertexColors: true }); GROUND_MAT.userData.shared = true;
 const farPlane = new THREE.Mesh(new THREE.PlaneGeometry(9000, 9000), new THREE.MeshLambertMaterial({ color: 0x6e6a60 })); farPlane.rotation.x = -Math.PI / 2; farPlane.userData.noChunk = true; scene.add(farPlane);
 const OWN_LISTS = () => [rayTargets, nightOnly, emissiveMats, signalMeshes, signalPoles, treeSpots, lampSpots, staticParked, parkedTiles];
 // Kreuzungen: Index aller Straßen- und Gleispunkte (2-m-Raster)
@@ -1894,7 +1894,7 @@ function update(dt) {
   streetTimer -= dt; if (streetTimer <= 0) { streetTimer = 0.5; streetEl.textContent = nearestStreet(); }
   if (!player.car) { let near = null; for (const c of cars) if (c.userData.mode !== 'wreck' && c.position.distanceTo(player.pos) < (c.userData.cannon ? 7 : 4)) near = c; hint.textContent = near ? (near.userData.mode === 'parked' ? (near.userData.cannon ? 'E · Wasserwerfer übernehmen' : near.userData.bike ? 'E · aufsteigen' : 'E · einsteigen') : near.userData.bike ? 'E · Radler runterziehen' : 'E · Fahrer rauszerren') : (staticParked.some(sp => sp.active && Math.hypot(sp.x - player.pos.x, sp.z - player.pos.z) < 3.6) ? 'E · einsteigen' : ''); } else hint.textContent = player.car.userData.cannon ? 'E · aussteigen · Linksklick Wasser · Maus zielt' : player.car.userData.bike ? 'E · absteigen · Leertaste bremsen · H klingeln' : 'E · aussteigen · Leertaste bremsen';
   { const sh = SHOPS.update(dt); if (sh && !player.car && !hint.textContent) hint.textContent = sh; const ih = INTERIORS.update(dt); if (ih) hint.textContent = ih; }
-  if (!locked && !menuOpen && !mapOpen && !document.hidden) hint.textContent = 'Ins Spiel klicken für Maussteuerung';
+  if (!locked && !menuOpen && !mapOpen && !document.hidden && !window.__touch) hint.textContent = 'Ins Spiel klicken für Maussteuerung';
   hint.style.display = hint.textContent ? 'block' : 'none';
   setSty(cross, 'display', (!player.car && !player.dead) ? 'block' : 'none');
   mmT -= dt; if (mmT <= 0) { mmT = 0.05; drawMinimap(); } // Minikarte mit 20 Hz statt jedem Bild
