@@ -17,7 +17,8 @@
   #minimap{width:220px;height:220px;border-radius:50%;border:2px solid #fff6;box-shadow:0 0 0 4px #0008;background:#111}
   #street{position:absolute;right:20px;bottom:22px;font-size:26px;font-weight:700;letter-spacing:.5px;text-shadow:0 2px 6px #000;text-align:right}
   #hint{position:absolute;left:50%;bottom:70px;transform:translateX(-50%);font-size:15px;background:#000a;padding:6px 14px;border-radius:8px}
-  #stars{position:absolute;right:20px;top:16px;font-size:26px;letter-spacing:4px;color:#ffd84a;text-shadow:0 1px 4px #000}
+  #stars{position:absolute;right:20px;top:16px;font-size:26px;letter-spacing:4px;text-shadow:0 1px 4px #000}#stars i{font-style:normal;color:#ffffff40}#stars i.on{color:#ffd84a;text-shadow:0 0 8px #ffb000,0 1px 3px #000}#stars.hot i.on{animation:starpulse 1s ease-in-out infinite}@keyframes starpulse{50%{color:#fff3b0;text-shadow:0 0 14px #ffd84a}}
+  .wic{vertical-align:-1px;filter:drop-shadow(0 1px 1px #000a)}
   #health{width:180px;height:8px;background:#0008;border-radius:4px;margin-top:6px}
   #health i{display:block;height:100%;width:100%;background:#62d26f;border-radius:4px}
   #cross{position:absolute;left:50%;top:50%;width:26px;height:26px;transform:translate(-50%,-50%);display:none;border:2px solid #fff9;border-radius:50%;box-shadow:0 0 4px #000}
@@ -73,6 +74,7 @@
   #menu .tabs button{display:inline-block;width:auto;margin:0;padding:6px 10px;font-size:13px;background:#202533}
   #menu .tabs button.on{background:#ffd84a;color:#111}
   #menu .tabs .sub{display:none;width:100%;gap:6px;margin-top:6px;padding-top:6px;border-top:1px solid #ffffff18;flex-wrap:wrap}#menu .tabs .sub button{font-size:12px;padding:4px 9px}
+  #menu .pgd{border-top:1px solid #ffffff14;padding:8px 2px}#menu .pgd summary{cursor:pointer;font-weight:700;font-size:15px}#menu .pgd table{margin-top:6px}
   #menu details.more{margin-top:6px}#menu details.more summary{cursor:pointer;color:#aaa;font-size:13px;padding:6px 2px}
   #ovstat{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;margin:2px 0 14px}#ovstat div{background:#ffffff0d;border:1px solid #ffffff14;border-radius:10px;padding:8px 10px}#ovstat b{display:block;font-size:18px}#ovstat small{color:#aaa;font-size:12px}
   #money .coin{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#fff2a8,#f2c200 55%,#a87a00);color:#5a3d00;font-size:14px;font-weight:900;margin-right:6px;vertical-align:-3px;box-shadow:0 1px 3px #000a}

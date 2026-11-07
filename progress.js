@@ -60,6 +60,11 @@ export function initProgress(X) {
       <tr><td>Stadtteile</td><td>${seen} von ${nZ} entdeckt</td></tr><tr><td>Geld</td><td>${player.money} €</td></tr><tr><td>Gefahren</td><td>${km(P.st.drive)}</td></tr><tr><td>Gelaufen</td><td>${km(P.st.walk)}</td></tr><tr><td>Spielzeit</td><td>${hm(P.st.time)}</td></tr><tr><td>U-Bahn-Fahrten</td><td>${P.st.metro}</td></tr><tr><td>Einkäufe</td><td>${P.st.buy}</td></tr><tr><td>Demos</td><td>${P.st.demo}</td></tr></table></div>`;
     const zones = `<div><h3>STADTTEILE ${seen}/${nZ}</h3><div class="zl">${(D.length ? D.map(d => d.n) : []).sort((a, b) => a.localeCompare(b, 'de')).map(n => `<span class="${P.seen[n] ? '' : 'no'}">${P.seen[n] ? '✓' : '·'} ${n}</span>`).join('')}</div></div>`;
     const keys = withKeys ? `<div><h3>BEFEHLE</h3><table>${KEYS_HELP.map(([k, t]) => `<tr><td><kbd>${k}</kbd></td><td>${t}</td></tr>`).join('')}</table></div>` : '';
+    if (!withKeys) { // Menü: knapp – Stufe mit Balken, Rest zum Aufklappen
+      const pct = Math.min(100, Math.round(P.xp / need(P.lvl) * 100));
+      return `<div class="pg"><div style="display:flex;justify-content:space-between;align-items:baseline"><b style="color:#c9a0ff;font-size:16px">Stufe ${P.lvl}</b><small style="color:#aaa">${P.xp} / ${need(P.lvl)} EP</small></div><div style="height:6px;background:#ffffff18;border-radius:3px;margin:5px 0 8px"><i style="display:block;height:100%;width:${pct}%;background:#b07cff;border-radius:3px"></i></div>
+        <small style="color:#aaa">Auto ${Math.round((1 - X.perks.car) * 100)} % robuster · Läden ${Math.round((1 - X.perks.shop) * 100)} % billiger · ${Math.round((X.perks.run - 1) * 100)} % schneller</small></div>
+        <details class="pgd"><summary>📈 Statistik</summary>${stats.replace('<h3>FORTSCHRITT</h3>', '')}</details><details class="pgd"><summary>🗺 Stadtteile ${seen}/${nZ}</summary>${zones.replace(/<h3>[^<]*<\/h3>/, '')}</details>`; }
     return stats + zones + keys;
   }
   function showTab(on) { if (on) { ov.innerHTML = `<div class="box">${html()}</div>`; ov.style.display = 'flex'; } else ov.style.display = 'none'; }
