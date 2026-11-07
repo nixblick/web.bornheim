@@ -665,11 +665,14 @@ function ragdoll(h, u, dt) {
     u.rd = { B, P, O, C, B0inv: B0.clone().invert(), bodyQ0, ft, ll0, ld, t: 0 }; u.fly = null; h.rotation.x = 0;
   }
   const R = u.rd; R.t += dt; if (R.t > 7) return true; // liegt still
-  const P = R.P, O = R.O, h2 = Math.min(dt, 1 / 30);
-  for (let i = 0; i < P.length; i++) { const p = P[i], o = O[i]; const vx = (p.x - o.x) * 0.995, vy = (p.y - o.y) * 0.995, vz = (p.z - o.z) * 0.995; o.copy(p); p.x += vx; p.y += vy - 9.8 * h2 * h2; p.z += vz; }
-  for (let it = 0; it < 8; it++) {
-    for (const [a, b, k, L] of R.C) { const pa = P[a], pb = P[b]; rd_v1.subVectors(pb, pa); const d = rd_v1.length() || 1e-4; const f = (d - L) / d * 0.5 * k; pa.addScaledVector(rd_v1, f); pb.addScaledVector(rd_v1, -f); }
-    for (let i = 0; i < P.length; i++) { const p = P[i], fy = TH(p.x, p.z) + (i === 2 ? 0.1 : 0.06); if (p.y < fy) { p.y = fy; const o = O[i]; o.x += (p.x - o.x) * 0.35; o.z += (p.z - o.z) * 0.35; } if (solidAt(p.x, p.z) >= 0) { p.x = O[i].x; p.z = O[i].z; } }
+  // Fester Schritt 1/60 s mit Akkumulator (höchstens 4 Schritte je Bild): Verlet-Dämpfung und Schwerkraft hängen sonst von der Bildrate ab
+  const P = R.P, O = R.O, H = 1 / 60; R.acc = Math.min((R.acc || 0) + dt, 4 * H); const F = R.F || (R.F = new Float64Array(P.length));
+  while (R.acc >= H - 1e-9) { R.acc -= H;
+    for (let i = 0; i < P.length; i++) { const p = P[i], o = O[i]; const vx = (p.x - o.x) * 0.995, vy = (p.y - o.y) * 0.995, vz = (p.z - o.z) * 0.995; o.copy(p); p.x += vx; p.y += vy - 9.8 * H * H; p.z += vz; F[i] = floorAt(p.x, p.z, p.y + 0.3) + (i === 2 ? 0.1 : 0.06); /* Boden je Punkt einmal je Schritt: Brückendeck, Dach, Gelände */ }
+    for (let it = 0; it < 8; it++) {
+      for (const [a, b, k, L] of R.C) { const pa = P[a], pb = P[b]; rd_v1.subVectors(pb, pa); const d = rd_v1.length() || 1e-4; const f = (d - L) / d * 0.5 * k; pa.addScaledVector(rd_v1, f); pb.addScaledVector(rd_v1, -f); }
+      for (let i = 0; i < P.length; i++) { const p = P[i], fy = F[i]; if (p.y < fy) { p.y = fy; const o = O[i]; o.x += (p.x - o.x) * 0.35; o.z += (p.z - o.z) * 0.35; } if (solidAtH(p.x, p.z, p.y) !== -1) { p.x = O[i].x; p.z = O[i].z; } }
+    }
   }
   // Knochen nachführen: Rumpf als starrer Körper, Glieder auf ihre Gelenkpunkte ausrichten
   const B = R.B; const D = rd_m1.multiplyMatrices(rdBasis(P, rd_m2), R.B0inv); const dq = rd_q1.setFromRotationMatrix(D);
@@ -1897,8 +1900,8 @@ function update(dt) {
     const h = peds[i], u = h.userData; const d = h.position.distanceTo(player.pos); h.visible = d < PED_VIS; u.lod = d > 55; if (d > 200) continue; u.t += dt;
     if (u.state === 'walk') { advanceAlongRoad(u, h.position, u.speed * dt, u.side * (u.road.w / 2 + 1.5) * u.dir); /* *u.dir: beim Umdrehen auf demselben Gehweg bleiben */ h.rotation.y = u.heading; animateWalk(h, u.t, u.speed * 2.5); }
     else if (u.state === 'cop') copAI(h, dt);
-    else if (u.state === 'flee') { u.fleeT -= dt; const dirx = h.position.x - player.pos.x, dirz = h.position.z - player.pos.z, l = Math.hypot(dirx, dirz) || 1; moveWithCollision(h.position, dirx / l * 5 * dt, dirz / l * 5 * dt, 0.3); h.position.y = TH(h.position.x, h.position.z); h.rotation.y = Math.atan2(dirx, dirz); animateWalk(h, u.t * 1.6, 7); if (u.fleeT <= 0) u.state = 'walk'; }
-    else if (u.state === 'dead') { if (u.mixer && ragdoll(h, u, dt)) {} else if (u.fly) { h.position.addScaledVector(u.fly, dt); u.fly.y -= 14 * dt; h.rotation.y += (u.spin || 0) * dt; const fy = TH(h.position.x, h.position.z); if (h.position.y <= fy && u.fly.y < 0) { h.position.y = fy; if (u.fly.length() > 4) { u.fly.multiplyScalar(0.35); u.fly.y = Math.abs(u.fly.y) * 0.3; } else u.fly = null; } } if (u.mixer && !u.rd) { if (!u.dead) { u.dead = true; playAnim(h, 'death', { once: true, fade: 0.1 }); } u.mixer.update(dt); } else h.rotation.x = Math.min(h.rotation.x + dt * 5, Math.PI / 2); u.deadT = (u.deadT || 0) + dt; if (u.deadT > 25) { scene.remove(h); peds.splice(i, 1); unshoot(h); } }
+    else if (u.state === 'flee') { u.fleeT -= dt; const dirx = h.position.x - player.pos.x, dirz = h.position.z - player.pos.z, l = Math.hypot(dirx, dirz) || 1; moveWithCollision(h.position, dirx / l * 5 * dt, dirz / l * 5 * dt, 0.3); h.position.y = floorAt(h.position.x, h.position.z, h.position.y + 0.3); h.rotation.y = Math.atan2(dirx, dirz); animateWalk(h, u.t * 1.6, 7); if (u.fleeT <= 0) u.state = 'walk'; }
+    else if (u.state === 'dead') { if (u.mixer && ragdoll(h, u, dt)) {} else if (u.fly) { const y0 = h.position.y; if (moveWithCollision(h.position, u.fly.x * dt, u.fly.z * dt, 0.3, h.position.y) === 2) { u.fly.x *= -0.2; u.fly.z *= -0.2; } /* weggeschleudert: nicht durch Wände, auf Brücken und Dächern landen */ h.position.y += u.fly.y * dt; u.fly.y -= 14 * dt; h.rotation.y += (u.spin || 0) * dt; const fy = floorAt(h.position.x, h.position.z, Math.max(y0, h.position.y) + 0.3); if (h.position.y <= fy && u.fly.y < 0) { h.position.y = fy; if (u.fly.length() > 4) { u.fly.multiplyScalar(0.35); u.fly.y = Math.abs(u.fly.y) * 0.3; } else u.fly = null; } } if (u.mixer && !u.rd) { if (!u.dead) { u.dead = true; playAnim(h, 'death', { once: true, fade: 0.1 }); } u.mixer.update(dt); } else h.rotation.x = Math.min(h.rotation.x + dt * 5, Math.PI / 2); u.deadT = (u.deadT || 0) + dt; if (u.deadT > 25) { scene.remove(h); peds.splice(i, 1); unshoot(h); } }
   }
   if (!POCKET) { const pw = Math.round(55 * (opts.peds ?? 1)); for (let k = 0; k < 2 && peds.length < pw; k++) spawnPed(player.pos); if (peds.length > pw + 3) { const far = peds.find(p => { const u = p.userData; return !u.cop && !u.demo && !u.keep && !u.follow && u.state !== 'arrested' && u.state !== 'stunned' && p.position.distanceTo(player.pos) > 90; }); if (far) { scene.remove(far); peds.splice(peds.indexOf(far), 1); unshoot(far); } } }
   updatePickups(dt); updateTrams(dt); WPN.update(dt); DEMO.update(dt); FIRE.update(dt); STORY.update(dt); updateFx(dt);
@@ -1946,7 +1949,7 @@ function copAI(h, dt) {
   // Fahndung vorbei: Beamter verschwindet (steigt ein). Vorher wurde er zum Passanten mit Pistole, das Auto bekam sofort den nächsten – hunderte „Polizisten“ in Sekunden (Issues #1, #2)
   if (player.wanted <= 0 || player.dead) { if (u.car) { u.car.userData.officer = null; u.car.userData.officerT = 6; } despawnPed(h); return; }
   const dirx = to.x / (d || 1), dirz = to.z / (d || 1); h.rotation.y = Math.atan2(dirx, dirz);
-  if (d > 9) { moveWithCollision(h.position, dirx * u.speed * dt, dirz * u.speed * dt, 0.3); h.position.y = TH(h.position.x, h.position.z); animateWalk(h, u.t, 4); }
+  if (d > 9) { moveWithCollision(h.position, dirx * u.speed * dt, dirz * u.speed * dt, 0.3); h.position.y = floorAt(h.position.x, h.position.z, h.position.y + 0.3); animateWalk(h, u.t, 4); }
   else animateWalk(h, u.t, 0);
   u.armR.rotation.x = -Math.PI / 2; u.armL.rotation.x = -Math.PI / 2; u.armL.rotation.z = -0.35;
   u.shotT -= dt; if (u.shotT <= 0 && d < 28) { u.shotT = rnd(0.9, 1.6); const from = new THREE.Vector3(); u.gun.userData.muzzle.getWorldPosition(from); const hit = Math.random() < (player.car ? 0.25 : 0.4); const target = player.pos.clone(); target.y += 1.2; if (!hit) { target.x += rnd(-2, 2); target.y += rnd(-1, 1.5); target.z += rnd(-2, 2); }

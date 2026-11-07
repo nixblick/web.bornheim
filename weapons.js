@@ -160,7 +160,7 @@ export function initWeapons(X) {
   function updateStunned(h, dt) {
     const u = h.userData; u.stunT -= dt; const lie = u.stunKind === 'taser' || u.stunKind === 'water';
     const k = u.stunT / (u.stunMax || 1); const tx = lie ? (k > 0.15 ? -1.45 : -1.45 * k / 0.15) : (u.stunKind === 'spray' ? 0.5 * Math.min(1, k * 3) : 0);
-    h.rotation.x += (tx - h.rotation.x) * Math.min(1, dt * 8); h.position.y = TH(h.position.x, h.position.z) + (lie ? 0.15 * Math.min(1, -h.rotation.x) : 0);
+    h.rotation.x += (tx - h.rotation.x) * Math.min(1, dt * 8); h.position.y = floorAt(h.position.x, h.position.z, h.position.y + 0.3) + (lie ? 0.15 * Math.min(1, -h.rotation.x) : 0);
     if (u.stunKind === 'spray' && Math.random() < dt * 0.8) moveWithCollision(h.position, rnd(-0.4, 0.4), rnd(-0.4, 0.4), 0.3);
     if (u.stunKind === 'spray' && Math.random() < dt * 0.6 && h.position.distanceTo(player.pos) < 25) sfx('cough', 0.25);
     if (u.mixer && !u.lod) { u.mixer.update(dt); }
