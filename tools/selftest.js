@@ -187,13 +187,38 @@ async function checks() {
       add('Fahndung hinterlässt keine Polizisten-Schwemme', during - swat0 <= 8 && after - swat0 <= 2, 'swat vorher=' + swat0 + ' während=' + during + ' danach=' + after); }
     add('Nicht mehr als 22 Polizisten gleichzeitig', G.peds.filter(p => p.userData.cop && p.userData.state !== 'dead').length <= Math.round(22 * Math.min(1.4, Math.max(0.5, G.opts.peds ?? 1))), G.peds.filter(p => p.userData.cop).length + ' Polizisten');
     G.opts.god = god; P.wanted = 0; clear(); }
+  await physikChecks(add);
   window.__noAutoMenu = false;
   return R;
+}
+// Physik- und Leistungsrunde (auch einzeln: await T.physik())
+async function physikChecks(add) {
+  const P = G.player, T3 = G.THREE; const god = G.opts.god; G.opts.god = true; if (P.car) G.toggleCar(); clear();
+  const rmCar = c => { if (P.car === c) G.toggleCar(); G.scene.remove(c); const i = G.cars.indexOf(c); if (i >= 0) G.cars.splice(i, 1); };
+  // Lange freie Hauswand (≥ 25 m, 7 m Streifen davor ohne Zaun und Parkreihe)
+  const wall = (() => { for (const b of C.buildings) { if (b.h <= 5) continue; for (let e = 0; e < b.p.length; e++) { const [ax, az] = b.p[e], [bx, bz] = b.p[(e + 1) % b.p.length]; const l = Math.hypot(bx - ax, bz - az); if (l < 25) continue; let nx = -(bz - az) / l, nz = (bx - ax) / l; if (G.solidAt((ax + bx) / 2 + nx * 2, (az + bz) / 2 + nz * 2) >= 0) { nx = -nx; nz = -nz; }
+    let free = true; for (let s = 0.05; s <= 0.96 && free; s += 0.1) for (let d = 0.8; d <= 7 && free; d += 1) { const x = ax + (bx - ax) * s + nx * d, z = az + (bz - az) * s + nz * d; if (G.solidAt(x, z) >= 0 || G.X.barrierNear(x, z, 1.5) || G.staticParked.some(sp => sp.active && Math.hypot(sp.x - x, sp.z - z) < 4)) free = false; }
+    if (free && Math.hypot((ax + bx) / 2 - P.pos.x, (az + bz) / 2 - P.pos.z) < 600) return { ax, az, bx, bz, nx, nz, l }; } } return null; })();
+  // 1) Auto schrammt im 10°-Winkel an der Wand entlang: kein Rückprall, bleibt in Fahrt, kommt voran
+  if (wall) { const { ax, az, bx, bz, nx, nz, l } = wall; const tx = (bx - ax) / l, tz = (bz - az) / l; const sx = ax + tx * l * 0.12 + nx * 2.6, sz = az + tz * l * 0.12 + nz * 2.6; const a = 10 * Math.PI / 180; const hx = Math.cos(a) * tx - Math.sin(a) * nx, hz = Math.cos(a) * tz - Math.sin(a) * nz;
+    for (const c of G.cars) if (c.userData.mode === 'ai' && Math.hypot(c.position.x - sx, c.position.z - sz) < 40) c.position.x += 500;
+    const c = G.makeCar(false, 'sedan'); c.position.set(sx, G.TH(sx, sz), sz); c.userData.heading = Math.atan2(hx, hz); c.rotation.y = c.userData.heading; G.scene.add(c); G.cars.push(c); P.pos.copy(c.position); P.mesh.position.copy(P.pos); G.toggleCar(); const u = c.userData;
+    let neg = 0, minDist = 1e9; const along = () => (c.position.x - ax) * tx + (c.position.z - az) * tz, dist = () => (c.position.x - ax) * nx + (c.position.z - az) * nz; const a0 = along();
+    G.keys.KeyW = true; for (let f = 0; f < 300 && along() - a0 < 18; f++) { G.update(1 / 60); if (u.speed < -0.3) neg++; minDist = Math.min(minDist, dist()); } G.keys.KeyW = false; // 18 m reichen: danach kommt die Hausecke
+    const fx = Math.sin(u.heading), fz = Math.cos(u.heading), L = u.dims.l / 2 - 0.15, W = u.dims.w / 2 - 0.05; const stuck = [[L, W], [L, -W], [-L, W], [-L, -W]].some(([p, q]) => G.solidAt(c.position.x + fx * p + fz * q, c.position.z + fz * p - fx * q) >= 0);
+    add('Auto schrammt im 10°-Winkel an der Wand entlang (kein Rückprall)', P.car === c && neg === 0 && along() - a0 > 15 && !stuck && minDist > 0.3, `${neg} Frames rückwärts, ${(along() - a0).toFixed(1)} m voran, Abstand min ${minDist.toFixed(2)} m, Dellen ${u.dents || 0}, steckt=${stuck}`); rmCar(c); }
+  else add('Auto schrammt im 10°-Winkel an der Wand entlang (kein Rückprall)', false, 'keine freie Hauswand gefunden');
+  // 2) Zwei Fahrzeuge verschiedener Größe (Sedan, Wasserwerfer) stoßen sich plausibel ab: Abstand aus den Maßen, keins in einer Wand
+  { const [ox, oz] = openPlace(); const c = G.makeCar(false, 'sedan'); c.position.set(ox, G.TH(ox, oz), oz); c.userData.heading = 0; G.scene.add(c); G.cars.push(c); P.pos.copy(c.position); P.mesh.position.copy(P.pos); G.toggleCar(); /* erst einsteigen: toggleCar bevorzugt sonst den Wasserwerfer */
+    const w = G.DEMO.makeCannon(); w.position.set(ox + 1.2, G.TH(ox + 1.2, oz), oz); w.userData.heading = 0; w.userData.mode = 'parked'; G.DEMO.addCar(w); run(90); const D = c.userData.dims, E = w.userData.dims; const R = (Math.hypot(D.l, D.w) + Math.hypot(E.l, E.w)) / 2 * 0.6; const d = c.position.distanceTo(w.position);
+    add('Fahrzeuge verschiedener Größe stoßen sich plausibel ab', P.car === c && d > R * 0.9 && d < R + 2.5 && G.solidAt(c.position.x, c.position.z) < 0 && G.solidAt(w.position.x, w.position.z) < 0, `Abstand ${d.toFixed(2)} m, Soll ≥ ${(R * 0.9).toFixed(2)} m (Sedan ${D.l.toFixed(1)} m, Wasserwerfer ${E.l.toFixed(1)} m), im Sedan=${P.car === c}, Wand ${G.solidAt(c.position.x, c.position.z)}/${G.solidAt(w.position.x, w.position.z)}`); rmCar(c); rmCar(w); }
+  G.opts.god = god; clear();
 }
 // Gerade Strecke ohne Zaun und Parkreihe bis kurz vor das Gebäude
 function freePath(p, tx, tz) { const L = Math.hypot(tx - p.x, tz - p.z); for (let k = 3; k < L; k += 1.5) { const x = p.x + (tx - p.x) * k / L, z = p.z + (tz - p.z) * k / L; if (G.solidAt(x, z) >= 0) return k > 12; if (G.X.barrierNear(x, z, 1.3) || G.staticParked.some(sp => Math.hypot(sp.x - x, sp.z - z) < 3)) return false; } return false; }
 function polyArea(p) { let a = 0; for (let i = 0, j = p.length - 1; i < p.length; j = i++) a += (p[j][0] * p[i][1] - p[i][0] * p[j][1]); return a / 2; }
-window.T = { run, snap, unsnap, ms, checks, clear, openPlace };
+async function physik() { const R = []; const add = (name, ok, detail = '') => R.push({ name, ok: !!ok, detail }); if (document.getElementById('start').style.display !== 'none') { document.getElementById('go').click(); await new Promise(r => setTimeout(r, 800)); } window.__noAutoMenu = true; if (document.getElementById('menu').style.display === 'flex') G.X.closeMenu(); await physikChecks(add); window.__noAutoMenu = false; return R; }
+window.T = { run, snap, unsnap, ms, checks, clear, openPlace, physik };
 export default window.T;
 // Echte GPU-Zeit eines Bildes (Median aus n Messungen), unabhängig davon, ob das Fenster sichtbar ist
 async function gpu(n = 5) { const gl = G.renderer.getContext(), ext = gl.getExtension('EXT_disjoint_timer_query_webgl2'); if (!ext) return null; const res = [];
