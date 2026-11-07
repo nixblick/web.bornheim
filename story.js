@@ -195,7 +195,8 @@ export function initStory(X, W, D, F) {
   }
   function setMarkObj(o) { if (markObj !== o) { markObj = o; mark = [o.position.x, o.position.z]; gps = null; gpsT = 0; } else mark = [o.position.x, o.position.z]; }
   X.listeners.push((ev) => { if (ev === 'busted' && S.state === 'active' && chapActive) failChapter('Du wurdest festgenommen.');
-    if ((ev === 'demoFormed' || ev === 'joinedDemo') && S.state !== 'active' && !S1.finishedAll && !S1.declined && !S1.done.length) { setTimeout(() => { if (S.state !== 'active') start('demo', 's1'); }, 4000); } });
+        // Demo gebildet oder beigetreten: Story 1 nicht mehr ungefragt starten (das sperrte mitten im Spiel die Waffen), nur einmal hinweisen und den Weg zeigen
+    if ((ev === 'demoFormed' || ev === 'joinedDemo') && S.state !== 'active' && !S1.finishedAll && !S1.declined && !S1.done.length && !S1.hinted) { S1.hinted = true; persist(); X.card('STORY 1 · BORNHEIM BLEIBT', 'Esc › Story wählen – oder zum lila B am Uhrtürmchen (gelber Strahl)', 6); if (!intro) { intro = true; introT = 180; setMark(UHR); setObj('Zur <b>Story</b>: dem gelben Strahl zum lila <b>B</b> folgen · oder Esc › Story wählen'); } } });
 
   // ---------- Menü ----------
   function renderMenu() { const el = $('storypane'); if (!el) return; const R = D.rep; const bar = (k, n) => `<div class="rep"><span>${n}</span><i><b style="width:${50 + R[k] / 2}%;background:${R[k] >= 0 ? '#62d26f' : '#e05050'}"></b></i><em>${R[k] > 0 ? '+' : ''}${Math.round(R[k])}</em></div>`;

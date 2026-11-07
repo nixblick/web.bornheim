@@ -33,7 +33,7 @@ export function initWeapons(X) {
     else if (d.kind === 'throw') it.res += n ?? d.give;
     return fresh;
   }
-  function reset() { for (const k of Object.keys(inv)) delete inv[k]; give('fists'); give('pistol', 84); give('paint', 4); select('fists', true); }
+  function reset() { for (const k of Object.keys(inv)) delete inv[k]; give('fists'); select('fists', true); } // Start ohne Waffen: Pistole und Co. gibt es im Laden oder als Pickup
   // Sperre in Story-Kapiteln: 'all' = nur Fäuste, 'protest' = Fäuste und Demo-Zubehör (Farbe, Böller, Rauch, Bengalo)
   let lockMode = null; const PROTEST = new Set(['fists', 'paint', 'banger', 'smoke', 'flare']);
   const allowed = id => !lockMode || id === 'fists' || (lockMode === 'protest' && PROTEST.has(id));
