@@ -1,7 +1,7 @@
 // Läden: mit Geld einkaufen. Supermärkte führen alles, was das Spiel kennt, Fachläden einen Teil.
 // Läden kommen aus den OSM-Daten (Shop-Punkte und Gebäude mit Laden), Eingang = nächste Hauswand.
 export function initShops(X, W) {
-  const { player, CITY, sfx, showMsg, nearestEdge, edgeNormal, keys } = X;
+  const { player, CITY, sfx, showMsg, nearestEdge, edgeNormal, keys, solidAt } = X;
   const $ = id => document.getElementById(id);
   // Sortiment: id, Name, Preis, Wirkung
   const ITEMS = {
@@ -28,10 +28,19 @@ export function initShops(X, W) {
     fast_food: 'food', restaurant: 'food', cafe: 'food', ice_cream: 'food', bakery: 'bakery', pastry: 'bakery', pharmacy: 'pharmacy', chemist: 'pharmacy', doityourself: 'hardware', hardware: 'hardware', paint: 'hardware', sports: 'sports', outdoor: 'sports' };
   // Läden aus den geladenen Daten sammeln (wächst mit den Kacheln)
   const shops = []; let seenP = 0, seenB = 0;
-  function door(x, z) { const ne = nearestEdge(x, z, 25); if (!ne) return [x, z]; const e = edgeNormal(ne.b.p, ne.e); let nx = e.nx, nz = e.nz; const mx = e.ax + e.dx / 2, mz = e.az + e.dz / 2; const bx = ne.b.p.reduce((a, p) => a + p[0], 0) / ne.b.p.length, bz = ne.b.p.reduce((a, p) => a + p[1], 0) / ne.b.p.length; if ((mx - bx) * nx + (mz - bz) * nz < 0) { nx = -nx; nz = -nz; } const t = Math.max(0, Math.min(1, ((x - e.ax) * e.dx + (z - e.az) * e.dz) / (e.l * e.l))); return [e.ax + e.dx * t + nx * 1.2, e.az + e.dz * t + nz * 1.2]; }
+  // Eingang: Punkt 1,2 m vor einer freien Außenwand des nächsten Hauses. Zuerst die nächste Kante, sonst die übrigen Kanten nach Abstand
+  // (Reihenhäuser teilen Wände mit dem Nachbarn), zuletzt die nächste freie Stelle drumherum.
+  const free = (x, z) => solidAt(x, z) < 0 && solidAt(x + 0.8, z) < 0 && solidAt(x - 0.8, z) < 0 && solidAt(x, z + 0.8) < 0 && solidAt(x, z - 0.8) < 0;
+  function door(x, z) {
+    const ne = nearestEdge(x, z, 25); if (!ne) return free(x, z) ? [x, z] : spiral(x, z); const P = ne.b.p;
+    const order = P.map((_, i) => i).map(i => { const e = edgeNormal(P, i); const t = Math.max(0, Math.min(1, ((x - e.ax) * e.dx + (z - e.az) * e.dz) / (e.l * e.l))); const px = e.ax + e.dx * t, pz = e.az + e.dz * t; return { e, px, pz, d: (px - x) ** 2 + (pz - z) ** 2 + (i === ne.e ? -1e6 : 0) }; }).sort((a, b) => a.d - b.d);
+    for (const o of order) { if (o.e.l < 2.5) continue; for (const sg of [1, -1]) { const t = Math.max(0.15, Math.min(0.85, ((o.px - o.e.ax) * o.e.dx + (o.pz - o.e.az) * o.e.dz) / (o.e.l * o.e.l))); const bx = o.e.ax + o.e.dx * t, bz = o.e.az + o.e.dz * t; const qx = bx + o.e.nx * sg * 1.2, qz = bz + o.e.nz * sg * 1.2; if (free(qx, qz) && free(bx + o.e.nx * sg * 2.4, bz + o.e.nz * sg * 2.4)) return [qx, qz]; } }
+    return spiral(x, z);
+  }
+  function spiral(x, z) { for (let r = 1.5; r < 40; r += 1.5) for (let a = 0; a < 6.283; a += 1.5 / r) { const px = x + Math.cos(a) * r, pz = z + Math.sin(a) * r; if (free(px, pz)) return [px, pz]; } return [x, z]; }
   function scan() {
-    for (; seenP < CITY.pois.length; seenP++) { const p = CITY.pois[seenP]; const k = KIND[p.k]; if (!k) continue; const [x, z] = door(p.x, p.z); shops.push({ x, z, k, name: p.n || TYPES[k].n }); }
-    for (; seenB < CITY.buildings.length; seenB++) { const b = CITY.buildings[seenB]; const k = KIND[b.shop]; if (!k) continue; const cx = b.p.reduce((a, p) => a + p[0], 0) / b.p.length, cz = b.p.reduce((a, p) => a + p[1], 0) / b.p.length; const [x, z] = door(cx, cz); if (shops.some(s => Math.hypot(s.x - x, s.z - z) < 6)) continue; shops.push({ x, z, k, name: b.n || TYPES[k].n }); }
+    for (; seenP < CITY.pois.length; seenP++) { const p = CITY.pois[seenP]; const k = KIND[p.k]; if (!k) continue; const [x, z] = door(p.x, p.z); shops.push({ x, z, ox: p.x, oz: p.z, k, name: p.n || TYPES[k].n }); }
+    for (; seenB < CITY.buildings.length; seenB++) { const b = CITY.buildings[seenB]; const k = KIND[b.shop]; if (!k) continue; const cx = b.p.reduce((a, p) => a + p[0], 0) / b.p.length, cz = b.p.reduce((a, p) => a + p[1], 0) / b.p.length; const [x, z] = door(cx, cz); if (shops.some(s => Math.hypot(s.x - x, s.z - z) < 6)) continue; shops.push({ x, z, ox: cx, oz: cz, k, name: b.n || TYPES[k].n }); }
   }
   // Oberfläche
   const st = document.createElement('style'); st.textContent = `#shop{position:fixed;inset:0;background:#000a;display:none;align-items:center;justify-content:center;z-index:40;font-family:system-ui,sans-serif}
@@ -69,7 +78,7 @@ export function initShops(X, W) {
   function update(dt) {
     scanT -= dt; if (scanT <= 0) { scanT = 1; scan(); }
     near = null; if (player.car || player.dead) return null; let bd = 3.2 * 3.2;
-    for (const s of shops) { const d = (s.x - player.pos.x) ** 2 + (s.z - player.pos.z) ** 2; if (d < bd) { bd = d; near = s; } }
+    for (const s of shops) { const d = (s.x - player.pos.x) ** 2 + (s.z - player.pos.z) ** 2; if (d < 900 && !s.chk) { s.chk = 1; if (!free(s.x, s.z)) [s.x, s.z] = door(s.ox ?? s.x, s.oz ?? s.z); } if (d < bd) { bd = d; near = s; } }
     return near ? `F · ${TYPES[near.k].ic} ${near.name} (${TYPES[near.k].n})` : null;
   }
   addEventListener('keydown', e => { if (X.interiors) return; /* Taste F übernimmt interiors.js (Laden betreten) */ if (e.code !== 'KeyF' || X.shopOpen || !near || X.menuOpen && X.menuOpen()) return; if (player.wanted > 0) { showMsg('POLIZEI SUCHT DICH – KEIN EINKAUF', 1200); return; } open(near); });
