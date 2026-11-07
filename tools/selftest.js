@@ -173,7 +173,7 @@ async function checks() {
       G.STORY.stop(); S.state = state0; G.STORY.useStory(sid0); if (st0) localStorage.setItem('notgta.story3', st0); else localStorage.removeItem('notgta.story3'); }
     add('Neues Spiel beginnt nur mit Fäusten', (() => { const sv = G.WPN.save(); G.WPN.reset(); const ok = G.WPN.cur === 'fists' && !G.WPN.inv.pistol && Object.keys(G.WPN.inv).length === 1; G.WPN.load(sv); return ok; })(), 'inv=' + Object.keys(G.WPN.inv).join(','));
     // Fahrräder: KI-Radler unterwegs, Spieler kann aufsteigen und fahren, Rad kippt um statt zu explodieren
-    { run(600); const bikes = G.cars.filter(c => c.userData.bike); const riding = bikes.filter(c => c.userData.mode === 'ai' && c.userData.rider && c.userData.speed > 0.5);
+    { run(600); const bikes = G.cars.filter(c => c.userData.bike && !c.userData.moto); /* nur Fahrräder, keine Motorräder */ const riding = bikes.filter(c => c.userData.mode === 'ai' && c.userData.rider && c.userData.speed > 0.5);
       add('Fahrräder mit Radlern unterwegs', bikes.length >= 3 && riding.length >= 1, bikes.length + ' Räder, ' + riding.length + ' fahren');
       // freie Stelle auf einer Fahrstraße ohne Fahrzeuge im Umkreis, damit das Rad nicht sofort anstößt
       let spot = null; for (let k = 0; k < 300 && !spot; k++) { const rs = G.X.roadsNear(G.player.pos.x, G.player.pos.z, 2, true); const q = G.X.randomRoadPoint(rs[Math.floor(Math.random() * rs.length)]); if (!q || G.cars.some(c => Math.hypot(c.position.x - q.x, c.position.z - q.z) < 12) || G.solidAt(q.x, q.z) >= 0 || G.solidAt(q.x + 2, q.z) >= 0 || G.solidAt(q.x, q.z + 2) >= 0) continue; spot = q; }

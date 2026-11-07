@@ -72,6 +72,11 @@
   #menu .tabs{display:flex;gap:4px;margin-bottom:10px;flex-wrap:wrap}
   #menu .tabs button{display:inline-block;width:auto;margin:0;padding:6px 10px;font-size:13px;background:#202533}
   #menu .tabs button.on{background:#ffd84a;color:#111}
+  #menu .tabs .sub{display:none;width:100%;gap:6px;margin-top:6px;padding-top:6px;border-top:1px solid #ffffff18;flex-wrap:wrap}#menu .tabs .sub button{font-size:12px;padding:4px 9px}
+  #menu details.more{margin-top:6px}#menu details.more summary{cursor:pointer;color:#aaa;font-size:13px;padding:6px 2px}
+  #ovstat{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;margin:2px 0 14px}#ovstat div{background:#ffffff0d;border:1px solid #ffffff14;border-radius:10px;padding:8px 10px}#ovstat b{display:block;font-size:18px}#ovstat small{color:#aaa;font-size:12px}
+  #money .coin{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#fff2a8,#f2c200 55%,#a87a00);color:#5a3d00;font-size:14px;font-weight:900;margin-right:6px;vertical-align:-3px;box-shadow:0 1px 3px #000a}
+  #health{position:relative}#health::before{content:"❤";position:absolute;left:-18px;top:50%;transform:translateY(-55%);font-size:13px;color:#ff4d5e;text-shadow:0 1px 2px #000}
   #menu .help .start{font-size:16px;margin:4px 0 12px}#menu .help details{border-bottom:1px solid #ffffff14;padding:8px 2px}#menu .help summary{cursor:pointer;font-size:15px;font-weight:700}#menu .help details p{margin:6px 0 2px 24px;font-size:14px;line-height:1.45;color:#ccc}#menu .help kbd{background:#2a2f3a;border:1px solid #444;border-radius:4px;padding:0 5px;font-size:12px}
   #menu .pane{min-height:210px}
   #menu label span{display:flex;align-items:center;gap:8px}
@@ -130,18 +135,19 @@
   <h2>PAUSE</h2>
   <button id="m_resume" class="y">Weiter</button>
   <button id="m_story">📖 Story wählen</button>
-  <button id="m_save">Speichern (F6)</button>
-  <button id="m_load">Spielstand laden (F9)</button>
+  <div class="row2"><button id="m_save">💾 Speichern</button><button id="m_load">📂 Laden</button></div>
+  <button id="m_feedback">🐞 Fehler melden / Idee schicken</button>
+  <details class="more"><summary>Mehr …</summary>
   <button id="m_restart">Neu starten</button>
   <div class="row2"><button id="m_export">Spielstand exportieren</button><button id="m_import">Importieren</button></div>
-  <button id="m_feedback">🐞 Fehler melden / Idee schicken</button>
   <button id="m_home">Zur Startseite</button>
+  </details>
   <input type="file" id="importfile" accept=".json,application/json" style="display:none">
   </div>
   <div class="opts">
-    <div class="tabs"><button data-tab="hilfe">❓ Hilfe</button><button data-tab="fortschritt" class="on">📊 Fortschritt</button><button data-tab="steuerung">⌨ Steuerung</button><button data-tab="story">📖 Story</button><span class="sep">Einstellungen</span><button data-tab="grafik">Grafik</button><button data-tab="kamera">Kamera</button><button data-tab="welt">Welt</button><button data-tab="spiel">Spiel</button><button data-tab="ton">Ton &amp; HUD</button></div>
-    <div class="pane" data-tab="fortschritt" id="progpane"></div>
-    <div class="pane" data-tab="steuerung" style="display:none" id="keyspane"></div>
+    <div class="tabs"><button data-tab="fortschritt" class="on">🏠 Übersicht</button><button data-tab="hilfe">❓ Hilfe</button><button data-tab="story">📖 Story</button><button data-tab="grafik" class="set">⚙ Einstellungen</button>
+      <div class="sub"><button data-tab="grafik">Grafik</button><button data-tab="kamera">Kamera</button><button data-tab="welt">Welt</button><button data-tab="spiel">Spiel</button><button data-tab="ton">Ton &amp; HUD</button></div></div>
+    <div class="pane" data-tab="fortschritt"><div id="ovstat"></div><div id="progpane"></div></div>
     <div class="pane" data-tab="grafik" style="display:none">
       <label>Grafikqualität <select id="o_quality"><option value="niedrig">Niedrig</option><option value="mittel">Mittel</option><option value="hoch">Hoch (Leuchten, feine Schatten)</option><option value="ultra">Ultra (starke Grafikkarte)</option></select></label>
       <label>Renderauflösung <span><input id="o_scale" type="range" min="0.5" max="1.5" step="0.05" data-pct="1"><output></output></span></label>
@@ -192,7 +198,7 @@
       <details><summary>🚇 U-Bahn</summary><p>Am Eingang <kbd>F</kbd>, Ziel wählen, losfahren.</p></details>
       <details><summary>🛒 Einkaufen</summary><p>Vor einem Laden <kbd>F</kbd>.</p></details>
       <details><summary>📣 Demos und Storys</summary><p>Bei einer Demo mitlaufen. Leuchtende Buchstaben auf der Karte starten Storys.</p></details>
-      <details><summary>⌨ Alle Tasten</summary><p><kbd>Tab</kbd> zeigt alle Befehle.</p></details>
+      <details><summary>⌨ Alle Tasten</summary><div id="keyspane"></div></details>
     </div>
     <div class="pane" data-tab="story" style="display:none" id="storypane"></div>
   </div>
