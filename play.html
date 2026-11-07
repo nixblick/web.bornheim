@@ -72,7 +72,7 @@
   #menu .tabs{display:flex;gap:4px;margin-bottom:10px;flex-wrap:wrap}
   #menu .tabs button{display:inline-block;width:auto;margin:0;padding:6px 10px;font-size:13px;background:#202533}
   #menu .tabs button.on{background:#ffd84a;color:#111}
-  #menu .help h3{margin:14px 0 6px;font-size:15px;color:#ffd84a}#menu .help p{margin:4px 0;line-height:1.45;font-size:14px}#menu .help table{border-collapse:collapse;width:100%;font-size:14px}#menu .help td{padding:5px 6px;vertical-align:top;border-bottom:1px solid #ffffff14;line-height:1.4}#menu .help td:first-child{white-space:nowrap;width:1%}#menu .help kbd{background:#2a2f3a;border:1px solid #444;border-radius:4px;padding:0 5px;font-size:12px}
+  #menu .help .start{font-size:16px;margin:4px 0 12px}#menu .help details{border-bottom:1px solid #ffffff14;padding:8px 2px}#menu .help summary{cursor:pointer;font-size:15px;font-weight:700}#menu .help details p{margin:6px 0 2px 24px;font-size:14px;line-height:1.45;color:#ccc}#menu .help kbd{background:#2a2f3a;border:1px solid #444;border-radius:4px;padding:0 5px;font-size:12px}
   #menu .pane{min-height:210px}
   #menu label span{display:flex;align-items:center;gap:8px}
   #menu output{min-width:44px;text-align:right;font-variant-numeric:tabular-nums;opacity:.8}
@@ -186,28 +186,13 @@
       <label>Sprechchöre und Durchsagen vorlesen <input id="o_tts" type="checkbox"></label>
     </div>
     <div class="pane help" data-tab="hilfe" style="display:none">
-      <h3>Los geht's</h3>
-      <p>Du bist in Frankfurt, gebaut aus echten Karten- und Geländedaten. Es gibt keine Pflicht: lauf los, schnapp dir ein Fahrzeug, fahr U-Bahn, kauf ein, misch dich unter eine Demo oder starte eine Story. Jede Tat bringt Erfahrung (EP), Stufen machen dich zäher, schneller und Läden günstiger.</p>
-      <h3>Unterwegs</h3>
-      <table>
-        <tr><td><b>🚗 Auto</b></td><td>Neben ein Auto stellen, <kbd>E</kbd>. Parkende Autos sind frei, fahrende klaust du (Fahndung!). Auf der Autobahn bis ~160 km/h.</td></tr>
-        <tr><td><b>🚲 Fahrrad</b></td><td>An Fahrradständern stehen Räder: <kbd>E</kbd> · Fahrrad nehmen. <kbd>H</kbd> klingelt.</td></tr>
-        <tr><td><b>🏍 Motorrad</b></td><td>Stehen am Straßenrand oder fahren im Verkehr. <kbd>E</kbd>, Helm gibt's gratis.</td></tr>
-        <tr><td><b>🚁 Christoph 2</b></td><td>BG Unfallklinik in Seckbach (Friedberger Landstraße, Haltestelle „Unfallklinik“): am Eingang <kbd>F</kbd> · Aufzug aufs Dach, <kbd>E</kbd> einsteigen. <kbd>Leertaste</kbd> steigen, <kbd>Shift</kbd> sinken, <kbd>W</kbd>/<kbd>S</kbd> vor/zurück, <kbd>A</kbd>/<kbd>D</kbd> drehen. Aussteigen nur gelandet – auch auf Dächern.</td></tr>
-        <tr><td><b>🚇 U-Bahn</b></td><td>An den Eingängen <kbd>F</kbd>, am Automaten Ziel wählen (3 €), Fahrt durch die Stadt.</td></tr>
-        <tr><td><b>🗺 Karte</b></td><td><kbd>M</kbd> große Karte, <kbd>N</kbd> Minikarte nach Norden.</td></tr>
-      </table>
-      <h3>Was du tun kannst</h3>
-      <table>
-        <tr><td><b>🛒 Einkaufen</b></td><td>Vor Läden <kbd>F</kbd>. Supermärkte führen alles, Fachläden einen Teil: Essen heilt, Waffen, Farbe, Rauch.</td></tr>
-        <tr><td><b>📣 Demos</b></td><td>Mitlaufen, mit <kbd>G</kbd> Leute sammeln, mit <kbd>V</kbd> filmen. Polizei kommt in Stufen: Begleitung, Kette, Kessel, Wasserwerfer.</td></tr>
-        <tr><td><b>📖 Storys</b></td><td>Leuchtende Buchstaben auf der Karte (B, S, K) starten eine Geschichte. Stand im Reiter „Story“.</td></tr>
-        <tr><td><b>🏠 Häuser</b></td><td>An Hauseingängen <kbd>F</kbd> · Treppenhaus, Aufzug aufs Dach.</td></tr>
-        <tr><td><b>🧱 Kreativ</b></td><td><kbd>C</kbd>: fliegen und Blöcke bauen.</td></tr>
-        <tr><td><b>⭐ Fahndung</b></td><td>Sterne oben rechts. Abhauen, verstecken oder aussitzen – erwischt heißt Geld weg.</td></tr>
-      </table>
-      <h3>Tipps</h3>
-      <p><kbd>Tab</kbd> zeigt Statistik und alle Befehle, <kbd>F6</kbd>/<kbd>F9</kbd> speichern/laden (gespeichert wird nur in deinem Browser). Ruckelt es: Menü → Grafik → „🥔 Für sehr schwachen Rechner optimieren“. Fehler gefunden oder eine Idee? Links im Menü „Fehler melden / Idee schicken“.</p>
+      <p class="start"><kbd>WASD</kbd> laufen · <kbd>E</kbd> einsteigen · <kbd>F</kbd> benutzen · <kbd>M</kbd> Karte</p>
+      <details><summary>🚗 Fahrzeuge</summary><p>Neben Auto, Fahrrad oder Motorrad stellen und <kbd>E</kbd>. Räder stehen an Fahrradständern.</p></details>
+      <details><summary>🚁 Christoph 2 fliegen</summary><p>BG Unfallklinik Seckbach: am Eingang <kbd>F</kbd> (Aufzug), oben <kbd>E</kbd>. <kbd>Leertaste</kbd> hoch, <kbd>Shift</kbd> runter, <kbd>WASD</kbd> lenken.</p></details>
+      <details><summary>🚇 U-Bahn</summary><p>Am Eingang <kbd>F</kbd>, Ziel wählen, losfahren.</p></details>
+      <details><summary>🛒 Einkaufen</summary><p>Vor einem Laden <kbd>F</kbd>.</p></details>
+      <details><summary>📣 Demos und Storys</summary><p>Bei einer Demo mitlaufen. Leuchtende Buchstaben auf der Karte starten Storys.</p></details>
+      <details><summary>⌨ Alle Tasten</summary><p><kbd>Tab</kbd> zeigt alle Befehle.</p></details>
     </div>
     <div class="pane" data-tab="story" style="display:none" id="storypane"></div>
   </div>
