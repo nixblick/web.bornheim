@@ -738,7 +738,8 @@ function corridorH(x, z) { const g = getRoadGrid(); const cx0 = Math.floor(x / C
   for (const [ri, i] of c) { const r = WORLD.roads[ri]; if (r.ry && (r.el[i] || r.el[i + 1])) continue; const [ax, az] = r.p[i], [bx, bz] = r.p[i + 1]; const lim = r.w / 2 + (r.mw ? 1.6 : 2.6) + 1.5; const dx = bx - ax, dz = bz - az, L2 = dx * dx + dz * dz || 1; const t = clamp(((x - ax) * dx + (z - az) * dz) / L2, 0, 1); const ex = x - ax - dx * t, ez = z - az - dz * t; if (ex * ex + ez * ez > lim * lim) continue; const h = TH(ax + dx * t, az + dz * t); if (best === null || h < best) best = h; } }
   return best; }
 function groundH(x, z, mul) { const cr = corridorH(x, z); const g = groundH0(x, z, mul); return cr === null ? g : Math.min(g, cr - 0.05); }
-function groundH0(x, z, mul) { if (mul <= 1) return TH(x, z); const st = DEM.step; let m = 1e9; for (let a = -mul + 1; a <= mul - 1; a++) for (let b = -mul + 1; b <= mul - 1; b++) m = Math.min(m, TH(x + a * st, z + b * st)); return m; }
+// Grobes Gelände folgt der echten Höhe (früher: tiefster Punkt der Umgebung, das ließ Grünflächen und Plätze am Hang bis 0,5 m schweben); Straßen senkt corridorH ab
+function groundH0(x, z, mul) { return TH(x, z); }
 function buildGround() {
   const mul = groundMul(); const step = DEM.step * mul; if (groundMesh && groundStep === step) return; groundStep = step;
   const nx = Math.floor((DEM.nx - 1) / mul), nz = Math.floor((DEM.nz - 1) / mul); const drop = mul === 1 ? 0.03 : 0.06;

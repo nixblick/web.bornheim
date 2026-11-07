@@ -152,7 +152,7 @@ export function initInteriors(X, W, D, SH) {
     const loading = X.streamInit(exitPt[0], exitPt[1]); let done = false; loading.then(() => done = true, () => done = true);
     await new Promise(res => { const tick = () => { const k = Math.min(1, (performance.now() - t0) / 3500); const bar = ov.querySelector('#rbar'); if (bar) bar.style.width = (k * 100) + '%'; const i = Math.min(names.length - 1, 1 + Math.floor(k * (names.length - 1))); const nx = ov.querySelector('#rnext'); if (nx) nx.textContent = names[i]; if (k >= 1 && done) res(); else setTimeout(tick, 60); }; tick(); });
     world.hour = (world.hour + p.min / 60) % 24;
-    const [ex, ez] = exitPt; const [fx, fz] = D.freeSpot(ex + 2, ez + 2, 2); const exit = { x: fx, z: fz, yaw: camYaw.v };
+    const [ex, ez] = exitPt; const [fx, fz] = outside(ex + 2, ez + 2); const exit = { x: fx, z: fz, yaw: camYaw.v };
     if (to.entr && to.entr.length) station(to, exit, 1); else { leaveSilent(); player.pos.set(fx, TH(fx, fz), fz); if (player.mesh) player.mesh.position.copy(player.pos); }
     ov.style.opacity = '0'; setTimeout(() => ov.remove(), 450); riding = false;
     if (fine) { player.money = Math.max(0, player.money - 60); showMsg('FAHRKARTENKONTROLLE: 60 € ERHÖHTES BEFÖRDERUNGSENTGELT', 2600); } else showMsg(to.name.toUpperCase(), 1400);
@@ -187,6 +187,8 @@ export function initInteriors(X, W, D, SH) {
   }
   function onRoof() { const i = solidAt(player.pos.x, player.pos.z); if (i < 0) return null; const b = WORLD.buildings[i]; if (!b || b.h < 7) return null; return player.pos.y > roofHeight(b, player.pos.x, player.pos.z) - 0.6 ? b : null; }
 
+  // Ausgang ins Freie: liegt der Punkt in einem Gebäude (z. B. Eingang in der Bahnhofshalle), den nächsten Punkt draußen suchen
+  function outside(x, z) { if (solidAt(x, z) < 0) return D.freeSpot(x, z, 1.5); for (let r = 3; r < 260; r += 3) for (let k = 0; k < 16; k++) { const a = k / 16 * Math.PI * 2; const qx = x + Math.cos(a) * r, qz = z + Math.sin(a) * r; if (solidAt(qx, qz) < 0 && solidAt(qx + 1, qz) < 0 && solidAt(qx - 1, qz) < 0) return [qx, qz]; } return [x, z]; }
   // ---------- Steuerung ----------
   let curT = null; let t = 0;
   function update(dt) {
@@ -196,7 +198,7 @@ export function initInteriors(X, W, D, SH) {
       if (!curT && inside.trainNear && inside.trainNear()) curT = { label: 'F · Einsteigen: Ziel wählen (3 €)', act: () => travelMenu(inside.station) };
       return curT ? curT.label : null; }
     if (player.car || player.dead) return null;
-    const m = nearMetro(); if (m) { curT = { label: `F · ${m.under ? 'U-Bahn' : 'Bahn'} ${m.s.name} (${m.s.lines.join(', ')})`, act: () => { if (m.under) { const [fx, fz] = D.freeSpot(m.p[0] + 2.2, m.p[1] + 2.2, 2); station(m.s, { x: fx, z: fz, yaw: camYaw.v + Math.PI }); } else travelMenu(m.s); } }; return curT.label; }
+    const m = nearMetro(); if (m) { curT = { label: `F · ${m.under ? 'U-Bahn' : 'Bahn'} ${m.s.name} (${m.s.lines.join(', ')})`, act: () => { if (m.under) { const [fx, fz] = outside(m.p[0] + 2.2, m.p[1] + 2.2); station(m.s, { x: fx, z: fz, yaw: camYaw.v + Math.PI }); } else travelMenu(m.s); } }; return curT.label; }
     if (SH.near) { const s = SH.near; curT = { label: `F · ${s.name} betreten`, act: () => { if (player.wanted > 0) { showMsg('POLIZEI SUCHT DICH – KEIN EINKAUF', 1200); return; } shop(s, { x: player.pos.x, z: player.pos.z, yaw: camYaw.v + Math.PI }); } }; return curT.label; }
     const r = onRoof(); if (r) { curT = { label: 'F · Treppenhaus (runter)', act: () => { const ne = nearestEdge(player.pos.x, player.pos.z, 60); let ex = player.pos.x, ez = player.pos.z; if (ne) { const e = edgeNormal(ne.b.p, ne.e); const mx = e.ax + e.dx / 2, mz = e.az + e.dz / 2; const cx = r.p.reduce((a, p) => a + p[0], 0) / r.p.length, cz = r.p.reduce((a, p) => a + p[1], 0) / r.p.length; const sg = (mx - cx) * e.nx + (mz - cz) * e.nz > 0 ? 1 : -1; [ex, ez] = D.freeSpot(mx + e.nx * sg * 1.5, mz + e.nz * sg * 1.5, 1.5); } stairwell(r, { x: ex, z: ez, yaw: camYaw.v }); } }; return curT.label; }
     const h = nearHouse(); if (h) { curT = { label: 'F · Hauseingang', act: () => stairwell(h, { x: player.pos.x, z: player.pos.z, yaw: camYaw.v + Math.PI }) }; return curT.label; }

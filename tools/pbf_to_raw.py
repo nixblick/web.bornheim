@@ -65,10 +65,12 @@ AREA = [("natural", "^water$|scrub|wood"), ("waterway", "riverbank"), ("leisure"
         ("landuse", "grass|cemetery|allotments|forest|meadow|recreation_ground"), ("amenity", "school|kindergarten|community_centre|place_of_worship")]
 AREA = [(k, re.compile(v)) for k, v in AREA]
 def area(self, a):
-    """Multipolygone (Main, Stadtwald, große Parks): Außenringe als geschlossene Wege; Wege-Flächen kommen schon über way()."""
+    """Multipolygone (Main, Stadtwald, große Parks, Großbauten wie Hauptbahnhof und Messe): Außenringe als geschlossene Wege; Wege-Flächen kommen schon über way()."""
     if a.from_way(): return
     t = dict(a.tags)
-    if not match(t, AREA) or "building" in t: return
+    bld = t.get("building") not in (None, "no")
+    if not bld and not match(t, AREA): return
+    if bld: t = {k: v for k, v in t.items() if k in ("building", "height", "building:levels", "roof:shape", "roof:levels", "name", "shop", "amenity", "leisure", "min_height")}
     if t.get("waterway") == "riverbank": t["natural"] = "water"
     for k, ring in enumerate(a.outer_rings()):
         c = [[nd.location.lat, nd.location.lon] for nd in ring if nd.location.valid()]

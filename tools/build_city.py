@@ -38,10 +38,11 @@ def convert(elements, nodes=None):
             if len(pts)>=4 and pts[0]==pts[-1]: pts=pts[:-1]
             if len(pts)<3: continue
             b={"p":pts,"h":round(height(t),1)}
+            if t.get("building") in ("train_station","transportation") and "height" not in t and len(pts)>40: b["h"]=max(b["h"],24.0)  # Bahnhofshallen: Stockwerke sagen wenig über die Hallenhöhe
             bt=t.get("building","yes")
             if bt in ("church","cathedral","chapel"): b["k"]="church"
             elif bt in ("school","kindergarten","university","college","hospital","office","public","civic","government") or t.get("amenity") in ("school","kindergarten","hospital"): b["k"]="public"
-            elif bt in ("industrial","warehouse","retail","supermarket","commercial","service","sports_hall","sports_centre","hangar","transportation") or t.get("leisure") in ("sports_hall","sports_centre"): b["k"]="hall"
+            elif bt in ("industrial","warehouse","retail","supermarket","commercial","service","sports_hall","sports_centre","hangar","transportation","train_station") or t.get("leisure") in ("sports_hall","sports_centre"): b["k"]="hall"
             elif bt in ("garage","garages","shed","hut","roof","carport","kiosk","allotment_house","greenhouse","cabin"): b["k"]="small"
             elif bt in ("house","detached","semidetached_house","terrace","bungalow","farm"): b["k"]="house"
             rs=t.get("roof:shape","")
