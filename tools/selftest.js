@@ -187,13 +187,88 @@ async function checks() {
       add('Fahndung hinterlässt keine Polizisten-Schwemme', during - swat0 <= 8 && after - swat0 <= 2, 'swat vorher=' + swat0 + ' während=' + during + ' danach=' + after); }
     add('Nicht mehr als 22 Polizisten gleichzeitig', G.peds.filter(p => p.userData.cop && p.userData.state !== 'dead').length <= Math.round(22 * Math.min(1.4, Math.max(0.5, G.opts.peds ?? 1))), G.peds.filter(p => p.userData.cop).length + ' Polizisten');
     G.opts.god = god; P.wanted = 0; clear(); }
+  await physikChecks(add);
   window.__noAutoMenu = false;
   return R;
+}
+// Physik- und Leistungsrunde (auch einzeln: await T.physik())
+async function physikChecks(add) {
+  const P = G.player, T3 = G.THREE; const god = G.opts.god; G.opts.god = true; if (P.car) G.toggleCar(); clear();
+  const rmCar = c => { if (P.car === c) G.toggleCar(); G.scene.remove(c); const i = G.cars.indexOf(c); if (i >= 0) G.cars.splice(i, 1); };
+  // Lange freie Hauswand (≥ 25 m, 7 m Streifen davor ohne Zaun und Parkreihe)
+  const findWall = () => { for (const b of C.buildings) { if (b.h <= 5) continue; for (let e = 0; e < b.p.length; e++) { const [ax, az] = b.p[e], [bx, bz] = b.p[(e + 1) % b.p.length]; const l = Math.hypot(bx - ax, bz - az); if (l < 25) continue; let nx = -(bz - az) / l, nz = (bx - ax) / l; if (G.solidAt((ax + bx) / 2 + nx * 2, (az + bz) / 2 + nz * 2) >= 0) { nx = -nx; nz = -nz; } if (G.solidAt((ax + bx) / 2 - nx, (az + bz) / 2 - nz) < 0 || G.solidAt((ax + bx) / 2 - nx * 2, (az + bz) / 2 - nz * 2) < 0) continue; /* Innenseite muss wirklich im Haus liegen */
+    let free = true; for (let s = 0.05; s <= 0.96 && free; s += 0.1) for (let d = 0.8; d <= 7 && free; d += 1) { const x = ax + (bx - ax) * s + nx * d, z = az + (bz - az) * s + nz * d; if (G.solidAt(x, z) >= 0 || G.X.barrierNear(x, z, 1.5) || G.staticParked.some(sp => sp.active && Math.hypot(sp.x - x, sp.z - z) < 4)) free = false; }
+    if (free && Math.hypot((ax + bx) / 2 - P.pos.x, (az + bz) / 2 - P.pos.z) < 600) return { ax, az, bx, bz, nx, nz, l }; } } return null; }; const wall = findWall();
+  // 1) Auto schrammt im 10°-Winkel an der Wand entlang: kein Rückprall, bleibt in Fahrt, kommt voran
+  if (wall) { const { ax, az, bx, bz, nx, nz, l } = wall; const tx = (bx - ax) / l, tz = (bz - az) / l; const sx = ax + tx * l * 0.12 + nx * 2.6, sz = az + tz * l * 0.12 + nz * 2.6; const a = 10 * Math.PI / 180; const hx = Math.cos(a) * tx - Math.sin(a) * nx, hz = Math.cos(a) * tz - Math.sin(a) * nz;
+    for (const c of G.cars) if (c.userData.mode === 'ai' && Math.hypot(c.position.x - sx, c.position.z - sz) < 40) c.position.x += 500;
+    const c = G.makeCar(false, 'sedan'); c.position.set(sx, G.TH(sx, sz), sz); c.userData.heading = Math.atan2(hx, hz); c.rotation.y = c.userData.heading; G.scene.add(c); G.cars.push(c); P.pos.copy(c.position); P.mesh.position.copy(P.pos); G.toggleCar(); const u = c.userData;
+    let neg = 0, minDist = 1e9; const along = () => (c.position.x - ax) * tx + (c.position.z - az) * tz, dist = () => (c.position.x - ax) * nx + (c.position.z - az) * nz; const a0 = along();
+    G.keys.KeyW = true; for (let f = 0; f < 300 && along() - a0 < 18; f++) { G.update(1 / 60); if (u.speed < -0.3) neg++; minDist = Math.min(minDist, dist()); } G.keys.KeyW = false; // 18 m reichen: danach kommt die Hausecke
+    const fx = Math.sin(u.heading), fz = Math.cos(u.heading), L = u.dims.l / 2 - 0.15, W = u.dims.w / 2 - 0.05; const stuck = [[L, W], [L, -W], [-L, W], [-L, -W]].some(([p, q]) => G.solidAt(c.position.x + fx * p + fz * q, c.position.z + fz * p - fx * q) >= 0);
+    add('Auto schrammt im 10°-Winkel an der Wand entlang (kein Rückprall)', P.car === c && neg === 0 && along() - a0 > 15 && !stuck && minDist > 0.3, `${neg} Frames rückwärts, ${(along() - a0).toFixed(1)} m voran, Abstand min ${minDist.toFixed(2)} m, Dellen ${u.dents || 0}, steckt=${stuck}`); rmCar(c); }
+  else add('Auto schrammt im 10°-Winkel an der Wand entlang (kein Rückprall)', false, 'keine freie Hauswand gefunden');
+  // 2) Zwei Fahrzeuge verschiedener Größe (Sedan, Wasserwerfer) stoßen sich plausibel ab: Abstand aus den Maßen, keins in einer Wand
+  { const [ox, oz] = openPlace(); const c = G.makeCar(false, 'sedan'); c.position.set(ox, G.TH(ox, oz), oz); c.userData.heading = 0; G.scene.add(c); G.cars.push(c); P.pos.copy(c.position); P.mesh.position.copy(P.pos); G.toggleCar(); /* erst einsteigen: toggleCar bevorzugt sonst den Wasserwerfer */
+    const w = G.DEMO.makeCannon(); w.position.set(ox + 1.2, G.TH(ox + 1.2, oz), oz); w.userData.heading = 0; w.userData.mode = 'parked'; G.DEMO.addCar(w); run(90); const D = c.userData.dims, E = w.userData.dims; const d = c.position.distanceTo(w.position);
+    // Hüllen nach Maßen (wie in driveCar): keine Überlappung mehr, aber auch nicht weggeschleudert
+    const hx = Math.sin(c.userData.heading), hz = Math.cos(c.userData.heading), rx = w.position.x - c.position.x, rz = w.position.z - c.position.z; const al = rx * hx + rz * hz, ac = rx * hz - rz * hx; const pa = D.l / 2 + Math.min(E.l, E.w * 1.6) / 2 - Math.abs(al), pc = D.w / 2 + E.w / 2 - Math.abs(ac);
+    add('Fahrzeuge verschiedener Größe stoßen sich plausibel ab', P.car === c && (pa <= 0.1 || pc <= 0.1) && d < (D.w + E.w) / 2 + 3 && G.solidAt(c.position.x, c.position.z) < 0 && G.solidAt(w.position.x, w.position.z) < 0, `Abstand ${d.toFixed(2)} m, Überlappung längs ${pa.toFixed(2)} / quer ${pc.toFixed(2)} m (Sedan ${D.l.toFixed(1)}×${D.w.toFixed(1)}, Wasserwerfer ${E.l.toFixed(1)}×${E.w.toFixed(1)}), im Sedan=${P.car === c}, Wand ${G.solidAt(c.position.x, c.position.z)}/${G.solidAt(w.position.x, w.position.z)}`); rmCar(c); rmCar(w); }
+  // 3) Fußgänger auf einer Brücke: Flucht fällt nicht durchs Deck, Ragdoll liegt auf dem Deck (fester Schritt auch bei 10 Hz stabil)
+  let deckPt = null;
+  { let deck = null, bd = 1e9; for (const r of G.WORLD.roads) { if (!r || !r.ry || !r.el) continue; for (let i = 0; i < r.p.length - 1; i++) { if (!r.el[i] || !r.el[i + 1]) continue; const x = (r.p[i][0] + r.p[i + 1][0]) / 2, z = (r.p[i][1] + r.p[i + 1][1]) / 2; const dd = Math.hypot(x - P.pos.x, z - P.pos.z); if (dd >= bd) continue; const d = G.deckAt(x, z); if (d !== null && d > G.TH(x, z) + 2.5 && G.solidAt(x, z) < 0) { const dx = r.p[i + 1][0] - r.p[i][0], dz = r.p[i + 1][1] - r.p[i][1], l = Math.hypot(dx, dz) || 1; deck = { x, z, y: d, dx: dx / l, dz: dz / l }; bd = dd; } } }
+    // Kachel unter der Brücke muss gebaut sein, sonst steht die Welt (hereReady)
+    if (deck) { deckPt = deck; P.pos.set(deck.x, deck.y, deck.z); P.mesh.position.copy(P.pos); const tk = Math.floor(deck.x / G.TS) + '_' + Math.floor(deck.z / G.TS); for (let k = 0; k < 100 && !(G.TILES.get(tk) || {}).built; k++) { G.streamUpdate(0.5, true); await new Promise(r => setTimeout(r, 100)); } run(5); }
+    if (deck) { const h = G.X.spawnPedAt(deck.x, deck.z); if (h) { h.position.set(deck.x, deck.y, deck.z); const u = h.userData; u.state = 'flee'; u.fleeT = 3; P.pos.set(deck.x - deck.dx * 1.5, deck.y, deck.z - deck.dz * 1.5); P.mesh.position.copy(P.pos); run(45);
+      const d2 = G.deckAt(h.position.x, h.position.z, h.position.y + 1); add('Fußgänger auf der Brücke fällt nicht durch (Flucht)', d2 !== null && Math.abs(h.position.y - d2) < 0.4, `Figur ${h.position.y.toFixed(1)} m, Deck ${d2 === null ? '–' : d2.toFixed(1)} m, Gelände ${G.TH(h.position.x, h.position.z).toFixed(1)} m`);
+      u.hp = 0; u.state = 'dead'; u.fallDir = new T3.Vector3(deck.dx, 0, deck.dz); for (let k = 0; k < 20; k++) G.update(0.1); const R = u.rd; let below = 0, nan = 0; if (R) for (const p of R.P) { if (!Number.isFinite(p.x + p.y + p.z)) nan++; const dk = G.deckAt(p.x, p.z, p.y + 1); if ((dk === null ? G.TH(p.x, p.z) : dk) - p.y > 0.3) below++; }
+      add('Ragdoll liegt auf dem Brückendeck, fester Schritt stabil bei 10 Hz', !!R && nan === 0 && below === 0, R ? `${below} von ${R.P.length} Punkten unter dem Boden, ${nan} NaN` : 'kein Ragdoll (Modell ohne Knochen?)'); G.DEMO.removePed(h); }
+      else add('Fußgänger auf der Brücke fällt nicht durch (Flucht)', false, 'spawnPedAt lieferte nichts'); }
+    else add('Fußgänger auf der Brücke fällt nicht durch (Flucht)', false, 'keine Brücke in den gebauten Kacheln'); }
+  // 5) Partikel: Explosion, Funken, Motorrauch und Spray laufen über einen Pool (ein instanziertes Quad = ein Draw-Call), keine Sprites je Partikel
+  { const [ox, oz] = openPlace(); const pos = new T3.Vector3(ox, G.TH(ox, oz) + 1, oz); const sprites0 = G.scene.children.filter(o => o.isSprite).length;
+    G.WPN.boom(pos.clone(), 'test'); G.burst(pos.clone(), 0xff8800, 30, 4); G.smoke(pos.clone(), 0x888888); G.puff(pos.clone(), 0xf2f8ff, 0.5, 0.6, new T3.Vector3(0, 2, 0), 2, 0.4, false); run(2);
+    const sprites1 = G.scene.children.filter(o => o.isSprite).length; const n = G.FX.count; G.camera.position.copy(pos).add(new T3.Vector3(0, 3, 12)); G.camera.lookAt(pos); G.camera.updateMatrixWorld();
+    G.renderer.render(G.scene, G.camera); const c1 = G.renderer.info.render.calls; G.FX.mesh.visible = false; G.renderer.render(G.scene, G.camera); const c0 = G.renderer.info.render.calls; G.FX.mesh.visible = true; G.camera.userData.init = false;
+    add('Partikel (Explosion, Funken, Rauch, Spray) als ein Draw-Call aus dem Pool', n >= 60 && c1 - c0 === 1 && sprites1 === sprites0 && G.FX.count <= G.FX.max, `${n} Partikel im Pool (max ${G.FX.max}), ${c1 - c0} Draw-Call(s) für die Partikel, Sprites ${sprites0} → ${sprites1}`);
+    run(600); add('Partikel-Pool leert sich wieder', G.FX.count < 20, G.FX.count + ' Partikel nach 10 s'); }
+  // 6) Sparmodus (Niedrig/schwache GPU): Figuren-, Auto- und Straßenmaterial Lambert, kein Umgebungslicht; Anisotropie überall aus der Stufe
+  { const mats = new Set(); for (const n of Object.keys(G.CHAR)) G.CHAR[n].scene.traverse(o => { if (o.isMesh) (Array.isArray(o.material) ? o.material : [o.material]).forEach(m => mats.add(m)); }); for (const n of Object.keys(G.CAR_TPL)) G.CAR_TPL[n].root.traverse(o => { if (o.isMesh) (Array.isArray(o.material) ? o.material : [o.material]).forEach(m => mats.add(m)); });
+    const nonL = [...mats].filter(m => !m.isMeshLambertMaterial && !m.isMeshBasicMaterial).length; const noMap = [...mats].filter(m => m.isMeshLambertMaterial && !m.map && !m.color).length; const road = G.roadMat;
+    if (G.LOW_GFX) add('Sparmodus: Vorlagen Lambert, Straße Lambert, kein Umgebungslicht', nonL === 0 && noMap === 0 && G.scene.environment === null && !!road && road.isMeshLambertMaterial && !!road.map, `${mats.size} Materialien, ${nonL} nicht Lambert, Umgebung=${!!G.scene.environment}, Straße=${road && road.type}`);
+    else add('Normalmodus: Vorlagen PBR mit Umgebungslicht', nonL > 0 && !!G.scene.environment, `${mats.size} Materialien, ${nonL} PBR, Umgebung=${!!G.scene.environment}`);
+    let bad = 0, n = 0; const ex = new Set(); G.scene.traverse(o => { const ms = o.material ? (Array.isArray(o.material) ? o.material : [o.material]) : []; for (const m of ms) for (const k of ['map', 'normalMap', 'roughnessMap', 'emissiveMap']) { const t = m[k]; if (!t) continue; n++; if (t.anisotropy !== G.ANISO) { bad++; ex.add(o.type + '/' + k + '=' + t.anisotropy); } } });
+    add('Anisotropie überall gleich der Qualitätsstufe (' + G.ANISO + ')', n > 20 && bad === 0, `${bad} von ${n} Texturen abweichend${ex.size ? ': ' + [...ex].slice(0, 4).join(' ') : ''}`); }
+  // 7) Kachel-Speicher: ferne, ungebaute Kacheln werden samt DEM, Rastern und Minikarte freigegeben; eine lange Fahrt lässt Geometrien und Kachelzahl nicht wachsen
+  { const tk = (x, z) => Math.floor(x / G.TS) + '_' + Math.floor(z / G.TS); const ready = (x, z) => { for (let a = -1; a <= 1; a++) for (let b = -1; b <= 1; b++) { const k = (Math.floor(x / G.TS) + a) + '_' + (Math.floor(z / G.TS) + b); if (G.WIDX.tiles[k] && !(G.TILES.get(k) || {}).built) return false; } return true; }; // 3×3 gebaut: vergleichbarer Stand vor und nach der Tour
+    const settle = async (x, z) => { P.pos.set(x, G.TH(x, z), z); P.mesh.position.copy(P.pos); for (let k = 0; k < 400 && !ready(x, z); k++) { G.streamUpdate(0.5, true); run(2); await new Promise(r => setTimeout(r, 30)); } };
+    const geoms = () => { G.renderer.render(G.scene, G.camera); return G.renderer.info.memory.geometries; }; // erst ein Render lädt neue Geometrien hoch (versteckter Tab rendert sonst nicht)
+    if (P.car) G.toggleCar(); const x0 = P.pos.x, z0 = P.pos.z; await settle(x0, z0); const geo0 = geoms(), tiles0 = G.TILES.size;
+    const idx = G.WIDX.tiles; const reach = dir => { let s = 0; while (s < 7 && idx[tk(x0 + (s + 1) * dir * G.TS, z0)]) s++; return s; }; const dir = reach(1) >= reach(-1) ? 1 : -1; const far = reach(dir);
+    for (let s = 1; s <= far; s++) await settle(x0 + s * dir * G.TS, z0); const tilesFar = G.TILES.size, demFar = G.DEMN.size, bNull = G.WORLD.buildings.filter(b => !b).length;
+    for (let s = far - 1; s >= 0; s--) await settle(x0 + s * dir * G.TS, z0);
+    const geo1 = geoms(), cap = (2 * (G.R_DATA + 2) + 1) ** 2;
+    add('Kacheldaten außerhalb R_DATA+2 werden freigegeben', far >= 4 && tilesFar <= cap && G.TILES.size <= cap && G.DEMN.size <= cap && G.DEMT.size <= cap && bNull > 0, `${far} Kacheln weit: ${tilesFar} Kacheln, ${demFar} DEM geladen (Deckel ${cap}), ${bNull} Gebäudeplätze frei; zurück: ${G.TILES.size} Kacheln (Start ${tiles0})`);
+    add('Geometrien wachsen bei langer Fahrt nicht', geo1 <= geo0 + 40, `${geo0} → ${geo1} Geometrien nach ${far * 2 * G.TS / 1000} km`); }
+  // 8) Sichtlinie: Explosion hinter einer Hauswand wirkt nur ×0,2; Wurfgeschoss zittert nicht in einer Figur; Kamera-Mindesthöhe kennt das Brückendeck
+  const wall8 = findWall(); // neu suchen: die Kachel-Tour hat die Wand vom Anfang womöglich entladen
+  if (wall8) { const { ax, az, bx, bz, nx, nz } = wall8; const mx = ax + (bx - ax) * 0.5 + nx * 1.0, mz = az + (bz - az) * 0.5 + nz * 1.0, ix = ax + (bx - ax) * 0.5 - nx * 1.0, iz = az + (bz - az) * 0.5 - nz * 1.0; // 1 m vor bzw. 1 m hinter der Wand (im Haus)
+    const lfIn = G.X.losFactor(ix, G.TH(ix, iz) + 0.5, iz, mx, G.TH(mx, mz) + 1, mz), lfFree = G.X.losFactor(mx, G.TH(mx, mz) + 0.5, mz, mx + nx * 3, G.TH(mx, mz) + 1, mz + nz * 3);
+    const h = G.X.spawnPedAt(mx, mz); let hp = null; if (h) { h.userData.state = 'npc'; G.WPN.boom(new T3.Vector3(ix, G.TH(ix, iz) + 0.5, iz), 'test'); hp = h.userData.hp; G.DEMO.removePed(h); }
+    add('Explosion hinter der Wand wirkt nur ×0,2 (Sichtlinie)', lfIn === 0.2 && lfFree === 1 && hp !== null && hp > 60, `Faktor hinter Wand ${lfIn}, frei ${lfFree}, Innenpunkt im Haus ${G.solidAt(ix, iz)}, Figur 2 m von der Explosion (Wand dazwischen): ${hp === null ? 'kein Ziel' : hp.toFixed(0) + ' HP'}`); }
+  else add('Explosion hinter der Wand wirkt nur ×0,2 (Sichtlinie)', false, 'keine freie Hauswand gefunden');
+  { const [ox, oz] = openPlace(); const h = G.X.spawnPedAt(ox + 3, oz); if (h) { h.userData.state = 'npc'; const p = G.WPN.spawnProj('smoke', new T3.Vector3(ox, G.TH(ox, oz) + 1.2, oz), new T3.Vector3(6, 1.5, 0), 'test'); let flips = 0, sx = Math.sign(p.v.x); for (let f = 0; f < 120; f++) { G.update(1 / 60); const s = Math.sign(p.v.x); if (s && s !== sx) { flips++; sx = s; } }
+    add('Wurfgeschoss zittert nicht in der Figur (höchstens eine Umkehr)', flips <= 1, flips + ' Richtungswechsel in 2 s'); G.DEMO.removePed(h); } else add('Wurfgeschoss zittert nicht in der Figur', false, 'spawnPedAt lieferte nichts'); }
+  if (deckPt) { const cd0 = G.opts.camdist; G.opts.camdist = 2; /* weiter Abstand + Blick nach unten: die Wunschhöhe liegt unter dem Deck, die Mindesthöhe muss sie aufs Deck heben */ P.pos.set(deckPt.x, deckPt.y, deckPt.z); P.mesh.position.copy(P.pos); G.camYaw.v = Math.atan2(deckPt.dx, deckPt.dz); G.camPitch.v = -0.6; G.camera.userData.init = false; run(40);
+    const cp = G.camera.position, sf = G.surfAt(cp.x, cp.z, deckPt.y + 1), th = G.TH(cp.x, cp.z); // Deck (oder Rampe) unter der Kamera selbst
+    add('Kamera-Mindesthöhe kennt das Brückendeck', sf > th + 1.5 && cp.y > sf + 0.5, `Kamera ${cp.y.toFixed(1)} m, Deck unter der Kamera ${sf.toFixed(1)} m, Gelände ${th.toFixed(1)} m, Pitch ${G.camPitch.v.toFixed(2)}`); G.camPitch.v = 0.1; G.opts.camdist = cd0; }
+  G.opts.god = god; clear();
 }
 // Gerade Strecke ohne Zaun und Parkreihe bis kurz vor das Gebäude
 function freePath(p, tx, tz) { const L = Math.hypot(tx - p.x, tz - p.z); for (let k = 3; k < L; k += 1.5) { const x = p.x + (tx - p.x) * k / L, z = p.z + (tz - p.z) * k / L; if (G.solidAt(x, z) >= 0) return k > 12; if (G.X.barrierNear(x, z, 1.3) || G.staticParked.some(sp => Math.hypot(sp.x - x, sp.z - z) < 3)) return false; } return false; }
 function polyArea(p) { let a = 0; for (let i = 0, j = p.length - 1; i < p.length; j = i++) a += (p[j][0] * p[i][1] - p[i][0] * p[j][1]); return a / 2; }
-window.T = { run, snap, unsnap, ms, checks, clear, openPlace };
+async function physik() { const R = []; const add = (name, ok, detail = '') => R.push({ name, ok: !!ok, detail }); if (document.getElementById('start').style.display !== 'none') { document.getElementById('go').click(); await new Promise(r => setTimeout(r, 800)); } window.__noAutoMenu = true; if (document.getElementById('menu').style.display === 'flex') G.X.closeMenu(); await physikChecks(add); window.__noAutoMenu = false; return R; }
+window.T = { run, snap, unsnap, ms, checks, clear, openPlace, physik };
 export default window.T;
 // Echte GPU-Zeit eines Bildes (Median aus n Messungen), unabhängig davon, ob das Fenster sichtbar ist
 async function gpu(n = 5) { const gl = G.renderer.getContext(), ext = gl.getExtension('EXT_disjoint_timer_query_webgl2'); if (!ext) return null; const res = [];

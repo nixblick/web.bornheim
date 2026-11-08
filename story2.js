@@ -17,7 +17,7 @@ export function story2Chapters(K) {
     return { name, real, poly: a.p, yard, gate, road: [g.x, g.z], h: g.h };
   }
   const HGS = schoolInfo('Stauffenbergschule', 'Helmholtz-Gesamtschule'), LGO = schoolInfo('Comeniusschule', 'Lessing-Gymnasium Ost'), BRS = schoolInfo('Kirchnerschule', 'Brückenschule');
-  const sb = CITY.buildings.find(b => /Saalbau/.test(b.n || '')); const sbc = sb ? sb.p.reduce((a, p) => [a[0] + p[0] / sb.p.length, a[1] + p[1] / sb.p.length], [0, 0]) : [-369, 672];
+  const sb = CITY.buildings.find(b => b && /Saalbau/.test(b.n || '')); const sbc = sb ? sb.p.reduce((a, p) => [a[0] + p[0] / sb.p.length, a[1] + p[1] / sb.p.length], [0, 0]) : [-369, 672];
   const sr = K.nearestOn(roads6, sbc[0], sbc[1]); const STADT = [sr.x, sr.z];
   const START = D.freeSpot(HGS.gate[0], HGS.gate[1], 1.5);
   const NAMES = { selin: ['Selin', '#7de0ff'], mo: ['Mo', '#ffb35b'], kessler: ['Dr. Kessler', '#cfcfcf'], brandt: ['Frau Brandt', '#ff7070'], adler: ['Herr Adler', '#b6f08a'] };

@@ -1,13 +1,13 @@
 // Demos, Polizei-Eskalation, Wasserwerfer, Social-Feed und Ruf. Alle Namen, Accounts und Firmen sind erfunden.
 export function initDemo(X, W) {
-  const { THREE, scene, camera, player, peds, cars, shootables, keys, camYaw, camPitch, opts, world, CITY, TH, solidAt, moveWithCollision, makeHuman, makeCar, playAnim, animateWalk, sfx, SND, showMsg, raiseWanted, camShake, canvasTex, rnd, clamp, pick, lerpAngle, driveCar, carFx, carTerrain, distSegSq } = X;
+  const { THREE, scene, camera, player, peds, cars, shootables, keys, camYaw, camPitch, opts, world, CITY, TH, floorAt, solidAt, moveWithCollision, makeHuman, makeCar, playAnim, animateWalk, sfx, SND, showMsg, raiseWanted, camShake, canvasTex, rnd, clamp, pick, lerpAngle, driveCar, carFx, carTerrain, distSegSq } = X;
   const V3 = THREE.Vector3; const $ = id => document.getElementById(id);
   const emit = (ev, pos, data) => { for (const f of X.listeners) f(ev, pos, data || {}); };
 
   // ---------- Wegenetz für Demozüge (Dijkstra über die Straßen) ----------
   const NODES = new Map(); const nk = (x, z) => Math.round(x * 2) + ',' + Math.round(z * 2);
   function addRoads(list) { for (const r of list) { if (r.mw || r.ry) continue; const cost = r.w >= 8 ? 1 : r.w >= 6 ? 1.15 : 1.6;
-    for (let i = 0; i < r.p.length - 1; i++) { const [ax, az] = r.p[i], [bx, bz] = r.p[i + 1]; const ka = nk(ax, az), kb = nk(bx, bz); if (ka === kb) continue; if (!NODES.has(ka)) NODES.set(ka, { x: ax, z: az, e: [] }); if (!NODES.has(kb)) NODES.set(kb, { x: bx, z: bz, e: [] }); const L = Math.hypot(bx - ax, bz - az) * cost; NODES.get(ka).e.push([kb, L]); NODES.get(kb).e.push([ka, L]); } } }
+    for (let i = 0; i < r.p.length - 1; i++) { const [ax, az] = r.p[i], [bx, bz] = r.p[i + 1]; const ka = nk(ax, az), kb = nk(bx, bz); if (ka === kb) continue; if (!NODES.has(ka)) NODES.set(ka, { x: ax, z: az, e: [] }); if (!NODES.has(kb)) NODES.set(kb, { x: bx, z: bz, e: [] }); const L = Math.hypot(bx - ax, bz - az) * cost; const ea = NODES.get(ka).e; if (ea.some(e => e[0] === kb)) continue; /* Kachel neu geladen: keine doppelten Kanten */ ea.push([kb, L]); NODES.get(kb).e.push([ka, L]); } } }
   addRoads(CITY.roads);
   function nearestNode(x, z) { let best = 1e18, bk = null; for (const [k, n] of NODES) { const d = (n.x - x) ** 2 + (n.z - z) ** 2; if (d < best && n.e.length) { best = d; bk = k; } } return bk; }
   function route(ax, az, bx, bz) {
@@ -156,7 +156,7 @@ export function initDemo(X, W) {
     if (sp > 0) { const x0 = h.position.x, z0 = h.position.z; moveWithCollision(h.position, dx / L * sp * dt, dz / L * sp * dt, 0.28); h.rotation.y = lerpAngle(h.rotation.y, Math.atan2(dx, dz), Math.min(1, dt * 6));
       if (Math.hypot(h.position.x - x0, h.position.z - z0) < sp * dt * 0.3) { u.wallT = (u.wallT || 0) + dt; if (u.wallT > 0.7) { u.wallT = 0; u.waitT = rnd(2.5, 5); u.pose = null; } } else u.wallT = 0; }
     else h.rotation.y = lerpAngle(h.rotation.y, d.state === 'halt' && d.pol.lineS != null ? linePt(d, 0).h : T.h, Math.min(1, dt * 3));
-    h.position.y = TH(h.position.x, h.position.z);
+    h.position.y = floorAt(h.position.x, h.position.z, h.position.y + 0.3);
     if (u.mixer) { if (sp > 0.05) { u.pose = null; animateWalk(h, u.t, sp * 2.3); } else { if (!u.pose) u.pose = (d.state === 'halt' || d.state === 'kessel') && Math.random() < (d.state === 'kessel' ? 0.35 : 0.5) && X.CHAR[u.charName].clips.Sitting ? 'Sitting' : X.CHAR[u.charName].clips.Clapping && Math.random() < 0.45 ? 'Clapping' : X.CHAR[u.charName].clips.Wave && Math.random() < 0.3 ? 'Wave' : 'idle'; playAnim(h, u.pose); if (!u.lod) { u.acc = (u.acc || 0) + dt; if (h.position.distanceToSquared(camera.position) > 900 && ((u.fr = (u.fr || 0) + 1) & 1)) {} else { u.mixer.update(u.acc); u.acc = 0; } } } }
     else animateWalk(h, u.t, sp * 2.3);
     if (u.sign) { u.sign.rotation.z = Math.sin(u.t * 2.1 + i) * 0.09; u.sign.position.y = Math.abs(Math.sin(u.t * 3 + i)) * 0.06; }
@@ -196,7 +196,7 @@ export function initDemo(X, W) {
     else { const f = frontS(d); const p = posAt(d.trail, f - 3 - (i >> 1) * 6); const side = i % 2 ? 1 : -1; const off = (d.leadPlayer ? 3.2 : 3.6) + 1.2; tx = p.x + Math.cos(p.h) * side * off; tz = p.z - Math.sin(p.h) * side * off; face = p.h; if (P.lineOpened && P.stage === 2) { const q = linePt(d, 0); tx = q.x + Math.cos(q.h) * side * 5.5; tz = q.z - Math.sin(q.h) * side * 5.5; } }
     const dx = tx - h.position.x, dz = tz - h.position.z, L = Math.hypot(dx, dz); const sp = L > 0.4 ? Math.min(run || L > 5 ? 4.6 : 1.8, L * 2) : 0;
     if (sp > 0) { moveWithCollision(h.position, dx / L * sp * dt, dz / L * sp * dt, 0.3); h.rotation.y = lerpAngle(h.rotation.y, Math.atan2(dx, dz), Math.min(1, dt * 8)); } else if (face != null) h.rotation.y = lerpAngle(h.rotation.y, face, Math.min(1, dt * 4));
-    h.position.y = TH(h.position.x, h.position.z); u.aiming = false; animateWalk(h, u.t, sp * 1.6);
+    h.position.y = floorAt(h.position.x, h.position.z, h.position.y + 0.3); u.aiming = false; animateWalk(h, u.t, sp * 1.6);
     // Spieler festnehmen: kurz festhalten reicht
     const dp = h.position.distanceTo(player.pos);
     if ((hostile || (P.stage >= 5 && dp < 10) || u.task === 'arrestPlayer') && !player.car && !player.dead && dp < 1.35) { u.grab += dt; if (u.hitT <= 0 && player.wanted >= 2) { u.hitT = 1.2; X.hurtPlayer('baton', 9); sfx('punch', 0.8); if (u.mixer) { playAnim(h, 'Sword_Slash', { once: true, fade: 0.05 }); u.actT = 0.6; } } if (u.grab > 1.4) { busted(); u.grab = 0; } } else u.grab = Math.max(0, u.grab - dt);
@@ -278,7 +278,7 @@ export function initDemo(X, W) {
       else if (d.state === 'gather') { d.joinT -= dt; if (d.joinT <= 0 && d.members.length < 14 + d.energy * 10) { d.joinT = rnd(1.5, 3.5); arrive(d); } if (d.members.length >= 14 && d.age > 25 && d.goal) { const r = route(d.cx, d.cz, d.goal[0], d.goal[1]); if (r && r.length > 2) { d.trail = trailFrom(r); d.total = d.trail[d.trail.length - 1].s; d.s = 0; d.state = 'march'; post('kollektiv', 'Wir laufen los! Kommt dazu! #Hitzefrei', 640); } else d.goal = null; } }
       else if (d.state === 'rally') { d.rallyT += dt; if (d.rallyT > (d.rallyDur ?? 50)) endDemo(d, 'success'); }
       if (d.state === 'kessel' && !player.car) { const dx = player.pos.x - d.cx, dz = player.pos.z - d.cz, L = Math.hypot(dx, dz); if (d.playerIn === undefined) d.playerIn = L < d.kesselR; if (d.playerIn && L > d.kesselR - 0.6 && L < d.kesselR + 2) { const a = Math.atan2(dz, dx); const gap = d.pol.cops.some(c => { const cu = c.userData; if (cu.state === 'riot') return false; const ca = Math.atan2(c.position.z - d.cz, c.position.x - d.cx); return Math.abs(((ca - a + Math.PI) % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI) - Math.PI) < 0.45; }) || W.inSmoke(player.pos);
-          if (!gap) { player.pos.x = d.cx + dx / L * (d.kesselR - 0.6); player.pos.z = d.cz + dz / L * (d.kesselR - 0.6); if (Math.random() < dt) showMsg('KESSEL – KEIN DURCHKOMMEN', 900); } else d.playerIn = false; } else if (L > d.kesselR + 2) d.playerIn = false; }
+          if (!gap) { const tx = d.cx + dx / L * (d.kesselR - 0.6), tz = d.cz + dz / L * (d.kesselR - 0.6); moveWithCollision(player.pos, tx - player.pos.x, tz - player.pos.z, 0.35, player.pos.y); /* nicht in Wände setzen */ if (Math.random() < dt) showMsg('KESSEL – KEIN DURCHKOMMEN', 900); } else d.playerIn = false; } else if (L > d.kesselR + 2) d.playerIn = false; }
       // Spannung und Energie
       d.quietT += dt; const st = d.pol.stage; const atLine = d.state === 'halt' || (d.leadPlayer && st === 2 && !d.pol.lineOpened); d.tension += dt * (atLine ? 0.012 : d.state === 'kessel' ? 0.008 : st >= 1 ? 0.0012 : 0); if (d.quietT > 10 && d.state !== 'kessel' && !atLine) d.tension -= dt * 0.006; d.tension = clamp(d.tension, 0, 1.2); d.energy = clamp(d.energy - dt * 0.006, 0, 1);
       if (d.state === 'march' || d.state === 'lead' || d.state === 'halt') { d.joinT -= dt; if (d.joinT <= 0 && d.members.length < d.max * (0.6 + d.energy * 0.4)) { d.joinT = rnd(3, 7) / (0.3 + d.energy); arrive(d); } }
@@ -321,7 +321,7 @@ export function initDemo(X, W) {
     if (followers.length >= (X.rallyLimit || 8)) { const fl = followers; followers = []; for (const f of fl) f.userData.follow = false; const d2 = spawnDemo({ x: player.pos.x, z: player.pos.z, leadPlayer: true, members: fl, n: fl.length + 4, max: 32 }); d2.energy = 0.8; X.card('SPONTANDEMO', 'Du führst. G: Sprechchor oder deeskalieren · V: filmen'); post('kollektiv', 'Spontandemo in Bornheim! Läuft gerade vorne weg: ' + myHandle() + ' 🔥', 1300); emit('demoFormed', player.pos, { demo: d2, leadPlayer: true }); addRep('kollektiv', 4); }
   }
   function updateFollowers(dt) { for (let i = followers.length - 1; i >= 0; i--) { const h = followers[i], u = h.userData; if (u.state !== 'follow') { u.follow = false; followers.splice(i, 1); continue; } u.t += dt; const fx = Math.sin(player.yaw), fz = Math.cos(player.yaw); const tx = player.pos.x - fx * (2.2 + (i >> 1) * 1.2) + fz * u.jit[0], tz = player.pos.z - fz * (2.2 + (i >> 1) * 1.2) - fx * u.jit[0]; const dx = tx - h.position.x, dz = tz - h.position.z, L = Math.hypot(dx, dz);
-      const sp = L > 0.5 ? clamp(L * 1.3, 0.6, L > 8 ? 6.5 : 3.6) : 0; if (sp) { moveWithCollision(h.position, dx / L * sp * dt, dz / L * sp * dt, 0.28); h.rotation.y = Math.atan2(dx, dz); } h.position.y = TH(h.position.x, h.position.z); animateWalk(h, u.t, sp * 2.2); if (L > 70) { u.state = 'walk'; } } }
+      const sp = L > 0.5 ? clamp(L * 1.3, 0.6, L > 8 ? 6.5 : 3.6) : 0; if (sp) { moveWithCollision(h.position, dx / L * sp * dt, dz / L * sp * dt, 0.28); h.rotation.y = Math.atan2(dx, dz); } h.position.y = floorAt(h.position.x, h.position.z, h.position.y + 0.3); animateWalk(h, u.t, sp * 2.2); if (L > 70) { u.state = 'walk'; } } }
 
   // ---------- Filmen (Taste V) ----------
   let filming = false, clip = 0, filmT = 0; const recEl = $('rec');
