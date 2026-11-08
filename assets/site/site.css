@@ -68,3 +68,11 @@ footer .right { margin-left: auto; }
   .nav .links a:not(.btn) { display: none; }
   section { padding: 52px 0; }
 }
+
+/* BETA-Stempel */
+.beta { position: absolute; z-index: 2; top: clamp(70px, 12vh, 120px); right: clamp(16px, 6vw, 90px); transform: rotate(-12deg); pointer-events: none;
+  border: 6px solid #e8333a; border-radius: 14px; padding: 6px 22px 8px; color: #e8333a; text-align: center; font-weight: 900; letter-spacing: 6px;
+  font-size: clamp(54px, 10vw, 128px); line-height: .9; background: #0b0d1255; box-shadow: 0 0 0 3px #e8333a33 inset;
+  -webkit-mask-image: repeating-linear-gradient(115deg, #000 0 9px, #000c 9px 10px, #000 10px 18px); mask-image: repeating-linear-gradient(115deg, #000 0 9px, #000c 9px 10px, #000 10px 18px); }
+.beta small { display: block; font-size: clamp(11px, 1.4vw, 16px); letter-spacing: 2px; font-weight: 800; margin-top: 4px; }
+@media (max-width: 560px) { .beta { top: 64px; right: 12px; border-width: 4px; padding: 4px 12px 6px; } }

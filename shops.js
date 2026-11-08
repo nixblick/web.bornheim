@@ -1,7 +1,7 @@
 // Läden: mit Geld einkaufen. Supermärkte führen alles, was das Spiel kennt, Fachläden einen Teil.
 // Läden kommen aus den OSM-Daten (Shop-Punkte und Gebäude mit Laden), Eingang = nächste Hauswand.
 export function initShops(X, W) {
-  const { player, CITY, sfx, showMsg, nearestEdge, edgeNormal, keys } = X;
+  const { player, CITY, sfx, showMsg, nearestEdge, edgeNormal, keys, solidAt } = X;
   const $ = id => document.getElementById(id);
   // Sortiment: id, Name, Preis, Wirkung
   const ITEMS = {
@@ -28,10 +28,21 @@ export function initShops(X, W) {
     fast_food: 'food', restaurant: 'food', cafe: 'food', ice_cream: 'food', bakery: 'bakery', pastry: 'bakery', pharmacy: 'pharmacy', chemist: 'pharmacy', doityourself: 'hardware', hardware: 'hardware', paint: 'hardware', sports: 'sports', outdoor: 'sports' };
   // Läden aus den geladenen Daten sammeln (wächst mit den Kacheln)
   const shops = []; let seenP = 0, seenB = 0;
-  function door(x, z) { const ne = nearestEdge(x, z, 25); if (!ne) return [x, z]; const e = edgeNormal(ne.b.p, ne.e); let nx = e.nx, nz = e.nz; const mx = e.ax + e.dx / 2, mz = e.az + e.dz / 2; const bx = ne.b.p.reduce((a, p) => a + p[0], 0) / ne.b.p.length, bz = ne.b.p.reduce((a, p) => a + p[1], 0) / ne.b.p.length; if ((mx - bx) * nx + (mz - bz) * nz < 0) { nx = -nx; nz = -nz; } const t = Math.max(0, Math.min(1, ((x - e.ax) * e.dx + (z - e.az) * e.dz) / (e.l * e.l))); return [e.ax + e.dx * t + nx * 1.2, e.az + e.dz * t + nz * 1.2]; }
-  function scan() {
-    for (; seenP < CITY.pois.length; seenP++) { const p = CITY.pois[seenP]; const k = KIND[p.k]; if (!k) continue; const [x, z] = door(p.x, p.z); shops.push({ x, z, k, name: p.n || TYPES[k].n }); }
-    for (; seenB < CITY.buildings.length; seenB++) { const b = CITY.buildings[seenB]; if (!b) continue; /* freigegebene Kachel */ const k = KIND[b.shop]; if (!k) continue; const cx = b.p.reduce((a, p) => a + p[0], 0) / b.p.length, cz = b.p.reduce((a, p) => a + p[1], 0) / b.p.length; const [x, z] = door(cx, cz); if (shops.some(s => Math.hypot(s.x - x, s.z - z) < 6)) continue; shops.push({ x, z, k, name: b.n || TYPES[k].n }); }
+  // Eingang: Punkt 1,2 m vor einer freien Außenwand des nächsten Hauses, von der aus die Straße frei zu sehen ist (sonst Innenhof).
+  // Zuerst die nächste Kante, dann die übrigen nach Abstand (Reihenhäuser teilen Wände), zuletzt die nächste freie Stelle drumherum.
+  const free = (x, z) => solidAt(x, z) < 0 && solidAt(x + 0.8, z) < 0 && solidAt(x - 0.8, z) < 0 && solidAt(x, z + 0.8) < 0 && solidAt(x, z - 0.8) < 0;
+  function reach(x, z) { const r = X.nearestRoadDir && X.nearestRoadDir(x, z, 45); if (!r) return true; const dx = r.x - x, dz = r.z - z, L = Math.hypot(dx, dz); for (let s = 1.5; s < L - r.w / 2; s += 1.5) if (solidAt(x + dx / L * s, z + dz / L * s) >= 0) return false; return true; }
+  function door(x, z) {
+    const ne = nearestEdge(x, z, 25); if (!ne) return free(x, z) ? [x, z] : spiral(x, z); const P = ne.b.p;
+    const order = P.map((_, i) => { const e = edgeNormal(P, i); const t = Math.max(0, Math.min(1, ((x - e.ax) * e.dx + (z - e.az) * e.dz) / (e.l * e.l))); const px = e.ax + e.dx * t, pz = e.az + e.dz * t; return { e, t, d: (px - x) ** 2 + (pz - z) ** 2 + (i === ne.e ? -1e6 : 0) }; }).sort((a, b) => a.d - b.d);
+    for (const o of order) { const e = o.e; if (e.l < 2.5) continue; const t = Math.max(0.15, Math.min(0.85, o.t)); const bx = e.ax + e.dx * t, bz = e.az + e.dz * t;
+      for (const sg of [1, -1]) { const qx = bx + e.nx * sg * 1.2, qz = bz + e.nz * sg * 1.2; if (solidAt(bx - e.nx * sg * 0.6, bz - e.nz * sg * 0.6) !== ne.bi) continue; /* nur die Seite, auf der das eigene Haus liegt, ist innen */ if (free(qx, qz) && free(bx + e.nx * sg * 2.4, bz + e.nz * sg * 2.4) && reach(qx, qz)) return [qx, qz]; } }
+    return spiral(x, z);
+  }
+  function spiral(x, z) { for (let r = 2; r < 26; r += 2) for (let a = 0; a < 6.283; a += 2 / r) { const px = x + Math.cos(a) * r, pz = z + Math.sin(a) * r; if (free(px, pz) && reach(px, pz)) return [px, pz]; } return null; }
+  function scan() { const t0 = performance.now(); const busy = () => performance.now() - t0 > 3; /* Zeitbudget: Rest im nächsten Durchlauf */
+    for (; seenP < CITY.pois.length && !busy(); seenP++) { const p = CITY.pois[seenP]; const k = KIND[p.k]; if (!k) continue; const dp = door(p.x, p.z); if (!dp) continue; const [x, z] = dp; shops.push({ x, z, ox: p.x, oz: p.z, k, name: p.n || TYPES[k].n }); }
+    for (; seenB < CITY.buildings.length && !busy(); seenB++) { const b = CITY.buildings[seenB]; if (!b) continue; /* freigegebene Kachel */ const k = KIND[b.shop]; if (!k) continue; const cx = b.p.reduce((a, p) => a + p[0], 0) / b.p.length, cz = b.p.reduce((a, p) => a + p[1], 0) / b.p.length; const dp = door(cx, cz); if (!dp) continue; const [x, z] = dp; if (shops.some(s => Math.hypot(s.x - x, s.z - z) < 6)) continue; shops.push({ x, z, ox: cx, oz: cz, k, name: b.n || TYPES[k].n }); }
   }
   // Oberfläche
   const st = document.createElement('style'); st.textContent = `#shop{position:fixed;inset:0;background:#000a;display:none;align-items:center;justify-content:center;z-index:40;font-family:system-ui,sans-serif}
@@ -67,12 +78,12 @@ export function initShops(X, W) {
   // Nähe prüfen, Hinweis zeigen, Taste F
   let near = null, scanT = 0;
   function update(dt) {
-    scanT -= dt; if (scanT <= 0) { scanT = 1; scan(); }
+    scanT -= dt; if (scanT <= 0) { scanT = seenP < CITY.pois.length || seenB < CITY.buildings.length ? 0.1 : 1; scan(); }
     near = null; if (player.car || player.dead) return null; let bd = 3.2 * 3.2;
-    for (const s of shops) { const d = (s.x - player.pos.x) ** 2 + (s.z - player.pos.z) ** 2; if (d < bd) { bd = d; near = s; } }
+    for (const s of shops) { let d = (s.x - player.pos.x) ** 2 + (s.z - player.pos.z) ** 2; if (d < 900 && !s.chk) { s.chk = 1; /* Nachprüfung, wenn die Nachbarkacheln sicher geladen sind */ if (!free(s.x, s.z) || !reach(s.x, s.z)) { const dp = door(s.ox ?? s.x, s.oz ?? s.z); if (dp) { [s.x, s.z] = dp; d = (s.x - player.pos.x) ** 2 + (s.z - player.pos.z) ** 2; } else s.dead = true; } } if (!s.dead && d < bd) { bd = d; near = s; } }
     return near ? `F · ${TYPES[near.k].ic} ${near.name} (${TYPES[near.k].n})` : null;
   }
   addEventListener('keydown', e => { if (X.interiors) return; /* Taste F übernimmt interiors.js (Laden betreten) */ if (e.code !== 'KeyF' || X.shopOpen || !near || X.menuOpen && X.menuOpen()) return; if (player.wanted > 0) { showMsg('POLIZEI SUCHT DICH – KEIN EINKAUF', 1200); return; } open(near); });
-  X.mmHooks.push((ctx, P, R) => { for (const s of shops) { const [x, y] = P(s.x, s.z); if (x * x + y * y > R * R) continue; ctx.fillStyle = s.k === 'super' ? '#3fd0ff' : '#7fa8b8'; ctx.fillRect(x - 2, y - 2, 4, 4); } });
+  X.mmHooks.push((ctx, P, R) => { for (const s of shops) { if (s.dead) continue; const [x, y] = P(s.x, s.z); if (x * x + y * y > R * R) continue; ctx.fillStyle = s.k === 'super' ? '#3fd0ff' : '#7fa8b8'; ctx.fillRect(x - 2, y - 2, 4, 4); } });
   return { update, shops, open, close, ITEMS, TYPES, buy, scan, get near() { return near; } };
 }

@@ -17,7 +17,8 @@
   #minimap{width:220px;height:220px;border-radius:50%;border:2px solid #fff6;box-shadow:0 0 0 4px #0008;background:#111}
   #street{position:absolute;right:20px;bottom:22px;font-size:26px;font-weight:700;letter-spacing:.5px;text-shadow:0 2px 6px #000;text-align:right}
   #hint{position:absolute;left:50%;bottom:70px;transform:translateX(-50%);font-size:15px;background:#000a;padding:6px 14px;border-radius:8px}
-  #stars{position:absolute;right:20px;top:16px;font-size:26px;letter-spacing:4px;color:#ffd84a;text-shadow:0 1px 4px #000}
+  #stars{position:absolute;right:20px;top:16px;font-size:26px;letter-spacing:4px;text-shadow:0 1px 4px #000}#stars i{font-style:normal;color:#ffffff40}#stars i.on{color:#ffd84a;text-shadow:0 0 8px #ffb000,0 1px 3px #000}#stars.hot i.on{animation:starpulse 1s ease-in-out infinite}@keyframes starpulse{50%{color:#fff3b0;text-shadow:0 0 14px #ffd84a}}
+  .wic{vertical-align:-1px;filter:drop-shadow(0 1px 1px #000a)}
   #health{width:180px;height:8px;background:#0008;border-radius:4px;margin-top:6px}
   #health i{display:block;height:100%;width:100%;background:#62d26f;border-radius:4px}
   #cross{position:absolute;left:50%;top:50%;width:26px;height:26px;transform:translate(-50%,-50%);display:none;border:2px solid #fff9;border-radius:50%;box-shadow:0 0 4px #000}
@@ -72,6 +73,13 @@
   #menu .tabs{display:flex;gap:4px;margin-bottom:10px;flex-wrap:wrap}
   #menu .tabs button{display:inline-block;width:auto;margin:0;padding:6px 10px;font-size:13px;background:#202533}
   #menu .tabs button.on{background:#ffd84a;color:#111}
+  #menu .tabs .sub{display:none;width:100%;gap:6px;margin-top:6px;padding-top:6px;border-top:1px solid #ffffff18;flex-wrap:wrap}#menu .tabs .sub button{font-size:12px;padding:4px 9px}
+  #menu .pgd{border-top:1px solid #ffffff14;padding:8px 2px}#menu .pgd summary{cursor:pointer;font-weight:700;font-size:15px}#menu .pgd table{margin-top:6px}
+  #menu details.more{margin-top:6px}#menu details.more summary{cursor:pointer;color:#aaa;font-size:13px;padding:6px 2px}
+  #ovstat{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;margin:2px 0 14px}#ovstat div{background:#ffffff0d;border:1px solid #ffffff14;border-radius:10px;padding:8px 10px}#ovstat b{display:block;font-size:18px}#ovstat small{color:#aaa;font-size:12px}
+  #money .coin{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#fff2a8,#f2c200 55%,#a87a00);color:#5a3d00;font-size:14px;font-weight:900;margin-right:6px;vertical-align:-3px;box-shadow:0 1px 3px #000a}
+  #health{position:relative}#health::before{content:"❤";position:absolute;left:-18px;top:50%;transform:translateY(-55%);font-size:13px;color:#ff4d5e;text-shadow:0 1px 2px #000}
+  #menu .help .start{font-size:16px;margin:4px 0 12px}#menu .help details{border-bottom:1px solid #ffffff14;padding:8px 2px}#menu .help summary{cursor:pointer;font-size:15px;font-weight:700}#menu .help details p{margin:6px 0 2px 24px;font-size:14px;line-height:1.45;color:#ccc}#menu .help kbd{background:#2a2f3a;border:1px solid #444;border-radius:4px;padding:0 5px;font-size:12px}
   #menu .pane{min-height:210px}
   #menu label span{display:flex;align-items:center;gap:8px}
   #menu output{min-width:44px;text-align:right;font-variant-numeric:tabular-nums;opacity:.8}
@@ -108,7 +116,7 @@
 </head>
 <body>
 <div id="start"><div class="box">
-  <h1>BORNHEIM<small>FRANKFURT AM MAIN</small></h1>
+  <h1 style="position:relative">BORNHEIM<span style="position:absolute;top:-6px;margin-left:12px;transform:rotate(-10deg);border:3px solid #e8333a;color:#e8333a;border-radius:8px;padding:0 8px;font-size:22px;letter-spacing:3px;font-weight:900">BETA</span><small>FRANKFURT AM MAIN</small></h1>
   <div class="who">
     <button id="bm" class="sel">♂ Mann</button>
     <button id="bf">♀ Frau</button>
@@ -129,18 +137,19 @@
   <h2>PAUSE</h2>
   <button id="m_resume" class="y">Weiter</button>
   <button id="m_story">📖 Story wählen</button>
-  <button id="m_save">Speichern (F6)</button>
-  <button id="m_load">Spielstand laden (F9)</button>
+  <div class="row2"><button id="m_save">💾 Speichern</button><button id="m_load">📂 Laden</button></div>
+  <button id="m_feedback">🐞 Fehler melden / Idee schicken</button>
+  <details class="more"><summary>Mehr …</summary>
   <button id="m_restart">Neu starten</button>
   <div class="row2"><button id="m_export">Spielstand exportieren</button><button id="m_import">Importieren</button></div>
-  <button id="m_feedback">🐞 Fehler melden / Idee schicken</button>
   <button id="m_home">Zur Startseite</button>
+  </details>
   <input type="file" id="importfile" accept=".json,application/json" style="display:none">
   </div>
   <div class="opts">
-    <div class="tabs"><button data-tab="fortschritt" class="on">📊 Fortschritt</button><button data-tab="steuerung">⌨ Steuerung</button><button data-tab="story">📖 Story</button><span class="sep">Einstellungen</span><button data-tab="grafik">Grafik</button><button data-tab="kamera">Kamera</button><button data-tab="welt">Welt</button><button data-tab="spiel">Spiel</button><button data-tab="ton">Ton &amp; HUD</button></div>
-    <div class="pane" data-tab="fortschritt" id="progpane"></div>
-    <div class="pane" data-tab="steuerung" style="display:none" id="keyspane"></div>
+    <div class="tabs"><button data-tab="fortschritt" class="on">🏠 Übersicht</button><button data-tab="hilfe">❓ Hilfe</button><button data-tab="story">📖 Story</button><button data-tab="grafik" class="set">⚙ Einstellungen</button>
+      <div class="sub"><button data-tab="grafik">Grafik</button><button data-tab="kamera">Kamera</button><button data-tab="welt">Welt</button><button data-tab="spiel">Spiel</button><button data-tab="ton">Ton &amp; HUD</button></div></div>
+    <div class="pane" data-tab="fortschritt"><div id="ovstat"></div><div id="progpane"></div></div>
     <div class="pane" data-tab="grafik" style="display:none">
       <label>Grafikqualität <select id="o_quality"><option value="niedrig">Niedrig</option><option value="mittel">Mittel</option><option value="hoch">Hoch (Leuchten, feine Schatten)</option><option value="ultra">Ultra (starke Grafikkarte)</option></select></label>
       <label>Renderauflösung <span><input id="o_scale" type="range" min="0.5" max="1.5" step="0.05" data-pct="1"><output></output></span></label>
@@ -183,6 +192,15 @@
       <label>Minikarte nach Norden ausrichten (sonst Blickrichtung oben; Taste N) <input id="o_mapnorth" type="checkbox"></label>
       <label>HUD anzeigen <input id="o_hud" type="checkbox"></label>
       <label>Sprechchöre und Durchsagen vorlesen <input id="o_tts" type="checkbox"></label>
+    </div>
+    <div class="pane help" data-tab="hilfe" style="display:none">
+      <p class="start"><kbd>WASD</kbd> laufen · <kbd>E</kbd> einsteigen · <kbd>F</kbd> benutzen · <kbd>M</kbd> Karte</p>
+      <details><summary>🚗 Fahrzeuge</summary><p>Neben Auto, Fahrrad oder Motorrad stellen und <kbd>E</kbd>. Räder stehen an Fahrradständern.</p></details>
+      <details><summary>🚁 Christoph 2 fliegen</summary><p>BG Unfallklinik Seckbach: am Eingang <kbd>F</kbd> (Aufzug), oben <kbd>E</kbd>. <kbd>Leertaste</kbd> hoch, <kbd>Shift</kbd> runter, <kbd>WASD</kbd> lenken.</p></details>
+      <details><summary>🚇 U-Bahn</summary><p>Am Eingang <kbd>F</kbd>, Ziel wählen, losfahren.</p></details>
+      <details><summary>🛒 Einkaufen</summary><p>Vor einem Laden <kbd>F</kbd>.</p></details>
+      <details><summary>📣 Demos und Storys</summary><p>Bei einer Demo mitlaufen. Leuchtende Buchstaben auf der Karte starten Storys.</p></details>
+      <details><summary>⌨ Alle Tasten</summary><div id="keyspane"></div></details>
     </div>
     <div class="pane" data-tab="story" style="display:none" id="storypane"></div>
   </div>

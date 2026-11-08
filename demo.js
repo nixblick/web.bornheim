@@ -22,7 +22,7 @@ export function initDemo(X, W) {
     let lo = 0, hi = n; while (hi - lo > 1) { const m = (lo + hi) >> 1; if (tr[m].s <= s) lo = m; else hi = m; } const a = tr[lo], b = tr[hi], t = (s - a.s) / ((b.s - a.s) || 1); return { x: a.x + (b.x - a.x) * t, z: a.z + (b.z - a.z) * t, h: Math.atan2(b.x - a.x, b.z - a.z) }; }
 
   // ---------- Feed, Ruf, Reichweite ----------
-  const HANDLES = { feuerwehr: ['@Feuerwehr_Ost', '#ff6b5b'], selin: ['@selin_streikt', '#7de0ff'], mo: ['@mo_macht_laerm', '#ffb35b'], schule: ['@Schulleitung_HGS', '#cfcfcf'], kurier: ['@KlartextKurier', '#ff5050'], eltern: ['@Elternrat_HGS', '#e2c4ff'], adler: ['@herr_adler', '#b6f08a'], kollektiv: ['@bornheimbleibt', '#7dff9a'], kim: ['@kim_kollektiv', '#7dff9a'], polizei: ['@PraesidiumOst', '#8fb8ff'], investor: ['@GoldachLiving', '#ffd27a'], presse: ['@Stadtfunk61', '#ff9090'], hilde: ['@hilde_vom_kiez', '#e2c4ff'], lena: ['@lenas_life', '#ff9ad5'], brack: ['@Dezernent_Brack', '#cfcfcf'], troll: ['@MeinungMitMut', '#9a9a9a'], wetter: ['@Wetterwarte_Main', '#9fe0ff'], du: [null, '#ffd84a'] };
+  const HANDLES = { feuerwehr: ['@Feuerwehr_Ost', '#ff6b5b'], selin: ['@selin_streikt', '#7de0ff'], mo: ['@mo_macht_laerm', '#ffb35b'], schule: ['@Schulleitung_HGS', '#cfcfcf'], kurier: ['@KlartextKurier', '#ff5050'], eltern: ['@Elternrat_HGS', '#e2c4ff'], adler: ['@herr_adler', '#b6f08a'], kollektiv: ['@bornheimbleibt', '#7dff9a'], kim: ['@kim_kollektiv', '#7dff9a'], polizei: ['@PraesidiumOst', '#8fb8ff'], investor: ['@ParkblickImmo', '#ffd27a'], presse: ['@Stadtfunk61', '#ff9090'], hilde: ['@hilde_vom_kiez', '#e2c4ff'], lena: ['@lenas_life', '#ff9ad5'], brack: ['@Buergermeister', '#cfcfcf'], troll: ['@MeinungMitMut', '#9a9a9a'], wetter: ['@Wetterwarte_Main', '#9fe0ff'], du: [null, '#ffd84a'] };
   const myHandle = () => player.female ? '@kiezheldin' : '@kiezheld';
   const feed = []; const feedEl = $('feed');
   function post(who, text, likes) { const h = HANDLES[who] || [who, '#ddd']; feed.unshift({ name: h[0] || myHandle(), col: h[1], text, t: 0, likes: likes ?? Math.round(rnd(12, 900)) }); if (feed.length > 4) feed.pop(); renderFeed(); sfx('notify', 0.35); }
@@ -31,7 +31,7 @@ export function initDemo(X, W) {
   function addRep(k, v) { rep[k] = clamp(Math.round((rep[k] + v) * 10) / 10, -100, 100); }
 
   // ---------- Schilder und Transparente ----------
-  const SLOGANS = ['Es gibt keinen Planet B', 'Miete runter – Bäume rauf', 'Park statt Penthouse', '38 °C und ihr baut Glas?', 'Wohnen ist kein Luxus', 'Wir sind die Hitze', 'Lieber Schatten als Rendite', 'Unsere Zukunft ist kein Investment', 'Goldach? Nein danke', 'Erst die Bäume, dann wir?', '1,5 Grad statt 25 €/m²', 'Oma gegen Abriss', 'Die Erde kocht – ihr kassiert', 'Hitzefrei für alle'];
+  const SLOGANS = ['Es gibt keinen Planet B', 'Miete runter – Bäume rauf', 'Park statt Penthouse', '38 °C und ihr baut Glas?', 'Wohnen ist kein Luxus', 'Wir sind die Hitze', 'Lieber Schatten als Rendite', 'Unsere Zukunft ist kein Investment', 'Luxustürme? Nein danke', 'Erst die Bäume, dann wir?', '1,5 Grad statt 25 €/m²', 'Oma gegen Abriss', 'Die Erde kocht – ihr kassiert', 'Hitzefrei für alle'];
   const SCHOOL_SLOGANS = ['34 Grad im Klassenraum', 'Bildung statt Bonzen', 'Freitag ist Pflicht', 'Unsere Turnhalle ist seit 2 Jahren zu', 'Verweis? Gern geschehen', 'Saniert die Schulen, nicht die Banken', 'Ich schwänze für eure Enkel', 'Klimakrise ist auch Schulstoff', 'Mehr Lehrer, weniger Polizei', 'Wir sind nicht leise'];
   const BANNERS = ['BORNHEIM BLEIBT', 'PARK BLEIBT · MIETE RUNTER', 'KLIMA GERECHT · WOHNEN FÜR ALLE'];
   const texCache = {};
@@ -65,7 +65,7 @@ export function initDemo(X, W) {
   function removePed(h) { h.traverse(o => { if (o.isSprite && o.material && o.material.map && o.material.map.isCanvasTexture) { o.material.map.dispose(); o.material.dispose(); } }); /* Namensschilder-Texturen freigeben */ scene.remove(h); const i = peds.indexOf(h); if (i >= 0) peds.splice(i, 1); const j = shootables.indexOf(h); if (j >= 0) shootables.splice(j, 1); }
   function addCar(c) { scene.add(c); cars.push(c); shootables.push(c); return c; }
   function removeCar(c) { if (X.disposeCar) X.disposeCar(c); scene.remove(c); const i = cars.indexOf(c); if (i >= 0) cars.splice(i, 1); const j = shootables.indexOf(c); if (j >= 0) shootables.splice(j, 1); }
-  function freeSpot(x, z, r = 2) { if (solidAt(x, z) < 0) return [x, z]; for (let k = 1; k < 12; k++) { const a = k * 2.4, d = r * k * 0.5; const qx = x + Math.cos(a) * d, qz = z + Math.sin(a) * d; if (solidAt(qx, qz) < 0) return [qx, qz]; } return [x, z]; }
+  function freeSpot(x, z, r = 2) { if (solidAt(x, z) < 0) return [x, z]; for (let k = 1; k < 12; k++) { const a = k * 2.4, d = r * k * 0.5; const qx = x + Math.cos(a) * d, qz = z + Math.sin(a) * d; if (solidAt(qx, qz) < 0) return [qx, qz]; } for (let d = 4; d <= 30; d += 2) for (let a = 0; a < 6.283; a += 1.8 / d) { const qx = x + Math.cos(a) * d, qz = z + Math.sin(a) * d; if (solidAt(qx, qz) < 0) return [qx, qz]; } /* große Gebäude: weiter außen suchen statt im Haus zu bleiben */ return [x, z]; }
 
   // ---------- Wasserwerfer ----------
   const MS = (c, r = 0.5, m = 0.2) => new THREE.MeshStandardMaterial({ color: c, roughness: r, metalness: m });
@@ -149,12 +149,15 @@ export function initDemo(X, W) {
     const u = h.userData; u.t += dt; const dpl = h.position.distanceTo(player.pos); u.lod = dpl > 55;
     const T = slotOf(d, i);
     if (d.pol.lineFix && d.pol.stage === 2 && !d.pol.lineOpened) { const F = d.pol.lineFix, fx = Math.sin(F.h), fz = Math.cos(F.h); const al = (T.x - F.x) * fx + (T.z - F.z) * fz; if (al > -2.5) { T.x -= fx * (al + 2.5 + (i % 3) * 0.8); T.z -= fz * (al + 2.5 + (i % 3) * 0.8); T.h = F.h; } } // nicht durch die Kette
+    if (solidAt(T.x, T.z) >= 0) { const k = Math.round(T.x) + ',' + Math.round(T.z); if (u.fixK !== k) { u.fixK = k; u.fix = freeSpot(T.x, T.z, 1.5); } T.x = u.fix[0]; T.z = u.fix[1]; } // Platz liegt im Haus: daneben stellen
     const dx = T.x - h.position.x, dz = T.z - h.position.z, L = Math.hypot(dx, dz);
     let sp = L > 6 ? 3.4 : L > 0.35 ? clamp(L * 1.4, 0.5, d.state === 'lead' ? 3.4 : 1.7) : 0;
-    if (sp > 0) { moveWithCollision(h.position, dx / L * sp * dt, dz / L * sp * dt, 0.28); h.rotation.y = lerpAngle(h.rotation.y, Math.atan2(dx, dz), Math.min(1, dt * 6)); }
+    if (u.waitT > 0) { u.waitT -= dt; sp = 0; } // festgefahren: kurz stehen bleiben statt gegen die Wand zu laufen
+    if (sp > 0) { const x0 = h.position.x, z0 = h.position.z; moveWithCollision(h.position, dx / L * sp * dt, dz / L * sp * dt, 0.28); h.rotation.y = lerpAngle(h.rotation.y, Math.atan2(dx, dz), Math.min(1, dt * 6));
+      if (Math.hypot(h.position.x - x0, h.position.z - z0) < sp * dt * 0.3) { u.wallT = (u.wallT || 0) + dt; if (u.wallT > 0.7) { u.wallT = 0; u.waitT = rnd(2.5, 5); u.pose = null; } } else u.wallT = 0; }
     else h.rotation.y = lerpAngle(h.rotation.y, d.state === 'halt' && d.pol.lineS != null ? linePt(d, 0).h : T.h, Math.min(1, dt * 3));
     h.position.y = floorAt(h.position.x, h.position.z, h.position.y + 0.3);
-    if (u.mixer) { if (sp > 0.05) { u.pose = null; animateWalk(h, u.t, sp * 2.3); } else { if (!u.pose) u.pose = d.state === 'halt' && Math.random() < 0.5 && X.CHAR[u.charName].clips.Sitting ? 'Sitting' : X.CHAR[u.charName].clips.Clapping && Math.random() < 0.45 ? 'Clapping' : X.CHAR[u.charName].clips.Wave && Math.random() < 0.3 ? 'Wave' : 'idle'; playAnim(h, u.pose); if (!u.lod) { u.acc = (u.acc || 0) + dt; if (h.position.distanceToSquared(camera.position) > 900 && ((u.fr = (u.fr || 0) + 1) & 1)) {} else { u.mixer.update(u.acc); u.acc = 0; } } } }
+    if (u.mixer) { if (sp > 0.05) { u.pose = null; animateWalk(h, u.t, sp * 2.3); } else { if (!u.pose) u.pose = (d.state === 'halt' || d.state === 'kessel') && Math.random() < (d.state === 'kessel' ? 0.35 : 0.5) && X.CHAR[u.charName].clips.Sitting ? 'Sitting' : X.CHAR[u.charName].clips.Clapping && Math.random() < 0.45 ? 'Clapping' : X.CHAR[u.charName].clips.Wave && Math.random() < 0.3 ? 'Wave' : 'idle'; playAnim(h, u.pose); if (!u.lod) { u.acc = (u.acc || 0) + dt; if (h.position.distanceToSquared(camera.position) > 900 && ((u.fr = (u.fr || 0) + 1) & 1)) {} else { u.mixer.update(u.acc); u.acc = 0; } } } }
     else animateWalk(h, u.t, sp * 2.3);
     if (u.sign) { u.sign.rotation.z = Math.sin(u.t * 2.1 + i) * 0.09; u.sign.position.y = Math.abs(Math.sin(u.t * 3 + i)) * 0.06; }
     // Schwarzer Block: bei hoher Spannung fliegt Farbe oder Böller Richtung Polizei
@@ -187,7 +190,7 @@ export function initDemo(X, W) {
     const hostile = player.wanted >= 1 && !player.car && h.position.distanceTo(player.pos) < 45;
     let tx = u.tx, tz = u.tz, face = null, run = false; const alive = d.members.length;
     if (hostile || u.task === 'arrestPlayer') { tx = player.pos.x; tz = player.pos.z; run = true; face = Math.atan2(player.pos.x - h.position.x, player.pos.z - h.position.z); }
-    else if (P.stage >= 5 && alive) { const m = nearest(d.members, h.position, 60); if (m) { tx = m.position.x; tz = m.position.z; run = true; if (h.position.distanceTo(m.position) < 1.3) arrest(m, h); } }
+    else if (P.stage >= 5 && alive && i % 2 === 0) { const m = nearest(d.members, h.position, 60); if (m) { tx = m.position.x; tz = m.position.z; run = true; if (h.position.distanceTo(m.position) < 1.3 && (d.arrT || 0) <= 0) { arrest(m, h); d.arrT = rnd(3, 6); } } } // Räumung: Festnahmen nacheinander, nicht alle auf einmal
     else if (P.stage === 3 || (P.stage === 4 && d.state === 'kessel')) { const n = P.cops.length; const a = i / n * Math.PI * 2; tx = d.cx + Math.cos(a) * d.kesselR; tz = d.cz + Math.sin(a) * d.kesselR; face = Math.atan2(d.cx - tx, d.cz - tz); }
     else if (P.stage === 2 && P.lineS != null && !P.lineOpened) { const p = linePt(d, i >= 9 ? 2.5 : 0); const k = (i % 9) - 4; tx = p.x + Math.cos(p.h) * k * 1.1; tz = p.z - Math.sin(p.h) * k * 1.1; face = p.h + Math.PI; }
     else { const f = frontS(d); const p = posAt(d.trail, f - 3 - (i >> 1) * 6); const side = i % 2 ? 1 : -1; const off = (d.leadPlayer ? 3.2 : 3.6) + 1.2; tx = p.x + Math.cos(p.h) * side * off; tz = p.z - Math.sin(p.h) * side * off; face = p.h; if (P.lineOpened && P.stage === 2) { const q = linePt(d, 0); tx = q.x + Math.cos(q.h) * side * 5.5; tz = q.z - Math.sin(q.h) * side * 5.5; } }
@@ -205,15 +208,19 @@ export function initDemo(X, W) {
     if (player.dead || player.bustedT > 0) return; player.bustedT = 3.5; emit('busted', player.pos, {}); X.card('FESTGENOMMEN', 'Personalien aufgenommen, Waffen und Pyro beschlagnahmt.'); sfx('door'); W.confiscate(); player.money = Math.floor(player.money * 0.85); player.wanted = 0;
     for (const d of demos) for (const c of d.pol.cops) { c.userData.task = 'escort'; c.userData.grab = 0; }
     for (const c of cars) if (c.userData.mode === 'police') c.userData.mode = 'parked';
-    const [x, z] = freeSpot(806, 452, 3); player.pos.set(x, TH(x, z), z); if (player.mesh) player.mesh.position.copy(player.pos); addRep('polizei', -5);
+    /* nach der Personalienaufnahme in der Nähe freigelassen statt quer durch die Stadt zum festen Revier in Bornheim versetzt */ { const a = Math.random() * Math.PI * 2; let [x, z] = freeSpot(player.pos.x + Math.cos(a) * 30, player.pos.z + Math.sin(a) * 30, 3); if (!X.inPocket || !X.inPocket(player.pos.x, player.pos.z)) { player.pos.set(x, TH(x, z), z); if (player.mesh) player.mesh.position.copy(player.pos); } } addRep('polizei', -5); sub('👮 Polizei', 'Personalien aufgenommen. Sie können gehen – halten Sie sich fern.', 5);
   }
   function updatePolice(d, dt) {
     const P = d.pol; P.t += dt; if (d.noPolice) return;
     if (P.stage === 0 && d.age > (d.story ? 8 : 16)) setStage(d, 1);
-    if (P.stage === 1 && ((d.blockAt != null && !P.lineOpened && (d.total ? frontS(d) / d.total : 0) >= d.blockAt) || d.tension > 0.32 || (d.leadPlayer && d.age > 75 && d.tension > 0.2))) setStage(d, 2);
-    if (P.stage >= 2 && d.tension > 0.55 && P.stage < 3) setStage(d, 3);
-    if (P.stage >= 3 && d.tension > 0.76 && P.stage < 4) setStage(d, 4);
-    if (P.stage === 4) { P.cannonT += dt; if (d.tension > 0.92 || P.cannonT > 28) setStage(d, 5); }
+    if (P.stage === 1 && P.t > 25 && ((d.blockAt != null && !P.lineOpened && (d.total ? frontS(d) / d.total : 0) >= d.blockAt) || d.tension > 0.32 || (d.leadPlayer && d.age > 75 && d.tension > 0.2))) setStage(d, 2);
+    if (P.stage === 2 && P.t > 45 && d.tension > 0.55) setStage(d, 3); // Kette steht mindestens 45 s
+    if (P.stage === 3 && P.t > 60 && d.tension > 0.76) setStage(d, 4); // Kessel: mindestens eine Minute warten
+    if (P.stage === 4) { P.cannonT += dt; if ((d.tension > 0.92 && P.cannonT > 25) || P.cannonT > 50) setStage(d, 5); } // Wasserwerfer mindestens 25 s, spätestens nach 50 s Räumung
+    // Rauchtöpfe: im Kessel und unter Wasserwerfer zündet ab und zu jemand Rauch
+    if (P.stage >= 3 && P.stage <= 4 && d.members.length > 3) { d.smokeT = (d.smokeT ?? rnd(8, 14)) - dt; if (d.smokeT <= 0) { d.smokeT = rnd(14, 26); const m = d.members.find(h => h.userData.black) || pick(d.members); const tg = nearest(P.cops, m.position, 40); if (tg) { const from = m.position.clone(); from.y += 1.5; const v = new V3(tg.position.x - from.x, 0, tg.position.z - from.z); const l = v.length() || 1; v.multiplyScalar(Math.min(12, l * 0.9) / l); v.y = 4; W.spawnProj('smoke', from, v, 'npc'); } } }
+    // Räumung schrittweise: alle paar Sekunden verlassen einzelne die Versammlung
+    if (P.stage >= 5) { d.arrT = (d.arrT || 0) - dt; d.leaveT = (d.leaveT ?? 2) - dt; if (d.leaveT <= 0 && d.members.length > 3) { d.leaveT = rnd(3, 6); const m = pick(d.members); leaveDemo(m); m.userData.state = 'flee'; m.userData.fleeT = rnd(3, 6); } }
     if (P.stage === 3 && P.t > 50 && d.tension < 0.5) { d.tension = 0.4; }
     // Deeskalation: an der Kette lange ruhig → die Polizei lässt durch
     if (P.stage === 2 && !P.lineOpened) { if (d.state === 'halt' || d.leadPlayer) { if (d.tension < 0.24) P.calmT += dt; else P.calmT = Math.max(0, P.calmT - dt * 0.5); } if (P.calmT > 22) { P.lineOpened = true; d.state = d.leadPlayer ? 'lead' : 'march'; sub('📢 Polizei', 'Die Versammlung darf weiterziehen. Danke für Ihre Kooperation.', 5); post('polizei', 'Die Versammlung verläuft friedlich und zieht weiter. Danke an alle Beteiligten.', 410); post('kollektiv', 'Wir dürfen weiter!! Friedlich und laut wirkt. #BornheimBleibt', 2100); addRep('polizei', 6); addRep('anwohner', 3); stats.peaceful++; emit('lineOpened', new V3(d.cx, 0, d.cz), { demo: d }); } }

@@ -193,11 +193,13 @@ export function initInteriors(X, W, D, SH) {
   let curT = null; let t = 0;
   function update(dt) {
     t += dt; updateEntrances(dt); curT = null;
+    if (inside && !riding && X.inPocket && !X.inPocket(player.pos.x, player.pos.z)) { console.warn('Innenraum ohne leave() verlassen', inside.label || ''); leaveSilent(); } /* Spieler wurde aus dem Innenraum versetzt (Festnahme, Teleport): Zustand aufräumen, sonst hängt Fahren und F */
     if (inside) { if (inside.update) inside.update(dt); for (const n of inside.npc || []) { try { animateWalk(n, t, 0); } catch (e) {} }
       let bd = 1e9; for (const tr of inside.triggers) { const d = Math.hypot(player.pos.x - PX - tr.x, player.pos.z - PZ - tr.z); if (d < tr.r && d < bd) { bd = d; curT = tr; } }
       if (!curT && inside.trainNear && inside.trainNear()) curT = { label: 'F · Einsteigen: Ziel wählen (3 €)', act: () => travelMenu(inside.station) };
       return curT ? curT.label : null; }
     if (player.car || player.dead) return null;
+    for (const fh of X.fHooks || []) { const r = fh(); if (r) { curT = r; return r.label; } } /* weitere F-Aktionen (Klinik-Aufzug) */
     const m = nearMetro(); if (m) { curT = { label: `F · ${m.under ? 'U-Bahn' : 'Bahn'} ${m.s.name} (${m.s.lines.join(', ')})`, act: () => { if (m.under) { const [fx, fz] = outside(m.p[0] + 2.2, m.p[1] + 2.2); station(m.s, { x: fx, z: fz, yaw: camYaw.v + Math.PI }); } else travelMenu(m.s); } }; return curT.label; }
     if (SH.near) { const s = SH.near; curT = { label: `F · ${s.name} betreten`, act: () => { if (player.wanted > 0) { showMsg('POLIZEI SUCHT DICH – KEIN EINKAUF', 1200); return; } shop(s, { x: player.pos.x, z: player.pos.z, yaw: camYaw.v + Math.PI }); } }; return curT.label; }
     const r = onRoof(); if (r) { curT = { label: 'F · Treppenhaus (runter)', act: () => { const ne = nearestEdge(player.pos.x, player.pos.z, 60); let ex = player.pos.x, ez = player.pos.z; if (ne) { const e = edgeNormal(ne.b.p, ne.e); const mx = e.ax + e.dx / 2, mz = e.az + e.dz / 2; const cx = r.p.reduce((a, p) => a + p[0], 0) / r.p.length, cz = r.p.reduce((a, p) => a + p[1], 0) / r.p.length; const sg = (mx - cx) * e.nx + (mz - cz) * e.nz > 0 ? 1 : -1; [ex, ez] = D.freeSpot(mx + e.nx * sg * 1.5, mz + e.nz * sg * 1.5, 1.5); } stairwell(r, { x: ex, z: ez, yaw: camYaw.v }); } }; return curT.label; }

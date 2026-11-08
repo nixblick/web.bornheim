@@ -70,7 +70,7 @@ def area(self, a):
     t = dict(a.tags)
     bld = t.get("building") not in (None, "no")
     if not bld and not match(t, AREA): return
-    if bld: t = {k: v for k, v in t.items() if k in ("building", "height", "building:levels", "roof:shape", "roof:levels", "name", "shop", "amenity", "leisure", "min_height")}
+    if bld: t = {k: v for k, v in t.items() if k in ("building", "height", "building:levels", "roof:shape", "roof:levels", "name", "shop", "amenity", "leisure", "min_height", "building:min_level", "layer", "location")}
     if t.get("waterway") == "riverbank": t["natural"] = "water"
     for k, ring in enumerate(a.outer_rings()):
         c = [[nd.location.lat, nd.location.lon] for nd in ring if nd.location.valid()]
