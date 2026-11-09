@@ -8,7 +8,7 @@ export function initShops(X, W) {
     bat: { n: 'Baseballschläger', p: 60, w: 'bat' }, pistol: { n: 'Pistole', p: 350, w: 'pistol' }, smg: { n: 'Maschinenpistole', p: 950, w: 'smg' },
     shotgun: { n: 'Schrotflinte', p: 800, w: 'shotgun' }, rifle: { n: 'Sturmgewehr', p: 1500, w: 'rifle' }, spray: { n: 'Pfefferspray', p: 25, w: 'spray' },
     taser: { n: 'Taser', p: 180, w: 'taser' }, paint: { n: 'Farbbeutel (8)', p: 24, w: 'paint' }, banger: { n: 'Böller (6)', p: 18, w: 'banger' },
-    smoke: { n: 'Rauchtopf (3)', p: 30, w: 'smoke' }, flare: { n: 'Bengalo (3)', p: 36, w: 'flare' }, grenade: { n: 'Granate (2)', p: 300, w: 'grenade' },
+    smoke: { n: 'Rauchtopf (3)', p: 30, w: 'smoke' }, flare: { n: 'Bengalo (3)', p: 36, w: 'flare' }, grenade: { n: 'Granate (2)', p: 300, w: 'grenade' }, tnt: { n: 'Zeitbombe (3)', p: 420, w: 'tnt' },
     a_pistol: { n: 'Munition Pistole (48)', p: 40, ammo: 'pistol' }, a_smg: { n: 'Munition MP (120)', p: 90, ammo: 'smg' }, a_shotgun: { n: 'Schrotpatronen (24)', p: 60, ammo: 'shotgun' }, a_rifle: { n: 'Munition Gewehr (90)', p: 110, ammo: 'rifle' },
     snack: { n: 'Snack (+15 Gesundheit)', p: 4, hp: 15 }, drink: { n: 'Wasser (+10, kühlt bei Hitze)', p: 2, hp: 10 }, meal: { n: 'Mahlzeit (+40 Gesundheit)', p: 12, hp: 40 },
     band: { n: 'Verband (+50 Gesundheit)', p: 20, hp: 50 }, kit: { n: 'Erste-Hilfe-Set (volle Gesundheit)', p: 60, hp: 100 },
@@ -21,7 +21,7 @@ export function initShops(X, W) {
     food: { n: 'Imbiss', ic: '🍔', items: ['meal', 'snack', 'drink'] },
     bakery: { n: 'Bäckerei', ic: '🥨', items: ['snack', 'meal', 'drink'] },
     pharmacy: { n: 'Apotheke', ic: '💊', items: ['band', 'kit', 'drink', 'spray'] },
-    hardware: { n: 'Baumarkt', ic: '🔨', items: ['bat', 'paint', 'smoke', 'spray'] },
+    hardware: { n: 'Baumarkt', ic: '🔨', items: ['bat', 'paint', 'smoke', 'spray', 'tnt'] },
     sports: { n: 'Sportladen', ic: '⚽', items: ['bat', 'spray', 'taser', 'drink'] },
   };
   const KIND = { supermarket: 'super', convenience: 'super', department_store: 'super', general: 'super', kiosk: 'kiosk', newsagent: 'kiosk', tobacco: 'kiosk', beverages: 'kiosk',

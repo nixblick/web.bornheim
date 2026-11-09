@@ -18,9 +18,23 @@ export function initWeapons(X) {
     banger:  { n: 'Böller', ic: '🧨', kind: 'throw', rate: 0.6, give: 6, fuse: 1.6, slot: 8 },
     smoke:   { n: 'Rauchtopf', ic: '💨', kind: 'throw', rate: 0.8, give: 3, slot: 9 },
     flare:   { n: 'Bengalo', ic: '🔥', kind: 'throw', rate: 0.8, give: 3, slot: 9 },
-    grenade: { n: 'Granate', ic: '💣', kind: 'throw', rate: 1.0, give: 2, fuse: 2.4, slot: 0 },
+    grenade: { n: 'Granate', ic: '💣', kind: 'throw', rate: 1.0, give: 2, fuse: 2.5, slot: 0 },
+    tnt:     { n: 'Zeitbombe', ic: '⏰', kind: 'throw', rate: 0.9, give: 3, fuse: 5.0, slot: 0 },
     molotov: { n: 'Brandsatz', ic: '🍾', kind: 'throw', rate: 0.9, give: 2, slot: 0, creativeOnly: true },
   };
+  const FUSE_STEPS = [1, 2, 3, 5, 10, 15, 30];
+  const customFuse = {};
+  const fuseOf = id => customFuse[id] ?? DEF[id]?.fuse ?? 0;
+  function cycleFuse() {
+    const id = DEF[cur]?.fuse ? cur : 'grenade';
+    const curF = fuseOf(id);
+    const idx = FUSE_STEPS.findIndex(s => s >= curF - 0.05);
+    const next = FUSE_STEPS[(idx + 1) % FUSE_STEPS.length];
+    customFuse[id] = next;
+    if (id === 'grenade' || id === 'tnt') { customFuse.grenade = next; customFuse.tnt = next; }
+    sfx('click'); barT = 2; drawBar();
+    showMsg(`ZÜNDER-TIMER: ${next} s (Taste T)`, 1100, 'info');
+  }
   const ORDER = Object.keys(DEF);
   const inv = {};
   let cur = 'fists', last = 'fists', cool = 0, trigger = false, swingT = 0, meleeT = -1, punchAlt = false, heat = 0, barT = 0;
@@ -66,6 +80,13 @@ export function initWeapons(X) {
     else if (id === 'smoke') { g.add(cyl(0.045, 0.14, MS(0x3b7d3a, 0.5, 0.2), 0, 0, 0), cyl(0.03, 0.03, mGry, 0, 0.085, 0)); }
     else if (id === 'flare') { g.add(cyl(0.022, 0.26, MS(0xd02020, 0.5, 0), 0, 0.05, 0), cyl(0.024, 0.04, MS(0x222222), 0, 0.2, 0)); }
     else if (id === 'grenade') { const s = new THREE.Mesh(new THREE.SphereGeometry(0.055, 10, 8), MS(0x3f4a2a, 0.6, 0.3)); s.scale.y = 1.2; s.castShadow = true; g.add(s, box(0.02, 0.06, 0.03, mGry, 0.035, 0.05, 0)); }
+    else if (id === 'tnt') {
+      const mRed = MS(0xc82020, 0.55, 0.1), mTape = MS(0x1a1a1a, 0.7, 0.2);
+      for (const [ox, oz] of [[-0.026, -0.015], [0.026, -0.015], [0, 0.026]]) g.add(cyl(0.024, 0.18, mRed, ox, 0.04, oz));
+      g.add(box(0.11, 0.028, 0.09, mTape, 0, 0.04, 0), box(0.065, 0.05, 0.03, mGry, 0, 0.06, 0.035));
+      const led = new THREE.Mesh(new THREE.SphereGeometry(0.014, 8, 6), new THREE.MeshBasicMaterial({ color: 0xff2020 }));
+      led.position.set(0, 0.09, 0.045); g.add(led); g.userData.led = led;
+    }
     else if (id === 'molotov') { const gl = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.04, 0.2, 8), new THREE.MeshStandardMaterial({ color: 0x3f7a3a, roughness: 0.1, metalness: 0.1, transparent: true, opacity: 0.85 })); gl.position.y = 0.05; const neck = cyl(0.015, 0.08, MS(0x3f7a3a, 0.1, 0.1), 0, 0.19, 0); const cloth = box(0.04, 0.07, 0.04, MS(0xe8e0c8, 0.9, 0), 0, 0.25, 0); g.add(gl, neck, cloth); g.userData.cloth = cloth; }
     if (!g.userData.muzzle) { const mz = new THREE.Object3D(); mz.position.set(0, 0.05, -0.1); g.add(mz); g.userData.muzzle = mz; }
     return g;
@@ -92,11 +113,19 @@ export function initWeapons(X) {
     if (d.kind === 'gun') return it.mag + ' / ' + it.res; if (d.kind === 'spray') return Math.ceil(it.mag) + ' %' + (it.res ? ' +' + it.res : ''); if (d.kind === 'taser') return it.mag + ' / ' + it.res; if (d.kind === 'throw') return '× ' + it.res; return ''; }
   function drawBar() {
     // DOM nur bei Änderung schreiben: drawBar läuft jedes Bild
-    const wh = `<b>${DEF[cur].ic}</b> ${DEF[cur].n} <span>${ammoText(cur)}</span>${lockMode ? ' <span title="In diesem Kapitel gesperrt">🔒</span>' : ''}`; if (wEl && wh !== lastW) { lastW = wh; wEl.innerHTML = wh; }
+    const fTxt = DEF[cur].fuse ? ` <small style="opacity:.85">· ⏱ ${fuseOf(cur)}s [T]</small>` : '';
+    const wh = `<b>${DEF[cur].ic}</b> ${DEF[cur].n} <span>${ammoText(cur)}</span>${fTxt}${lockMode ? ' <span title="In diesem Kapitel gesperrt">🔒</span>' : ''}`; if (wEl && wh !== lastW) { lastW = wh; wEl.innerHTML = wh; }
     if (!barEl) return; const disp = barT > 0 ? 'flex' : 'none'; if (disp !== lastBarDisp) { lastBarDisp = disp; barEl.style.display = disp; } if (barT <= 0) return;
     const bh = ORDER.map(k => `<div class="${k === cur ? 'sel' : ''}${inv[k] && allowed(k) ? '' : ' off'}"><i>${inv[k] && !allowed(k) ? '🔒' : DEF[k].ic}</i><small>${(DEF[k].slot)}</small><span>${DEF[k].n}</span></div>`).join(''); if (bh !== lastB) { lastB = bh; barEl.innerHTML = bh; }
   }
-  const inClosedCar = () => !!(player.car && !player.car.userData.bike);
+  const inClosedCar = () => !!(player.car && player.car.userData.cannon);
+  const muzzlePos = out => {
+    if (player.car && !player.car.userData.bike) {
+      const c = player.car, h = (c.userData.dims?.h || 1.5) + 0.22;
+      return out.copy(c.position).setY(c.position.y + h);
+    }
+    return model && model.userData.muzzle ? model.userData.muzzle.getWorldPosition(out) : out.copy(player.pos).setY(player.pos.y + 1.5);
+  };
   function hud() { return inClosedCar() ? null : ammoText(cur); }
 
   // ---------- Feuern ----------
@@ -106,7 +135,7 @@ export function initWeapons(X) {
     if (d.kind === 'gun') fireGun(d); else if (d.kind === 'melee') melee(d); else if (d.kind === 'throw') throwIt(d); else if (d.kind === 'spray') sprayTick(d); else if (d.kind === 'taser') taser(d);
     return true;
   }
-  function shootPose(snd) { player.aimT = 1.6; const pm = player.mesh.userData; pm.aiming = true; if (pm.mixer) { playAnim(player.mesh, 'shoot', { fade: 0.05 }); pm.curAnim = 'shooting'; } if (!player.car) player.yaw = camYaw.v; player.mesh.rotation.y = camYaw.v; if (snd) sfx(snd); }
+  function shootPose(snd) { player.aimT = 1.6; const pm = player.mesh.userData; pm.aiming = true; if (pm.mixer && !player.car) { playAnim(player.mesh, 'shoot', { fade: 0.05 }); pm.curAnim = 'shooting'; } if (!player.car) { player.yaw = camYaw.v; player.mesh.rotation.y = camYaw.v; } if (snd) sfx(snd); }
   const _ray = new THREE.Raycaster(), _v = new V3(), _ndc = new THREE.Vector2();
   function candidates(range) { const dir = camera.getWorldDirection(new V3()); const cp = camera.position; return shootables.filter(o => { if (!o.visible || o === player.car || o.userData.hp <= 0 && !cars.includes(o)) return false; const dx = o.position.x - cp.x, dz = o.position.z - cp.z, dy = o.position.y - cp.y; const L = Math.hypot(dx, dy, dz); if (L > range + 5) return false; return (dx * dir.x + dy * dir.y + dz * dir.z) > -3; }); }
   function wallDist(ray, range) { for (let s = 2.5; s < range; s += 1.25) { const p = ray.at(s, _v); if (p.y <= TH(p.x, p.z) || solidAtH(p.x, p.z, p.y) !== -1) return s; } return range; }
@@ -119,7 +148,7 @@ export function initWeapons(X) {
     const it = inv[cur]; if (it.mag <= 0) { if (it.res > 0 || unlimited()) reload(); else { showMsg('LEER', 600); sfx('click'); cool = 0.3; } return; }
     if (!unlimited()) it.mag--; cool = d.rate; heat = Math.min(1, heat + (d.auto ? 0.12 : 0.3));
     shootPose(d.snd); camShake(cur === 'shotgun' ? 0.16 : cur === 'rifle' ? 0.07 : 0.05); player.mesh.userData.recoil = cur === 'shotgun' ? 0.5 : 0.22;
-    const muzzle = new V3(); model.userData.muzzle.getWorldPosition(muzzle);
+    const muzzle = muzzlePos(new V3());
     const moving = keys.KeyW || keys.KeyA || keys.KeyS || keys.KeyD; const spread = d.spread * (player.aimHold ? 0.55 : 1) * (moving ? 1.7 : 1) + heat * (d.auto ? 0.02 : 0.006);
     if (X.wakeParkedRay) { _ray.setFromCamera(_ndc.set(0, 0), camera); X.wakeParkedRay(_ray.ray.origin, _ray.ray.direction, d.range); }
     const cands = candidates(d.range); const n = d.pellets || 1;
@@ -141,7 +170,7 @@ export function initWeapons(X) {
 
   // ---------- Nahkampf ----------
   function melee(d) {
-    cool = d.rate; swingT = 0.34; meleeT = 0.14; if (!player.car) player.yaw = camYaw.v; player.mesh.rotation.y = camYaw.v; const pm = player.mesh.userData;
+    cool = d.rate; swingT = 0.34; meleeT = 0.14; if (!player.car) { player.yaw = camYaw.v; player.mesh.rotation.y = camYaw.v; } const pm = player.mesh.userData;
     if (pm.mixer) { playAnim(player.mesh, cur === 'bat' ? 'Sword_Slash' : (punchAlt ? 'Punch_Right' : 'Punch_Left'), { once: true, fade: 0.05 }); pm.actT = cur === 'bat' ? 0.55 : 0.4; } punchAlt = !punchAlt; sfx('swing', cur === 'bat' ? 0.8 : 0.4);
   }
   function meleeHit(d) {
@@ -174,7 +203,7 @@ export function initWeapons(X) {
   function sprayTick(d) {
     const it = inv.spray; if (it.mag <= 0 && !unlimited()) { if (it.res > 0) { reload(); } else { showMsg('SPRAY LEER', 600); cool = 0.5; } return; }
     cool = d.rate; if (!unlimited()) it.mag = Math.max(0, it.mag - 1.2); shootPose(null); if (Math.random() < 0.3) sfx('hiss', 0.25);
-    const from = new V3(); model.userData.muzzle.getWorldPosition(from); const dir = camera.getWorldDirection(new V3());
+    const from = muzzlePos(new V3()); const dir = camera.getWorldDirection(new V3());
     for (let i = 0; i < 2; i++) puff(from.clone(), 0xffb27a, 0.25, 0.7, dir.clone().multiplyScalar(rnd(6, 9)).add(new V3(rnd(-0.6, 0.6), rnd(-0.3, 0.5), rnd(-0.6, 0.6))), 2.2, 0.55);
     sprayCone(player.pos, dir, 'player');
   }
@@ -190,7 +219,7 @@ export function initWeapons(X) {
   function taser(d) {
     const it = inv.taser; if (it.mag <= 0 && !unlimited()) { if (it.res > 0) { it.res--; it.mag = 1; sfx('reload'); cool = 1.0; } else { showMsg('KEINE KARTUSCHEN', 700); cool = 0.4; } return; }
     if (!unlimited()) it.mag--; cool = d.rate; shootPose('taser');
-    const from = new V3(); model.userData.muzzle.getWorldPosition(from); const ray = new THREE.Raycaster(); ray.setFromCamera(new THREE.Vector2(0, 0), camera);
+    const from = muzzlePos(new V3()); const ray = new THREE.Raycaster(); ray.setFromCamera(new THREE.Vector2(0, 0), camera);
     for (const c of cars) if (c !== player.car && c.userData.bike && c.userData.rider && c.position.distanceTo(player.pos) <= d.range && ray.ray.distanceToPoint(c.position.clone().setY(c.position.y + 1)) < 1.2) { X.tipBike && X.tipBike(c, 'player'); }
     let best = null, bd = 1.2; for (const p of peds) { const u = p.userData; if (u.state === 'dead') continue; const c = p.position.clone(); c.y += 1.1; const t = c.clone().sub(ray.ray.origin).dot(ray.ray.direction); if (t < 2 || t > d.range + 4) continue; if (c.distanceTo(player.pos) > d.range) continue; const dd = ray.ray.distanceToPoint(c); if (dd < bd) { bd = dd; best = p; } }
     const end = best ? best.position.clone().setY(best.position.y + 1.1) : ray.ray.at(d.range + 3, new V3());
@@ -202,17 +231,17 @@ export function initWeapons(X) {
   const projs = [];
   function throwIt(d) {
     const it = inv[cur]; if (!unlimited() && it.res <= 0) { showMsg('KEINE ' + d.n.toUpperCase(), 700); cool = 0.4; return; }
-    if (!unlimited()) it.res--; cool = d.rate; if (!player.car) player.yaw = camYaw.v; player.mesh.rotation.y = camYaw.v; const pm = player.mesh.userData;
+    if (!unlimited()) it.res--; cool = d.rate; if (!player.car) { player.yaw = camYaw.v; player.mesh.rotation.y = camYaw.v; } const pm = player.mesh.userData;
     if (pm.mixer) { playAnim(player.mesh, 'Punch_Right', { once: true, fade: 0.05 }); pm.actT = 0.38; } sfx('throw', 0.5);
-    const from = new V3(); pm.hand.getWorldPosition(from); from.y = Math.max(from.y, player.pos.y + 1.55);
-    const dir = camera.getWorldDirection(new V3()); const sp = cur === 'paint' || cur === 'banger' ? 21 : 17; const v = dir.multiplyScalar(sp); v.y += 3.0;
-    spawnProj(cur, from, v, 'player'); if (cur === 'paint') paintIdx++; if (model && cur === 'paint') attach();
+    const from = new V3(); if (player.car && !player.car.userData.bike) muzzlePos(from); else { pm.hand.getWorldPosition(from); from.y = Math.max(from.y, player.pos.y + 1.45); }
+    const dir = camera.getWorldDirection(new V3()); const sp = cur === 'paint' || cur === 'banger' ? 21 : cur === 'tnt' ? 14 : 17; const v = dir.multiplyScalar(sp); v.y += 3.0;
+    spawnProj(cur, from, v, 'player', fuseOf(cur)); if (cur === 'paint') paintIdx++; if (model && cur === 'paint') attach();
     if (!unlimited() && it.res <= 0) setTimeout(() => { if (cur === d.id && inv[cur] && inv[cur].res <= 0) select(inv[last] ? last : 'fists', true); }, 400);
   }
   for (const [k, d] of Object.entries(DEF)) d.id = k;
-  function spawnProj(kind, from, vel, who) {
+  function spawnProj(kind, from, vel, who, fuseOverride) {
     const m = buildModel(kind); m.scale.setScalar(1.25); m.position.copy(from); scene.add(m);
-    const p = { kind, m, v: vel.clone(), t: 0, who, fuse: DEF[kind].fuse || 0, rest: false, spin: new V3(rnd(-9, 9), rnd(-9, 9), rnd(-9, 9)), col: m.userData.col ?? pick(PAINT) };
+    const p = { kind, m, v: vel.clone(), t: 0, who, fuse: fuseOverride || DEF[kind].fuse || 0, rest: false, spin: new V3(rnd(-9, 9), rnd(-9, 9), rnd(-9, 9)), col: m.userData.col ?? pick(PAINT) };
     if (kind === 'smoke') p.col = pick([0x8a3dff, 0x2fbf4f, 0xff7a1a, 0xe8e8e8, 0xff3b6b]);
     projs.push(p); return p;
   }
@@ -245,7 +274,14 @@ export function initWeapons(X) {
       }
       if (!gone && p.kind === 'molotov' && Math.random() < 0.6) { const q = new V3(); (m.userData.cloth || m).getWorldPosition(q); puff(q, 0xff8a2a, 0.22, 0.25, new V3(rnd(-0.3, 0.3), 1, rnd(-0.3, 0.3)), 0.4, 1, true); }
       if (!gone && p.kind === 'banger' && p.t >= p.fuse) { bang(m.position.clone(), p.who); gone = true; }
-      if (!gone && p.kind === 'grenade' && p.t >= p.fuse) { boom(m.position.clone(), p.who); gone = true; }
+      if (!gone && p.kind === 'grenade' && p.t >= p.fuse) { boom(m.position.clone(), p.who, 1.0); gone = true; }
+      if (!gone && p.kind === 'tnt') {
+        const rem = Math.max(0.05, p.fuse - p.t), freq = rem < 1.2 ? 14 : rem < 2.5 ? 7 : 3;
+        const on = Math.floor(p.t * freq) % 2 === 0;
+        if (m.userData.led) m.userData.led.material.color.setHex(on ? 0xff2020 : 0x2a0505);
+        if (on && !p.beepOn) { p.beepOn = true; if (m.position.distanceTo(player.pos) < 35) sfx('click', rem < 1.2 ? 0.55 : 0.25); } else if (!on) p.beepOn = false;
+        if (p.t >= p.fuse) { boom(m.position.clone(), p.who, 1.55); gone = true; }
+      }
       if (!gone && p.kind === 'smoke') { if (p.t > 0.8 && p.t < 22) { p.e = (p.e || 0) + dt; while (p.e > 0.06) { p.e -= 0.06; const s = Math.min(1, (p.t - 0.8) / 2); puff(m.position.clone().add(new V3(0, 0.25, 0)), p.col, 0.6 * s + 0.4, 6.5, new V3(rnd(-1.4, 1.4), rnd(0.8, 2.0), rnd(-1.4, 1.4)), 0.95, 0.55); } if (p.t < 1 + dt) { sfx('hiss', 0.6); emit('smoke', m.position, {}); } } if (p.t > 26) gone = true; }
       if (!gone && p.kind === 'flare') { if (p.t > 0.2 && p.t < 28) { flareFx(p, dt); } if (p.t > 29) gone = true; }
       if (gone) { m.traverse(o => { if (o.isMesh) { o.geometry.dispose(); const ms = Array.isArray(o.material) ? o.material : [o.material]; for (const mm of ms) if (mm && !mm.userData.shared) mm.dispose(); } }); scene.remove(m); projs.splice(i, 1); if (p.light) p.light.busy = 0; }
@@ -282,16 +318,16 @@ export function initWeapons(X) {
     emit('banger', pos, { who });
   }
   const scorchMat = new THREE.MeshBasicMaterial({ map: null, color: 0x111111, transparent: true, opacity: 0.75, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4 });
-  function boom(pos, who) {
-    const d = pos.distanceTo(player.pos); sfx('explosion', clamp(1.3 - d / 160, 0.15, 1.3)); flashLight(pos, 0xffa040, 260, 0.45); burst(pos.clone().setY(pos.y + 0.5), 0xff7a1a, 30, 6); burst(pos.clone().setY(pos.y + 1), 0x222222, 14, 3);
-    for (let i = 0; i < 10; i++) puff(pos.clone().setY(pos.y + 0.6), i < 4 ? 0xffa040 : 0x3a3530, i < 4 ? 1.2 : 1.6, i < 4 ? 0.5 : 4, new V3(rnd(-2, 2), rnd(1, 4), rnd(-2, 2)), i < 4 ? 6 : 2.2, i < 4 ? 1 : 0.8, i < 4);
-    if (d < 45) camShake(0.7 * (1 - d / 45));
+  function boom(pos, who, scale = 1) {
+    const R = 8 * scale, d = pos.distanceTo(player.pos); sfx('explosion', clamp((1.3 - d / (160 * scale)) * Math.min(1.3, scale), 0.15, 1.5)); flashLight(pos, 0xffa040, 260 * scale, 0.45 * scale); burst(pos.clone().setY(pos.y + 0.5), 0xff7a1a, Math.round(30 * scale), 6 * scale); burst(pos.clone().setY(pos.y + 1), 0x222222, Math.round(14 * scale), 3 * scale);
+    for (let i = 0; i < Math.round(10 * scale); i++) puff(pos.clone().setY(pos.y + 0.6), i < 4 ? 0xffa040 : 0x3a3530, (i < 4 ? 1.2 : 1.6) * scale, i < 4 ? 0.5 : 4, new V3(rnd(-2, 2) * scale, rnd(1, 4) * scale, rnd(-2, 2) * scale), i < 4 ? 6 : 2.2, i < 4 ? 1 : 0.8, i < 4);
+    if (d < 45 * scale) camShake(0.7 * scale * (1 - d / (45 * scale)));
     const los = (q, h) => X.losFactor(pos.x, pos.y + 0.5, pos.z, q.x, q.y + h, q.z); // Wand dazwischen: Wirkung ×0,2
-    if (!player.car && d < 8) X.hurtPlayer('boom', 95 * (1 - d / 8) * los(player.pos, 1));
-    for (const p of peds) { const u = p.userData; const dd = p.position.distanceTo(pos); if (dd < 8 && u.state !== 'dead') { const dir = new V3().subVectors(p.position, pos).setY(0).normalize(); damage(p, 150 * (1 - dd / 8) * los(p.position, 1), dir, who === 'player' ? 'player' : 'npc'); if (u.state === 'dead') { u.fly = new V3(dir.x * 8, 6 + rnd(0, 3), dir.z * 8); u.spin = rnd(-6, 6); } } else if (dd < 30 && u.state === 'walk') { u.state = 'flee'; u.fleeT = 8; } }
-    if (X.wakeParked) X.wakeParked(pos, 7);
-    for (const c of [...cars]) { const dd = c.position.distanceTo(pos); if (c.userData.mode === 'wreck' || dd > 7) continue; const src = who === 'player' ? 'player' : 'npc'; const lf = los(c.position, 0.8); if (dd < 4.5 && lf === 1) explode(c, src); else { c.userData.hp -= 45 * lf; if (c.userData.hp <= 0) explode(c, src); } }
-    const g = new THREE.Mesh(new THREE.CircleGeometry(1.8, 16), scorchMat); g.rotation.x = -Math.PI / 2; g.position.set(pos.x, floorAt(pos.x, pos.z, pos.y + 0.5) + 0.03, pos.z); scene.add(g); splats.push(g); trimSplats();
+    if (!player.car && d < R) X.hurtPlayer('boom', 95 * scale * (1 - d / R) * los(player.pos, 1));
+    for (const p of peds) { const u = p.userData; const dd = p.position.distanceTo(pos); if (dd < R && u.state !== 'dead') { const dir = new V3().subVectors(p.position, pos).setY(0).normalize(); damage(p, 150 * scale * (1 - dd / R) * los(p.position, 1), dir, who === 'player' ? 'player' : 'npc'); if (u.state === 'dead') { u.fly = new V3(dir.x * 8 * scale, (6 + rnd(0, 3)) * scale, dir.z * 8 * scale); u.spin = rnd(-6, 6); } } else if (dd < 30 * scale && u.state === 'walk') { u.state = 'flee'; u.fleeT = 8; } }
+    if (X.wakeParked) X.wakeParked(pos, 7 * scale);
+    for (const c of [...cars]) { const dd = c.position.distanceTo(pos); if (c.userData.mode === 'wreck' || dd > 7 * scale) continue; const src = who === 'player' ? 'player' : 'npc'; const lf = los(c.position, 0.8); if (dd < 4.5 * scale && lf === 1) explode(c, src); else { c.userData.hp -= 45 * scale * lf; if (c.userData.hp <= 0) explode(c, src); } }
+    const g = new THREE.Mesh(new THREE.CircleGeometry(1.8 * scale, 16), scorchMat); g.rotation.x = -Math.PI / 2; g.position.set(pos.x, floorAt(pos.x, pos.z, pos.y + 0.5) + 0.03, pos.z); scene.add(g); splats.push(g); trimSplats();
     if (who === 'player') raiseWanted(2); emit('grenade', pos, { who });
   }
 
@@ -334,5 +370,5 @@ export function initWeapons(X) {
   function inSmoke(pos) { for (const p of projs) if (p.kind === 'smoke' && p.t > 2 && p.t < 24 && p.m.position.distanceTo(pos) < 5.5) return true; return false; }
 
   reset();
-  return { quick, DEF, ORDER, inv, give, reset, save, load, confiscate, lock, allowed, get locked() { return lockMode; }, select, slotKey, cycle, press, update, reload, addAmmo, attach, hud, canAim, stun, spawnProj, sprayCone, puff, sparks, bang, boom, flashLight, firework, addSplat, paintTargets, inSmoke, buildModel, PAINT, get cur() { return cur; }, get trigger() { return trigger; }, projs };
+  return { quick, DEF, ORDER, inv, give, reset, save, load, confiscate, lock, allowed, get locked() { return lockMode; }, select, slotKey, cycle, cycleFuse, press, update, reload, addAmmo, attach, hud, canAim, stun, spawnProj, sprayCone, puff, sparks, bang, boom, flashLight, firework, addSplat, paintTargets, inSmoke, buildModel, PAINT, get cur() { return cur; }, get trigger() { return trigger; }, projs };
 }
