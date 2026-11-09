@@ -100,8 +100,76 @@ export function initFire(X, W, D) {
       else if (b.state === 'leave') { const away = b.away || (b.away = (() => { for (let k = 0; k < 30; k++) { const q = X.randomRoadPoint(pick(X.roadsDrivable)); if (Math.hypot(q.x - c.position.x, q.z - c.position.z) > 200) return [q.x, q.z]; } return [c.position.x + 300, c.position.z]; })()); if (!b.lpath) { b.lpath = D.route(c.position.x, c.position.z, away[0], away[1]) || [away]; b.lpi = 0; } while (b.lpi < b.lpath.length - 1 && Math.hypot(b.lpath[b.lpi][0] - c.position.x, b.lpath[b.lpi][1] - c.position.z) < 7) b.lpi++; D.driveTo(c, b.lpath[b.lpi][0], b.lpath[b.lpi][1], dt, 11); b.leaveT = (b.leaveT || 0) + dt; if (c.position.distanceTo(player.pos) > 150 || (b.leaveT > 20 && c.position.distanceTo(player.pos) > 30) || b.leaveT > 60) { D.removeCar(c); brigades.splice(i, 1); } }
     }
   }
-  function update(dt) { updateFires(dt); updateBrigades(dt); }
+  // ---------- Rettungsdienst (RTW & Sanitäter) ----------
+  const medics = [];
+  function makeParamedic(x, z) {
+    const h = makeHuman(Math.random() < 0.5, { model: 'man', keepColors: true });
+    h.traverse(o => { if (o.isMesh && o.material) { o.material = o.material.clone(); const nm = o.material.name || ''; if (/Shirt|Jacket|LightJacket|Main/i.test(nm)) o.material.color.setHex(0xe62420).convertSRGBToLinear(); else if (/Pants/i.test(nm)) o.material.color.setHex(0xf0f2f5).convertSRGBToLinear(); } });
+    const stripe = new THREE.Mesh(new THREE.BoxGeometry(0.48, 0.06, 0.28), new THREE.MeshBasicMaterial({ color: 0xffe135 })); stripe.position.set(0, 1.05, 0); h.add(stripe);
+    const bag = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.2, 0.14), new THREE.MeshLambertMaterial({ color: 0xd01818 })); bag.position.set(0, -0.1, 0); h.userData.hand.add(bag);
+    h.position.set(x, TH(x, z), z); Object.assign(h.userData, { road: pick(X.pedRoads()), seg: 0, dir: 1, side: 1, speed: 3.4, hp: 120, state: 'medic', t: rnd(0, 5), medic: true, keep: true });
+    scene.add(h); peds.push(h); X.shootables.push(h); return h;
+  }
+  function revivePed(p) {
+    const u = p.userData; u.dead = false; u.rd = null; u.fly = null; u.deadT = 0; u.hp = 85; u.state = 'walk'; u.medic = null; u.curAnim = null;
+    p.rotation.set(0, p.rotation.y, 0); p.position.y = TH(p.position.x, p.position.z);
+    if (X.rehome) X.rehome(u, p.position); if (u.mixer) X.playAnim(p, 'idle');
+  }
+  function dispatchMedic(target) {
+    const p = target.position; let best = null;
+    for (let k = 0; k < 40; k++) { const q = X.randomRoadPoint(pick(X.roadsDrivable)); const dd = Math.hypot(q.x - p.x, q.z - p.z); if (dd > 85 && dd < 190) { best = q; break; } }
+    if (!best || !X.makeAmbulance) return null;
+    const c = X.makeAmbulance(); const [fx, fz] = D.freeSpot(best.x, best.z, 2.5);
+    c.position.set(fx, TH(fx, fz), fz); c.userData.heading = best.heading; c.rotation.y = best.heading; c.userData.mode = 'medicAI'; c.userData.siren = true;
+    D.addCar(c);
+    const m = { rtw: c, target, crew: [], state: 'drive', t: 0, treatT: 0 }; c.userData.medic = m; target.userData.medic = m; medics.push(m);
+    if (Math.random() < 0.6) D.post('rettung', `Rettungseinsatz ${X.streetAt(p.x, p.z) ? 'in der ' + X.streetAt(p.x, p.z) : 'in Bornheim'}. RTW ist unterwegs.`, Math.round(rnd(40, 240)));
+    return m;
+  }
+  function updateMedics(dt) {
+    if (opts.firebrigade !== false && medics.filter(m => m.state !== 'leave').length < 2) {
+      for (const p of peds) { const u = p.userData; if (u.state === 'dead' && !u.medic && (u.deadT || 0) > 1.2 && (u.deadT || 0) < 20 && p.position.distanceTo(player.pos) < 240) { dispatchMedic(p); break; } }
+    }
+    for (let i = medics.length - 1; i >= 0; i--) {
+      const m = medics[i], c = m.rtw, u = c.userData; m.t += dt;
+      if (!cars.includes(c) || c === player.car || u.mode === 'wreck') { for (const h of m.crew) D.removePed(h); if (m.target) m.target.userData.medic = null; medics.splice(i, 1); continue; }
+      const tOk = m.target && peds.includes(m.target) && m.target.userData.state === 'dead';
+      if (!tOk && m.state !== 'leave') {
+        const nx = peds.find(p => p.userData.state === 'dead' && (!p.userData.medic || p.userData.medic === m) && p.position.distanceTo(c.position) < 45);
+        if (nx) { m.target = nx; nx.userData.medic = m; m.treatT = 0; continue; }
+        m.state = 'leave'; u.siren = false; for (const h of m.crew) D.removePed(h); m.crew = [];
+      }
+      if (m.state === 'drive' && tOk) {
+        const tp = m.target.position, dx = c.position.x - tp.x, dz = c.position.z - tp.z, L = Math.hypot(dx, dz) || 1;
+        const tx = tp.x + dx / L * 6, tz = tp.z + dz / L * 6;
+        if (!m.path) { m.path = D.route(c.position.x, c.position.z, tp.x, tp.z) || []; m.pi = 0; const e = m.path[m.path.length - 1]; m.goal = e && Math.hypot(e[0] - tp.x, e[1] - tp.z) < 45 ? e : [tx, tz]; }
+        while (m.pi < m.path.length - 1 && Math.hypot(m.path[m.pi][0] - c.position.x, m.path[m.pi][1] - c.position.z) < 7) m.pi++;
+        const last = m.pi >= m.path.length - 1, wp = last ? m.goal : m.path[m.pi];
+        D.driveTo(c, wp[0], wp[1], dt, last ? 8 : 15);
+        const d = Math.hypot(tp.x - c.position.x, tp.z - c.position.z);
+        if (d < 9 || m.t > 32) { u.speed = 0; if (u.vel) u.vel.set(0, 0); m.state = 'work'; m.treatT = 0;
+          for (let k = 0; k < 2; k++) { const [x, z] = D.freeSpot(c.position.x + rnd(-2, 2), c.position.z + rnd(-2, 2), 1.2); m.crew.push(makeParamedic(x, z)); } }
+      } else if (m.state === 'work' && tOk) {
+        const tp = m.target.position; let near = false;
+        m.crew.forEach((h, k) => {
+          const hu = h.userData; if (hu.state === 'dead' || hu.state === 'stunned') return; hu.t += dt;
+          const tx = tp.x + (k ? 0.65 : -0.65), tz = tp.z + (k ? -0.4 : 0.4), dx = tx - h.position.x, dz = tz - h.position.z, L = Math.hypot(dx, dz);
+          if (L > 0.7) { const sp = Math.min(3.5, L * 2.2); moveWithCollision(h.position, dx / L * sp * dt, dz / L * sp * dt, 0.3); h.rotation.y = lerpAngle(h.rotation.y, Math.atan2(dx, dz), Math.min(1, dt * 8)); animateWalk(h, hu.t, sp * 2); }
+          else { near = true; h.rotation.y = lerpAngle(h.rotation.y, Math.atan2(tp.x - h.position.x, tp.z - h.position.z), Math.min(1, dt * 6)); animateWalk(h, hu.t, 0); h.userData.armR.rotation.x = -0.6 + Math.sin(hu.t * 6) * 0.25; }
+          h.position.y = TH(h.position.x, h.position.z);
+        });
+        if (near || m.t > 42) { m.treatT += dt; if (m.treatT > 4.2) { revivePed(m.target); m.target = null; } }
+      } else if (m.state === 'leave') {
+        const away = m.away || (m.away = (() => { for (let k = 0; k < 30; k++) { const q = X.randomRoadPoint(pick(X.roadsDrivable)); if (Math.hypot(q.x - c.position.x, q.z - c.position.z) > 180) return [q.x, q.z]; } return [c.position.x + 250, c.position.z]; })());
+        if (!m.lpath) { m.lpath = D.route(c.position.x, c.position.z, away[0], away[1]) || [away]; m.lpi = 0; }
+        while (m.lpi < m.lpath.length - 1 && Math.hypot(m.lpath[m.lpi][0] - c.position.x, m.lpath[m.lpi][1] - c.position.z) < 7) m.lpi++;
+        D.driveTo(c, m.lpath[m.lpi][0], m.lpath[m.lpi][1], dt, 12); m.leaveT = (m.leaveT || 0) + dt;
+        if (c.position.distanceTo(player.pos) > 150 || (m.leaveT > 18 && c.position.distanceTo(player.pos) > 30) || m.leaveT > 55) { D.removeCar(c); medics.splice(i, 1); }
+      }
+    }
+  }
+  function update(dt) { updateFires(dt); updateBrigades(dt); updateMedics(dt); }
   X.douse = douse; X.ignite = ignite;
-  X.mmHooks.push((ctx, P) => { for (const f of fires) { const p = fireAt(f); const [x, y] = P(p.x, p.z); ctx.fillStyle = '#ff7a1a'; ctx.beginPath(); ctx.arc(x, y, 3 + f.I * 2, 0, 7); ctx.fill(); } for (const b of brigades) { const [x, y] = P(b.truck.position.x, b.truck.position.z); ctx.fillStyle = '#e02020'; ctx.fillRect(x - 4, y - 4, 8, 8); } });
-  return { update, ignite, douse, fires, bins, spawnBin, removeBin, brigades, dispatch, makeFirefighter, fireAt };
+  X.mmHooks.push((ctx, P) => { for (const f of fires) { const p = fireAt(f); const [x, y] = P(p.x, p.z); ctx.fillStyle = '#ff7a1a'; ctx.beginPath(); ctx.arc(x, y, 3 + f.I * 2, 0, 7); ctx.fill(); } for (const b of brigades) { const [x, y] = P(b.truck.position.x, b.truck.position.z); ctx.fillStyle = '#e02020'; ctx.fillRect(x - 4, y - 4, 8, 8); } for (const m of medics) { const [x, y] = P(m.rtw.position.x, m.rtw.position.z); ctx.fillStyle = '#ffffff'; ctx.fillRect(x - 4, y - 4, 8, 8); ctx.fillStyle = '#e62420'; ctx.fillRect(x - 1, y - 3, 2, 6); ctx.fillRect(x - 3, y - 1, 6, 2); } });
+  return { update, ignite, douse, fires, bins, spawnBin, removeBin, brigades, medics, dispatch, dispatchMedic, makeFirefighter, makeParamedic, fireAt };
 }

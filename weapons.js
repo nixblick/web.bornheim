@@ -96,23 +96,24 @@ export function initWeapons(X) {
     if (!barEl) return; const disp = barT > 0 ? 'flex' : 'none'; if (disp !== lastBarDisp) { lastBarDisp = disp; barEl.style.display = disp; } if (barT <= 0) return;
     const bh = ORDER.map(k => `<div class="${k === cur ? 'sel' : ''}${inv[k] && allowed(k) ? '' : ' off'}"><i>${inv[k] && !allowed(k) ? '🔒' : DEF[k].ic}</i><small>${(DEF[k].slot)}</small><span>${DEF[k].n}</span></div>`).join(''); if (bh !== lastB) { lastB = bh; barEl.innerHTML = bh; }
   }
-  function hud() { return player.car ? null : ammoText(cur); }
+  const inClosedCar = () => !!(player.car && !player.car.userData.bike);
+  function hud() { return inClosedCar() ? null : ammoText(cur); }
 
   // ---------- Feuern ----------
   function press(down) { if (!allowed(cur)) { select('fists', true); } trigger = down; if (down) tryFire(true); }
   function tryFire(first) {
-    if (player.car || player.dead || cool > 0) return false; const d = DEF[cur]; if (!d.auto && !first) return false;
+    if (inClosedCar() || player.dead || cool > 0) return false; const d = DEF[cur]; if (!d.auto && !first) return false;
     if (d.kind === 'gun') fireGun(d); else if (d.kind === 'melee') melee(d); else if (d.kind === 'throw') throwIt(d); else if (d.kind === 'spray') sprayTick(d); else if (d.kind === 'taser') taser(d);
     return true;
   }
-  function shootPose(snd) { player.aimT = 1.6; const pm = player.mesh.userData; pm.aiming = true; if (pm.mixer) { playAnim(player.mesh, 'shoot', { fade: 0.05 }); pm.curAnim = 'shooting'; } player.yaw = camYaw.v; player.mesh.rotation.y = player.yaw; if (snd) sfx(snd); }
+  function shootPose(snd) { player.aimT = 1.6; const pm = player.mesh.userData; pm.aiming = true; if (pm.mixer) { playAnim(player.mesh, 'shoot', { fade: 0.05 }); pm.curAnim = 'shooting'; } if (!player.car) player.yaw = camYaw.v; player.mesh.rotation.y = camYaw.v; if (snd) sfx(snd); }
   const _ray = new THREE.Raycaster(), _v = new V3(), _ndc = new THREE.Vector2();
   function candidates(range) { const dir = camera.getWorldDirection(new V3()); const cp = camera.position; return shootables.filter(o => { if (!o.visible || o === player.car || o.userData.hp <= 0 && !cars.includes(o)) return false; const dx = o.position.x - cp.x, dz = o.position.z - cp.z, dy = o.position.y - cp.y; const L = Math.hypot(dx, dy, dz); if (L > range + 5) return false; return (dx * dir.x + dy * dir.y + dz * dir.z) > -3; }); }
   function wallDist(ray, range) { for (let s = 2.5; s < range; s += 1.25) { const p = ray.at(s, _v); if (p.y <= TH(p.x, p.z) || solidAtH(p.x, p.z, p.y) !== -1) return s; } return range; }
   function owner(o) { while (o && !cars.includes(o) && !peds.includes(o)) o = o.parent; return o; }
   function hitTarget(o, dmg, dir) {
     if (peds.includes(o)) { const u = o.userData; if (u.cop && u.hp > 0) { raiseWanted(0.6); emit('hitCop', o.position, { ped: o }); } else emit('hitPed', o.position, { ped: o }); damage(o, dmg, dir); if (u.hp > 0 && u.state !== 'dead' && dmg >= 15 && (u.state === 'demo' || u.state === 'riot')) stun(o, 'hit', 1.2); }
-    else damage(o, dmg * 0.6, dir);
+    else damage(o, o.userData.bike ? dmg : dmg * 0.6, dir);
   }
   function fireGun(d) {
     const it = inv[cur]; if (it.mag <= 0) { if (it.res > 0 || unlimited()) reload(); else { showMsg('LEER', 600); sfx('click'); cool = 0.3; } return; }
@@ -140,15 +141,17 @@ export function initWeapons(X) {
 
   // ---------- Nahkampf ----------
   function melee(d) {
-    cool = d.rate; swingT = 0.34; meleeT = 0.14; player.yaw = camYaw.v; player.mesh.rotation.y = player.yaw; const pm = player.mesh.userData;
+    cool = d.rate; swingT = 0.34; meleeT = 0.14; if (!player.car) player.yaw = camYaw.v; player.mesh.rotation.y = camYaw.v; const pm = player.mesh.userData;
     if (pm.mixer) { playAnim(player.mesh, cur === 'bat' ? 'Sword_Slash' : (punchAlt ? 'Punch_Right' : 'Punch_Left'), { once: true, fade: 0.05 }); pm.actT = cur === 'bat' ? 0.55 : 0.4; } punchAlt = !punchAlt; sfx('swing', cur === 'bat' ? 0.8 : 0.4);
   }
   function meleeHit(d) {
-    const fx = Math.sin(player.yaw), fz = Math.cos(player.yaw); let best = null, bd = d.range + 0.3;
+    const yaw = player.car ? camYaw.v : player.yaw, fx = Math.sin(yaw), fz = Math.cos(yaw); let best = null, bd = d.range + 0.3;
+    for (const c of cars) if (c !== player.car && c.userData.bike && c.userData.rider && c.position.distanceTo(player.pos) < bd + 0.5) { X.tipBike && X.tipBike(c, 'player'); }
     for (const p of peds) { const u = p.userData; if (u.state === 'dead' || u.hp <= 0) continue; const dx = p.position.x - player.pos.x, dz = p.position.z - player.pos.z, L = Math.hypot(dx, dz); if (L > bd || Math.abs(p.position.y - player.pos.y) > 1.6) continue; if ((dx * fx + dz * fz) / (L || 1) < 0.35) continue; bd = L; best = p; }
     if (best) { const dir = new V3(fx, 0, fz); sfx('punch', cur === 'bat' ? 1 : 0.7); hitTarget(best, d.dmg, dir); if (best.userData.state !== 'dead') { moveWithCollision(best.position, fx * (cur === 'bat' ? 1.1 : 0.5), fz * (cur === 'bat' ? 1.1 : 0.5), 0.3); if (cur === 'bat') stun(best, 'hit', 2.2); } camShake(0.08); return; }
     if (cur === 'bat' && X.wakeParked) X.wakeParked(player.pos, 3.2);
     if (cur === 'bat') for (const c of cars) { if (c === player.car || c.userData.mode === 'wreck') continue; const dx = c.position.x - player.pos.x, dz = c.position.z - player.pos.z, L = Math.hypot(dx, dz); if (L > 3.4 || (dx * fx + dz * fz) / L < 0.3) continue;
+      if (c.userData.bike) { X.tipBike && X.tipBike(c, 'player'); return; }
       const wp = new V3(player.pos.x + fx * 1.4, player.pos.y + 0.9, player.pos.z + fz * 1.4); dentCar(c, wp, new V3(fx, -0.2, fz), 0.13); c.userData.hp -= 5; sfx('bump', 0.9); camShake(0.1); emit('vandal', c.position, { car: c }); if (c.userData.mode === 'ai') { c.userData.speed = 0; } return; }
   }
 
@@ -188,6 +191,7 @@ export function initWeapons(X) {
     const it = inv.taser; if (it.mag <= 0 && !unlimited()) { if (it.res > 0) { it.res--; it.mag = 1; sfx('reload'); cool = 1.0; } else { showMsg('KEINE KARTUSCHEN', 700); cool = 0.4; } return; }
     if (!unlimited()) it.mag--; cool = d.rate; shootPose('taser');
     const from = new V3(); model.userData.muzzle.getWorldPosition(from); const ray = new THREE.Raycaster(); ray.setFromCamera(new THREE.Vector2(0, 0), camera);
+    for (const c of cars) if (c !== player.car && c.userData.bike && c.userData.rider && c.position.distanceTo(player.pos) <= d.range && ray.ray.distanceToPoint(c.position.clone().setY(c.position.y + 1)) < 1.2) { X.tipBike && X.tipBike(c, 'player'); }
     let best = null, bd = 1.2; for (const p of peds) { const u = p.userData; if (u.state === 'dead') continue; const c = p.position.clone(); c.y += 1.1; const t = c.clone().sub(ray.ray.origin).dot(ray.ray.direction); if (t < 2 || t > d.range + 4) continue; if (c.distanceTo(player.pos) > d.range) continue; const dd = ray.ray.distanceToPoint(c); if (dd < bd) { bd = dd; best = p; } }
     const end = best ? best.position.clone().setY(best.position.y + 1.1) : ray.ray.at(d.range + 3, new V3());
     for (const off of [-0.06, 0.06]) { const g = new THREE.BufferGeometry().setFromPoints([from.clone().setY(from.y + off), end.clone().setY(end.y + off)]); const l = new THREE.Line(g, wireMat); scene.add(l); wires.push({ l, t: 1.4 }); }
@@ -198,7 +202,7 @@ export function initWeapons(X) {
   const projs = [];
   function throwIt(d) {
     const it = inv[cur]; if (!unlimited() && it.res <= 0) { showMsg('KEINE ' + d.n.toUpperCase(), 700); cool = 0.4; return; }
-    if (!unlimited()) it.res--; cool = d.rate; player.yaw = camYaw.v; player.mesh.rotation.y = player.yaw; const pm = player.mesh.userData;
+    if (!unlimited()) it.res--; cool = d.rate; if (!player.car) player.yaw = camYaw.v; player.mesh.rotation.y = camYaw.v; const pm = player.mesh.userData;
     if (pm.mixer) { playAnim(player.mesh, 'Punch_Right', { once: true, fade: 0.05 }); pm.actT = 0.38; } sfx('throw', 0.5);
     const from = new V3(); pm.hand.getWorldPosition(from); from.y = Math.max(from.y, player.pos.y + 1.55);
     const dir = camera.getWorldDirection(new V3()); const sp = cur === 'paint' || cur === 'banger' ? 21 : 17; const v = dir.multiplyScalar(sp); v.y += 3.0;
