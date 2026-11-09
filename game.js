@@ -1350,7 +1350,7 @@ function makeCar(police = false, typeName = null) {
   if (!tlMat) { tlMat = new THREE.MeshBasicMaterial({ color: 0x8a1010 }); tlMat.userData.own = true; }
   if (police && !bar) { const bm = POLICE_BAR_M.clone(); bm.userData.own = true; bar = new THREE.Mesh(POLICE_BAR_G, bm); bar.position.set(0, D.h + 0.05, -0.2); g.add(bar); }
   if (!T.blinkGeoL) {
-    const mkB = x => { const g1 = new THREE.BoxGeometry(0.1, 0.07, 0.08), g2 = new THREE.BoxGeometry(0.1, 0.07, 0.08); g1.translate(x, D.h * 0.45, D.l / 2 - 0.05); g2.translate(x, D.h * 0.45, -D.l / 2 + 0.05); const mg = mergeBufferGeometries([g1, g2]); g1.dispose(); g2.dispose(); mg.userData.shared = true; return mg; };
+    const mkB = x => { const g1 = new THREE.BoxGeometry(0.1, 0.07, 0.08), g2 = new THREE.BoxGeometry(0.1, 0.07, 0.08); g1.translate(x, D.h * 0.45, D.l / 2 - 0.05); g2.translate(x, D.h * 0.45, -D.l / 2 + 0.05); const mg = mergeGeometries([g1, g2]); g1.dispose(); g2.dispose(); mg.userData.shared = true; return mg; };
     T.blinkGeoL = mkB(-D.w / 2 + 0.06); T.blinkGeoR = mkB(D.w / 2 - 0.06);
     T.coneGeo = new THREE.PlaneGeometry(D.w + 2.5, 9); T.coneGeo.userData.shared = true;
   }
