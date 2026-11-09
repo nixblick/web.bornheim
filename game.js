@@ -23,10 +23,11 @@ let aoPass = null, gradePass = null;
 
 // ---------- Grundgerüst ----------
 // Schwache (integrierte/mobile) GPU vorab erkennen: Antialiasing lässt sich nach dem Anlegen nicht mehr abschalten
-const WEAK_GPU = (() => { try { const g = String(window.__gpuInfo || '').toLowerCase(); return /intel.*(uhd|hd graphics|iris)|mali|adreno|powervr|videocore/.test(g) && !/\barc\b/.test(g); } catch (e) { return false; } })();
+const WEAK_GPU = (() => { try { const g = String(localStorage.getItem('notgta.gpu') || '').toLowerCase(); return /intel.*(uhd|hd graphics|iris)|mali|adreno|powervr|videocore/.test(g) && !/\barc\b/.test(g); } catch (e) { return false; } })();
 const CAR_VIS = WEAK_GPU ? 120 : 180, PED_VIS = WEAK_GPU ? 75 : 100; // Sichtgrenzen für fahrende Autos und Fußgänger
-const renderer = new THREE.WebGLRenderer({ antialias: !WEAK_GPU, powerPreference: 'high-performance' });
-addEventListener('pagehide', () => { try { renderer.forceContextLoss(); renderer.dispose(); } catch (e) {} });
+let renderer;
+try { renderer = new THREE.WebGLRenderer({ antialias: !WEAK_GPU, powerPreference: 'high-performance' }); }
+catch (e1) { try { renderer = new THREE.WebGLRenderer({ antialias: false }); } catch (e2) { if (window.__fail) window.__fail('WebGL konnte nicht gestartet werden', 'Der Grafik-Kontext im aktuellen Browser-Tab ist blockiert. Bitte schließe diesen Tab und öffne die Seite in einem neuen Tab (oder starte den Browser kurz neu).', String(e2 && e2.message || e2)); throw e2; } }
 renderer.setPixelRatio(1);
 renderer.setSize(innerWidth, innerHeight);
 renderer.shadowMap.enabled = true;
@@ -185,7 +186,7 @@ const WORLD = {}; for (const k of WKEYS) WORLD[k] = []; // alles bisher geladene
 const CITY = Object.assign({ origin: WIDX.origin }, WORLD); // beim Bau einer Kachel zeigt CITY kurz nur auf deren Daten
 const TILES = new Map(); const tkey = (tx, tz) => tx + '_' + tz;
 // Qualitätsstufe früh lesen (Normal-Maps werden beim Aufbau gesetzt)
-function detectGPU() { if (window.__gpuInfo) return window.__gpuInfo; try { const gl = renderer.getContext(); const ext = gl.getExtension('WEBGL_debug_renderer_info'); return String(ext ? gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER)); } catch (e) { return ''; } }
+function detectGPU() { try { const gl = renderer.getContext(); const ext = gl.getExtension('WEBGL_debug_renderer_info'); const s = String(ext ? gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER)); try { localStorage.setItem('notgta.gpu', s); } catch (e) {} return s; } catch (e) { return ''; } }
 function autoQuality(gpu) { const g = gpu.toLowerCase();
   if (/swiftshader|llvmpipe|software|basic render/.test(g)) return 'niedrig';
   if (/rtx\s*(30[6-9]0|40[6-9]0|50\d0)|rx\s*(6[7-9]|7[7-9]|9[0-9])\d\d|apple m[2-9] (pro|max|ultra)/.test(g)) return 'ultra';
