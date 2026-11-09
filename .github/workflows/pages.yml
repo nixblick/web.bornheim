@@ -29,6 +29,9 @@ jobs:
           mkdir _site
           cp index.html play.html credits.html impressum.html manifest.webmanifest _site/
           cp *.js _site/   # alle Spielmodule im Wurzelverzeichnis (tools/ bleibt draußen); eine feste Liste hat story3.js vergessen und die Seite hing bei „Lade Stadt“
+          V="${GITHUB_SHA::7}"
+          sed -i "s/game\.js[^']*/game.js?v=$V/" _site/play.html
+          sed -i -E "s/from '\.\/([a-z0-9_]+\.js)'/from '.\/\1?v=$V'/g" _site/*.js
           cp -r assets vendor _site/
           mkdir _site/data && cp -r data/tiles data/dem data/metro.json data/districts.json _site/data/
           touch _site/.nojekyll

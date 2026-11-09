@@ -235,7 +235,7 @@
   document.getElementById('loaderr_fb').onclick = function () { if (window.__openFeedback) window.__openFeedback(); else location.href = 'https://github.com/nixblick/web.bornheim/issues/new'; };
   if (!window.WebGL2RenderingContext) { fail('Dein Browser kann kein WebGL 2', 'Das Spiel braucht WebGL 2. Aktualisiere Chrome, Edge, Firefox oder Safari und schalte die Hardwarebeschleunigung in den Browser-Einstellungen ein.'); return; }
   var mobile = matchMedia('(pointer: coarse)').matches && !matchMedia('(pointer: fine)').matches;
-  function start() { var s = document.createElement('script'); s.type = 'module'; s.src = 'game.js'; s.onerror = function () { fail('Das Spiel konnte nicht laden', 'Eine Spieldatei fehlt oder ließ sich nicht laden (game.js oder eines seiner Module). Neu laden hilft oft. Bleibt es, melde den Fehler bitte mit dem Knopf unten.'); }; document.body.appendChild(s); }
+  function start() { var s = document.createElement('script'); s.type = 'module'; s.src = 'game.js?v=2'; s.onerror = function () { fail('Das Spiel konnte nicht laden', 'Eine Spieldatei fehlt oder ließ sich nicht laden (game.js oder eines seiner Module). Neu laden hilft oft. Bleibt es, melde den Fehler bitte mit dem Knopf unten.'); }; document.body.appendChild(s); }
   // Handy und Tablet: Touch-Steuerung (touch.js) und beim ersten Start sparsame Einstellungen
   if (mobile) { window.__touch = true; try { if (!localStorage.getItem('notgta.opts')) localStorage.setItem('notgta.opts', JSON.stringify({ quality: 'niedrig', view: 300, scale: 0.8, shadows: false, ao: false, bloom: 0, peds: 0.6, traffic: 0.6, dynres: true, lod: true, minimap: true })); } catch (e) {} var ts = document.createElement('script'); ts.src = 'touch.js'; document.body.appendChild(ts); }
   start();
