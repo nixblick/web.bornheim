@@ -193,7 +193,7 @@ function autoQuality(gpu) { const g = gpu.toLowerCase();
   if (/nvidia|geforce|rtx|gtx|radeon rx|radeon pro|apple m\d/.test(g)) return 'hoch';
   return 'mittel'; }
 const GPU = detectGPU(); let QUALITY = 'mittel', QUALITY_AUTO = false, WEAK_VIEW = false;
-try { const o = JSON.parse(localStorage.getItem('notgta.opts') || '{}'); if (o.quality) QUALITY = o.quality; else { QUALITY = 'niedrig'; QUALITY_AUTO = true; } /* Standard immer „Niedrig“: läuft überall flüssig, höher stellt man im Menü (autoQuality liefert den Vorschlag im Hinweistext) */ if (WEAK_GPU && !o.weakTuned) WEAK_VIEW = true; } catch (e) {}
+try { const o = JSON.parse(localStorage.getItem('notgta.opts') || '{}'); if (o.quality) QUALITY = o.quality; else { const a = autoQuality(GPU); QUALITY = a === 'ultra' ? 'hoch' : a; QUALITY_AUTO = true; } /* Standard nach GPU, höchstens „Hoch“: „Mittel“ mit Schatten lief auf Intel UHD so schnell wie „Niedrig“ (41,8 zu 40,7 fps, 09.11.2026), sah aber deutlich besser aus; Software-Renderer bekommen weiter „Niedrig“ */ if (WEAK_GPU && !o.weakTuned) WEAK_VIEW = true; } catch (e) {}
 // Sparmodus: „Niedrig“ oder integrierte GPU → Figuren, Autos und Straße mit MeshLambertMaterial (kein PBR, kein Umgebungslicht), Anisotropie global aus der Stufe
 const LOW_GFX = WEAK_GPU || QUALITY === 'niedrig';
 let ANISO = QUALITY === 'ultra' ? renderer.capabilities.getMaxAnisotropy() : QUALITY === 'niedrig' ? 2 : 4;
@@ -2223,7 +2223,7 @@ function dynRes() {
   if (opts.dynres === false) { if (dynK !== 1) { dynK = 1; renderer.setPixelRatio(dynBase); if (composer) composer.setPixelRatio(dynBase); } dynSet = renderer.getPixelRatio(); return; }
   dynAcc += ft; dynN++; if (dynAcc < 1000) { dynSet = renderer.getPixelRatio(); return; }
   const avg = dynAcc / dynN; dynAcc = 0; dynN = 0; const k0 = dynK;
-  if (avg > 36 && dynK > 0.5) dynK = Math.max(0.5, dynK - 0.1); else if (avg < 22 && dynK < 1) dynK = Math.min(1, dynK + 0.05);
+  if (avg > 40 && dynK > 0.7) dynK = Math.max(0.7, dynK - 0.1); /* Untergrenze 0,7: darunter wird das Bild matschig (09.11.2026) */ else if (avg < 22 && dynK < 1) dynK = Math.min(1, dynK + 0.05);
   if (dynK !== k0) { renderer.setPixelRatio(dynBase * dynK); if (composer) composer.setPixelRatio(dynBase * dynK); }
   dynSet = renderer.getPixelRatio();
 }
@@ -2246,7 +2246,7 @@ function importSave(file) { const fr = new FileReader(); fr.onload = () => { try
 $('m_export').onclick = exportSave; $('m_import').onclick = $('s_import').onclick = () => $('importfile').click(); $('importfile').onchange = e => { if (e.target.files[0]) importSave(e.target.files[0]); e.target.value = ''; };
 $('m_home').onclick = () => { if (!started || confirm('Zur Startseite? Nicht gespeicherter Fortschritt geht verloren.')) location.href = './'; };
 $('s_opts').onclick = openMenu;
-{ const N = { niedrig: 'Niedrig', mittel: 'Mittel', hoch: 'Hoch', ultra: 'Ultra' }; const sug = autoQuality(GPU); $('gpuinfo').textContent = (QUALITY_AUTO ? 'Grafikstufe: Niedrig (Standard)' + (sug !== 'niedrig' ? ' · deine Grafik schafft wohl „' + N[sug] + '“ – Einstellungen › Grafik' : '') : 'Grafikstufe: ' + (N[QUALITY] || QUALITY)) + (GPU ? ' · ' + GPU.replace(/ANGLE \((.*)\)/, '$1').slice(0, 70) : ''); }
+{ const N = { niedrig: 'Niedrig', mittel: 'Mittel', hoch: 'Hoch', ultra: 'Ultra' }; const sug = autoQuality(GPU); $('gpuinfo').textContent = (QUALITY_AUTO ? 'Grafikstufe: ' + N[QUALITY] + ' (automatisch, ändern unter Einstellungen › Grafik)' : 'Grafikstufe: ' + (N[QUALITY] || QUALITY)) + (GPU ? ' · ' + GPU.replace(/ANGLE \((.*)\)/, '$1').slice(0, 70) : ''); }
 // Handy-Hinweis kommt jetzt aus play.html, bevor überhaupt etwas geladen wird
 $('m_resume').onclick = () => { closeMenu(); if (started) lockMouse(); }; $('m_save').onclick = () => { saveGame(); closeMenu(); }; $('m_load').onclick = () => { if (confirm('Letzten Spielstand laden? Nicht gespeicherter Fortschritt geht verloren.')) { loadGame(); closeMenu(); } }; $('m_restart').onclick = () => { if (confirm('Neu starten? Nicht gespeicherter Fortschritt geht verloren.')) location.reload(); };
 for (const id of ['o_sens', 'o_vol', 'o_shadows', 'o_time']) $(id).oninput = () => { opts.sens = +$('o_sens').value; opts.vol = +$('o_vol').value; opts.shadows = $('o_shadows').checked; opts.timeSpeed = +$('o_time').value; applyOpts(); };
