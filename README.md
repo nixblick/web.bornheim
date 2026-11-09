@@ -38,6 +38,7 @@ Linksklick schießen, R nachladen, Enter nach dem Tod, C Kreativmodus, Strg im W
 
 ## Stand
 
+- U-Bahn (09.11.2026): Eingänge stehen als „U“ auf der Minikarte; am Eingang F drücken, Ziel wählen, fahren
 - Grafik (09.11.2026): Neue Spieler starten mit der Stufe, die zur GPU passt (höchstens Hoch), nicht mehr mit „Niedrig“
 - Wasser (09.11.2026): Schwimmen kostet Atemluft (Balken unten), Tauchen mit Strg hält 15 s, an der
   Oberfläche ermüdet man nach 90 s; ohne Luft ertrinkt man („ERTRUNKEN“), an Land füllt sie sich in 3 s

@@ -7,6 +7,9 @@ export function initInteriors(X, W, D, SH) {
   const PX = 60000, PZ = 0; // Taschenraum
   let inside = null; // { kind, grp, walls, triggers, exit, ... }
   let metro = { lines: [], stations: [] }; const ST = new Map();
+  /* U-Bahn-Eingänge auf der Minikarte: blaues „U“ im Umkreis der Karte, damit man die Stationen findet (09.11.2026) */
+  if (X.mmHooks) X.mmHooks.push((ctx, P, R) => { const done = new Set(); for (const s of metro.stations) { if (s.entr.length === 0) continue; const e = s.entr[0]; const [x, y] = P(e[0], e[1]); if (x * x + y * y > R * R || done.has(s.id)) continue; done.add(s.id);
+    ctx.fillStyle = '#0a3d8f'; ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5; ctx.fillRect(x - 6, y - 6, 12, 12); ctx.strokeRect(x - 6, y - 6, 12, 12); ctx.fillStyle = '#fff'; ctx.font = 'bold 10px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('U', x, y + 0.5); } });
   fetch('data/metro.json').then(r => r.ok ? r.json() : null).then(m => { if (!m) return; metro = m; for (const s of m.stations) ST.set(s.id, s); }).catch(() => {});
 
   // ---------- Baukasten ----------
@@ -167,8 +170,8 @@ export function initInteriors(X, W, D, SH) {
     const hole = new THREE.Mesh(new THREE.PlaneGeometry(2.4, 4), new THREE.MeshBasicMaterial({ color: 0x0b0c0f })); hole.rotation.x = -Math.PI / 2; hole.position.set(0, 0.04, 0); g.add(hole);
     for (let i = 0; i < 7; i++) { const s = new THREE.Mesh(new THREE.BoxGeometry(2.3, 0.02, 0.08), M(0x777777, 0.3)); s.position.set(0, 0.05, -1.8 + i * 0.55); g.add(s); }
     for (const [w, d, x, z] of [[0.06, 4, -1.25, 0], [0.06, 4, 1.25, 0], [2.5, 0.06, 0, 2.0]]) { const r = new THREE.Mesh(new THREE.BoxGeometry(w, 1.0, d), metal); r.position.set(x, 0.55, z); g.add(r); }
-    const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 2.8, 6), metal); pole.position.set(1.5, 1.4, 2.2); g.add(pole);
-    const sg = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.6, 0.06), [metal, metal, metal, metal, new THREE.MeshBasicMaterial({ map: uTex() }), new THREE.MeshBasicMaterial({ map: uTex() })]); sg.position.set(1.5, 2.9, 2.2); g.add(sg);
+    const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 3.6, 6), metal); pole.position.set(1.5, 1.8, 2.2); g.add(pole); /* größeres Schild auf höherem Mast: von der Straße aus erkennbar */
+    const sg = new THREE.Mesh(new THREE.BoxGeometry(1.0, 1.0, 0.08), [metal, metal, metal, metal, new THREE.MeshBasicMaterial({ map: uTex() }), new THREE.MeshBasicMaterial({ map: uTex() })]); sg.position.set(1.5, 3.9, 2.2); g.add(sg);
     const ne = nearestEdge(p[0], p[1], 20); if (ne) { const e = edgeNormal(ne.b.p, ne.e); g.rotation.y = Math.atan2(e.dx, e.dz); }
     g.position.set(p[0], y, p[1]); scene.add(g); return g;
   }
