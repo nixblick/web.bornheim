@@ -2312,9 +2312,12 @@ function update(dt) {
     if (creative.on) { player.swim = false; const fly = (keys.Space ? 1 : 0) - (keys.ControlLeft ? 1 : 0) - (keys.ShiftLeft && !ctrl.fwd && !ctrl.back && !ctrl.left && !ctrl.right ? 1 : 0); player.pos.y = Math.max(gy, player.pos.y + fly * 9 * dt); player.vy = 0; player.airT = 0; }
     else if (swimming) {
       if (!player.swim) { player.swim = true; sfx('splat', 0.6); burst(new THREE.Vector3(player.pos.x, wy + 0.1, player.pos.z), 0xd8eeff, 12, 3); }
-      const swimY = wy - 1.18; player.vy = 0; player.pos.y += (swimY - player.pos.y) * Math.min(1, dt * 10);
+      const dive = !!keys.ControlLeft; player.breath = Math.max(0, (player.breath ?? 1) - dt / (dive ? 15 : 90)); /* Atemluft: tauchen 15 s, an der Oberfläche ermüdet man nach 90 s */
+      if (player.breath <= 0 && !opts.god) { player.drownT = (player.drownT || 0) + dt; if (player.drownT > 0.5) { player.drownT = 0; player.hp -= 8; player.drowning = true; sfx('hit', 0.3); } }
+      const swimY = wy - (dive ? 2.4 : 1.18); player.vy = 0; player.pos.y += (swimY - player.pos.y) * Math.min(1, dt * 10);
       if (moving && Math.random() < dt * 10) burst(new THREE.Vector3(player.pos.x, wy + 0.05, player.pos.z), 0xd8eeff, 2, 1.2);
     } else {
+      player.breath = Math.min(1, (player.breath ?? 1) + dt / 3); player.drowning = false;
       if (player.swim) { player.swim = false; player.pos.y = gy; if (player.mesh.userData.gun) player.mesh.userData.gun.visible = true; }
       if (player.vy <= 0 && player.pos.y > gy && player.pos.y - gy < 0.3) player.pos.y = gy; /* Bodenhaftung bergab und auf Treppen, sonst „schwebt“ man und kann nicht springen */ const onGround = player.pos.y <= gy + 0.02; if (keys.Space && onGround) player.vy = 5.2;
       if (onGround && player.vy <= 0 && player.pos.y > gy - 0.6) { player.pos.y += (gy - player.pos.y) * Math.min(1, dt * 18); }
@@ -2404,9 +2407,11 @@ function update(dt) {
   else { for (let i = cars.length - 1; i >= 0; i--) { const c = cars[i]; if (c.userData.mode !== 'police') continue; if (c.position.distanceTo(player.pos) > 120) { disposeCar(c); scene.remove(c); cars.splice(i, 1); unshoot(c); } else { c.userData.mode = 'parked'; c.userData.speed = 0; c.userData.officer = null; } } } // nahe Streifenwagen bleiben stehen statt weiter Beamte abzusetzen
   // Tod
   if (opts.god) player.hp = 100;
+  { const b = player.breath ?? 1; if (!breathEl) { breathEl = document.createElement('div'); breathEl.id = 'breath'; breathEl.style.cssText = 'position:fixed;left:50%;bottom:92px;transform:translateX(-50%);width:180px;height:10px;border-radius:5px;background:rgba(0,0,0,.45);border:1px solid rgba(255,255,255,.5);overflow:hidden;z-index:5;pointer-events:none'; breathEl.innerHTML = '<div style="height:100%;width:100%;background:#7cc8ff"></div>'; document.body.appendChild(breathEl); }
+    const show = player.swim || b < 1; setSty(breathEl, 'display', show ? 'block' : 'none'); if (show) { breathEl.firstChild.style.width = (b * 100).toFixed(0) + '%'; breathEl.firstChild.style.background = b < 0.25 ? '#ff6b5a' : '#7cc8ff'; } }
   player.hp = clamp(player.hp, 0, 100); if (player.hp < lastHp - 0.5) { $('flash').style.opacity = 0.45; setTimeout(() => $('flash').style.opacity = 0, 120); } lastHp = player.hp;
   if (!player.dead && player.hp < 100 && player.wanted === 0) player.hp = Math.min(100, player.hp + dt * 1.5);
-  if (player.hp <= 0 && !player.dead) { player.dead = true; showMsg(player.car ? 'ZERSCHELLT · Enter für Neustart' : 'UMGEHAUEN · Enter für Neustart', 99999); if (player.car) exitCar(); }
+  if (player.hp <= 0 && !player.dead) { player.dead = true; showMsg(player.car ? 'ZERSCHELLT · Enter für Neustart' : player.drowning ? 'ERTRUNKEN · Enter für Neustart' : 'UMGEHAUEN · Enter für Neustart', 99999); if (player.car) exitCar(); }
   // HUD
   if (!moneyEl._v) { moneyEl.innerHTML = '<span class="coin">€</span><span></span>'; moneyEl._v = moneyEl.lastChild; } setTxt(moneyEl._v, (player.money || 0).toLocaleString('de-DE'));
   setTxt(ammoEl, player.car ? `${Math.round(Math.abs(player.car.userData.speed) * 3.6)} km/h` + (player.car.userData.cannon ? ` · Wasser ${Math.round(player.car.userData.tank)} % · Linksklick spritzen` : '') : ''); setSty(weaponEl, 'display', (player.car && player.car.userData.cannon) ? 'none' : '');
@@ -2470,7 +2475,8 @@ const fxEl = { spray: 0, water: 0, paint: 0 };
 function hurtPlayer(kind, amt) { if (player.dead) return; if (!opts.god) player.hp -= amt; if (kind === 'spray') fxEl.spray = 5; if (kind === 'water') fxEl.water = Math.min(3, fxEl.water + 0.6); if (kind === 'paint') { fxEl.paint = 4; $('fx_paint').style.background = `radial-gradient(circle at ${30 + Math.random() * 40}% ${30 + Math.random() * 40}%, #${WPN.PAINT[Math.floor(Math.random() * 6)].toString(16).padStart(6, '0')}cc 0 12%, transparent 30%)`; } if (kind === 'baton' || kind === 'boom') camShake(0.3); }
 function updateFx(dt) { for (const k of ['spray', 'water', 'paint']) { fxEl[k] = Math.max(0, fxEl[k] - dt); $('fx_' + k).style.opacity = Math.min(1, fxEl[k] / (k === 'water' ? 1 : 2)); } if (fxEl.spray > 0 && Math.random() < dt * 0.8) sfx('cough', 0.4); }
 let cardT = null; function card(title, sub, sec = 4) { const el = $('card'); el.innerHTML = `<h2>${title}</h2>${sub ? '<p>' + sub + '</p>' : ''}`; el.style.display = 'block'; el.style.opacity = 1; clearTimeout(cardT); cardT = setTimeout(() => { el.style.opacity = 0; cardT = setTimeout(() => el.style.display = 'none', 600); }, sec * 1000); }
-function respawn() { player.dead = false; player.hp = 100; player.wanted = 0; msgEl.style.display = 'none'; for (const c of cars) if (c.userData.police && c !== player.car) c.userData.mode = 'parked'; }
+let breathEl = null;
+function respawn() { player.dead = false; player.hp = 100; player.breath = 1; player.drowning = false; player.wanted = 0; msgEl.style.display = 'none'; for (const c of cars) if (c.userData.police && c !== player.car) c.userData.mode = 'parked'; }
 
 window.G = { barrierHit, HELI, makeMoto, makeAmbulance, updateBikeRacks, onMotorway, PROGRESS, INTERIORS, explode, makeBike, FX, puff, burst, smoke, LOW_GFX, WEAK_GPU, get ANISO() { return ANISO; }, get roadMat() { return roadMatRef; }, DEMN, DEMT, R_DATA, unregisterTile, SHOPS, TILES, WORLD, WIDX, streamUpdate, streamInit, buildTileNow, TS, WPN, DEMO, STORY, FIRE, X, card, hurtPlayer, composerRef: () => composer,  autoQuality, groundH, dentCar, deckAt, surfAt, signalPoles, treeSpots, lampSpots, pushOffRoads, onOtherRoad, floorAt, solidAtH, solidAt, roofHeight, camShake,  CHAR, CAR_TPL, playAnim, makeHuman, makeCar, makeGun, applyQuality,  staticParked, chunkStatic,  saveGame, loadGame, world, opts, pickups, weather, trams, scene, cars, peds, player, camera, camYaw, camPitch, keys, CITY, DEM, TH, renderer, sun, hemi, THREE, shoot, toggleCar, update, toggleCreative, creative, creativePlace };
 let fpsN = 0, fpsT = 0;

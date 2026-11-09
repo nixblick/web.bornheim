@@ -34,10 +34,12 @@ Dann http://127.0.0.1:8765/ öffnen. Jeder statische Webserver reicht (GitHub Pa
 ## Steuerung
 
 WASD laufen, Maus umschauen, Shift rennen, Leertaste springen, E Auto klauen/aussteigen,
-Linksklick schießen, R nachladen, Enter nach dem Tod, C Kreativmodus. Start: Mann oder Frau wählen.
+Linksklick schießen, R nachladen, Enter nach dem Tod, C Kreativmodus, Strg im Wasser tauchen. Start: Mann oder Frau wählen.
 
 ## Stand
 
+- Wasser (09.11.2026): Schwimmen kostet Atemluft (Balken unten), Tauchen mit Strg hält 15 s, an der
+  Oberfläche ermüdet man nach 90 s; ohne Luft ertrinkt man („ERTRUNKEN“), an Land füllt sie sich in 3 s
 - Stadt aus OSM: Gebäude (extrudiert, Fassadentextur mit Fenstern, Dächer), Straßen mit Asphalt,
   Bürgersteige, Wege, Straßenbahnschienen, Grünflächen, Bäume, Laternen mit Lichtschein, Ampeln
 - Abendstimmung, beleuchtete Fenster, Straßenname und Minimap im HUD
