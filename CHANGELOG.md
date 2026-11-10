@@ -2,6 +2,7 @@
 
 ## 2026-11-10
 
+- Teststrecke Fußgänger `T.laufen()` (`tools/laufen.js`): Fall aus 2,5 m ohne Schaden, Fall aus 14 m mit Fallschaden (19,6 m/s, −60 hp) und ohne Einsinken, Landen auf einem Flachdach, gegen eine Hauswand laufen (bleibt davor), Sprung (0,92 m); 5/5. Treppen und Ragdoll noch ohne Prüfung
 - Hangabtrieb: Autos bekommen g·sin(Neigung) entlang der Fahrtrichtung (abzüglich 1,2 % g Rollwiderstand). Das eigene Auto rollt ohne Gas ab 4 % Gefälle los, bergauf rückwärts; Bremse/Handbremse halten es. KI-Autos erst in Fahrt (wartende rollen nicht weg). Teststrecke `T.fahren()` um „Hangabtrieb“ erweitert (7,5 %: nach 2 s bergab +3,5 km/h, bergauf −3,5 km/h, Handbremse 0), 16/16
 - Schwebende Grünflächen (52/−442, sporadisch rot): `drape` prüft die Höhe nur an Kantenmitten und Schwerpunkt, Dreiecke bis 40 m übersahen Buckel im 4-m-Geländeraster (Spielplatz dort 0,24 m über dem Boden; der Test würfelt die Messpunkte, daher sporadisch). Grünflächen und Schulhöfe teilen jetzt jede Kante über 10 m, Toleranz 5 cm: größte Abweichung in 700 Stichproben 0,13 statt 0,18–0,24 m, Dreiecke im Bild −1,5 %
 - Selbsttest „Fahrbahn liegt obenauf“: Gleisbett der Straßenbahn liegt gewollt auf der Fahrbahn (war die sporadische Abweichung, 1 cm)
