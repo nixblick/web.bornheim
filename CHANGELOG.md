@@ -2,6 +2,8 @@
 
 ## 2026-11-10
 
+- Schwebende Grünflächen (52/−442, sporadisch rot): `drape` prüft die Höhe nur an Kantenmitten und Schwerpunkt, Dreiecke bis 40 m übersahen Buckel im 4-m-Geländeraster (Spielplatz dort 0,24 m über dem Boden; der Test würfelt die Messpunkte, daher sporadisch). Grünflächen und Schulhöfe teilen jetzt jede Kante über 10 m, Toleranz 5 cm: größte Abweichung in 700 Stichproben 0,13 statt 0,18–0,24 m, Dreiecke im Bild −1,5 %
+- Selbsttest „Fahrbahn liegt obenauf“: Gleisbett der Straßenbahn liegt gewollt auf der Fahrbahn (war die sporadische Abweichung, 1 cm)
 - Fenster bei Nacht: statt flacher, gleich heller Gold-Rechtecke ein Lichtverlauf je Fenster in gemischten Farben (warm, neutral, vereinzelt Fernseher-Blau), Helligkeit 60–100 %, Rahmen und Sprossen bleiben dunkel, ein Drittel mit halb zugezogenem Vorhang; weniger Fenster an (Wohnhaus 32 statt 35 %, öffentlich 35 statt 50 %). Tagsüber waren beleuchtete Fenster braun getönt und im Erdgeschoss passten Tag- und Nachtbild nicht zusammen (zweimal gewürfelt); jetzt überall dunkles Glas
 - Selbsttest „Fahrbahn liegt obenauf“ nennt bei Fehlschlag Material und Abstand zur Fahrbahn (schlägt sporadisch fehl, Stichprobe hängt von den gebauten Kacheln ab)
 - Speicher: Knochen-Texturen (12×12/16×16) der Figuren wurden beim Entfernen von Passanten (Abstand, Tote, Umsetzen, Demo, Fahrer) nie freigegeben, je Figur eine GPU-Textur; jetzt `freeSkel`. Gemessen über 24 Kachelsprünge mit Spielschleife: vorher 283→391 GPU-Texturen, nachher 67–114 ohne Anstieg. Canvas-Texturen der Kacheln (Schilderatlas) wurden schon freigegeben; `canvasTex` hält freigegebene Texturen nicht mehr in der Anisotropie-Liste
