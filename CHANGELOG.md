@@ -2,6 +2,7 @@
 
 ## 2026-11-10
 
+- Speicher: Knochen-Texturen (12×12/16×16) der Figuren wurden beim Entfernen von Passanten (Abstand, Tote, Umsetzen, Demo, Fahrer) nie freigegeben, je Figur eine GPU-Textur; jetzt `freeSkel`. Gemessen über 24 Kachelsprünge mit Spielschleife: vorher 283→391 GPU-Texturen, nachher 67–114 ohne Anstieg. Canvas-Texturen der Kacheln (Schilderatlas) wurden schon freigegeben; `canvasTex` hält freigegebene Texturen nicht mehr in der Anisotropie-Liste
 - Gehwege und Wege mit `polygonOffset`: am Hang lag der Gehweg der Querstraße bis 3 cm über der Fahrbahn und flimmerte darüber
 - Selbsttest stabil: Fadenkreuz- und Tasertest stellen das Ziel auf die Ebene des Schützen (stand auf Brücken/am Hang Meter tiefer), „Fahrbahn liegt obenauf“ wertet den Tiefenversatz; 76/76 grün
 - Grafik Mittel: Asphalt im PBR-Material dunkler (Grundwert 0,4 statt 0,6, Umgebungslicht 0,2 statt 0,4), war seit Mittel als Standard ausgewaschen hellgrau; Schatten mit `normalBias` 0,04 und auf Mittel engerem Bereich (±50 statt ±70 m, ~10 statt 14 cm je Texel) gegen Treppen an Bordsteinen
