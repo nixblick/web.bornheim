@@ -455,13 +455,13 @@ function nearestEdge(x, z, maxD = 20) { // nächste Gebäudekante über das Koll
 }
 const SIGN_STYLES = { pharmacy: ['#c8102e', '#ffffff'], bank: ['#1a4f9c', '#ffffff'], cafe: ['#5b3a1e', '#f6e7c8'], restaurant: ['#2b2b2b', '#f2d16b'], fast_food: ['#d8471c', '#ffffff'], bakery: ['#d99a2b', '#3a2a10'], bar: ['#1f1f2e', '#ff6f91'], pub: ['#163a2a', '#e8d9a0'], supermarket: ['#1d6fb8', '#ffffff'], convenience: ['#2a7f3e', '#ffffff'], hairdresser: ['#7a2e8e', '#ffffff'], clothes: ['#222222', '#ffffff'], kiosk: ['#c4342d', '#ffe9a0'], florist: ['#2f7d4a', '#ffd1dc'], ice_cream: ['#ff9ab3', '#3a1a2a'], doctors: ['#ffffff', '#1a4f9c'], dentist: ['#ffffff', '#1a8f8f'], post_office: ['#ffcc00', '#000000'], butcher: ['#b3272d', '#ffffff'], books: ['#3a3a7a', '#ffffff'], optician: ['#ffffff', '#222222'], beauty: ['#c77dba', '#ffffff'], chemist: ['#1a5fb4', '#ffffff'], default: ['#2b3a67', '#ffffff'] };
 // Flächen aufs Gelände legen: Dreiecke teilen, bis sie dem Gelände auf ~10 cm folgen (flache Stellen bleiben grob)
-function drape(geo, lift, minLen = 2.5, tol = 0.1) {
+function drape(geo, lift, minLen = 2.5, tol = 0.1, maxLen = 40) { // maxLen: Kanten darüber werden immer geteilt; die Prüfung an Kantenmitten und Schwerpunkt übersieht sonst Buckel im 4-m-Raster
   const src = geo.index ? geo.toNonIndexed() : geo; const p = src.attributes.position; const out = []; const H = (x, z) => TH(x, z) + lift;
   const tri = (a, b, c, depth) => { const ha = H(a[0], a[1]), hb = H(b[0], b[1]), hc = H(c[0], c[1]);
     const lab = Math.hypot(a[0] - b[0], a[1] - b[1]), lbc = Math.hypot(b[0] - c[0], b[1] - c[1]), lca = Math.hypot(c[0] - a[0], c[1] - a[1]); const L = Math.max(lab, lbc, lca);
     if (L > minLen && depth < 14) { const m = (u, v) => [(u[0] + v[0]) / 2, (u[1] + v[1]) / 2]; const ce = [(a[0] + b[0] + c[0]) / 3, (a[1] + b[1] + c[1]) / 3];
       const dev = Math.max(Math.abs(H(...m(a, b)) - (ha + hb) / 2), Math.abs(H(...m(b, c)) - (hb + hc) / 2), Math.abs(H(...m(c, a)) - (hc + ha) / 2), Math.abs(H(...ce) - (ha + hb + hc) / 3));
-      if (dev > tol || L > 40) { if (L === lab) { const q = m(a, b); tri(a, q, c, depth + 1); tri(q, b, c, depth + 1); } else if (L === lbc) { const q = m(b, c); tri(a, b, q, depth + 1); tri(a, q, c, depth + 1); } else { const q = m(c, a); tri(a, b, q, depth + 1); tri(q, b, c, depth + 1); } return; } }
+      if (dev > tol || L > maxLen) { if (L === lab) { const q = m(a, b); tri(a, q, c, depth + 1); tri(q, b, c, depth + 1); } else if (L === lbc) { const q = m(b, c); tri(a, b, q, depth + 1); tri(a, q, c, depth + 1); } else { const q = m(c, a); tri(a, b, q, depth + 1); tri(q, b, c, depth + 1); } return; } }
     out.push(a[0], ha, a[1], b[0], hb, b[1], c[0], hc, c[1]); };
   for (let i = 0; i < p.count; i += 3) tri([p.getX(i), p.getZ(i)], [p.getX(i + 1), p.getZ(i + 1)], [p.getX(i + 2), p.getZ(i + 2)], 0);
   const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(out, 3)); g.computeVertexNormals(); return g;
@@ -503,7 +503,7 @@ function* buildDetails() {
   addMerged(fenceRail, shLambert(0x3a3a3a), false); addMerged(fencePost, shLambert(0x4a4a4a), false);
   addMerged(wall, shLambert(0x9a9388)); addMerged(rwall, shLambert(0x8a847a)); addMerged(hedge, shLambert(0x3f6f2f));
   // --- Schulhöfe ---
-  const yard = []; for (const a of CITY.areas) { const shape = new THREE.Shape(a.p.map(([x, z]) => new THREE.Vector2(x, -z))); const geo = new THREE.ShapeGeometry(shape); geo.rotateX(-Math.PI / 2); yard.push(drape(geo, 0.06)); }
+  const yard = []; for (const a of CITY.areas) { const shape = new THREE.Shape(a.p.map(([x, z]) => new THREE.Vector2(x, -z))); const geo = new THREE.ShapeGeometry(shape); geo.rotateX(-Math.PI / 2); yard.push(drape(geo, 0.06, 2.5, 0.05, 10)); }
   addMerged(yard, shLambert(0x8f8d88), false);
   // --- Balkone ---
   const slab = [], rail = [];
@@ -976,7 +976,7 @@ function* buildCity() {
   const byCol = new Map();
   for (const g of CITY.green) { if (++YC % 10 === 0) yield;
     const shape = new THREE.Shape(g.p.map(([x, z]) => new THREE.Vector2(x, -z)));
-    let geo = new THREE.ShapeGeometry(shape); geo.rotateX(-Math.PI / 2); geo = drape(geo, g.k === 'pitch' || g.k === 'playground' ? 0.07 : 0.05);
+    let geo = new THREE.ShapeGeometry(shape); geo.rotateX(-Math.PI / 2); geo = drape(geo, g.k === 'pitch' || g.k === 'playground' ? 0.07 : 0.05, 2.5, 0.05, 10);
     const col = g.k === 'pitch' ? (sportCol[g.s] || 0x7a7f86) : (greenCol[g.k] || 0x6f9a52);
     if (!byCol.has(col)) byCol.set(col, []); byCol.get(col).push(geo);
   }
@@ -1041,7 +1041,7 @@ function* buildCity() {
   const roadG = ribbon(CITY.roads, 0.04, r => r.w); if (roadG) { const rm = new THREE.Mesh(roadG, roadMatRef || ((LOW_GFX || opts.potato) ? new THREE.MeshLambertMaterial(TEX.asphalt ? { map: TEX.asphalt, color: 0xb8b8b8 } : { map: asphaltTex }) : new THREE.MeshStandardMaterial(Object.assign(TEX.asphalt ? { map: TEX.asphalt, normalMap: TEX.asphaltN, color: 0xb8b8b8 } : { map: asphaltTex }, { roughness: 0.92, metalness: 0, roughnessMap: null })))); /* Sparmodus und „Sehr schwacher Rechner“: Lambert mit Map */ if (!rm.material.userData.pud) { rm.material.userData.pud = puddleTex(); rm.material.userData.shared = true; } rm.receiveShadow = true; scene.add(rm); roadMatRef = rm.material; }
   const pathG = ribbon(CITY.paths, 0.03, () => 2); if (pathG) { if (!PATH_MAT) { PATH_MAT = new THREE.MeshLambertMaterial(TEX.cobble ? { map: TEX.cobble, normalMap: TEX.cobbleN, color: 0xd0c8bc } : { map: pavingTex, color: 0xcfc8bb }); PATH_MAT.userData.shared = true; PATH_MAT.polygonOffset = true; PATH_MAT.polygonOffsetFactor = 1; PATH_MAT.polygonOffsetUnits = 4; /* Gehweg der Querstraße liegt am Hang bis 3 cm über der Fahrbahn: Fahrbahn gewinnt im Tiefenpuffer */ } flatMat(pathG, PATH_MAT); }
   buildBridges();
-  const railG = ribbon(CITY.rails, 0.05, () => 3); if (railG) flatMat(railG, shLambert(0x6b6258));
+  const railG = ribbon(CITY.rails, 0.05, () => 3); if (railG) { const rm = shLambert(0x6b6258); rm.userData.onRoad = true; /* Gleisbett liegt gewollt auf der Fahrbahn */ flatMat(railG, rm); }
   // Schienen
   const railLines = [];
   for (const r of CITY.rails) for (const off of [-0.72, 0.72]) for (let i = 0; i < r.p.length - 1; i++) { const [ax, az] = r.p[i], [bx, bz] = r.p[i + 1]; const l = Math.hypot(bx - ax, bz - az) || 1; const nx = -(bz - az) / l * off, nz = (bx - ax) / l * off; const g = new THREE.BoxGeometry(0.08, 0.1, l); g.rotateY(Math.atan2(bx - ax, bz - az)); g.rotateX(Math.atan2(TH(ax, az) - TH(bx, bz), l)); g.translate((ax + bx) / 2 + nx, 0.1 + TH((ax + bx) / 2, (az + bz) / 2), (az + bz) / 2 + nz); railLines.push(g); }
