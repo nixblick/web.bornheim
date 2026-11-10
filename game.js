@@ -363,7 +363,7 @@ function canvasTex(w, h, draw, repeatX = 1, repeatY = 1) {
 // Fassade: 4x4 Fenster je Kachel = 12 m breit, 12.8 m hoch (4 Stockwerke)
 const FAC_W = 12, FAC_H = 12.8;
 function facadeTextures(kind = 'res') {
-  const lit = []; for (let i = 0; i < 16; i++) lit.push(Math.random() < (kind === 'public' ? 0.5 : kind === 'hall' ? 0.25 : 0.35));
+  const lit = []; for (let i = 0; i < 16; i++) lit.push(Math.random() < (kind === 'public' ? 0.35 : kind === 'hall' ? 0.2 : 0.32));
   const base = { res: '#f2ece2', house: '#f4efe6', public: '#ece8e0', hall: '#d8d8d6', small: '#d9d2c4', church: '#d5cec2' }[kind] || '#f2ece2';
   const draw = (emis) => (ctx, w, h) => {
     ctx.fillStyle = emis ? '#000' : base; ctx.fillRect(0, 0, w, h);
@@ -389,9 +389,13 @@ function facadeTextures(kind = 'res') {
     const big = kind === 'public';
     for (let r = 0; r < 4; r++) for (let q = 0; q < 4; q++) {
       const ww = cw * (big ? 0.62 : 0.44), wh = ch * (big ? 0.58 : 0.5); const x = q * cw + (cw - ww) / 2, y = r * ch + ch * 0.2; const i = r * 4 + q;
-      if (emis) { if (lit[i]) { ctx.fillStyle = big ? '#eef4ff' : (Math.random() < 0.5 ? '#ffd27a' : '#ffe9b8'); ctx.fillRect(x, y, ww, wh); } continue; }
+      if (emis) { if (lit[i]) { // Innenlicht: Farbe und Helligkeit je Fenster verschieden, Rahmen und Sprossen bleiben dunkel, oft Vorhang oder Lampe nur in einer Ecke
+          const pal = big ? ['#dfe8f0', '#eef1ea', '#c9d6e4'] : ['#e8b25e', '#f0c98a', '#d9984a', '#f3dcb0', '#c8d2e0', '#7f9cc8'], col = pick(pal), k = 0.6 + Math.random() * 0.4;
+          const g = ctx.createRadialGradient(x + ww * (0.3 + Math.random() * 0.4), y + wh * (0.25 + Math.random() * 0.5), 2, x + ww / 2, y + wh / 2, Math.max(ww, wh) * 0.9); g.addColorStop(0, col); g.addColorStop(1, '#000');
+          ctx.globalAlpha = k; ctx.fillStyle = g; ctx.fillRect(x, y, ww, wh); if (!big && Math.random() < 0.35) { ctx.globalAlpha = 0.55; ctx.fillStyle = '#000'; const cv = Math.random() < 0.5 ? x : x + ww * 0.55; ctx.fillRect(cv, y, ww * 0.45, wh); } ctx.globalAlpha = 1;
+          ctx.fillStyle = '#000'; if (!big) ctx.fillRect(x + ww / 2 - 2, y, 4, wh); ctx.fillRect(x, y + wh / 2 - 2, ww, 4); } continue; }
       ctx.fillStyle = big ? '#c9c4bb' : '#ddd4c4'; ctx.fillRect(x - 4, y - 3, ww + 8, wh + 6);
-      ctx.fillStyle = lit[i] ? '#6a5a3a' : '#2c3442'; ctx.fillRect(x, y, ww, wh);
+      ctx.fillStyle = Math.random() < 0.5 ? '#2c3442' : '#323a46'; ctx.fillRect(x, y, ww, wh);
       ctx.fillStyle = 'rgba(255,255,255,0.18)'; ctx.fillRect(x, y, ww * 0.45, wh * 0.4);
       ctx.fillStyle = '#cfc6b6'; if (!big) ctx.fillRect(x + ww / 2 - 1.5, y, 3, wh); ctx.fillRect(x, y + wh / 2 - 1.5, ww, 3);
       ctx.fillStyle = 'rgba(0,0,0,0.25)'; ctx.fillRect(x - 4, y + wh + 3, ww + 8, 4);
@@ -410,7 +414,7 @@ function groundTextures0(kind = 'res') {
     ctx.fillStyle = emis ? '#000' : { hall: '#c9c9c6', small: '#cfc7b8', church: '#cfc7ba', public: '#dedad2' }[kind] || '#e6dfd3'; ctx.fillRect(0, 0, w, h);
     if (!emis) { for (let i = 0; i < 900; i++) { ctx.fillStyle = `rgba(0,0,0,${Math.random() * 0.07})`; ctx.fillRect(Math.random() * w, Math.random() * h, 3, 3); } ctx.fillStyle = 'rgba(0,0,0,0.22)'; ctx.fillRect(0, h - 0.45 * M, w, 0.45 * M); /* Sockel */ ctx.fillStyle = 'rgba(0,0,0,0.12)'; ctx.fillRect(0, 0, w, 5); }
     const door = (x, dw, dh, col, glass) => { if (emis) { if (glass) { ctx.fillStyle = '#ffe2a0'; ctx.fillRect(x + 0.1 * M, h - dh + 0.2 * M, dw - 0.2 * M, dh * 0.5); } return; } ctx.fillStyle = '#8f8676'; ctx.fillRect(x - 5, h - dh - 5, dw + 10, dh + 5); ctx.fillStyle = col; ctx.fillRect(x, h - dh, dw, dh); ctx.fillStyle = 'rgba(0,0,0,0.25)'; ctx.fillRect(x + dw / 2 - 1.5, h - dh, 3, dh); if (glass) { ctx.fillStyle = '#2c3442'; ctx.fillRect(x + 0.1 * M, h - dh + 0.2 * M, dw - 0.2 * M, dh * 0.5); } else { ctx.fillStyle = '#d9c38a'; ctx.fillRect(x + dw * 0.72, h - dh * 0.5, 5, 5); } ctx.fillStyle = '#6a645c'; ctx.fillRect(x - 0.15 * M, h - 0.12 * M, dw + 0.3 * M, 0.12 * M); };
-    const win = (x, y, ww, wh, lit) => { if (emis) { if (lit) { ctx.fillStyle = '#ffd98a'; ctx.fillRect(x, y, ww, wh); } return; } ctx.fillStyle = '#ddd4c4'; ctx.fillRect(x - 4, y - 3, ww + 8, wh + 6); ctx.fillStyle = lit ? '#6a5a3a' : '#2c3442'; ctx.fillRect(x, y, ww, wh); ctx.fillStyle = '#cfc6b6'; ctx.fillRect(x + ww / 2 - 1.5, y, 3, wh); ctx.fillRect(x, y + wh / 2 - 1.5, ww, 3); };
+    const win = (x, y, ww, wh, lit) => { if (emis) { if (lit) { const g = ctx.createRadialGradient(x + ww * 0.5, y + wh * 0.4, 2, x + ww / 2, y + wh / 2, Math.max(ww, wh) * 0.9); g.addColorStop(0, pick(['#e8b25e', '#f0c98a', '#f3dcb0', '#c8d2e0'])); g.addColorStop(1, '#000'); ctx.globalAlpha = 0.6 + Math.random() * 0.4; ctx.fillStyle = g; ctx.fillRect(x, y, ww, wh); ctx.globalAlpha = 1; ctx.fillStyle = '#000'; ctx.fillRect(x + ww / 2 - 2, y, 4, wh); } return; } ctx.fillStyle = '#ddd4c4'; ctx.fillRect(x - 4, y - 3, ww + 8, wh + 6); ctx.fillStyle = '#2c3442'; ctx.fillRect(x, y, ww, wh); ctx.fillStyle = '#cfc6b6'; ctx.fillRect(x + ww / 2 - 1.5, y, 3, wh); ctx.fillRect(x, y + wh / 2 - 1.5, ww, 3); };
     if (kind === 'hall') { if (!emis) { ctx.fillStyle = '#7f8388'; ctx.fillRect(1.0 * M, h - 3.0 * M, 4.2 * M, 3.0 * M); ctx.fillStyle = 'rgba(0,0,0,0.25)'; for (let y = h - 3.0 * M; y < h; y += 0.3 * M) ctx.fillRect(1.0 * M, y, 4.2 * M, 2); } door(7.0 * M, 1.0 * M, 2.2 * M, '#555a60', false); win(9.2 * M, h - 2.6 * M, 1.6 * M, 1.0 * M, Math.random() < 0.4); return; }
     if (kind === 'small') { if (!emis) { ctx.fillStyle = '#8a8580'; ctx.fillRect(0.6 * M, h - 2.3 * M, 2.6 * M, 2.3 * M); ctx.fillStyle = 'rgba(0,0,0,0.2)'; for (let y = h - 2.3 * M; y < h; y += 0.35 * M) ctx.fillRect(0.6 * M, y, 2.6 * M, 2); } door(6.5 * M, 0.9 * M, 2.0 * M, '#5a4634', false); return; }
     if (kind === 'church') { if (!emis) { const x = 4.5 * M, dw = 3.0 * M, dh = 3.1 * M; ctx.fillStyle = '#5a4634'; ctx.beginPath(); ctx.moveTo(x, h); ctx.lineTo(x, h - dh + dw / 2); ctx.arc(x + dw / 2, h - dh + dw / 2, dw / 2, Math.PI, 0); ctx.lineTo(x + dw, h); ctx.fill(); ctx.strokeStyle = '#a89c8a'; ctx.lineWidth = 6; ctx.stroke(); } return; }
