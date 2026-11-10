@@ -84,7 +84,7 @@ function updateWeather(dt) {
   // Regen um die Kamera (GPU-Vertex-Shader animiert die Fallbewegung ohne Buffer-Upload pro Frame)
   if (rainPts) { rainPts.visible = weather.rain > 0.05 && !POCKET; rainPts.material.opacity = 0.45 * weather.rain; if (rainPts.visible) { rainU.value = (rainU.value + 26 * dt) % 30; rainPts.position.set(camera.position.x, camera.position.y - 15, camera.position.z); } }
   weather.wet = (weather.wet || 0) + ((weather.rain > 0.1 ? 1 : 0) - (weather.wet || 0)) * dt * (weather.rain > 0.1 ? 0.05 : 0.008);
-  if (roadMatRef) { const w = weather.wet; roadMatRef.color.setScalar(0.6 - w * 0.25); if (roadMatRef.isMeshStandardMaterial) { roadMatRef.roughness = 0.95 - w * 0.75; const pm = w > 0.12 ? roadMatRef.userData.pud : null; if (roadMatRef.roughnessMap !== pm) { roadMatRef.roughnessMap = pm; roadMatRef.needsUpdate = true; } roadMatRef.envMapIntensity = 0.4 + w * 2.2; } }
+  if (roadMatRef) { const w = weather.wet; roadMatRef.color.setScalar(0.6 - w * 0.25); if (roadMatRef.isMeshStandardMaterial) { roadMatRef.color.setScalar(0.4 - w * 0.15); /* PBR-Asphalt plus Umgebungslicht wirkte bei 0,6 ausgewaschen hellgrau (seit Mittel Standard ist) */ roadMatRef.roughness = 0.95 - w * 0.75; const pm = w > 0.12 ? roadMatRef.userData.pud : null; if (roadMatRef.roughnessMap !== pm) { roadMatRef.roughnessMap = pm; roadMatRef.needsUpdate = true; } roadMatRef.envMapIntensity = 0.2 + w * 2.4; } }
   updateStreaks(dt);
   if (gradePass) { gradePass.uniforms.wet.value = weather.wet || 0; gradePass.uniforms.night.value = (world.hour < 6.5 || world.hour > 20) ? 1 : 0; }
   // Gewitter
@@ -120,7 +120,7 @@ const sun = new THREE.DirectionalLight(0xffa860, 1.6);
 sun.castShadow = true;
 sun.shadow.mapSize.set(1024, 1024);
 const sc = sun.shadow.camera; sc.left = -70; sc.right = 70; sc.top = 70; sc.bottom = -70; sc.near = 1; sc.far = 500;
-sun.shadow.bias = -0.0005;
+sun.shadow.bias = -0.0005; sun.shadow.normalBias = 0.04; // normalBias gegen Streifen und Treppen auf flachen Flächen (Fahrbahn, Gehweg)
 scene.add(sun, sun.target);
 
 let composer = null, bloomPass = null;
@@ -132,7 +132,7 @@ function applyQuality() {
   const q = opts.quality || 'mittel';
   const ultra = q === 'ultra', post = q === 'hoch' || ultra;
   renderer.setPixelRatio((q === 'niedrig' ? 0.75 : ultra ? Math.min(1.5, Math.max(1, devicePixelRatio || 1)) : 1) * (opts.scale || 1)); renderer.setSize(innerWidth, innerHeight);
-  const sm = ultra ? 4096 : q === 'hoch' ? 2048 : 1024; sun.shadow.mapSize.set(sm, sm); { const e = ultra ? 95 : 70; sc.left = -e; sc.right = e; sc.top = e; sc.bottom = -e; sc.updateProjectionMatrix(); } sun.shadow.radius = ultra ? 2 : 1;
+  const sm = ultra ? 4096 : q === 'hoch' ? 2048 : 1024; sun.shadow.mapSize.set(sm, sm); { const e = ultra ? 95 : q === 'mittel' ? 50 : 70; /* Mittel: 1024er Karte auf 100 m statt 140 m, ~10 statt 14 cm je Texel: weniger Treppen an Bordsteinkanten */ sc.left = -e; sc.right = e; sc.top = e; sc.bottom = -e; sc.updateProjectionMatrix(); } sun.shadow.radius = ultra ? 2 : 1;
   WIN_U.value = q === 'niedrig' ? 0 : 1; if (typeof applyTreeQuality === 'function') applyTreeQuality(); if (typeof rebuildAllTiles === 'function') rebuildAllTiles();
   { const an = ANISO = ultra ? renderer.capabilities.getMaxAnisotropy() : q === 'niedrig' ? 2 : 4;
     if (typeof syncAnisoAll === 'function') syncAnisoAll(an);

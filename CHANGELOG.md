@@ -2,6 +2,7 @@
 
 ## 2026-11-10
 
+- Grafik Mittel: Asphalt im PBR-Material dunkler (Grundwert 0,4 statt 0,6, Umgebungslicht 0,2 statt 0,4), war seit Mittel als Standard ausgewaschen hellgrau; Schatten mit `normalBias` 0,04 und auf Mittel engerem Bereich (±50 statt ±70 m, ~10 statt 14 cm je Texel) gegen Treppen an Bordsteinen
 - Baumkronen (Hoch/Ultra): wieder 60 Blattflächen statt 24 wie vor Antigravity; gemessen kosten alle Blätter zusammen 1–2 ms von 34 ms je Bild (Intel UHD), der Unterschied 24↔60 ist darunter
 - Fahrphysik: Zäune am Straßenrand halten Autos wieder (der Antigravity-Umgehungsweg `onOtherRoad` in `barrierHit` ließ sie durch)
 - Auto gegen Auto: Trennachsen-Test über die echten gedrehten Umrisse statt Kasten, Stoß nach Masse; geparkte Autos und Wracks werden geschoben (`shoveCar`). Auffahrunfall vorher 0,71 m Durchdringung und 0,2 m Schub, jetzt 0,01 m und 9,8 m
