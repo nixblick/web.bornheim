@@ -2,6 +2,7 @@
 
 ## 2026-11-10
 
+- Baumkronen (Hoch/Ultra): wieder 60 Blattflächen statt 24 wie vor Antigravity; gemessen kosten alle Blätter zusammen 1–2 ms von 34 ms je Bild (Intel UHD), der Unterschied 24↔60 ist darunter
 - Fahrphysik: Zäune am Straßenrand halten Autos wieder (der Antigravity-Umgehungsweg `onOtherRoad` in `barrierHit` ließ sie durch)
 - Auto gegen Auto: Trennachsen-Test über die echten gedrehten Umrisse statt Kasten, Stoß nach Masse; geparkte Autos und Wracks werden geschoben (`shoveCar`). Auffahrunfall vorher 0,71 m Durchdringung und 0,2 m Schub, jetzt 0,01 m und 9,8 m
 - Hubschrauber: Absturz bei leeren Gebäudeplätzen behoben (`heli.js`)
