@@ -38,7 +38,7 @@ Linksklick schießen, R nachladen, Enter nach dem Tod, C Kreativmodus, Strg im W
 
 ## Stand
 
-- Runde 3 (10.11.2026): Speicherleck der Figuren-Knochentexturen behoben (GPU-Texturen bleiben beim Herumfahren bei ~100 statt zu wachsen)
+- Runde 3 (10.11.2026): Speicherleck der Figuren-Knochentexturen behoben (GPU-Texturen bleiben beim Herumfahren bei ~100 statt zu wachsen); Fenster nachts mit gemischtem Innenlicht statt gleichförmigem Gold
 - Fahrphysik (10.11.2026): Teststrecke `T.fahren()` grün (15/15), Auto-gegen-Auto mit gedrehten Umrissen, Zäune halten wieder; Selbsttest 76/76; Mittel mit dunklerem Asphalt und feineren Schatten, Baumkronen wieder mit 60 Blattflächen
 - U-Bahn (09.11.2026): Eingänge stehen als „U“ auf der Minikarte; am Eingang F drücken, Ziel wählen, fahren
 - Grafik (09.11.2026): Neue Spieler starten mit der Stufe, die zur GPU passt (höchstens Hoch), nicht mehr mit „Niedrig“

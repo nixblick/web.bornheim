@@ -2,6 +2,8 @@
 
 ## 2026-11-10
 
+- Fenster bei Nacht: statt flacher, gleich heller Gold-Rechtecke ein Lichtverlauf je Fenster in gemischten Farben (warm, neutral, vereinzelt Fernseher-Blau), Helligkeit 60–100 %, Rahmen und Sprossen bleiben dunkel, ein Drittel mit halb zugezogenem Vorhang; weniger Fenster an (Wohnhaus 32 statt 35 %, öffentlich 35 statt 50 %). Tagsüber waren beleuchtete Fenster braun getönt und im Erdgeschoss passten Tag- und Nachtbild nicht zusammen (zweimal gewürfelt); jetzt überall dunkles Glas
+- Selbsttest „Fahrbahn liegt obenauf“ nennt bei Fehlschlag Material und Abstand zur Fahrbahn (schlägt sporadisch fehl, Stichprobe hängt von den gebauten Kacheln ab)
 - Speicher: Knochen-Texturen (12×12/16×16) der Figuren wurden beim Entfernen von Passanten (Abstand, Tote, Umsetzen, Demo, Fahrer) nie freigegeben, je Figur eine GPU-Textur; jetzt `freeSkel`. Gemessen über 24 Kachelsprünge mit Spielschleife: vorher 283→391 GPU-Texturen, nachher 67–114 ohne Anstieg. Canvas-Texturen der Kacheln (Schilderatlas) wurden schon freigegeben; `canvasTex` hält freigegebene Texturen nicht mehr in der Anisotropie-Liste
 - Gehwege und Wege mit `polygonOffset`: am Hang lag der Gehweg der Querstraße bis 3 cm über der Fahrbahn und flimmerte darüber
 - Selbsttest stabil: Fadenkreuz- und Tasertest stellen das Ziel auf die Ebene des Schützen (stand auf Brücken/am Hang Meter tiefer), „Fahrbahn liegt obenauf“ wertet den Tiefenversatz; 76/76 grün
