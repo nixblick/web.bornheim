@@ -43,7 +43,7 @@ export function initHeli(X) {
   const inPoly = (x, z, P) => { let c = false; for (let i = 0, j = P.length - 1; i < P.length; j = i++) { const [ax, az] = P[i], [bx, bz] = P[j]; if ((az > z) !== (bz > z) && x < (bx - ax) * (z - az) / (bz - az) + ax) c = !c; } return c; };
   const edgeDist = (x, z, P) => { let best = 1e9; for (let i = 0; i < P.length; i++) { const [ax, az] = P[i], [bx, bz] = P[(i + 1) % P.length]; const dx = bx - ax, dz = bz - az, L2 = dx * dx + dz * dz || 1; const t = Math.max(0, Math.min(1, ((x - ax) * dx + (z - az) * dz) / L2)); best = Math.min(best, Math.hypot(ax + dx * t - x, az + dz * t - z)); } return best; };
   function findSite() {
-    let b = null, bd = 1e9; for (const q of X.WORLD.buildings) { const cx = q.p.reduce((a, p) => a + p[0], 0) / q.p.length, cz = q.p.reduce((a, p) => a + p[1], 0) / q.p.length; const d = Math.hypot(cx - BGU[0], cz - BGU[1]); if (d < 90 && Math.abs(polyArea(q.p)) > 3000 && d < bd) { bd = d; b = q; } }
+    let b = null, bd = 1e9; for (const q of X.WORLD.buildings) { if (!q) continue; const cx = q.p.reduce((a, p) => a + p[0], 0) / q.p.length, cz = q.p.reduce((a, p) => a + p[1], 0) / q.p.length; const d = Math.hypot(cx - BGU[0], cz - BGU[1]); if (d < 90 && Math.abs(polyArea(q.p)) > 3000 && d < bd) { bd = d; b = q; } }
     if (!b || b.base === undefined) return null; // erst, wenn das Gebäude gebaut ist (Dachhöhe bekannt)
     // Landeplatz: Punkt mit größtem Abstand zu den Dachkanten (grobes Raster)
     let x0 = 1e9, x1 = -1e9, z0 = 1e9, z1 = -1e9; for (const [x, z] of b.p) { x0 = Math.min(x0, x); x1 = Math.max(x1, x); z0 = Math.min(z0, z); z1 = Math.max(z1, z); }

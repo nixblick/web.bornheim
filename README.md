@@ -29,7 +29,7 @@ Dann http://127.0.0.1:8765/ öffnen. Jeder statische Webserver reicht (GitHub Pa
 
 ## Tests
 
-`tools/selftest.js` im Spiel laden: `await import('/tools/selftest.js'); await T.checks()` (Ablauf im Skill `.claude/skills/spieltest`).
+`tools/selftest.js` im Spiel laden: `await import('/tools/selftest.js'); await T.checks()` (Ablauf im Skill `.claude/skills/spieltest`). Teststrecke Fahrphysik getrennt auf frisch geladener Seite: `await T.fahren()`.
 
 ## Steuerung
 
@@ -38,6 +38,7 @@ Linksklick schießen, R nachladen, Enter nach dem Tod, C Kreativmodus, Strg im W
 
 ## Stand
 
+- Fahrphysik (10.11.2026): Teststrecke `T.fahren()` grün (15/15), Auto-gegen-Auto mit gedrehten Umrissen, Zäune halten wieder
 - U-Bahn (09.11.2026): Eingänge stehen als „U“ auf der Minikarte; am Eingang F drücken, Ziel wählen, fahren
 - Grafik (09.11.2026): Neue Spieler starten mit der Stufe, die zur GPU passt (höchstens Hoch), nicht mehr mit „Niedrig“
 - Wasser (09.11.2026): Schwimmen kostet Atemluft (Balken unten), Tauchen mit Strg hält 15 s, an der

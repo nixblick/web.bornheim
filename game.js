@@ -309,7 +309,7 @@ function losFactor(ax, ay, az, bx, by, bz) { const L = Math.hypot(bx - ax, by - 
 const barrierGrid = new Map();
 function barrierAdd(ax, az, bx, bz, h) { const seg = [ax, az, bx, bz, h]; for (let cx = Math.floor((Math.min(ax, bx) - 2) / CELL); cx <= Math.floor((Math.max(ax, bx) + 2) / CELL); cx++) for (let cz = Math.floor((Math.min(az, bz) - 2) / CELL); cz <= Math.floor((Math.max(az, bz) + 2) / CELL); cz++) { const k = key(cx, cz); if (!barrierGrid.has(k)) barrierGrid.set(k, []); barrierGrid.get(k).push(seg); } return seg; }
 function barrierOnRoad(ax, az, bx, bz) { return onOtherRoad((ax + bx) / 2, (az + bz) / 2, null, 0.8) || onOtherRoad(ax * 0.75 + bx * 0.25, az * 0.75 + bz * 0.25, null, 0.6) || onOtherRoad(ax * 0.25 + bx * 0.75, az * 0.25 + bz * 0.75, null, 0.6); }
-function barrierHit(x, z, r, y) { const c = barrierGrid.get(key(Math.floor(x / CELL), Math.floor(z / CELL))); if (!c || onOtherRoad(x, z, null, 0.6)) return false; for (const [ax, az, bx, bz, h] of c) { if (distSegSq(x, z, ax, az, bx, bz) < (r + 0.15) * (r + 0.15)) { if (y === undefined || y < TH(x, z) + h) return true; } } return false; }
+function barrierHit(x, z, r, y) { const c = barrierGrid.get(key(Math.floor(x / CELL), Math.floor(z / CELL))); if (!c) return false; /* Zäune quer über der Fahrbahn fallen schon beim Eintragen weg (barrierOnRoad); die frühere Freigabe der ganzen Fahrbahn ließ Autos durch Zäune am Straßenrand */ for (const [ax, az, bx, bz, h] of c) { if (distSegSq(x, z, ax, az, bx, bz) < (r + 0.15) * (r + 0.15)) { if (y === undefined || y < TH(x, z) + h) return true; } } return false; }
 // Gewässer (Main, Hafenbecken, Weiher) im Raster; Brücken, Stege und Uferwege bleiben trocken befahr-/begehbar
 const waterGrid = new Map(), pathGrid = new Map();
 function waterAdd(w) { let x0 = 1e9, x1 = -1e9, z0 = 1e9, z1 = -1e9, ym = 1e9; for (const [x, z] of w.p) { x0 = Math.min(x0, x); x1 = Math.max(x1, x); z0 = Math.min(z0, z); z1 = Math.max(z1, z); ym = Math.min(ym, TH(x, z)); } w.x0 = x0; w.x1 = x1; w.z0 = z0; w.z1 = z1; w.wy = ym + 0.2;
@@ -1900,6 +1900,10 @@ function dentCar(c, wp, dir, strength) {
     for (let i = 0; i < pos.count; i++) { v.fromBufferAttribute(pos, i); const d = v.distanceTo(lp); if (d > R) continue; const f = (1 - d / R) ** 2 * S; v.addScaledVector(ld, f); v.y -= f * 0.15 * Math.random(); pos.setXYZ(i, v.x, v.y, v.z); n++; }
     pos.needsUpdate = true; m.geometry.computeVertexNormals(); m.geometry.computeBoundingSphere(); });
   u.dents = (u.dents || 0) + 1; return n; }
+// Angestoßenes stehendes Auto oder Wrack rutscht mit Reibung aus (nicht durch Wände), dreht sich etwas
+function shoveCar(c, dt) { const u = c.userData, v = u.shove, sp = v.length(); if (sp < 0.05 || (u.mode !== 'parked' && u.mode !== 'wreck')) { u.shove = null; u.shoveSpin = 0; return; }
+  const D = u.dims || { l: 4.4, w: 1.9 }; if (moveWithCollision(c.position, v.x * dt, v.y * dt, Math.min(1.05, D.w / 2 + 0.1)) === 2) v.multiplyScalar(0.2);
+  v.multiplyScalar(Math.max(0, sp - 9 * dt) / sp); u.heading += (u.shoveSpin || 0) * dt; u.shoveSpin = (u.shoveSpin || 0) * Math.pow(0.05, dt); c.rotation.y = u.heading; carTerrain(c); }
 function carTerrain(c) { const u = c.userData; const fx = Math.sin(u.heading), fz = Math.cos(u.heading); const cy = c.position.y; const hf = surfAt(c.position.x + fx * 1.5, c.position.z + fz * 1.5, cy), hb = surfAt(c.position.x - fx * 1.5, c.position.z - fz * 1.5, cy); c.position.y = (hf + hb) / 2; c.rotation.x = Math.atan2(hb - hf, 3); }
 function carFx(c, dt, braking) {
   const u = c.userData; if (!u.wheels) return;
@@ -1963,13 +1967,18 @@ function driveCar(c, dt, ctrl) {
   if (Math.abs(u.speed) > 3) for (const ped of peds) { if (ped.userData.state === 'dead') continue; if (ped.position.distanceTo(p) < 3.5 && (() => { const D = u.dims || { l: 4.4, w: 1.9 }; const sg = Math.sign(u.speed) || 1; const hx = Math.sin(u.heading) * sg, hz = Math.cos(u.heading) * sg; const rx = ped.position.x - p.x, rz = ped.position.z - p.z; const al = rx * hx + rz * hz, ac = rx * hz - rz * hx; return al > -D.l / 2 + 0.6 && al < D.l / 2 + 0.3 && Math.abs(ac) < D.w / 2 + 0.25; })()) { const dir = new THREE.Vector3(dx, 0, dz).normalize(); if (c !== player.car) { /* KI-Fahrer weichen aus und schubsen nur */ const sx = ped.position.x - p.x, sz = ped.position.z - p.z, sl = Math.hypot(sx, sz) || 1; moveWithCollision(ped.position, sx / sl * 1.2, sz / sl * 1.2, 0.3); if (ped.userData.state !== 'stunned' && ped.userData.state !== 'cop') WPN.stun(ped, 'hit', 1.5); u.speed *= 0.5; continue; } damage(ped, u.bike ? 35 : 100, dir); const v = Math.abs(u.speed); ped.userData.fly = new THREE.Vector3(dir.x * v * 0.75 + rnd(-1, 1), 2.5 + v * 0.22, dir.z * v * 0.75 + rnd(-1, 1)); ped.userData.spin = rnd(-6, 6); sfx('hit', 0.9); if (c === player.car) raiseWanted(0.8); } }
   { const D = u.dims || { l: 4.4, w: 1.9 }; const hx = Math.sin(u.heading), hz = Math.cos(u.heading);
     for (const o of cars) { if (o === c || o.userData.mode === 'tram' || o.userData.heli || Math.abs(o.position.y - p.y) > 2.5) continue; const rx = o.position.x - p.x, rz = o.position.z - p.z; if (rx * rx + rz * rz > 49) continue; const ou = o.userData, OD = ou.dims || { l: 4.4, w: 1.9 };
-      const al = rx * hx + rz * hz, ac = rx * hz - rz * hx; const pa = D.l / 2 + Math.min(OD.l, OD.w * 1.6) / 2 - Math.abs(al), pc = D.w / 2 + OD.w / 2 - Math.abs(ac); if (pa <= 0 || pc <= 0) continue;
-      // Stoßrichtung: entlang der kleineren Überlappung
-      let nx, nz, pen; if (pc < pa) { const sg = Math.sign(ac) || 1; nx = hz * sg; nz = -hx * sg; pen = pc; } else { const sg = Math.sign(al) || 1; nx = hx * sg; nz = hz * sg; pen = pa; }
+      // Zwei gedrehte Rechtecke (Trennachsen-Test über die vier Kantenrichtungen): Stoßrichtung = Achse mit der kleinsten Überlappung.
+      // Vorher zählte vom anderen Auto nur min(Länge, 1,6 × Breite): beim Auffahren steckten 0,7 m Blech ineinander
+      const oh = o.rotation.y, ohx = Math.sin(oh), ohz = Math.cos(oh); let nx = 0, nz = 0, pen = 1e9;
+      for (const [axx, axz] of [[hx, hz], [hz, -hx], [ohx, ohz], [ohz, -ohx]]) { const ra = D.l / 2 * Math.abs(hx * axx + hz * axz) + D.w / 2 * Math.abs(hz * axx - hx * axz), rb = OD.l / 2 * Math.abs(ohx * axx + ohz * axz) + OD.w / 2 * Math.abs(ohz * axx - ohx * axz); const dd = rx * axx + rz * axz, ov = ra + rb - Math.abs(dd); if (ov < pen) { pen = ov; const sg = Math.sign(dd) || 1; nx = axx * sg; nz = axz * sg; } }
+      if (pen <= 0) continue;
       const myV = u.vel ? [u.vel.x, u.vel.y] : [hx * u.speed, hz * u.speed]; const oV = ou.vel ? [ou.vel.x, ou.vel.y] : [Math.sin(ou.heading || 0) * (ou.speed || 0), Math.cos(ou.heading || 0) * (ou.speed || 0)];
       const closing = (myV[0] - oV[0]) * nx + (myV[1] - oV[1]) * nz; // > 0: wir fahren aufeinander zu
       const share = ou.mode === 'wreck' || ou.mode === 'parked' && !ou.unitCar ? 0.35 : 0.5; moveWithCollision(p, -nx * pen * (1 - share), -nz * pen * (1 - share), rr); if (ou.mode !== 'wreck') moveWithCollision(o.position, nx * pen * share, nz * pen * share, Math.min(1.05, OD.w / 2 + 0.1)); /* Schuebe ueber die Kollision: nicht in Waende */
-      if (closing > 0.5) { const k = closing * 0.55; if (u.vel) { u.vel.x -= nx * k; u.vel.y -= nz * k; } u.speed -= (nx * hx + nz * hz) * k; if (ou.mode !== 'wreck') { if (ou.vel) { ou.vel.x += nx * k * 0.8; ou.vel.y += nz * k * 0.8; } ou.speed = (ou.speed || 0) * 0.6; }
+      if (closing > 0.5) { /* Impuls nach Masse (Grundfläche): ein Kleinwagen prallt am Wasserwerfer ab, ein stehendes Auto wird weggeschoben statt nur 0,2 m */ const mA = D.l * D.w, mB = OD.l * OD.w * (ou.cannon ? 2.5 : 1), kA = closing * 1.1 * mB / (mA + mB), kB = closing * 1.1 * mA / (mA + mB);
+        if (u.vel) { u.vel.x -= nx * kA; u.vel.y -= nz * kA; } u.speed -= (nx * hx + nz * hz) * kA;
+        if (ou.mode === 'parked' || ou.mode === 'wreck') { if (!ou.shove) ou.shove = new THREE.Vector2(); ou.shove.x += nx * kB; ou.shove.y += nz * kB; ou.shoveSpin = (ou.shoveSpin || 0) + clamp((rx * nz - rz * nx) * kB * 0.04, -1.5, 1.5); }
+        else { if (ou.vel) { ou.vel.x += nx * kB * 0.8; ou.vel.y += nz * kB * 0.8; } ou.speed = (ou.speed || 0) * 0.6; }
         if (closing > 6) { const oK = o === player.car ? 0.35 : 1; u.hp -= (closing - 5) * 1.4 * dmgK; ou.hp -= (closing - 5) * 2.4 * oK; if (c === player.car || o === player.car) { sfx('crash', clamp(closing / 25, 0.3, 1)); camShake(Math.min(0.5, closing / 40)); } if ((u.dents || 0) < 12) dentCar(c, new THREE.Vector3(p.x + nx * (D.w / 2), p.y + 0.6, p.z + nz * (D.w / 2)), new THREE.Vector3(-nx, 0, -nz), Math.min(0.3, closing * 0.012)); if (ou.hp <= 0) explode(o); if (u.hp <= 0) explode(c); } else if (closing > 2 && (c === player.car || o === player.car)) sfx('bump', 0.4);
       }
       if (o === player.car && u.police) player.hp -= 120 * dt; /* Polizei drängt: Schaden pro Sekunde, bildratenunabhängig */ } }
@@ -2361,6 +2370,7 @@ function update(dt) {
   for (const c of cars) {
     const u = c.userData;
     const dc = c.position.distanceTo(player.pos); c.visible = dc < CAR_VIS;
+    if (u.shove && c !== player.car) shoveCar(c, dt);
     if (u.mode === 'ai') { const d = dc; if (d > 350) continue;
       // Hindernis voraus? (Spieler, Passanten, andere Autos innerhalb 9 m im Fahrkegel)
       const fx = Math.sin(u.heading), fz = Math.cos(u.heading); let block = false;
