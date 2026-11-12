@@ -2,6 +2,11 @@
 
 ## 2026-11-12
 
+- **Sozialrathaus Ost** (Foto, Lage nach André: rechts neben der Kita Eulengasse): Name am Gebäude, dunkles Vordach über die ganze Front mit „SOZIALRATHAUS OST / DIENSTORT BORNHEIM“, Stützen, hell erleuchtetes verglastes Erdgeschoss
+- **Obststand** mit rot-weißem Dach vor Supermärkten (Foto Nahkauf)
+- **Markise** über Apotheken-Schaufenstern (Foto Sonnen-Apotheke)
+- **Schriftzüge** „FEUERWACHE 2“ und „KIRCHNERSCHULE“ als Schilder an der Fassade; Schrift der Nasenschilder passt sich der Länge an
+- **Waschsalon-Schilder** weiß mit petrolfarbener Schrift; **Glascontainer** mit weißem, braunem und grünem Einwurf; **Schmierereien** auf Garagentoren; **gelbe Wände** in der Sonnenblumen-Bäckerei
 - **Fix Rundgang:** wartet bis 40 s auf Chrome (auf dem Runner war er nach 3 s noch nicht bereit)
 - **Kita-Stelen an allen Kitas:** auch an benannten Kita-Gebäuden ohne Kartenpunkt, bis 64 je Kachel; ohne passende Hauswand steht die Stele am Kartenpunkt
 - **Liniennummern an Bushaltestellen:** weißes Schild unter dem H mit den Linien, die dort halten (aus den OSM-Linien)
