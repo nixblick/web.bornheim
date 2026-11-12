@@ -426,7 +426,8 @@ function waldstadion(cx, cz, rx, rz, s = 1) { // s = Höhe (FSV-Stadion 0,55, oh
     const sitze = (txt) => canvasTex(2048, 128, (c, w, h) => { c.fillStyle = '#16181b'; c.fillRect(0, 0, w, h); for (let y = 2; y < h; y += 6) for (let x = 1; x < w; x += 5) { c.fillStyle = '#23262a'; c.fillRect(x, y, 3, 3); }
       for (let x = 0; x < w; x += w / 16) { c.fillStyle = '#cfcfcf'; c.fillRect(x, 0, 6, h); } // Treppen
       if (txt) { c.fillStyle = '#ececec'; c.font = 'bold 74px sans-serif'; c.textBaseline = 'middle'; c.textAlign = 'center'; for (const x of [w * 0.25, w * 0.75]) c.fillText(txt, x, h * 0.55); } }, 1, 1);
-    STAD_MATS.rang.map = sitze('EINTRACHT FRANKFURT'); STAD_MATS.rang.color.setHex(0xffffff);
+    const spieltag = [0, 6].includes(new Date().getDay()); // Wochenende = Spieltag: volle Ränge, Schals hoch
+    STAD_MATS.rang.map = spieltag ? canvasTex(2048, 128, (c, w, h) => { c.fillStyle = '#121316'; c.fillRect(0, 0, w, h); for (let y = 0; y < h; y += 4) for (let x = 0; x < w; x += 3) { const q = Math.random(); c.fillStyle = q < 0.3 ? '#e9e9e9' : q < 0.62 ? '#0a0a0a' : q < 0.7 ? '#c8a088' : q < 0.74 ? '#b5262a' : '#2a2c30'; c.fillRect(x, y, 2, 3); } for (let x = 0; x < w; x += w / 16) { c.fillStyle = '#9a9a9a'; c.fillRect(x, 0, 5, h); } }, 1, 1) : sitze('EINTRACHT FRANKFURT'); STAD_MATS.rang.color.setHex(0xffffff);
     STAD_MATS.rangFSV = new THREE.MeshLambertMaterial({ map: sitze(''), side: THREE.DoubleSide });
     STAD_MATS.glas.map = canvasTex(512, 64, (c, w, h) => { c.fillStyle = '#9ea3a8'; c.fillRect(0, 0, w, h); for (let x = 0; x < w; x += 8) { c.fillStyle = x % 64 === 0 ? '#c9ccce' : '#b4b8bb'; c.fillRect(x, 0, 5, h); } c.fillStyle = '#5d6268'; c.fillRect(0, h * 0.48, w, 3); }, 1, 1);
     STAD_MATS.glas.color.setHex(0xffffff); STAD_MATS.glas.emissiveIntensity = 0.08;
@@ -452,6 +453,12 @@ function facadeStyle(style) {
       c.fillStyle = '#efe3d6'; c.fillRect(0, 0, w, h); c.fillStyle = '#9a4f3e'; c.fillRect(0, h - ch * 0.08 - 4, w, 6);
       for (let y = 0; y < h; y += 24) { c.fillRect(0, y, (y / 24) % 2 ? 14 : 22, 18); c.fillRect(w - ((y / 24) % 2 ? 14 : 22), y, 22, 18); }
       for (let r = 0; r < 4; r++) for (let q = 0; q < 4; q++) fenster(q * cw + cw * 0.27, r * ch + ch * 0.2, cw * 0.46, ch * 0.55, '#9a4f3e', '#3a4250');
+      return; }
+    if (style === 'gruender') { // Berger Straße (Foto): heller Putz, Fenster mit Sandsteinrahmen, Ohren und Verdachung, Gurtgesims
+      c.fillStyle = '#ece6dc'; c.fillRect(0, 0, w, h); const s = '#8c5145';
+      for (let r = 0; r < 4; r++) { const y = r * ch; c.fillStyle = s; c.fillRect(0, y + ch - 10, w, 10); c.fillStyle = 'rgba(0,0,0,0.15)'; c.fillRect(0, y + ch, w, 3);
+        for (let q = 0; q < 3; q++) { const ww = cw * 0.52, x = q * (w / 3) + (w / 3 - ww) / 2, wy = y + ch * 0.2, wh = ch * 0.6; c.fillStyle = s; c.fillRect(x - 12, wy - 12, ww + 24, wh + 20); c.fillRect(x - 18, wy - 4, 8, 16); c.fillRect(x + ww + 10, wy - 4, 8, 16); c.fillRect(x - 16, wy - 22, ww + 32, 10); c.fillRect(x - 6, wy + wh + 6, ww + 12, 10);
+          fenster(x, wy, ww, wh, null, '#2f3843'); c.fillStyle = 'rgba(240,236,228,0.55)'; c.fillRect(x + 3, wy + 3, ww * 0.18, wh - 6); c.fillRect(x + ww * 0.82 - 3, wy + 3, ww * 0.18, wh - 6); } }
       return; }
     if (style === 'messeturm') { // rotbrauner Granit, enges Fensterraster, dunkle Glasbänder an den Ecken
       c.fillStyle = '#8a5a4e'; c.fillRect(0, 0, w, h); for (let r = 0; r < 12; r++) for (let q = 0; q < 8; q++) { const x = q * w / 8 + 10, y = r * h / 12 + 8; if (q === 0 || q === 7) { c.fillStyle = '#1e2733'; c.fillRect(q * w / 8, y - 8, w / 8, h / 12); continue; } fenster(x, y, w / 8 - 20, h / 12 - 18, '#6e443b', '#26303c'); }
@@ -877,6 +884,7 @@ const staticParked = []; let parkedMesh = null; let roadMeshRef = null; const ro
 const instRefs = [];
 let PARK_TG = null, PARK_LOW = null;
 // Wachen ohne Namen in OSM, Lage aus der Adresse (Nominatim) und Gebäudegröße: Feuer- und Rettungswache 2, Heinrichstraße 8; Lage per Google-Maps-Punkt bestätigt (50.107023, 8.651487), beide Gebäudeteile
+const ZAPP = { x: -1288, z: 239, done: 0 }; // OSM-Punkt der Zappbar
 const WACHE_OHNE_NAMEN = [[-4153, 2492], [-4136, 2487]];
 const WACHEN = []; // Mittelpunkte der Feuerwachen (aus dem Gebäudebau), dort parkt der Kommandowagen
 function buildParked() {
@@ -1152,11 +1160,18 @@ function* buildCity() {
   const facKind = (b, kind) => { if (['wache', 'school', 'altschule', 'messeturm', 'barock'].includes(kind)) return kind;
     { const [cx, cz] = centroidOf(b.p); if ((kind === 'res' || kind === 'public') && b.h >= 14 && cx > -3000 && cx < -1500 && cz > 1200 && cz < 2600 && Math.abs((b.p[0][0] * 13 + b.p[0][1] * 7) | 0) % 10 < 3) return 'sandstein'; } /* Innenstadt: rote Sandsteinbauten wie das Metropolis */
     if (kind !== 'res') return kind; const hsh = Math.abs((b.p[0][0] * 31 + b.p[0][1] * 17) | 0) % 12;
+    if (b.h >= 12 && hsh >= 2 && hsh < 6) { const [cx, cz] = centroidOf(b.p); if (cx > -800 && cx < 900 && cz > -900 && cz < 900) return 'gruender'; } // Bornheim: Gründerzeit wie an der Berger Straße
     if (b.r && b.rh > 0 && b.h <= 11.5) { const [cx, cz] = centroidOf(b.p); const alt = cx > -80 && cx < 460 && cz > -400 && cz < 220; /* Alt-Bornheim: Eulengasse, Turmstraße, Rendeler Straße */ if (alt && hsh < 7) return 'fw'; if (alt && hsh < 9) return 'schiefer'; if (!alt && hsh === 0) return 'schiefer'; } return hsh < 6 ? 'res' : hsh < 8 ? 'nk' : hsh < 10 ? 'nb' : 'zi'; };
   for (const b of CITY.buildings) { if (++YC % 10 === 0) yield;
     const kind = kindOf(b);
     if (kind === 'wache') WACHEN.push(centroidOf(b.p));
-    if (kind === 'messeturm' && !b._pyr) { b._pyr = 1; b.h = 190; const [mx, mz] = centroidOf(b.p); let rr = 0; for (const [x, z] of b.p) rr = Math.max(rr, Math.hypot(x - mx, z - mz));
+    if (!ZAPP.done && pointInPoly(ZAPP.x, ZAPP.z, b.p)) { ZAPP.done = 1; let best = null; for (let i = 0; i < b.p.length; i++) { const [ax, az] = b.p[i], [bx, bz] = b.p[(i + 1) % b.p.length]; const l = Math.hypot(bx - ax, bz - az); if (l < 2) continue; const t = Math.max(0, Math.min(1, ((ZAPP.x - ax) * (bx - ax) + (ZAPP.z - az) * (bz - az)) / (l * l))); const px = ax + (bx - ax) * t, pz = az + (bz - az) * t; const d = Math.hypot(px - ZAPP.x, pz - ZAPP.z); if (!best || d < best.d) best = { d, px, pz, ux: (bx - ax) / l, uz: (bz - az) / l }; }
+      if (best) { const tex = canvasTex(256, 96, (c, w, h) => { c.fillStyle = '#0e0e10'; c.fillRect(0, 0, w, h); c.fillStyle = '#f2f2f2'; c.font = 'bold 58px sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('zappbar', w / 2, h / 2 + 2); }, 1, 1);
+        const sg = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.5, 1.3), [shLambert(0x0e0e10), shLambert(0x0e0e10), shLambert(0x0e0e10), shLambert(0x0e0e10), new THREE.MeshBasicMaterial({ map: tex }), new THREE.MeshBasicMaterial({ map: tex })]);
+        let nx = -best.uz, nz = best.ux; const [cx0, cz0] = centroidOf(b.p); if ((best.px - cx0) * nx + (best.pz - cz0) * nz < 0) { nx = -nx; nz = -nz; }
+        sg.position.set(best.px + nx * 0.75, TH(best.px, best.pz) + 3.4, best.pz + nz * 0.75); sg.rotation.y = Math.atan2(nx, nz) + Math.PI / 2; scene.add(sg); } } // Zappbar, Frankfurter Kneipe (Fotos 12.11.2026)
+    if (kind === 'messeturm' && !b._pyr) { b._pyr = 1; b.h = 170; const [mx, mz] = centroidOf(b.p); let rr = 0; for (const [x, z] of b.p) rr = Math.max(rr, Math.hypot(x - mx, z - mz));
+      { const kr = new THREE.Mesh(new THREE.BoxGeometry(rr * 1.18, 20, rr * 1.18), shLambert(0x8a5a4e)); kr.rotation.y = Math.PI / 4; kr.position.set(mx, TH(mx, mz) + 180, mz); kr.castShadow = true; scene.add(kr); } /* gestufte Krone */
       { const zy = new THREE.Mesh(new THREE.CylinderGeometry(rr * 0.62, rr * 0.66, 31, 24), shLambert(0x2a3340)); zy.position.set(mx, TH(mx, mz) + 190 + 15.5, mz); zy.castShadow = true; scene.add(zy); } // Glaszylinder unter der Spitze // Pyramidenspitze, 36 m, rotbraun wie der Granit (Foto 12.11.2026)
       const pm = new THREE.Mesh(new THREE.ConeGeometry(rr * 0.62, 36, 4), shLambert(0x7a4a40)); pm.rotation.y = Math.PI / 4; pm.position.set(mx, TH(mx, mz) + 221 + 18, mz); pm.castShadow = true; scene.add(pm); }
     if (!b._stad && b.h >= 8 && b.p.length > 3) { let x0 = 1e9, x1 = -1e9, z0 = 1e9, z1 = -1e9; for (const [x, z] of b.p) { x0 = Math.min(x0, x); x1 = Math.max(x1, x); z0 = Math.min(z0, z); z1 = Math.max(z1, z); }
@@ -1229,7 +1244,7 @@ function* buildCity() {
       }
     }
   }
-  const facByKind = FAC_CACHE || (FAC_CACHE = (() => { const f = {}; for (const k of ['res', 'house', 'public', 'hall', 'small', 'church']) f[k] = [facadeTextures(k), facadeTextures(k)]; for (const k of ['wache', 'school', 'altschule', 'nk', 'nb', 'zi', 'fw', 'schiefer', 'messeturm', 'barock', 'sandstein']) { const s = facadeStyle(k); f[k] = [s, k === 'nk' || k === 'zi' ? facadeStyle(k) : s]; } return f; })());
+  const facByKind = FAC_CACHE || (FAC_CACHE = (() => { const f = {}; for (const k of ['res', 'house', 'public', 'hall', 'small', 'church']) f[k] = [facadeTextures(k), facadeTextures(k)]; for (const k of ['wache', 'school', 'altschule', 'nk', 'nb', 'zi', 'fw', 'schiefer', 'messeturm', 'barock', 'sandstein', 'gruender']) { const s = facadeStyle(k); f[k] = [s, k === 'nk' || k === 'zi' ? facadeStyle(k) : s]; } return f; })());
   const counters = {};
   const groups = new Map(); const tmpC = new THREE.Color();
   for (const [key, geos] of byKey) {
@@ -1690,7 +1705,7 @@ if (CAR_TPL.ev) { // 12.11.2026: E-Auto auch als Frankfurter Taxi (hellelfenbein
     const sv = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.2, 0.9), schraegM); sv.position.set(sx * 1.05, 0.5, 1.9); kd.push(sv); }
   for (const z of [2.54, -2.54]) { const s = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.18, 0.03), schraegM); s.position.set(0, 0.5, z); kd.push(s); }
   { const bb = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.1, 0.3), blauL); bb.position.set(0, D0.h + 0.05, 0.1); kd.push(bb); const sg = new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.16, 0.05), schildM); sg.position.set(0, D0.h + 0.17, 0.25); kd.push(sg); }
-  CAR_TPL.evkdow = ab(kd);
+  CAR_TPL.evkdow = ab(kd); CAR_TPL.evkdow.root.traverse(o => { if (o.isMesh && o.material.name === 'KdowBlue') o.material.name = 'BlueLights'; });
 }
 const CAR_PICK = ['ev', 'ev', 'ev', 'evtaxi', 'sedan', 'sedan', 'small', 'small', 'suv', 'hatchback', 'hatchback', 'wagon', 'wagon', 'taxi'].filter(n => CAR_TPL[n]); /* eigenes E-Auto am häufigsten (12.11.2026) */
 function carBodyColor(name) { return name === 'taxi' || name === 'evtaxi' ? 0xf0e3b8 : name === 'evpolice' ? 0xf3f5f7 : name === 'evkdow' ? 0xe8281e : name === 'police' ? 0xd5dbe2 : pick(CARCOL); }
@@ -2807,7 +2822,7 @@ function update(dt) {
       if (u.rider && c.visible) { u.rt = (u.rt || 0) + dt * (u.speed > 0.2 ? Math.max(0.5, u.speed * 0.5) : 0); poseBikeRider(u.rider, !!u.moto, u.rt); }
     }
     else if (u.mode === 'police') policeAI(c, dt);
-    if ((u.police || u.ambulance || u.cannon) && u.bar) { const sOn = u.mode === 'police' || u.mode === 'fireAI' || u.mode === 'medicAI' || !!u.siren; u.bar.material.color.setHex(!sOn ? 0x2a2f3a : Math.floor(performance.now() / 250) % 2 ? 0x3b7bff : (u.ambulance ? 0xffffff : 0xff3b3b)); }
+    if ((u.police || u.ambulance || u.cannon || u.type === 'evkdow') && u.bar) { const sOn = u.mode === 'police' || u.mode === 'fireAI' || u.mode === 'medicAI' || !!u.siren; u.bar.material.color.setHex(!sOn ? 0x2a2f3a : Math.floor(performance.now() / 250) % 2 ? 0x3b7bff : (u.ambulance ? 0xffffff : 0xff3b3b)); }
   }
   // Wracks nach einer Weile wegräumen
   for (let i = cars.length - 1; i >= 0; i--) { const c = cars[i]; if (c.userData.mode === 'wreck') { c.userData.wreckT = (c.userData.wreckT || 0) + dt; if (c.userData.wreckT > 45 && c.position.distanceTo(player.pos) > 60) { disposeCar(c); scene.remove(c); cars.splice(i, 1); unshoot(c); } } }
@@ -2915,7 +2930,7 @@ function updateDynLights() {
   let bestC = null, bestD = 42 * 42;
   for (const c of cars) {
     const u = c.userData;
-    if (!(u.police || u.ambulance || u.cannon) || !(u.mode === 'police' || u.mode === 'fireAI' || u.mode === 'medicAI' || u.siren)) continue;
+    if (!(u.police || u.ambulance || u.cannon || u.type === 'evkdow') || !(u.mode === 'police' || u.mode === 'fireAI' || u.mode === 'medicAI' || u.siren)) continue;
     const d2 = (c.position.x - player.pos.x) ** 2 + (c.position.z - player.pos.z) ** 2;
     if (d2 < bestD) { bestD = d2; bestC = c; }
   }
