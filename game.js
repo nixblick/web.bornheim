@@ -17,7 +17,7 @@ import { initInteriors } from './interiors.js';
 import { initProgress } from './progress.js';
 import { initFire } from './fire.js';
 import { initHeli } from './heli.js';
-import { initLandmarks } from './landmarks.js'; // Wahrzeichen vorerst aus (12.11.2026: Uhrtürmchen fehlte, schwarze Flächen vor Läden), siehe CHANGELOG
+import { initLandmarks } from './landmarks.js';
 const GradeShader = { uniforms: { tDiffuse: { value: null }, vig: { value: 0.32 }, wet: { value: 0 }, night: { value: 0 } }, vertexShader: 'varying vec2 vUv; void main(){ vUv=uv; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0); }',
   fragmentShader: 'uniform sampler2D tDiffuse; uniform float vig, wet, night; varying vec2 vUv; void main(){ vec4 c=texture2D(tDiffuse,vUv); vec3 col=c.rgb; float l=dot(col,vec3(0.299,0.587,0.114)); col=mix(vec3(l),col,1.12-wet*0.25); col=(col-0.5)*1.06+0.5; col*=mix(vec3(1.0),vec3(0.92,0.97,1.06),wet*0.7+night*0.5); col=mix(col,col*vec3(1.04,1.0,0.94),0.6*(1.0-night)); vec2 d=vUv-0.5; col*=1.0-vig*dot(d,d)*2.2; gl_FragColor=vec4(clamp(col,0.0,1.0),c.a); }' };
 let aoPass = null, gradePass = null;
@@ -522,7 +522,7 @@ function* buildDetails() {
   addMerged(poles, shLambert(0x444444), false); addMerged(signsB, shBasic(0x2e9c3a)); addMerged(signsT, shBasic(0x1e5fb4));
   addMerged(shelterRoof, shLambert(0x9aa0a8)); if (shelterG.length) { if (!SHELTER_GLASS_MAT) { SHELTER_GLASS_MAT = new THREE.MeshLambertMaterial({ color: 0x9fc4e8, transparent: true, opacity: 0.45 }); SHELTER_GLASS_MAT.userData.shared = true; } const m = new THREE.Mesh(mergeGeometries(shelterG), SHELTER_GLASS_MAT); scene.add(m); }
   // --- Möbel ---
-  const benchW = [], bins = [], bikes = [], vend = [], recyc = [], post = [], fount = [];
+  const benchW = [], bins = [], bikes = [], vend = [], recyc = [], post = [], fount = [], fountW = [];
   for (const f of CITY.furniture) { if (++YC % 10 === 0) yield; if (solidAt(f.x, f.z) >= 0) continue; const ty = TH(f.x, f.z); const ne = nearestRoadDir(f.x, f.z); const ang = ne ? ne.ang : Math.random() * 6;
     const bx = (w, h, d, y, arr, ox = 0, oz = 0) => { const g = new THREE.BoxGeometry(w, h, d); g.rotateY(ang); g.translate(f.x + ox, ty + y, f.z + oz); arr.push(g); };
     if (f.k === 'bench') { bx(1.6, 0.06, 0.45, 0.45, benchW); bx(1.6, 0.42, 0.05, 0.72, benchW, -Math.cos(ang) * 0.2, Math.sin(ang) * 0.2); bx(0.08, 0.45, 0.4, 0.22, benchW, Math.sin(ang) * 0.7, Math.cos(ang) * 0.7); bx(0.08, 0.45, 0.4, 0.22, benchW, -Math.sin(ang) * 0.7, -Math.cos(ang) * 0.7); }
@@ -533,9 +533,12 @@ function* buildDetails() {
     else if (f.k === 'vending_machine') { if (Math.random() < 0.3) bx(0.8, 1.8, 0.6, 0.9, vend); }
     else if (f.k === 'recycling') { bx(1.2, 1.3, 1.0, 0.65, recyc); bx(1.2, 1.3, 1.0, 0.65, recyc, Math.sin(ang) * 1.4, Math.cos(ang) * 1.4); }
     else if (f.k === 'post_box') { bx(0.5, 1.1, 0.4, 0.55, post); }
-    else if (f.k === 'fountain') { const g = new THREE.CylinderGeometry(2.2, 2.2, 0.5, 16); g.translate(f.x, ty + 0.25, f.z); fount.push(g); const c = new THREE.CylinderGeometry(0.3, 0.4, 1.6, 8); c.translate(f.x, ty + 0.8, f.z); fount.push(c); }
+    else if (f.k === 'fountain') { /* Becken mit Rand, Wasser, Säule und Schale (12.11.2026) */ const L2 = (p, s) => new THREE.LatheGeometry(p.map(([r, h]) => new THREE.Vector2(r, h)), s);
+      const b = L2([[2.0, 0], [2.3, 0], [2.3, 0.5], [2.45, 0.56], [2.45, 0.64], [2.1, 0.64], [2.1, 0.5], [2.0, 0.42]], 20); b.translate(f.x, ty, f.z); fount.push(b);
+      const s = L2([[0, 0], [0.32, 0], [0.24, 0.3], [0.2, 1.2], [0.75, 1.35], [0.85, 1.5], [0.7, 1.52], [0.16, 1.45], [0.14, 1.9], [0.24, 2.0], [0, 2.1]], 12); s.translate(f.x, ty, f.z); fount.push(s);
+      const w = new THREE.CircleGeometry(2.05, 20); w.rotateX(-Math.PI / 2); w.translate(f.x, ty + 0.4, f.z); fountW.push(w); const w2 = new THREE.CircleGeometry(0.72, 12); w2.rotateX(-Math.PI / 2); w2.translate(f.x, ty + 1.47, f.z); fountW.push(w2); }
   }
-  addMerged(benchW, shLambert(0x8b5a2b)); addMerged(bins, shLambert(0x2f3a2f), false); addMerged(bikes, shLambert(0x777777), false); addMerged(vend, shLambert(0xc0392b)); addMerged(recyc, shLambert(0x2f7d4a)); addMerged(post, shLambert(0xffcc00)); addMerged(fount, shLambert(0x9a9a9a));
+  addMerged(benchW, shLambert(0x8b5a2b)); addMerged(bins, shLambert(0x2f3a2f), false); addMerged(bikes, shLambert(0x777777), false); addMerged(vend, shLambert(0xc0392b)); addMerged(recyc, shLambert(0x2f7d4a)); addMerged(post, shLambert(0xffcc00)); addMerged(fount, shLambert(0xb5aa96)); addMerged(fountW, new THREE.MeshLambertMaterial({ color: 0x3f7fa8, emissive: 0x1d4a66, emissiveIntensity: 0.5 }), false);
   // --- Zebrastreifen ---
   const zebra = [];
   for (const c of CITY.crossings) { let x = c.x, z = c.z; if (c.p) { const m = c.p[Math.floor(c.p.length / 2)]; x = m[0]; z = m[1]; } if (x === undefined) continue; const nr = nearestRoadDir(x, z, 7); if (!nr || nr.w < 5) continue; const ang = nr.ang; for (let k = -2.5; k <= 2.5; k++) { const sx = nr.x + Math.sin(ang) * k * 1.0, sz = nr.z + Math.cos(ang) * k * 1.0; const g = new THREE.PlaneGeometry(nr.w - 0.6, 0.5); g.rotateX(-Math.PI / 2); g.rotateY(ang + Math.PI / 2); g.translate(sx, TH(sx, sz) + 0.055, sz); zebra.push(g); } }
@@ -1626,11 +1629,40 @@ function updateTrams(dt) {
 }
 
 // ---------- Pickups ----------
+// Pickups als Frankfurter Symbole (12.11.2026): Leben = Bembel, Geld = Münze mit Adler, Munition = Kiste mit Adler.
+// Einmal gebaut und geteilt (vorher je Pickup neue Geometrie, beim Entfernen nie freigegeben).
+let PK = null;
+function pkAssets() {
+  if (PK) return PK;
+  const lathe = (prof, seg) => new THREE.LatheGeometry(prof.map(([r, h]) => new THREE.Vector2(r, h)), seg);
+  const adler = (c, w, h, bg, fg) => { if (bg) { c.fillStyle = bg; c.fillRect(0, 0, w, h); } c.fillStyle = fg; c.save(); c.translate(w / 2, h / 2); c.scale(w / 128, h / 128);
+    c.beginPath(); c.moveTo(0, -38); c.lineTo(9, -30); c.lineTo(6, -18); c.lineTo(40, -30); c.lineTo(30, -6); c.lineTo(42, -2); c.lineTo(22, 6); c.lineTo(12, 4); c.lineTo(14, 22); c.lineTo(26, 40); c.lineTo(8, 32); c.lineTo(0, 44); c.lineTo(-8, 32); c.lineTo(-26, 40); c.lineTo(-14, 22); c.lineTo(-12, 4); c.lineTo(-22, 6); c.lineTo(-42, -2); c.lineTo(-30, -6); c.lineTo(-40, -30); c.lineTo(-6, -18); c.lineTo(-9, -30); c.closePath(); c.fill(); c.restore(); };
+  // Bembel: grauer Steinzeug-Krug mit blauem Muster
+  const bembelTex = canvasTex(256, 128, (c, w, h) => { c.fillStyle = '#9aa0a6'; c.fillRect(0, 0, w, h); c.strokeStyle = '#1f4fa0'; c.lineWidth = 6;
+    for (const y of [22, 106]) { c.beginPath(); c.moveTo(0, y); c.lineTo(w, y); c.stroke(); }
+    c.lineWidth = 4; for (let x = 16; x < w; x += 42) { c.beginPath(); c.arc(x, 64, 14, 0, Math.PI * 2); c.stroke(); for (let a = 0; a < 6; a++) { c.beginPath(); c.moveTo(x, 64); c.lineTo(x + Math.cos(a) * 24, 64 + Math.sin(a) * 24); c.stroke(); } } });
+  const bembel = lathe([[0, 0], [0.16, 0], [0.2, 0.06], [0.25, 0.24], [0.25, 0.36], [0.19, 0.5], [0.13, 0.6], [0.14, 0.66], [0.11, 0.68], [0, 0.68]], 16); bembel.translate(0, -0.34, 0);
+  const henkel = new THREE.TorusGeometry(0.12, 0.03, 6, 12, Math.PI); henkel.rotateZ(-Math.PI / 2); henkel.translate(0.24, 0.02, 0);
+  const tuelle = new THREE.ConeGeometry(0.05, 0.14, 6); tuelle.rotateZ(Math.PI / 2.6); tuelle.translate(-0.15, 0.27, 0);
+  const coinTex = canvasTex(128, 128, (c, w, h) => adler(c, w, h, '#e0b43a', '#a5302a'));
+  const coin = new THREE.CylinderGeometry(0.3, 0.3, 0.06, 24); coin.rotateX(Math.PI / 2);
+  const kisteTex = canvasTex(128, 128, (c, w, h) => { c.fillStyle = '#5f6b3a'; c.fillRect(0, 0, w, h); c.strokeStyle = '#3d4626'; c.lineWidth = 6; c.strokeRect(4, 4, w - 8, h - 8); c.fillStyle = '#f2efe6'; c.fillRect(24, 24, 80, 80); adler(c, w, h, null, '#c0392b'); });
+  const kiste = new THREE.BoxGeometry(0.5, 0.36, 0.36);
+  PK = {
+    bembel: [bembel, new THREE.MeshLambertMaterial({ map: bembelTex, emissive: 0x334455, emissiveIntensity: 0.4 })],
+    teile: [[henkel, new THREE.MeshLambertMaterial({ color: 0x8e949a, emissive: 0x334455, emissiveIntensity: 0.3 })], [tuelle, new THREE.MeshLambertMaterial({ color: 0x8e949a, emissive: 0x334455, emissiveIntensity: 0.3 })]],
+    coin: [coin, [new THREE.MeshLambertMaterial({ color: 0xc89a2a, emissive: 0x7a5a10, emissiveIntensity: 0.6 }), new THREE.MeshBasicMaterial({ map: coinTex }), new THREE.MeshBasicMaterial({ map: coinTex })]],
+    kiste: [kiste, new THREE.MeshLambertMaterial({ map: kisteTex, emissive: 0x222211, emissiveIntensity: 0.5 })],
+    ring: [new THREE.TorusGeometry(0.42, 0.03, 6, 24), { health: new THREE.MeshBasicMaterial({ color: 0x4a8fe0 }), money: new THREE.MeshBasicMaterial({ color: 0xf0c030 }), ammo: new THREE.MeshBasicMaterial({ color: 0x7fb24a }) }] };
+  return PK;
+}
 function spawnPickup(kind, x, z) {
   if (kind.startsWith('w:')) { const g = new THREE.Group(); const w = WPN.buildModel(kind.slice(2)); w.scale.setScalar(2.4); w.rotation.x = -0.3; w.position.y = 0.05; g.add(w); const ring = new THREE.Mesh(new THREE.TorusGeometry(0.42, 0.035, 6, 24), new THREE.MeshBasicMaterial({ color: 0xc86bff })); ring.rotation.x = Math.PI / 2; ring.position.y = -0.45; g.add(ring); g.position.set(x, TH(x, z) + 0.5, z); g.userData = { kind, t: Math.random() * 6 }; scene.add(g); pickups.push(g); return g; }
-  const col = kind === 'health' ? 0xe04040 : kind === 'ammo' ? 0x40c060 : 0xf0c030; const g = new THREE.Group();
-  const m = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.5, 0.5), new THREE.MeshLambertMaterial({ color: col, emissive: col, emissiveIntensity: 0.5 })); g.add(m);
-  if (kind === 'health') { const c = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.08, 0.52), new THREE.MeshBasicMaterial({ color: 0xffffff })); const c2 = c.clone(); c2.rotation.y = Math.PI / 2; g.add(c, c2); }
+  const A = pkAssets(); const g = new THREE.Group();
+  if (kind === 'health') { g.add(new THREE.Mesh(...A.bembel)); for (const t of A.teile) g.add(new THREE.Mesh(...t)); }
+  else if (kind === 'money') g.add(new THREE.Mesh(...A.coin));
+  else g.add(new THREE.Mesh(...A.kiste));
+  { const r = new THREE.Mesh(A.ring[0], A.ring[1][kind] || A.ring[1].money); r.rotation.x = Math.PI / 2; r.position.y = -0.45; g.add(r); }
   g.position.set(x, TH(x, z) + 0.5, z); g.userData = { kind, t: Math.random() * 6 }; scene.add(g); pickups.push(g); return g;
 }
 function spawnPickups(n) { let tries = 0; while (pickups.length < n && tries++ < n * 20) { const r = pick(CITY.roads); const p = randomRoadPoint(r); const side = Math.random() < 0.5 ? 1 : -1; const x = p.x + Math.cos(p.heading) * side * (r.w / 2 + 1.5), z = p.z - Math.sin(p.heading) * side * (r.w / 2 + 1.5); if (solidAt(x, z) >= 0) continue; if (Math.hypot(x - player.pos.x, z - player.pos.z) > 300) continue; spawnPickup(Math.random() < 0.3 ? 'w:' + pick(['bat', 'smg', 'shotgun', 'rifle', 'spray', 'taser', 'paint', 'paint', 'banger', 'banger', 'smoke', 'flare', 'grenade', 'tnt']) : pick(['money', 'money', 'ammo', 'health']), x, z); } }
@@ -2286,7 +2318,7 @@ $('cont').onclick = () => { let d = null; try { d = JSON.parse(localStorage.getI
 while (solidAt(player.pos.x, player.pos.z) >= 0) player.pos.x += 3;
 const X = { THREE, scene, camera, renderer, player, peds, cars, shootables, pickups, FX, puff, losFactor, keys, camYaw, camPitch, opts, world, weather, CITY, TH, solidAt, solidAtH, floorAt, nearestEdge, edgeNormal, moveWithCollision, makeHuman, makeCar, makeAmbulance, dropRider, tipBike, rehome, spawnCar, spawnPedAt, playAnim, animateWalk, damage, explode, burst, smoke, wakeParked, wakeParkedRay, sfx, SND, showMsg, raiseWanted, camShake, freeSkel, canvasTex, tracerMat, makeGun, dentCar, rnd, clamp, pick, lerpAngle, distSegSq, pointInPoly, randomRoadPoint, roadsDrivable, driveCar, carFx, carTerrain, exitCar, syncHand, CHAR, coneTex, hurtPlayer, card, closeMenu, saveGame, lockMouse, disposeCar,
   listeners: [], mmHooks: MM_HOOKS, menuHooks: MENU_HOOKS, rallyLimit: 8, get creative() { return creative; }, creativeSpawnerActive, pedRoads: () => pedRoads, roadsNear: (x, z, R, car) => roadsNear(x, z, R, car), streetAt: (x, z) => streetNameAt(x, z), barrierNear: (x, z, r) => barrierHit(x, z, r), storyBusy: () => STORY ? STORY.busy : false };
-var WPN = initWeapons(X); var DEMO = initDemo(X, WPN); var FIRE = initFire(X, WPN, DEMO); var STORY = initStory(X, WPN, DEMO, FIRE); var SHOPS = initShops(X, WPN); Object.assign(X, { nearestRoadDir, setPocket: p => { POCKET = p; camera.userData.init = false; }, inPocket, streamInit, roofHeight, WORLD, TILES, TS, WIDX }); var INTERIORS = initInteriors(X, WPN, DEMO, SHOPS); var PROGRESS = initProgress(X); var HELI = initHeli(X); var LANDMARKS = { update() {} }; void initLandmarks;
+var WPN = initWeapons(X); var DEMO = initDemo(X, WPN); var FIRE = initFire(X, WPN, DEMO); var STORY = initStory(X, WPN, DEMO, FIRE); var SHOPS = initShops(X, WPN); Object.assign(X, { nearestRoadDir, setPocket: p => { POCKET = p; camera.userData.init = false; }, inPocket, streamInit, roofHeight, WORLD, TILES, TS, WIDX }); var INTERIORS = initInteriors(X, WPN, DEMO, SHOPS); var PROGRESS = initProgress(X); var HELI = initHeli(X); var LANDMARKS = initLandmarks(X);
 for (let i = 0; i < 200 && cars.length < 60; i++) spawnCar(false, player.pos, 10, 260);
 for (let i = 0; i < 55; i++) spawnPed(null);
 spawnPickups(40);

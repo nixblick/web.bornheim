@@ -209,9 +209,9 @@ export function initInteriors(X, W, D, SH) {
   // U-Texturen wurden beim Abbau nie freigegeben). Das Namensschild gibt es je Station einmal, mit Zähler.
   let EG = null; const nameMats = new Map();
   const eg = () => EG || (EG = { metal: M(0x5a6068, 0.25), hole: new THREE.PlaneGeometry(2.4, 4), holeM: new THREE.MeshBasicMaterial({ color: 0x0b0c0f }), step: new THREE.BoxGeometry(2.3, 0.02, 0.08), stepM: M(0x777777, 0.3),
-    railS: new THREE.BoxGeometry(0.06, 1.0, 4), railB: new THREE.BoxGeometry(2.5, 1.0, 0.06), tube: new THREE.CylinderGeometry(0.035, 0.035, 4, 6), pole: new THREE.CylinderGeometry(0.07, 0.08, 4.4, 8), cap: new THREE.CylinderGeometry(0.1, 0.1, 0.12, 8),
+    railS: new THREE.BoxGeometry(0.06, 1.0, 4), railB: new THREE.BoxGeometry(2.5, 1.0, 0.06), tube: new THREE.CylinderGeometry(0.035, 0.035, 4, 6), pole: new THREE.CylinderGeometry(0.07, 0.08, 3.3, 8), cap: new THREE.CylinderGeometry(0.1, 0.1, 0.12, 8),
     sign: new THREE.BoxGeometry(1.1, 1.1, 0.1), uM: new THREE.MeshBasicMaterial({ map: canvasTex(128, 128, (c) => { c.fillStyle = '#0a3d8f'; c.fillRect(0, 0, 128, 128); uLogo(c, 0, 0, 128); }, 1, 1) }),
-    nameG: new THREE.PlaneGeometry(2.0, 0.46) });
+    nameG: new THREE.PlaneGeometry(2.0, 0.46), clamp: new THREE.BoxGeometry(0.12, 0.5, 0.2) });
   const nameMat = st => { let e = nameMats.get(st.id); if (!e) { e = { n: 0, m: new THREE.MeshBasicMaterial({ map: canvasTex(512, 118, (c, w, h) => { c.fillStyle = '#f7f7f4'; c.fillRect(0, 0, w, h); c.fillStyle = '#0a3d8f'; c.fillRect(0, h - 10, w, 10);
       let x = 12; for (const l of st.lines.slice(0, 4)) x += badge(c, l, x, 16, 54) + 8; c.fillStyle = '#16202a'; fitFont(c, st.name, w - x - 16, 46, 18); c.textAlign = 'left'; c.textBaseline = 'middle'; c.fillText(st.name, x + 6, 44);
       c.fillStyle = '#5a6b78'; c.font = '20px Arial'; c.fillText('U-Bahn', x + 6, 88); }, 1, 1) }) }; nameMats.set(st.id, e); } e.n++; return e.m; };
@@ -223,10 +223,11 @@ export function initInteriors(X, W, D, SH) {
     for (const [geo, x, z] of [[E.railS, -1.25, 0], [E.railS, 1.25, 0], [E.railB, 0, 2.0]]) { const r = new THREE.Mesh(geo, E.metal); r.position.set(x, 0.55, z); g.add(r); }
     for (const x of [-1.25, 1.25]) { const h = new THREE.Mesh(E.tube, E.metal); h.rotation.x = Math.PI / 2; h.position.set(x, 1.1, 0); g.add(h); }
     // Mast mit U-Würfel und Namensschild darunter, beidseitig lesbar: von der Straße aus erkennbar
-    const pole = new THREE.Mesh(E.pole, E.metal); pole.position.set(1.6, 2.2, 2.2); g.add(pole);
+    const pole = new THREE.Mesh(E.pole, E.metal); pole.position.set(1.6, 1.65, 2.2); g.add(pole); /* Mast endet am U-Würfel (12.11.: ging vorher durch Würfel und Schild) */
     const cap = new THREE.Mesh(E.cap, E.metal); cap.position.set(1.6, 4.46, 2.2); g.add(cap);
     const sg = new THREE.Mesh(E.sign, E.uM); sg.position.set(1.6, 3.85, 2.2); g.add(sg);
-    const nm = nameMat(st); for (const ry of [0, Math.PI]) { const n = new THREE.Mesh(E.nameG, nm); n.position.set(1.6, 2.95, 2.2 + (ry ? -0.06 : 0.06)); n.rotation.y = ry; g.add(n); }
+    const nm = nameMat(st); for (const ry of [0, Math.PI]) { const n = new THREE.Mesh(E.nameG, nm); n.position.set(1.6, 2.95, 2.2 + (ry ? -0.11 : 0.11)); n.rotation.y = ry; g.add(n); }
+    const cl = new THREE.Mesh(E.clamp, E.metal); cl.position.set(1.6, 2.95, 2.2); g.add(cl);
     const ne = nearestEdge(p[0], p[1], 20); if (ne) { const e = edgeNormal(ne.b.p, ne.e); g.rotation.y = Math.atan2(e.dx, e.dz); }
     g.position.set(p[0], y, p[1]); scene.add(g); return g;
   }
