@@ -2,6 +2,10 @@
 
 ## 2026-11-12
 
+- **Zappbar begehbar** (Fotos): langer Holztresen mit Barhockern, Flaschenregal, Hängelampen, Poster, Ledersitzbank und Schachtisch mit zwei Brettern; Bier am Tresen für 3 €
+- **Laternenlicht an Hauswänden:** nachts ein großer warmer Schein in Wandhöhe neben jeder Straßenlaterne (Nachtfoto Wöllstädter Straße)
+- **Ladenzeilen:** Läden im Erdgeschoss mit roter Sandsteinfront, Fugen und hellem Rollladen neben der Tür (Foto Berger Straße)
+- **Schilder Wöllstädter Straße:** Restaurant Caravan (Schriftzug) und Sonnenblumen-Bäckerei (gelbe Brezel) am OSM-Punkt
 - **Wöllstädter Straße** (Nachtfoto): Putzbauten der 1920er in Beigegrau mit weißen Fensterrahmen, Kastenerker und Gitterbalkon; alle Häuser an der Straße und ein Teil in Bornheim-Nord
 - **Feuerwehr-Einsätze nach Foto:** Trupp in dunkelblauer Einsatzkleidung mit neongelben Reflexstreifen; zum Löschfahrzeug kommt der Kommandowagen mit Blaulicht dazu
 - **Spieltag im Waldstadion:** am Wochenende sind die Ränge voll, schwarz-weiße Schals überall; unter der Woche leere Sitze mit Vereinsnamen
