@@ -835,8 +835,8 @@ function* buildDetails2() {
 const staticParked = []; let parkedMesh = null; let roadMeshRef = null; const roadChunks = [];
 const instRefs = [];
 let PARK_TG = null, PARK_LOW = null;
-// Wachen ohne Namen in OSM, Lage aus der Adresse (Nominatim) und Gebäudegröße: Feuer- und Rettungswache 2, Heinrichstraße 8 (Hauptbau und Fahrzeughalle)
-const WACHE_OHNE_NAMEN = [[-4105, 2517], [-4136, 2487]];
+// Wachen ohne Namen in OSM, Lage aus der Adresse (Nominatim) und Gebäudegröße: Feuer- und Rettungswache 2, Heinrichstraße 8; Lage per Google-Maps-Punkt bestätigt (50.107023, 8.651487), beide Gebäudeteile
+const WACHE_OHNE_NAMEN = [[-4153, 2492], [-4136, 2487]];
 const WACHEN = []; // Mittelpunkte der Feuerwachen (aus dem Gebäudebau), dort parkt der Kommandowagen
 function buildParked() {
   const local = [];
