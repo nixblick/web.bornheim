@@ -2,6 +2,11 @@
 
 ## 2026-11-12
 
+- **Frischlufteulen im Spiel (#61, erster Kunde):** Strecken nur aus dem Endpunkt frischlufteulen.de/api/spiel/strecken.json, keine ausgedachten Strecken; solange dort nichts freigegeben ist, bleibt alles aus (Datenwunsch: frischlufteulen.de-Ticket). Eine Strecke mit „Marathon“ im Namen wird die Marathon-Mission
+  - Litfaßsäulen mit gezeichnetem Eulen-Plakat an bis zu vier Bushalten in der Nähe; F startet den Eulen-Lauf
+  - Eulen-Marathon: grüne Säule am Start der Strecke, Wegpunkt-Ringe, Zeit, nur zu Fuß (Auto, Rad, Bahn oder Sprung = disqualifiziert), alle fünf Wegpunkte Verpflegung mit Speichern und +30 Leben
+  - Ziel Festhalle: grüner Zielbogen, 40 m roter Teppich, jubelnde Zuschauer, Konfetti; +10.000 €, volles Leben, Erfolg „Marathon gefinisht“ mit Zeit; Link zur Strecke mit ?von=bornheim
+  - Pausemenü → Spiel: „Trainingspläne auf frischlufteulen.de“
 - **Karte zeigt die ganze Stadt:** Übersicht aus allen Kacheln (Straßen in drei Stufen, Gleise, Main und Gewässer, Parks und Wald; data/overview.json, tools/build_overview.py) als Hintergrund für Menükarte und große Karte, auch dort, wo noch nichts geladen ist
 - **U-Bahn mit echtem Streckenverlauf** statt gerader Linien von Station zu Station (OSM-Routen, tools/metro_geometry.py)
 - **Rundgang-Modus menue** (tools/rundgang.mjs): Menü öffnen, Schnell, Karte, Bus, Statistik, große Karte fotografieren
