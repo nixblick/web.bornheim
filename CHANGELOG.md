@@ -2,6 +2,10 @@
 
 ## 2026-11-12
 
+- **Feste Hindernisse:** Bauzäune, Poller, Feuerdorn-Hecken und Außentische blockieren die Spielfigur und das gefahrene Auto
+- **Busse halten an Bushaltestellen:** acht Sekunden an jeder Haltestelle aus den Kartendaten (echte Linienwege gibt es in den Daten nicht)
+- **Außentische** mit Stühlen vor Bäckereien, Cafés, Imbissen und Eisdielen
+- **Nahkauf Eulengasse** (Fotos): rotes Schild mit weißer Schrift, als Nasenschild und an allen Nahkauf-Filialen
 - **Stadtbusse** in Türkis (Foto Seckbacher Landstraße): 12 m, Fensterband, Leuchtanzeige vorn, rote Rückleuchten; etwa jedes zwanzigste Fahrzeug auf breiteren Straßen
 - **Herbstlaub** im Oktober und November auf Gehwegen und am Fahrbahnrand (eine Punktwolke je Kachel)
 - **Baustellen-Warnleuchten blinken nachts**; Bauzäune sind weiter nicht fest
