@@ -491,6 +491,20 @@ const fahrbahnTex = canvasTex(1024, 1024, (ctx, w, h) => {
   // Ölfleck
   { const g = ctx.createRadialGradient(470, 820, 4, 470, 820, 70); g.addColorStop(0, 'rgba(10,10,12,0.35)'); g.addColorStop(1, 'rgba(10,10,12,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.ellipse(470, 820, 80, 55, 0.4, 0, Math.PI * 2); ctx.fill(); }
 }, 1 / 8, 1 / 8);
+// Fahrbahnmarkierung und Kanaldeckel, gezeichnet (12.11.2026)
+const markTex = canvasTex(32, 256, (ctx, w, h) => { let s = 5; const r = () => (s = Math.imul(s ^ s >>> 15, 0x2c1b3c6d) + 0x6D2B79F5 | 0, ((s ^ s >>> 13) >>> 0) / 4294967296);
+  ctx.clearRect(0, 0, w, h); ctx.fillStyle = 'rgba(236,230,210,0.82)'; ctx.fillRect(2, 4, w - 4, h - 8);
+  ctx.globalCompositeOperation = 'destination-out'; for (let i = 0; i < 260; i++) { ctx.fillStyle = `rgba(0,0,0,${0.3 + r() * 0.7})`; const z = 1 + r() * 4; ctx.fillRect(r() * w, r() * h, z, z * (1 + r() * 2)); } ctx.globalCompositeOperation = 'source-over'; }, 1, 1);
+markTex.wrapS = markTex.wrapT = THREE.ClampToEdgeWrapping;
+const deckelTex = canvasTex(128, 128, (ctx, w, h) => { ctx.clearRect(0, 0, w, h); ctx.save(); ctx.beginPath(); ctx.arc(64, 64, 62, 0, Math.PI * 2); ctx.clip();
+  ctx.fillStyle = '#3a3a38'; ctx.fillRect(0, 0, w, h); ctx.strokeStyle = '#2a2a28'; ctx.lineWidth = 3;
+  for (let r = 14; r < 62; r += 12) { ctx.beginPath(); ctx.arc(64, 64, r, 0, Math.PI * 2); ctx.stroke(); }
+  for (let a = 0; a < 12; a++) { ctx.beginPath(); ctx.moveTo(64, 64); ctx.lineTo(64 + Math.cos(a / 12 * Math.PI * 2) * 62, 64 + Math.sin(a / 12 * Math.PI * 2) * 62); ctx.stroke(); }
+  ctx.fillStyle = 'rgba(160,150,135,0.35)'; ctx.beginPath(); ctx.arc(64, 64, 10, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+  ctx.strokeStyle = '#6f6d66'; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(64, 64, 61, 0, Math.PI * 2); ctx.stroke(); }, 1, 1);
+deckelTex.wrapS = deckelTex.wrapT = THREE.ClampToEdgeWrapping;
+const gullyTex = canvasTex(128, 96, (ctx, w, h) => { ctx.fillStyle = '#5c5a55'; ctx.fillRect(0, 0, w, h); ctx.fillStyle = '#1c1c1b'; for (let x = 12; x < w - 8; x += 13) ctx.fillRect(x, 12, 6, h - 24); ctx.strokeStyle = '#7a776f'; ctx.lineWidth = 4; ctx.strokeRect(2, 2, w - 4, h - 4); }, 1, 1);
+gullyTex.wrapS = gullyTex.wrapT = THREE.ClampToEdgeWrapping;
 const roofTex = canvasTex(128, 128, (ctx, w, h) => { ctx.fillStyle = '#7d6b62'; ctx.fillRect(0, 0, w, h); for (let i = 0; i < 2000; i++) { ctx.fillStyle = `rgba(0,0,0,${Math.random() * 0.12})`; ctx.fillRect(Math.random() * w, Math.random() * h, 2, 2); } }, 1 / 5, 1 / 5);
 
 
@@ -1221,7 +1235,15 @@ function* buildCity() {
     const [ax, az] = r.p[i], [bx, bz] = r.p[i + 1]; const l = Math.hypot(bx - ax, bz - az); const n = Math.floor(l / 6);
     for (let k = 0; k < n; k++) { const t = (k + 0.5) / n; const g = new THREE.PlaneGeometry(0.2, 3); g.rotateX(-Math.PI / 2); g.rotateY(-Math.atan2(bz - az, bx - ax) + Math.PI / 2); const dxx = ax + (bx - ax) * t, dzz = az + (bz - az) * t; g.translate(dxx, 0.06 + TH(dxx, dzz), dzz); dash.push(g); }
   }
-  if (dash.length) scene.add(new THREE.Mesh(mergeGeometries(dash), shBasic(0xe9e2c8)));
+  if (dash.length) { const mm = new THREE.MeshLambertMaterial({ map: markTex, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -2 }); scene.add(new THREE.Mesh(mergeGeometries(dash), mm)); } /* verblasste Farbe statt grellem unbeleuchtetem Weiß */
+  // Kanaldeckel in der Fahrspur und Straßenabläufe am Bordstein, je Kachel zwei Meshes
+  { const dk = [], gu = []; let sd = 17; const rr = () => (sd = (sd * 16807) % 2147483647) / 2147483647;
+    for (const r of CITY.roads) { if (r.ped || r.mw || r.ry || r.w < 6) continue; for (let i = 0; i < r.p.length - 1; i++) { const [ax, az] = r.p[i], [bx, bz] = r.p[i + 1]; const l = Math.hypot(bx - ax, bz - az); if (l < 8) continue; const ux = (bx - ax) / l, uz = (bz - az) / l, nx = -uz, nz = ux; const ang = Math.atan2(bx - ax, bz - az);
+      for (let s = 4 + rr() * 20; s < l - 3; s += 26 + rr() * 22) { const off = (rr() < 0.5 ? -1 : 1) * r.w / 4; const x = ax + ux * s + nx * off, z = az + uz * s + nz * off; if (onOtherRoad(x, z, r, -0.5)) continue; const g = new THREE.CircleGeometry(0.33, 14); g.rotateX(-Math.PI / 2); g.translate(x, TH(x, z) + 0.055, z); dk.push(g); }
+      for (let s = 6 + rr() * 15; s < l - 3; s += 22 + rr() * 18) for (const sg of [-1, 1]) { if (rr() < 0.4) continue; const o = sg * (r.w / 2 - 0.35); const x = ax + ux * s + nx * o, z = az + uz * s + nz * o; if (onOtherRoad(x, z, r, -0.5)) continue; const g = new THREE.PlaneGeometry(0.32, 0.5); g.rotateX(-Math.PI / 2); g.rotateY(ang); g.translate(x, TH(x, z) + 0.055, z); gu.push(g); } } }
+    const mat = map => new THREE.MeshLambertMaterial({ map, transparent: true, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -2 });
+    if (dk.length) { const m = new THREE.Mesh(mergeGeometries(dk), mat(deckelTex)); m.receiveShadow = true; scene.add(m); }
+    if (gu.length) { const m = new THREE.Mesh(mergeGeometries(gu), mat(gullyTex)); m.receiveShadow = true; scene.add(m); } }
   // Bäume
   const trunk = TRUNK_G || (TRUNK_G = Object.assign(new THREE.CylinderGeometry(0.15, 0.2, 2.2, 5), { userData: { shared: true } }));
   const crown = opts.quality === 'niedrig' ? (CROWN_LOW_G || (CROWN_LOW_G = (() => { const g = new THREE.IcosahedronGeometry(1.9, 0); g.computeVertexNormals(); g.userData.shared = true; return g; })())) : (CROWN_HI_G || (CROWN_HI_G = (() => { const g = mergeGeometries([new THREE.IcosahedronGeometry(1.75, 0), new THREE.IcosahedronGeometry(1.3, 0).translate(0.95, 0.45, 0.35), new THREE.IcosahedronGeometry(1.2, 0).translate(-0.75, 0.6, -0.55), new THREE.IcosahedronGeometry(1.05, 0).translate(0.1, 1.2, -0.2)]); g.computeVertexNormals(); g.userData.shared = true; return g; })()));
@@ -1517,8 +1539,21 @@ CAR_FILES.forEach((name, i) => { const g = gCars[i]; if (!g) return; const s = g
   inner.position.y = -box.min.y; root.updateMatrixWorld(true);
   CAR_TPL.ev = { root, dims: { w: sz.x, h: sz.y, l: sz.z } };
 })();
-const CAR_PICK = ['ev', 'ev', 'ev', 'sedan', 'sedan', 'small', 'small', 'suv', 'hatchback', 'hatchback', 'wagon', 'wagon', 'taxi'].filter(n => CAR_TPL[n]); /* eigenes E-Auto am häufigsten (12.11.2026) */
-function carBodyColor(name) { return name === 'taxi' ? 0xf0e3b8 : name === 'police' ? 0xd5dbe2 : pick(CARCOL); }
+if (CAR_TPL.ev) { // 12.11.2026: E-Auto auch als Frankfurter Taxi (hellelfenbein, Dachschild) und als Streifenwagen (blau-silber)
+  const D0 = CAR_TPL.ev.dims;
+  const ab = (zusatz) => { const root = CAR_TPL.ev.root.clone(true); for (const m of zusatz) root.children[0].add(m); root.updateMatrixWorld(true); const b = new THREE.Box3().setFromObject(root); const s = b.getSize(new THREE.Vector3()); return { root, dims: { w: s.x, h: D0.h, l: s.z } }; };
+  const schild = new THREE.MeshLambertMaterial({ color: 0xf6d34a, emissive: 0xf6d34a, emissiveIntensity: 0.35 }); schild.name = 'TaxiSign';
+  const ts = new THREE.Mesh(new THREE.BoxGeometry(0.52, 0.16, 0.2), schild); ts.position.set(0, D0.h + 0.08, -0.45);
+  CAR_TPL.evtaxi = ab([ts]);
+  const blau = new THREE.MeshLambertMaterial({ color: 0x1d4f9e }); blau.name = 'PoliceBlue';
+  const gelb = new THREE.MeshLambertMaterial({ color: 0xd8f020, emissive: 0xb8d010, emissiveIntensity: 0.25 }); gelb.name = 'PoliceYellow';
+  const streifen = []; for (const sx of [-1, 1]) { const s = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.3, 3.3), blau); s.position.set(sx * 1.05, 0.62, 0.35); streifen.push(s); const y = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.42, 0.95), gelb); y.position.set(sx * 1.04, 0.62, -1.95); streifen.push(y); }
+  { const y = new THREE.Mesh(new THREE.BoxGeometry(1.7, 0.3, 0.03), gelb); y.position.set(0, 0.6, -2.55); streifen.push(y); } /* Heckklappe neongelb */
+  { const hb = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.12, 0.03), blau); hb.position.set(0, 0.86, 2.4); streifen.push(hb); }
+  CAR_TPL.evpolice = ab(streifen);
+}
+const CAR_PICK = ['ev', 'ev', 'ev', 'evtaxi', 'sedan', 'sedan', 'small', 'small', 'suv', 'hatchback', 'hatchback', 'wagon', 'wagon', 'taxi'].filter(n => CAR_TPL[n]); /* eigenes E-Auto am häufigsten (12.11.2026) */
+function carBodyColor(name) { return name === 'taxi' || name === 'evtaxi' ? 0xf0e3b8 : name === 'evpolice' ? 0xf3f5f7 : name === 'police' ? 0xd5dbe2 : pick(CARCOL); }
 function setCarColor(c, col) { c.userData.col = col; for (const m of c.userData.bodyMats || []) m.color.setHex(col).convertSRGBToLinear(); if (!c.userData.bodyMats) c.traverse(o => { if (o.isMesh && o.material?.color && o === c.children[0]) o.material.color.setHex(col); }); }
 const CONE_MAT = new THREE.MeshBasicMaterial({ map: coneTex, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide }); CONE_MAT.userData.shared = true;
 const POLICE_BAR_G = new THREE.BoxGeometry(1.0, 0.14, 0.28); POLICE_BAR_G.userData.shared = true;
@@ -1527,7 +1562,7 @@ function makeCar(police = false, typeName = null) {
   if (typeName === 'bike') return makeBike(); // Spielstand und Story bauen Räder über denselben Weg
   if (typeName === 'moto') return makeMoto();
   if (typeName === 'ambulance') return makeAmbulance();
-  const name = police ? 'police' : (typeName && CAR_TPL[typeName] ? typeName : pick(CAR_PICK)); const T = CAR_TPL[name];
+  const name = police ? (typeName && /police/.test(typeName) && CAR_TPL[typeName] ? typeName : (CAR_TPL.evpolice && Math.random() < 0.5 ? 'evpolice' : 'police')) : (typeName && CAR_TPL[typeName] ? typeName : pick(CAR_PICK)); const T = CAR_TPL[name];
   if (!T) return makeCarBox(police);
   const g = new THREE.Group(); const m = T.root.clone(true); g.add(m); const D = T.dims;
   const bodyMats = [], heads = []; let tlMat = null, bar = null; const wheels = [];
@@ -1875,7 +1910,7 @@ function loadGame() {
   if (INTERIORS && INTERIORS.inside) INTERIORS.leave(); // sonst bleibt der Innenraum-Zustand (kein Verkehr, Karte versteckt) aktiv
   if (player.car) exitCar(); player.pos.set(d.pos[0], d.pos[1], d.pos[2]); camYaw.v = Number.isFinite(d.yaw) ? d.yaw : 0; player.hp = clamp(+d.hp || 100, 1, 100); /* Werte aus importierten Dateien absichern */ WPN.load(d.inv); player.money = d.money || 0; player.score = d.score || 0; player.wanted = d.wanted || 0; world.hour = d.hour ?? 19.5; player.dead = false; msgEl.style.display = 'none';
   if (player.mesh) player.mesh.position.copy(player.pos);
-  if (d.car) { const c = makeCar(d.car.type === 'police', typeof d.car.type === 'string' ? d.car.type : null); c.position.set(d.car.x, TH(d.car.x, d.car.z), d.car.z); c.userData.heading = d.car.h; c.rotation.y = d.car.h; setCarColor(c, d.car.col); scene.add(c); cars.push(c); shootables.push(c); player.car = c; c.userData.mode = 'player'; c.userData.driver = 'player'; if (player.mesh) player.mesh.visible = !!c.userData.bike; player.pos.copy(c.position); }
+  if (d.car) { const c = makeCar(/police/.test(d.car.type || ''), typeof d.car.type === 'string' ? d.car.type : null); c.position.set(d.car.x, TH(d.car.x, d.car.z), d.car.z); c.userData.heading = d.car.h; c.rotation.y = d.car.h; setCarColor(c, d.car.col); scene.add(c); cars.push(c); shootables.push(c); player.car = c; c.userData.mode = 'player'; c.userData.driver = 'player'; if (player.mesh) player.mesh.visible = !!c.userData.bike; player.pos.copy(c.position); }
   for (const c of cars) if (c.userData.police && c !== player.car) c.userData.mode = 'parked';
   showMsg('GELADEN', 900, 'ok'); return true;
 }
