@@ -2,6 +2,10 @@
 
 ## 2026-11-12
 
+- **Gauben** auf flach eingetragenen Wohnhäusern ab 12 m: Reihe aus Schiefergauben mit Fenster an der Straßenseite (Foto ABG-Haus)
+- **Garagentore** (dunkle Schwingtore) an kleinen Nebengebäuden bis 4 m Höhe (Foto Kita Eulengasse)
+- **Torbögen** an Hausdurchfahrten: heller Rundbogen um die Öffnung (Foto Seckbacher Landstraße)
+- **Radwegweiser beschriftet** mit grünem Pfeil, Ziel und Kilometern (Bornheim Mitte, Innenstadt, Seckbach …); **Hausnummernschild** unter jedem Straßennamen
 - **Verkehrsspiegel** mit rot-weißem Rahmen an engen Einmündungen, **E-Roller** am Gehweg, **Friseur-Schilder** hell mit dunkler Schrift (Foto Moni's Frisierstubb)
 - **Glascontainer** blau und **Altkleidercontainer** rot an den Wertstoffplätzen aus den Kartendaten (vorher grüne Kästen)
 - **Parkscheinautomaten** weiß mit blauem Feld am Fahrbahnrand, fest
