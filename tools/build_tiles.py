@@ -2,7 +2,7 @@
 Liest data/raw/blk_*.jsonl.gz (tools/pbf_to_raw.py, Blöcke zu 8 x 8 Kacheln mit Rand) und data/dem/*.bin (tools/fetch_dgm_ffm.py),
 schreibt data/tiles/<tx>_<tz>.json und data/tiles/index.json.
 Gearbeitet wird Block für Block (wenig Speicher). Brücken- und Rampenhöhen werden je Block samt Rand berechnet (früher im Browser).
-Aufruf: python -I tools/build_tiles.py"""
+Aufruf: python -I tools/build_tiles.py [--add]"""
 import array, glob, gzip, json, math, os, struct, sys, time
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from build_city import convert, xy
@@ -35,6 +35,10 @@ BS = 8
 tinfo = json.load(open(f"{RAW}/tiles.json")); KEEP = {tuple(t) for t in tinfo["tiles"]}; CORE = [tuple(t) for t in tinfo["core"]]
 KEYS = ["buildings", "roads", "paths", "rails", "water", "green", "trees", "signals", "pois", "barriers", "stops", "furniture", "areas", "crossings"]
 idx = {"ts": TS, "base": BASE, "demN": DEM_N, "demStep": DEM_STEP, "origin": [50.129441, 8.7096938], "core": CORE, "tiles": {}}
+ADD = "--add" in sys.argv  # nur neue Kacheln (tools/fetch_umland.py) bauen und an den bestehenden Index anhängen
+if ADD:
+    old = json.load(open(f"{OUT}/index.json")); assert not (KEEP & {tuple(map(int, k.split("_"))) for k in old["tiles"]}), "--add würde bestehende Kacheln überschreiben"
+    idx["core"] = old["core"]; idx["tiles"] = old["tiles"]; OLDKEYS = set(old["tiles"])
 total = 0; written = set()
 def load_block(fn):
     el = []; nodes = {}; nid = -1
@@ -171,6 +175,7 @@ for n, fn in enumerate(blocks):
 for (tx, tz) in KEEP:
     if (tx, tz) not in written: idx["tiles"].setdefault(f"{tx}_{tz}", [0, 0])
 for k, v in idx["tiles"].items():
+    if ADD and k in OLDKEYS: continue
     tx, tz = map(int, k.split("_")); H = dem_tile(tx, tz); v.append(round(sum(H) / len(H), 1) if H else 0.0); v.append(1 if H else 0)
 json.dump(idx, open(f"{OUT}/index.json", "w"), separators=(",", ":"))
 log(len(written), "Kacheln geschrieben,", round(total / 1e6, 1), "MB")
