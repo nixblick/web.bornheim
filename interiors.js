@@ -81,25 +81,66 @@ export function initInteriors(X, W, D, SH) {
   }
 
   // ---------- U-Bahn ----------
+
+  // ---------- U-Bahn-Grafik, von Hand gezeichnet (12.11.2026) ----------
+  // Alles als Canvas-Textur auf wenigen Flächen: viel Bild, kaum Geometrie. Unbeleuchtetes Material,
+  // damit Schilder und Anzeigen auch nachts lesbar sind.
+  const rr = (c, x, y, w, h, r) => { c.beginPath(); c.moveTo(x + r, y); c.arcTo(x + w, y, x + w, y + h, r); c.arcTo(x + w, y + h, x, y + h, r); c.arcTo(x, y + h, x, y, r); c.arcTo(x, y, x + w, y, r); c.closePath(); };
+  const uLogo = (c, x, y, s) => { c.fillStyle = '#0a3d8f'; rr(c, x, y, s, s, s * 0.12); c.fill(); c.strokeStyle = '#ffffff'; c.lineWidth = s * 0.06; rr(c, x + s * 0.07, y + s * 0.07, s * 0.86, s * 0.86, s * 0.08); c.stroke();
+    c.fillStyle = '#ffffff'; c.font = `bold ${Math.round(s * 0.72)}px Arial, sans-serif`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('U', x + s / 2, y + s * 0.54); };
+  const badge = (c, ref, x, y, h) => { c.font = `bold ${Math.round(h * 0.62)}px Arial, sans-serif`; const w = Math.max(h * 1.5, c.measureText(ref).width + h * 0.5); c.fillStyle = LCOL(ref); rr(c, x, y, w, h, h * 0.22); c.fill();
+    c.fillStyle = '#ffffff'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(ref, x + w / 2, y + h * 0.54); return w; };
+  const fitFont = (c, txt, max, fs, min = 20) => { c.font = `bold ${fs}px Arial, sans-serif`; while (c.measureText(txt).width > max && fs > min) { fs -= 2; c.font = `bold ${fs}px Arial, sans-serif`; } return fs; };
+  // Stationsschild an der Wand: blaues Band, U-Logo, Name, Linien
+  const stationTex = st => canvasTex(1024, 160, (c, w, h) => { c.fillStyle = '#0a3d8f'; c.fillRect(0, 0, w, h); c.fillStyle = '#ffffff'; c.fillRect(0, 8, w, 4); c.fillRect(0, h - 12, w, 4);
+    uLogo(c, 22, 24, 112); let bx = w - 24; for (const l of st.lines.slice().reverse()) { c.font = 'bold 50px Arial'; const bw = Math.max(84, c.measureText(l).width + 40); bx -= bw + 10; badge(c, l, bx, 50, 70); }
+    c.fillStyle = '#ffffff'; fitFont(c, st.name, bx - 170, 84); c.textAlign = 'left'; c.textBaseline = 'middle'; c.fillText(st.name, 156, h / 2 + 4); }, 1, 1);
+  // Endstation einer Linie als Fahrtziel
+  const terminus = (ref, dir) => { const l = metro.lines.find(x => x.ref === ref); if (!l || !l.stops.length) return 'Sonderfahrt'; const id = dir > 0 ? l.stops[l.stops.length - 1] : l.stops[0]; const s = ST.get(id); return s ? s.name : id.replace(/(^|[\s\-/])\S/g, m => m.toUpperCase()); };
+  // Zugzielanzeiger: schwarz, bernsteinfarbene Punktschrift, drei Abfahrten
+  const boardTex = st => canvasTex(512, 160, (c, w, h) => { c.fillStyle = '#0d0f12'; c.fillRect(0, 0, w, h); c.fillStyle = '#1b1f25'; for (let y = 4; y < h; y += 6) c.fillRect(0, y, w, 1);
+    const rows = []; st.lines.forEach((l, i) => { rows.push([l, terminus(l, 1), 2 + i * 3]); rows.push([l, terminus(l, -1), 6 + i * 4]); }); rows.sort((a, b) => a[2] - b[2]);
+    c.textBaseline = 'middle'; rows.slice(0, 3).forEach(([l, z, m], i) => { const y = 30 + i * 48; c.fillStyle = '#ffb000'; c.font = 'bold 30px "Courier New", monospace'; c.textAlign = 'left'; c.fillText(l, 14, y);
+      c.font = 'bold 28px "Courier New", monospace'; let zz = z; while (c.measureText(zz).width > 330 && zz.length > 4) zz = zz.slice(0, -1); c.fillText(zz, 84, y); c.textAlign = 'right'; c.fillText(i === 0 && m <= 2 ? 'sofort' : m + ' min', w - 14, y); }); }, 1, 1);
+  // Fahrkartenautomat: Front als eine Textur (Kopf, Bildschirm mit Zielen, Tarif-Tasten, Münzschlitz, Kartenleser, Ausgabe)
+  const automatTex = st => canvasTex(256, 480, (c, w, h) => {
+    c.fillStyle = '#d9dde2'; c.fillRect(0, 0, w, h); c.fillStyle = '#0a3d8f'; c.fillRect(0, 0, w, 52); uLogo(c, 10, 8, 36);
+    c.fillStyle = '#ffffff'; c.font = 'bold 22px Arial'; c.textAlign = 'left'; c.textBaseline = 'middle'; c.fillText('Fahrkarten', 56, 27);
+    c.fillStyle = '#1a2330'; rr(c, 18, 66, w - 36, 150, 8); c.fill(); c.fillStyle = '#2e6fd0'; c.fillRect(26, 74, w - 52, 26); c.fillStyle = '#ffffff'; c.font = 'bold 15px Arial'; c.fillText('Ziel wählen', 34, 88);
+    const ziele = [...new Set(st.lines.flatMap(l => [terminus(l, 1), terminus(l, -1)]))].slice(0, 4);
+    c.font = '14px Arial'; ziele.forEach((z, i) => { c.fillStyle = i === 0 ? '#3d4b5e' : '#1a2330'; c.fillRect(26, 106 + i * 26, w - 52, 24); c.fillStyle = '#e8eef6'; let zz = z; while (c.measureText(zz).width > w - 100 && zz.length > 4) zz = zz.slice(0, -1); c.fillText(zz, 34, 118 + i * 26); c.textAlign = 'right'; c.fillText('3,00 €', w - 32, 118 + i * 26); c.textAlign = 'left'; });
+    [['Kurzstrecke', '#f2c230'], ['Einzelfahrt', '#2e6fd0'], ['Tageskarte', '#2a9d58']].forEach(([s, col], i) => { const y = 232 + i * 40; c.fillStyle = col; rr(c, 18, y, w - 36, 32, 6); c.fill(); c.fillStyle = i ? '#ffffff' : '#1a1a1a'; c.font = 'bold 16px Arial'; c.textAlign = 'center'; c.fillText(s, w / 2, y + 17); });
+    c.textAlign = 'left'; c.fillStyle = '#9aa3ad'; rr(c, 22, 360, 90, 44, 6); c.fill(); c.fillStyle = '#20262d'; c.fillRect(40, 378, 54, 7); c.fillStyle = '#4a525c'; c.font = '11px Arial'; c.fillText('Münzen', 42, 396);
+    c.fillStyle = '#2b3138'; rr(c, 130, 360, 104, 44, 6); c.fill(); c.fillStyle = '#5fd17a'; c.beginPath(); c.arc(220, 372, 4, 0, 7); c.fill(); c.fillStyle = '#c9d1da'; c.font = '11px Arial'; c.fillText('Karte', 140, 390);
+    c.fillStyle = '#20262d'; rr(c, 40, 420, w - 80, 40, 6); c.fill(); c.fillStyle = '#e8e2d0'; c.fillRect(70, 428, 46, 18); c.fillStyle = '#8a929c'; c.font = '10px Arial'; c.fillText('Ausgabe', w - 96, 446); }, 1, 1);
+  function automat(g, x, z, ry, st) { // Gehäuse mit schräger Pultfläche, Front als Textur, kleines Vordach
+    const grp = new THREE.Group(); const body = M(0x8b96a3, 0.3);
+    const b = new THREE.Mesh(new THREE.BoxGeometry(0.95, 1.85, 0.5), body); b.position.y = 0.925; grp.add(b);
+    const roof = new THREE.Mesh(new THREE.BoxGeometry(1.05, 0.08, 0.66), M(0x0a3d8f, 0.4)); roof.position.set(0, 1.9, 0.06); grp.add(roof);
+    const fr = new THREE.Mesh(new THREE.PlaneGeometry(0.86, 1.62), new THREE.MeshBasicMaterial({ map: automatTex(st) })); fr.position.set(0, 0.98, 0.252); grp.add(fr);
+    const tray = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.06, 0.16), M(0x2b3138, 0.2)); tray.position.set(0, 0.62, 0.3); grp.add(tray);
+    grp.position.set(PX + x, 0, PZ + z); grp.rotation.y = ry; g.add(grp); return grp; }
   const LCOL = r => (metro.lines.find(l => l.ref === r) || {}).color || '#0a3d8f';
   function station(st, exit, onTrain) {
     const L = 46, H = 7; const R = room('metro', L, 13, H, { floorTex: tileTex('#c9c6bf', '#b2aea6'), wallTex: tileTex('#f3f1ea', '#d8d4c8', LCOL(st.lines[0])), ceilCol: 0xd5d8dc });
-    const g = R.g; R.H = H;
+    const g = R.g; R.H = H; const stTex = stationTex(st);
     // Gleisbetten links und rechts vom Mittelbahnsteig (Bahnsteig z -4..4)
     for (const sd of [-1, 1]) { const bed = new THREE.Mesh(new THREE.PlaneGeometry(L * 2, 5), M(0x3a3632, 0.15)); bed.rotation.x = -Math.PI / 2; bed.position.set(PX, -1.2, PZ + sd * 6.5); g.add(bed);
       box(g, L * 2, 1.2, 0.3, 0, -0.6, sd * 4.1, M(0xb8b4ab, 0.3)); box(g, L * 2, 0.04, 0.35, 0, 0.02, sd * 3.85, M(0xf2d230, 0.6)); // Bahnsteigkante, gelbe Linie
       for (const o of [-0.72, 0.72]) box(g, L * 2, 0.12, 0.08, 0, -1.1, sd * 6.5 + o, M(0x8a8a8a, 0.4));
-      for (let x = -L + 4; x < L; x += 15) panel(g, signTex(st.name), 6, 0.95, x, 3.2, sd * 12.95, sd > 0 ? Math.PI : 0); }
+      for (let x = -L + 4; x < L; x += 15) panel(g, stTex, 6.4, 1.0, x, 3.2, sd * 12.95, sd > 0 ? Math.PI : 0); }
     R.walls.push([-L, -13, L, -4], [-L, 4, L, 13]); // nur der Bahnsteig ist begehbar
     for (let x = -L + 6; x < L - 4; x += 10) { box(g, 0.6, H, 0.6, x, H / 2, 0, M(LCOL(st.lines[0]), 0.35)); R.walls.push([x - 0.4, -0.4, x + 0.4, 0.4]); }
     for (let x = -L + 11; x < L - 6; x += 20) { box(g, 1.8, 0.45, 0.5, x, 0.45, 2.6, M(0x5d6d7e, 0.3)); }
     // Linienschild über dem Bahnsteig
-    panel(g, signTex(`${st.lines.join(' · ')}   ${st.name}`, LCOL(st.lines[0])), 9, 1.2, 0, H - 1.2, 0.36, 0); panel(g, signTex(`${st.lines.join(' · ')}   ${st.name}`, LCOL(st.lines[0])), 9, 1.2, 0, H - 1.2, -0.36, Math.PI);
+    panel(g, stTex, 7.2, 1.12, 0, H - 1.2, 0.36, 0); panel(g, stTex, 7.2, 1.12, 0, H - 1.2, -0.36, Math.PI);
+    // Zugzielanzeiger an beiden Enden des Bahnsteigs, an Stangen von der Decke
+    { const bt = boardTex(st); for (const bx of [-18, 18]) { box(g, 3.3, 0.85, 0.16, bx, H - 2.3, 0, M(0x22272e, 0.2)); panel(g, bt, 3.1, 0.97 * 0.7, bx, H - 2.3, 0.085, 0); panel(g, bt, 3.1, 0.97 * 0.7, bx, H - 2.3, -0.085, Math.PI); for (const o of [-1.2, 1.2]) box(g, 0.05, 1.9, 0.05, bx + o, H - 0.95, 0, M(0x5a6068, 0.3)); } }
     // Treppe nach oben am Ende
     for (let i = 0; i < 12; i++) box(g, 0.42, 0.25 * (i + 1), 3.2, -L + 6.4 - i * 0.4, 0.125 * (i + 1), 0, M(0x9a958c, 0.3)); box(g, 0.08, 1, 4.6, -L + 4, 3.3, 1.7, M(0x5a6068, 0.3)); box(g, 0.08, 1, 4.6, -L + 4, 3.3, -1.7, M(0x5a6068, 0.3)); panel(g, signTex('Ausgang ↑', '#0a3d8f'), 3, 0.6, -L + 3, 4.6, 0, Math.PI / 2);
     R.walls.push([-L, -1.7, -L + 6.6, 1.7]);
     // Fahrkartenautomat
-    box(g, 0.8, 1.7, 0.5, -L + 12, 0.85, -3.4, M(0xe3e3e3, 0.4)); box(g, 0.6, 0.4, 0.05, -L + 12, 1.25, -3.14, new THREE.MeshBasicMaterial({ color: 0x3b7bd6 })); R.walls.push([-L + 11.5, -3.8, -L + 12.5, -3.0]);
+    automat(g, -L + 11.5, -3.45, 0, st); automat(g, -L + 12.7, -3.45, 0, st); R.walls.push([-L + 10.9, -3.8, -L + 13.3, -3.0]);
     trig(R, -L + 8, 0, 2.2, 'F · Treppe rauf zum Ausgang', leave);
     trig(R, -L + 12, -2.6, 1.4, 'F · Fahrkartenautomat: Ziel wählen (3 €)', () => travelMenu(st));
     // Züge auf beiden Gleisen
@@ -164,21 +205,35 @@ export function initInteriors(X, W, D, SH) {
 
   // ---------- Eingänge an der Oberfläche ----------
   const entrGroups = new Map(); let scanT = 0;
-  const uTex = () => signTex('U', '#0a3d8f', '#ffffff', 128, 128);
+  // Seit 12.11.2026: Geometrie und Material einmal für alle Eingänge (vorher je Eingang neu, und die
+  // U-Texturen wurden beim Abbau nie freigegeben). Das Namensschild gibt es je Station einmal, mit Zähler.
+  let EG = null; const nameMats = new Map();
+  const eg = () => EG || (EG = { metal: M(0x5a6068, 0.25), hole: new THREE.PlaneGeometry(2.4, 4), holeM: new THREE.MeshBasicMaterial({ color: 0x0b0c0f }), step: new THREE.BoxGeometry(2.3, 0.02, 0.08), stepM: M(0x777777, 0.3),
+    railS: new THREE.BoxGeometry(0.06, 1.0, 4), railB: new THREE.BoxGeometry(2.5, 1.0, 0.06), tube: new THREE.CylinderGeometry(0.035, 0.035, 4, 6), pole: new THREE.CylinderGeometry(0.07, 0.08, 4.4, 8), cap: new THREE.CylinderGeometry(0.1, 0.1, 0.12, 8),
+    sign: new THREE.BoxGeometry(1.1, 1.1, 0.1), uM: new THREE.MeshBasicMaterial({ map: canvasTex(128, 128, (c) => { c.fillStyle = '#0a3d8f'; c.fillRect(0, 0, 128, 128); uLogo(c, 0, 0, 128); }, 1, 1) }),
+    nameG: new THREE.PlaneGeometry(2.0, 0.46) });
+  const nameMat = st => { let e = nameMats.get(st.id); if (!e) { e = { n: 0, m: new THREE.MeshBasicMaterial({ map: canvasTex(512, 118, (c, w, h) => { c.fillStyle = '#f7f7f4'; c.fillRect(0, 0, w, h); c.fillStyle = '#0a3d8f'; c.fillRect(0, h - 10, w, 10);
+      let x = 12; for (const l of st.lines.slice(0, 4)) x += badge(c, l, x, 16, 54) + 8; c.fillStyle = '#16202a'; fitFont(c, st.name, w - x - 16, 46, 18); c.textAlign = 'left'; c.textBaseline = 'middle'; c.fillText(st.name, x + 6, 44);
+      c.fillStyle = '#5a6b78'; c.font = '20px Arial'; c.fillText('U-Bahn', x + 6, 88); }, 1, 1) }) }; nameMats.set(st.id, e); } e.n++; return e.m; };
+  const dropName = id => { const e = nameMats.get(id); if (e && --e.n <= 0) { e.m.map.dispose(); e.m.dispose(); nameMats.delete(id); } };
   function entranceMesh(p, st) {
-    const g = new THREE.Group(); const y = TH(p[0], p[1]); const metal = M(0x5a6068, 0.25);
-    const hole = new THREE.Mesh(new THREE.PlaneGeometry(2.4, 4), new THREE.MeshBasicMaterial({ color: 0x0b0c0f })); hole.rotation.x = -Math.PI / 2; hole.position.set(0, 0.04, 0); g.add(hole);
-    for (let i = 0; i < 7; i++) { const s = new THREE.Mesh(new THREE.BoxGeometry(2.3, 0.02, 0.08), M(0x777777, 0.3)); s.position.set(0, 0.05, -1.8 + i * 0.55); g.add(s); }
-    for (const [w, d, x, z] of [[0.06, 4, -1.25, 0], [0.06, 4, 1.25, 0], [2.5, 0.06, 0, 2.0]]) { const r = new THREE.Mesh(new THREE.BoxGeometry(w, 1.0, d), metal); r.position.set(x, 0.55, z); g.add(r); }
-    const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 3.6, 6), metal); pole.position.set(1.5, 1.8, 2.2); g.add(pole); /* größeres Schild auf höherem Mast: von der Straße aus erkennbar */
-    const sg = new THREE.Mesh(new THREE.BoxGeometry(1.0, 1.0, 0.08), [metal, metal, metal, metal, new THREE.MeshBasicMaterial({ map: uTex() }), new THREE.MeshBasicMaterial({ map: uTex() })]); sg.position.set(1.5, 3.9, 2.2); g.add(sg);
+    const E = eg(); const g = new THREE.Group(); const y = TH(p[0], p[1]); g.userData.st = st.id;
+    const hole = new THREE.Mesh(E.hole, E.holeM); hole.rotation.x = -Math.PI / 2; hole.position.set(0, 0.04, 0); g.add(hole);
+    for (let i = 0; i < 7; i++) { const s = new THREE.Mesh(E.step, E.stepM); s.position.set(0, 0.05, -1.8 + i * 0.55); g.add(s); }
+    for (const [geo, x, z] of [[E.railS, -1.25, 0], [E.railS, 1.25, 0], [E.railB, 0, 2.0]]) { const r = new THREE.Mesh(geo, E.metal); r.position.set(x, 0.55, z); g.add(r); }
+    for (const x of [-1.25, 1.25]) { const h = new THREE.Mesh(E.tube, E.metal); h.rotation.x = Math.PI / 2; h.position.set(x, 1.1, 0); g.add(h); }
+    // Mast mit U-Würfel und Namensschild darunter, beidseitig lesbar: von der Straße aus erkennbar
+    const pole = new THREE.Mesh(E.pole, E.metal); pole.position.set(1.6, 2.2, 2.2); g.add(pole);
+    const cap = new THREE.Mesh(E.cap, E.metal); cap.position.set(1.6, 4.46, 2.2); g.add(cap);
+    const sg = new THREE.Mesh(E.sign, E.uM); sg.position.set(1.6, 3.85, 2.2); g.add(sg);
+    const nm = nameMat(st); for (const ry of [0, Math.PI]) { const n = new THREE.Mesh(E.nameG, nm); n.position.set(1.6, 2.95, 2.2 + (ry ? -0.06 : 0.06)); n.rotation.y = ry; g.add(n); }
     const ne = nearestEdge(p[0], p[1], 20); if (ne) { const e = edgeNormal(ne.b.p, ne.e); g.rotation.y = Math.atan2(e.dx, e.dz); }
     g.position.set(p[0], y, p[1]); scene.add(g); return g;
   }
   function updateEntrances(dt) {
     scanT -= dt; if (scanT > 0) return; scanT = 1;
     const want = new Set(); for (const s of metro.stations) for (let i = 0; i < s.entr.length; i++) { const p = s.entr[i]; if ((p[0] - player.pos.x) ** 2 + (p[1] - player.pos.z) ** 2 < 300 * 300) { const k = s.id + '#' + i; want.add(k); if (!entrGroups.has(k)) entrGroups.set(k, entranceMesh(p, s)); } }
-    for (const [k, g] of entrGroups) if (!want.has(k)) { scene.remove(g); g.traverse(o => { if (o.geometry) o.geometry.dispose(); }); entrGroups.delete(k); }
+    for (const [k, g] of entrGroups) if (!want.has(k)) { scene.remove(g); dropName(g.userData.st); entrGroups.delete(k); } /* Geometrie ist geteilt, nicht freigeben */
   }
   function nearMetro() {
     let best = null, bd = 9; for (const s of metro.stations) { for (const p of s.entr) { const d = (p[0] - player.pos.x) ** 2 + (p[1] - player.pos.z) ** 2; if (d < bd) { bd = d; best = { s, p, under: true }; } } if (!s.entr.length) { const d = (s.p[0] - player.pos.x) ** 2 + (s.p[1] - player.pos.z) ** 2; if (d < 18 * 18 && d < bd * 40) { bd = d / 40; best = { s, p: s.p, under: false }; } } }

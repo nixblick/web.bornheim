@@ -2,6 +2,10 @@
 
 ## 2026-11-12
 
+- **U-Bahn, von Hand ausgearbeitet (ungetestet, Test im Nachtfenster):** Eingänge mit höherem Mast, U-Würfel (weißer Rand) und darunter ein beidseitiges Namensschild mit farbigen Linienkürzeln. Am Bahnsteig blaue Stationsschilder mit U-Logo, Name und Linien. Zwei Zugzielanzeiger mit bernsteinfarbener Schrift (echte Endstationen der Linien aus `metro.json`). Zwei Fahrkartenautomaten statt grauem Kasten: Kopf „Fahrkarten“, Bildschirm mit Zielen, Tasten Kurzstrecke, Einzelfahrt und Tageskarte, Münzschlitz, Kartenleser, Ausgabe und Vordach
+- **Leistung:** Eingänge teilen jetzt Geometrie und Material, das Namensschild gibt es je Station einmal (mit Zähler freigegeben). Vorher baute jeder Eingang alles neu, und die U-Texturen wurden beim Abbau nie freigegeben (kleines Leck beim Herumfahren). Alle Details sind Canvas-Texturen auf wenigen Flächen
+- **Uhrtürmchen** auf der Berger Straße als Wahrzeichen (`landmarks.js`): Sandsteinsockel, Gusssäule, vier Zifferblätter mit der echten Uhrzeit (einmal pro Minute neu gezeichnet), grünes Kupferdach mit goldener Spitze, vier Laternen. Wird erst im Umkreis von 450 m gebaut und ab 600 m wieder abgebaut, rund 1.500 Dreiecke
+- Testbefehl für die Nacht (22–6 Uhr, einzeln): Spiel laden, `await import('/tools/selftest.js'); await T.checks()`, dann zum Uhrtürmchen und in eine U-Bahn-Station (F am Eingang), Bildrate und GPU-Texturen vorher/nachher vergleichen
 - README verweist für Tests auf `CLAUDE.md` statt auf den nicht mehr vorhandenen Skill `spieltest`
 - Regel `CLAUDE.md`: Spieltests im Browser nur von 22 bis 6 Uhr, immer nur einer zur selben Zeit (Notebook-Absturz durch Testlast neben anderen Sitzungen)
 - Fehler melden ohne GitHub: Bildschirmfoto des Spiels (Vorschau, abwählbar); „Teilen“ öffnet am Handy das Teilen-Menü (WhatsApp, Signal, Mail) mit Text und Bild, „Per E-Mail schicken“ lädt das Bild herunter und öffnet die Mail mit Anhang-Hinweis; GitHub nur noch als Link für Leute mit Konto, das Bild liegt dann in der Zwischenablage
