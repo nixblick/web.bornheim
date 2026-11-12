@@ -24,6 +24,11 @@ jobs:
       url: ${{ steps.deploy.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
+      - name: Startcheck (benutzte, aber nirgends definierte Namen)
+        # Anlass 12.11.2026: „berger is not defined“ nach einem Commit, das Spiel startete nicht. Bricht das Ausrollen ab.
+        run: |
+          npm i --no-save --no-package-lock eslint@9.15.0 globals@15.12.0
+          npx eslint --config eslint.config.mjs *.js
       - name: Spieldateien zusammenstellen
         run: |
           mkdir _site
@@ -32,8 +37,11 @@ jobs:
           V="${GITHUB_SHA::7}"
           sed -i "s/game\.js[^']*/game.js?v=$V/" _site/play.html
           sed -i -E "s/from '\.\/([a-z0-9_]+\.js)'/from '.\/\1?v=$V'/g" _site/*.js
+          # Service Worker: Cache fuer Programm, Bilder und CSS je Deploy neu benennen (alter wird beim Aktivieren geloescht),
+          # sonst bekaemen Spieler geaenderte Bilder/CSS nie und der Cache wuechse mit jeder Version (12.11.2026)
+          sed -i "s/bornheim-static-v2/bornheim-static-$V/" _site/sw.js
           cp -r assets vendor _site/
-          mkdir _site/data && cp -r data/tiles data/dem data/metro.json data/districts.json _site/data/
+          mkdir _site/data && cp -r data/tiles data/dem data/metro.json data/districts.json data/busroutes.json _site/data/
           touch _site/.nojekyll
           du -sh _site
       - uses: actions/configure-pages@v5
@@ -42,3 +50,20 @@ jobs:
           path: _site
       - id: deploy
         uses: actions/deploy-pages@v4
+
+  # Rundgang nach jedem Deploy (12.11.2026): echtes Spiel im Chrome des Runners starten, „Rein da“, Fehler sammeln.
+  # Läuft auf GitHub, nicht auf Andrés Notebook (CLAUDE.md: lokale Browser-Tests nur nachts).
+  rundgang:
+    needs: deploy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Spiel starten und auf Fehler prüfen
+        run: |
+          sleep 60
+          mkdir -p rg && node tools/rundgang.mjs rg "$(command -v google-chrome)" start
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: rundgang
+          path: rg/*.png

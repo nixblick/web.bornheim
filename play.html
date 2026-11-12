@@ -56,10 +56,17 @@
   #money{position:absolute;right:20px;top:52px;font-size:20px;font-weight:700;color:#8fe08f;text-shadow:0 1px 4px #000}
   #bigmap{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);display:none;border:2px solid #fff6;border-radius:12px;box-shadow:0 0 40px #000;z-index:5}
   #menu{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:#000a;z-index:20}
-  #menu .box{background:#161a24;border:1px solid #333a4a;border-radius:14px;padding:22px 26px;min-width:340px;color:#eee;display:grid;grid-template-columns:230px minmax(0,1fr);gap:24px;width:min(1000px,96vw);max-height:92vh;overflow:auto;box-sizing:border-box}
+  #menu .box{background:#161a24;border:1px solid #333a4a;border-radius:14px;padding:22px 26px;min-width:340px;color:#eee;display:grid;grid-template-columns:230px minmax(0,1fr);gap:24px;width:min(1400px,97vw);height:min(900px,94vh);max-height:94vh;overflow:auto;box-sizing:border-box}
   #menu .mside{min-width:0}#menu .opts{min-width:0}#menu .tabs .sep{font-size:11px;letter-spacing:2px;color:#8a93a8;align-self:center;margin:0 4px 0 10px;text-transform:uppercase}
   #menu #progpane table,#menu #keyspane table{width:100%;font-size:13px;border-collapse:collapse}#menu #progpane td,#menu #keyspane td{padding:3px 0;vertical-align:top}#menu #progpane td:first-child,#menu #keyspane td:first-child{color:#aab;width:42%}#menu #progpane h3{margin:12px 0 6px;font-size:13px;letter-spacing:2px;color:#ffd84a}#menu #progpane .zl{columns:3;font-size:12px;line-height:1.55}#menu #progpane .zl span{display:block}#menu #progpane .zl .no{opacity:.35}#menu kbd{background:#2a3040;border-radius:4px;padding:1px 6px;font:600 12px system-ui;color:#fff}
   @media (max-width:760px){#menu .box{grid-template-columns:1fr}}
+  #menu .sidehead{margin:16px 0 4px;font-size:11px;letter-spacing:2px;color:#8a93a8;text-transform:uppercase}
+  #menu .sidetabs button{text-align:left;background:#202533}#menu .sidetabs button.on{background:#ffd84a;color:#111}
+  #menu .tabs button{font-size:15px!important;padding:9px 16px!important}
+  #menu .quick{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px}#menu .quick .qc{background:#202533;border-radius:10px;padding:10px 14px}#menu .quick .qc label{margin:0}#menu .quick .qh{grid-column:1/-1;font-size:11px;letter-spacing:2px;color:#8a93a8;text-transform:uppercase;margin-top:6px}
+  #menu .pmbar{display:flex;flex-wrap:wrap;gap:14px;align-items:center;margin-bottom:8px}#menu .pmbar label{margin:0;gap:6px}#menu .pmhint{font-size:12px;color:#8a93a8}
+  #menu .pmlines summary{cursor:pointer;font-size:13px}#menu #pm_lines{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;max-width:640px}#menu #pm_lines label{margin:0;font-size:12px;gap:4px;padding:2px 8px;border-radius:12px;background:#202533}
+  #menu #pmap{width:100%;height:calc(min(900px,94vh) - 150px);border-radius:10px;background:#111;cursor:crosshair;display:block}
   #menu h2{margin:0 0 14px;font-size:22px;letter-spacing:2px}
   #menu button{display:block;width:100%;margin:6px 0;padding:10px;border:0;border-radius:8px;background:#2a3040;color:#eee;font-size:15px;cursor:pointer}
   #menu button:disabled{opacity:.4}
@@ -136,9 +143,11 @@
   <div class="mside">
   <h2>PAUSE</h2>
   <button id="m_resume" class="y">Weiter</button>
-  <button id="m_story">📖 Story wählen</button>
   <div class="row2"><button id="m_save">💾 Speichern</button><button id="m_load">📂 Laden</button></div>
   <button id="m_feedback">🐞 Fehler melden / Idee schicken</button>
+  <div class="sidehead">Einstellungen</div>
+  <div class="sidetabs"><button data-tab="grafik">🖥 Grafik</button><button data-tab="kamera">🎥 Kamera</button><button data-tab="welt">🌦 Welt</button><button data-tab="spiel">🎮 Spiel</button><button data-tab="ton">🔊 Ton &amp; HUD</button></div>
+  <button id="m_creative">🛠 Kreativmodus (C)</button>
   <details class="more"><summary>Mehr …</summary>
   <button id="m_restart">Neu starten</button>
   <div class="row2"><button id="m_export">Spielstand exportieren</button><button id="m_import">Importieren</button></div>
@@ -147,9 +156,10 @@
   <input type="file" id="importfile" accept=".json,application/json" style="display:none">
   </div>
   <div class="opts">
-    <div class="tabs"><button data-tab="fortschritt" class="on">🏠 Übersicht</button><button data-tab="hilfe">❓ Hilfe</button><button data-tab="story">📖 Story</button><button data-tab="grafik" class="set">⚙ Einstellungen</button>
-      <div class="sub"><button data-tab="grafik">Grafik</button><button data-tab="kamera">Kamera</button><button data-tab="welt">Welt</button><button data-tab="spiel">Spiel</button><button data-tab="ton">Ton &amp; HUD</button></div></div>
-    <div class="pane" data-tab="fortschritt"><div id="ovstat"></div><div id="progpane"></div></div>
+    <div class="tabs"><button data-tab="schnell" class="on">⚡ Schnell</button><button data-tab="karte">🗺 Karte</button><button data-tab="fortschritt">📊 Statistik</button><button data-tab="story">📖 Story</button><button data-tab="hilfe">❓ Hilfe</button></div>
+    <div class="pane" data-tab="schnell"><div id="quick" class="quick"></div></div>
+    <div class="pane" data-tab="karte" style="display:none"><div class="pmbar"><label><input type="checkbox" id="pm_u" checked> 🚇 U-Bahn</label><label><input type="checkbox" id="pm_b"> 🚌 Bus</label><details class="pmlines"><summary>Linien</summary><div id="pm_lines"></div></details><span class="pmhint">Klick auf Station: hinfahren · Klick ins Freie: hinspringen · Mausrad: Zoom · Ziehen: verschieben</span></div><canvas id="pmap"></canvas></div>
+    <div class="pane" data-tab="fortschritt" style="display:none"><div id="ovstat"></div><div id="progpane"></div></div>
     <div class="pane" data-tab="grafik" style="display:none">
       <label>Grafikqualität <select id="o_quality"><option value="niedrig">Niedrig</option><option value="mittel">Mittel</option><option value="hoch">Hoch (Leuchten, feine Schatten)</option><option value="ultra">Ultra (starke Grafikkarte)</option></select></label>
       <label>Renderauflösung <span><input id="o_scale" type="range" min="0.5" max="1.5" step="0.05" data-pct="1"><output></output></span></label>
@@ -157,6 +167,7 @@
       <label>Schatten <input id="o_shadows" type="checkbox"></label>
       <label>Leuchteffekt (Hoch / Ultra) <span><input id="o_bloom" type="range" min="0" max="2.5" step="0.1" data-pct="1"><output></output></span></label>
       <label>Umgebungsverdeckung (Hoch / Ultra) <input id="o_ao" type="checkbox"></label>
+      <label>Dynamisches Scheinwerfer- &amp; Blaulicht (Hoch / Ultra) <input id="o_dynlights" type="checkbox"></label>
       <label>Bildrate anzeigen <input id="o_fps" type="checkbox"></label>
       <label>Automatische Auflösung (hält die Bildrate) <input id="o_dynres" type="checkbox"></label>
       <label>Ferne Gegend vereinfacht (spart Grafikleistung) <input id="o_lod" type="checkbox"></label>
@@ -170,10 +181,12 @@
       <label>Mausempfindlichkeit <span><input id="o_sens" type="range" min="0.3" max="2.5" step="0.1"><output></output></span></label>
       <label>Maus Y umkehren <input id="o_invy" type="checkbox"></label>
       <label>Kamerawackeln <input id="o_shake" type="checkbox"></label>
+      <label>Gyro-Lenkung am Handy / Tablet (Neigen zum Lenken) <input id="o_gyro" type="checkbox"></label>
+      <label>Vibration / Haptik bei Treffern &amp; Explosionen <input id="o_vibrate" type="checkbox"></label>
     </div>
     <div class="pane" data-tab="welt" style="display:none">
       <label>Uhrzeit <span><input id="o_hour" type="range" min="0" max="23" step="1"><output></output></span></label>
-      <label>Zeitlauf (Std. je Minute) <span><input id="o_time" type="range" min="0" max="10" step="0.5"><output></output></span></label>
+      <label>Zeitlauf (Std. je Minute) <span><input id="o_time" type="range" min="0" max="4" step="0.25"><output></output></span></label>
       <label>Wetter <select id="o_weather"><option value="auto">Automatisch</option><option value="clear">Klar</option><option value="cloudy">Bewölkt</option><option value="rain">Regen</option><option value="storm">Gewitter</option><option value="fog">Nebel</option></select></label>
       <label>Verkehrsdichte <span><input id="o_traffic" type="range" min="0.2" max="2" step="0.1" data-pct="1"><output></output></span></label>
       <label>Passanten <span><input id="o_peds" type="range" min="0" max="2" step="0.1" data-pct="1"><output></output></span></label>
@@ -200,6 +213,7 @@
       <details><summary>🚇 U-Bahn</summary><p>Am Eingang <kbd>F</kbd>, Ziel wählen, losfahren.</p></details>
       <details><summary>🛒 Einkaufen</summary><p>Vor einem Laden <kbd>F</kbd>.</p></details>
       <details><summary>📣 Demos und Storys</summary><p>Bei einer Demo mitlaufen. Leuchtende Buchstaben auf der Karte starten Storys.</p></details>
+      <details><summary>🛠 Kreativmodus</summary><p>Mit <kbd>C</kbd> (oder über das Menü / <kbd>🛠</kbd> am Handy) umschalten: Fliegen mit <kbd>Leertaste</kbd> hoch und <kbd>Strg</kbd> runter, unverwundbar, alle 23 Werkzeuge, Fahrzeuge, Demos und Feuerwerk direkt in der Leiste unten wählen und platzieren.</p></details>
       <details><summary>⌨ Alle Tasten</summary><div id="keyspane"></div></details>
     </div>
     <div class="pane" data-tab="story" style="display:none" id="storypane"></div>
@@ -238,6 +252,7 @@
   function start() { var s = document.createElement('script'); s.type = 'module'; s.src = 'game.js?v=2'; s.onerror = function () { fail('Das Spiel konnte nicht laden', 'Eine Spieldatei fehlt oder ließ sich nicht laden (game.js oder eines seiner Module). Neu laden hilft oft. Bleibt es, melde den Fehler bitte mit dem Knopf unten.'); }; document.body.appendChild(s); }
   // Handy und Tablet: Touch-Steuerung (touch.js) und beim ersten Start sparsame Einstellungen
   if (mobile) { window.__touch = true; try { if (!localStorage.getItem('notgta.opts')) localStorage.setItem('notgta.opts', JSON.stringify({ quality: 'niedrig', view: 300, scale: 0.8, shadows: false, ao: false, bloom: 0, peds: 0.6, traffic: 0.6, dynres: true, lod: true, minimap: true })); } catch (e) {} var ts = document.createElement('script'); ts.src = 'touch.js'; document.body.appendChild(ts); }
+  if ('serviceWorker' in navigator && location.protocol !== 'file:') { navigator.serviceWorker.register('./sw.js').catch(function () {}); }
   start();
 })();
 </script>

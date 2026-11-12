@@ -8,11 +8,9 @@ export function initStory(X, W, D, F) {
 
   // ---------- Orte aus den echten Kartendaten ----------
   function nearestOn(roads, x, z) { let best = 1e18, res = null; for (const r of roads) for (let i = 0; i < r.p.length - 1; i++) { const [ax, az] = r.p[i], [bx, bz] = r.p[i + 1]; const dx = bx - ax, dz = bz - az, L2 = dx * dx + dz * dz || 1; const t = clamp(((x - ax) * dx + (z - az) * dz) / L2, 0, 1); const px = ax + dx * t, pz = az + dz * t; const d = (px - x) ** 2 + (pz - z) ** 2; if (d < best) { best = d; res = { x: px, z: pz, h: Math.atan2(dx, dz), r }; } } return res; }
-  const berger = CITY.roads.filter(r => r.n === 'Berger Straße');
-  const book = CITY.pois.find(p => /Uhrtürmchen/.test(p.n || '')) || { x: -229, z: 491 };
-  const U0 = nearestOn(berger.length ? berger : CITY.roads, book.x, book.z);
-  const side = (() => { const nx = Math.cos(U0.h), nz = -Math.sin(U0.h); const s = (book.x - U0.x) * nx + (book.z - U0.z) * nz > 0 ? 1 : -1; return [nx * s, nz * s]; })();
-  const UHR = D.freeSpot(U0.x + side[0] * (U0.r.w / 2 + 2.2), U0.z + side[1] * (U0.r.w / 2 + 2.2), 1.5);
+  const berger = CITY.roads.filter(r => r.n === 'Berger Straße'); /* wieder da (12.11.2026): wird von Kapiteln und Story 2/3 gebraucht, 697e8b0 hatte sie entfernt */
+  const UHR = D.freeSpot(-193, 425, 1.5);
+  const U0 = nearestOn(berger.length ? berger : CITY.roads, UHR[0], UHR[1]);
   const parkPoly = CITY.green.filter(g => g.k === 'park').map(g => ({ g, c: g.p.reduce((a, p) => [a[0] + p[0] / g.p.length, a[1] + p[1] / g.p.length], [0, 0]) })).sort((a, b) => Math.hypot(a.c[0] + 466, a.c[1] + 36) - Math.hypot(b.c[0] + 466, b.c[1] + 36))[0];
   const PARKC = parkPoly ? parkPoly.c : [-466, -36];
   const gateR = nearestOn(CITY.roads.filter(r => !r.mw && !r.ry && r.w >= 6), PARKC[0], PARKC[1]); const GATE = [gateR.x, gateR.z];

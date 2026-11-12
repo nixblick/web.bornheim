@@ -2,8 +2,139 @@
 
 ## 2026-11-12
 
+- **Pausemenü neu** (Wunsch André): größer (bis 1400 × 900), links Speichern, Laden, Fehler melden und die Einstellungen untereinander (Grafik, Kamera, Welt, Spiel, Ton), oben die Themen ⚡ Schnell, 🗺 Karte, 📊 Statistik, 📖 Story, ❓ Hilfe
+- **Schnell** (erste Seite): Grafikqualität, Sichtweite, Uhrzeit, Zeitlauf, Wetter, Verkehr, Passanten, Polizei, Unendlich Munition, Unverwundbar, Lautstärke auf einen Blick
+- **Karte im Menü:** Klick ins Freie springt dorthin; U-Bahn-Stationen (Linien einzeln aufklappbar) und Bushaltestellen ein- und ausblendbar, Klick auf eine Station fährt hin (U-Bahn wie am Eingang, 3 €; Bus 2,80 €, Fahrzeit läuft)
+- Ungetestet im Spiel, Test im Nachtfenster
+- **Flugwarnlichter:** rote Lichter an Dachkanten, auf zwei Dritteln Höhe und auf einem Mast über jedem Hochhaus ab 100 m, blinken im Sekundentakt
+- **EZB:** gläsernes, leicht verdrehtes Atrium zwischen den Türmen, hell durchscheinend
+- Ungetestet im Spiel, Test im Nachtfenster
+- **Fix Startfehler** nach #51: Kommandowagen-Schrift als eigene Flächen statt Materialliste (geparkte Autos brachen ab)
+- **Fix Poller:** die drei Poller an jedem Straßenschild sind entfernt; sie standen teils auf Fahrbahnen und blockierten Straßen wie die Mainzer Landstraße
+- **Container nie auf der Fahrbahn:** liegt der Kartenpunkt auf einer Straße, rücken sie auf Gehweg oder Grünstreifen, sonst entfallen sie; Glascontainer als drei dunkelblaue Glocken mit weißem, braunem und grünem Einwurfring, Altkleidercontainer rot mit Klappe und weißem Feld „DANKE! ALTKLEIDER SCHUHE“
+- **Kommandowagen:** Schriftzug FEUERWEHR nur auf den Schauseiten (war auf die Kanten gestreckt), zusätzlich an beiden Flanken
+- **Feuerwehr rückt aus der Wache aus:** liegt eine Feuerwache im Umkreis von 1,5 km, startet das Löschfahrzeug dort (z. B. FRW 2)
+- Ungetestet im Spiel, Test im Nachtfenster
+- **EZB** (Fotos): Glasfassade statt Stein, silbergraue Stahlsprossen, Geschossdecken nur als feine Linien, nachts viele kühl-weiß erleuchtete Scheiben in Bändern. Ungetestet im Spiel, Test im Nachtfenster
+- **Stahl-Bogenbrücken** (Wunsch André, Foto Brücke an der EZB): über jeder Brücke ab 60 m zwei Stahlbögen mit Hängern; oben begehbar und befahrbar (zu Fuß, Rad, Motorrad, E-Scooter, nicht mit dem Auto); zweimal geduldet, beim dritten Mal kommt die Polizei
+- **Kita-Frankfurt-Stelen nur an städtischen Kitas** („Kita 110“, „KiZ 126“, Kinderzentrum), freie Träger wie Zwergenplanet ohne Stele; Stele von beiden Seiten lesbar
+- **Straßenbahn** türkis wie in Frankfurt, grüne Linienanzeige vorn und hinten (Foto Linie 12)
+- Ungetestet im Spiel, Test im Nachtfenster
+- **Fix Straßenschilder auf der Fahrbahn:** Schilder, Radwegweiser, Parkscheinautomaten und Verkehrsspiegel stehen 8 m in der Straße statt mitten in der Kreuzung und nie auf einer Fahrbahn
+- **Fix Baustellen:** Seitenzäune laufen parallel zur Fahrbahn (standen quer)
+- **Fix Torbogen:** Öffnung als dunkle Durchfahrt mit Licht am anderen Ende statt durchsichtig vor der Hauswand
+- **Schaufenster mit Innenleben** (Fotos): Apotheken mit Holzvitrinen und Packungen, Döner-Imbisse mit Mint-Streifen, Menütafel, Spieß und Getränkekühlschrank, Bäckereien mit Brotregal und Theke; nachts hell
+- **Läden betreten:** Taste F wirkt schon in 4,5 m Abstand zur Ladentür (vorher 3,2 m)
+- Ungetestet im Spiel, Test im Nachtfenster
+- **Straßennamenschilder:** Schild sitzt neben dem Mast statt mittig auf ihm, Vorder- und Rückseite leicht versetzt, von beiden Seiten richtig lesbar
+- **Radwegweiser:** eigene Rückseite, von beiden Seiten lesbar, Pfeil zeigt auf beiden Seiten zur Spitze; Finger beginnen neben dem Mast
+- **Voi-E-Scooter** (Fotos): bis zu sechs abgestellt in der Nähe, mit E mieten: 1 € Entsperren, 2 € je Minute, bei leerem Guthaben endet die Fahrt; ersetzen die Deko-Roller
+- **Jahreszeiten:** Herbstlaub September bis November, Schnee Dezember bis Februar, Blütenblätter April und Mai; zum Ansehen `play.html?saison=winter|fruehling|herbst`
+- **Läden im Erdgeschoss nur mit Gewerbe:** Ladenfront nur, wo OpenStreetMap am Haus ein Geschäft, Lokal oder Gewerbe kennt; sonst Wohnhaus-Erdgeschoss (vorher bekam zufällig fast jedes Haus einen Laden)
+- Ungetestet im Spiel, Test im Nachtfenster
+- **Granitplatten** statt Asphalt in Fußgängerzonen und auf breiten Fußwegen (Fotos Innenstadt, TG Bornheim)
+- **Nasenschilder** Döneria (mint, pinke Schrift) und Moni's Frisierstubb (altes gelbes Schild)
+- **Sozialrathaus Ost** (Foto, Lage nach André: rechts neben der Kita Eulengasse): Name am Gebäude, dunkles Vordach über die ganze Front mit „SOZIALRATHAUS OST / DIENSTORT BORNHEIM“, Stützen, hell erleuchtetes verglastes Erdgeschoss
+- **Obststand** mit rot-weißem Dach vor Supermärkten (Foto Nahkauf)
+- **Markise** über Apotheken-Schaufenstern (Foto Sonnen-Apotheke)
+- **Schriftzüge** „FEUERWACHE 2“ und „KIRCHNERSCHULE“ als Schilder an der Fassade; Schrift der Nasenschilder passt sich der Länge an
+- **Waschsalon-Schilder** weiß mit petrolfarbener Schrift; **Glascontainer** mit weißem, braunem und grünem Einwurf; **Schmierereien** auf Garagentoren; **gelbe Wände** in der Sonnenblumen-Bäckerei
+- **Fix Rundgang:** wartet bis 40 s auf Chrome (auf dem Runner war er nach 3 s noch nicht bereit)
+- **Kita-Stelen an allen Kitas:** auch an benannten Kita-Gebäuden ohne Kartenpunkt, bis 64 je Kachel; ohne passende Hauswand steht die Stele am Kartenpunkt
+- **Liniennummern an Bushaltestellen:** weißes Schild unter dem H mit den Linien, die dort halten (aus den OSM-Linien)
+- **Fix:** `data/busroutes.json` wurde nicht ausgerollt, live fuhren keine Linienbusse
+- **Rundgang** `tools/rundgang.mjs`: läuft nach jedem Deploy auf GitHub (Spielstart, Fehler, Bild als Artefakt); Modus `orte` springt zu festen Orten bei Tag und Nacht, lokal nur im Nachtfenster. Ungetestet, Test im Nachtfenster
+- **Echte Buslinien** aus OpenStreetMap (48 Stadtbus-Linienwege, u. a. M32, M34, M36, M43, 38): Busse fahren ihre Linie ab, halten an den Haltestellen der Linie und zeigen vorn Liniennummer und Ziel (`data/busroutes.json`, Stand 12.11.2026)
+- **Radwegweiser mit echten Zielen:** jeder Finger zeigt in Richtung eines der drei nächsten Stadtteile, mit echter Entfernung in Kilometern
+- **TG Bornheim** (Foto): Leuchtkreise und Schriftzug „TG BORNHEIM“ an der Hallenwand
+- **Gauben** auf flach eingetragenen Wohnhäusern ab 12 m: Reihe aus Schiefergauben mit Fenster an der Straßenseite (Foto ABG-Haus)
+- **Garagentore** (dunkle Schwingtore) an kleinen Nebengebäuden bis 4 m Höhe (Foto Kita Eulengasse)
+- **Torbögen** an Hausdurchfahrten: heller Rundbogen um die Öffnung (Foto Seckbacher Landstraße)
+- **Radwegweiser beschriftet** mit grünem Pfeil, Ziel und Kilometern (Bornheim Mitte, Innenstadt, Seckbach …); **Hausnummernschild** unter jedem Straßennamen
+- **Verkehrsspiegel** mit rot-weißem Rahmen an engen Einmündungen, **E-Roller** am Gehweg, **Friseur-Schilder** hell mit dunkler Schrift (Foto Moni's Frisierstubb)
+- **Glascontainer** blau und **Altkleidercontainer** rot an den Wertstoffplätzen aus den Kartendaten (vorher grüne Kästen)
+- **Parkscheinautomaten** weiß mit blauem Feld am Fahrbahnrand, fest
+- **Radwegweiser** weiß mit drei Fingern an jeder fünften Einmündung, neben dem Straßennamenschild
+- **ABG-Wohnhäuser** (Foto, sozialer Wohnungsbau): hellblaugrauer Putz, weiße Fensterfaschen, graues Erdgeschoss mit dunklen Klappläden; in Bornheim und Nordend an etwa jedem fünften mittelhohen Wohnhaus
+- **Kita-Stelen „kita frankfurt“** (Foto Eulengasse): weiße Stele mit Tangram-Zeichen und dem Namen der jeweiligen Kita, an allen Kitas aus den Kartendaten
+- **Einkaufswagen** in Reihe mit roten Griffen vor Supermärkten
+- **Trinkhallen-Schilder** weiß mit dunkler Schrift
+- **Verkehr hält vor Bauzäunen und Pollern** statt hindurchzufahren
+- **Feste Hindernisse:** Bauzäune, Poller, Feuerdorn-Hecken und Außentische blockieren die Spielfigur und das gefahrene Auto
+- **Busse halten an Bushaltestellen:** acht Sekunden an jeder Haltestelle aus den Kartendaten (echte Linienwege gibt es in den Daten nicht)
+- **Außentische** mit Stühlen vor Bäckereien, Cafés, Imbissen und Eisdielen
+- **Nahkauf Eulengasse** (Fotos): rotes Schild mit weißer Schrift, als Nasenschild und an allen Nahkauf-Filialen
+- **Stadtbusse** in Türkis (Foto Seckbacher Landstraße): 12 m, Fensterband, Leuchtanzeige vorn, rote Rückleuchten; etwa jedes zwanzigste Fahrzeug auf breiteren Straßen
+- **Herbstlaub** im Oktober und November auf Gehwegen und am Fahrbahnrand (eine Punktwolke je Kachel)
+- **Baustellen-Warnleuchten blinken nachts**; Bauzäune sind weiter nicht fest
+- **Schilder nach Fotos:** Der Bäcker Eifler hellgrün mit roter Schrift, Döneria mint mit pinker Schrift (alle Filialen)
+- **Straßennamenschilder** an Einmündungen, Frankfurter Art: dunkelblau mit weißem Rand und weißer Schrift, beidseitig, dazu drei Poller an der Ecke (ein Atlas, wenige Meshes je Kachel)
+- **Hauseingänge nach Foto:** Granitrahmen, Milchglastür mit Briefkastenfeld, Klingeltableau, Leuchte mit Hausnummer (nachts hell)
+- **Baustellen:** ein bis zwei je Kachel, rot-weiße Bauzäune mit gelben Warnleuchten; beleuchtete Schaufenster gab es schon, Läden bleiben nachts hell
+- **Apotheken innen** (Foto Sonnen-Apotheke): Holzvitrinen mit Glasböden und bunten Packungen, Schubladenschrank mit Schildern, Holztresen mit Glasschutz, Kassenbildschirm, Glas-Hängelampe
+- **U-Würfel zurück** (Foto Am Röthenek): am Eingang zusätzlich der leuchtende grün-türkise U-Würfel auf dem Mast, neben dem Portal
+- **Infokasten** neben jedem U-Bahn-Eingang mit selbst gezeichnetem Liniennetz
+- **Sonnenblumen-Bäckerei innen:** blauer Getränkekühlschrank, Korbstühle, bunte Lichterkette, Leuchtschild „Coffee to go“
+- **Feuerdorn-Hecken** mit roten Beeren an der Wöllstädter Straße
+- **U-Bahn-Eingänge nach Foto (Seckbacher Landstraße):** dunkles Portal mit zwei Stützen über dem Treppenkopf, weißer Leuchtkasten mit türkisem U und grauem Stationsnamen, Glasbrüstung über niedriger dunkler Brüstung; der alte Mast mit Würfel entfällt
+- **Zappbar begehbar** (Fotos): langer Holztresen mit Barhockern, Flaschenregal, Hängelampen, Poster, Ledersitzbank und Schachtisch mit zwei Brettern; Bier am Tresen für 3 €
+- **Laternenlicht an Hauswänden:** nachts ein großer warmer Schein in Wandhöhe neben jeder Straßenlaterne (Nachtfoto Wöllstädter Straße)
+- **Ladenzeilen:** Läden im Erdgeschoss mit roter Sandsteinfront, Fugen und hellem Rollladen neben der Tür (Foto Berger Straße)
+- **Schilder Wöllstädter Straße:** Restaurant Caravan (Schriftzug) und Sonnenblumen-Bäckerei (gelbe Brezel) am OSM-Punkt
+- **Wöllstädter Straße** (Nachtfoto): Putzbauten der 1920er in Beigegrau mit weißen Fensterrahmen, Kastenerker und Gitterbalkon; alle Häuser an der Straße und ein Teil in Bornheim-Nord
+- **Feuerwehr-Einsätze nach Foto:** Trupp in dunkelblauer Einsatzkleidung mit neongelben Reflexstreifen; zum Löschfahrzeug kommt der Kommandowagen mit Blaulicht dazu
+- **Spieltag im Waldstadion:** am Wochenende sind die Ränge voll, schwarz-weiße Schals überall; unter der Woche leere Sitze mit Vereinsnamen
+- **Messeturm gestuft:** Schaft bis 170 m, darüber die schmalere Krone, dann Glaszylinder und Pyramide
+- **Gründerzeit wie an der Berger Straße** (Foto): heller Putz, Fenster mit Sandsteinrahmen, Ohren und Verdachung; ein Drittel der hohen Wohnhäuser in Bornheim
+- **Zappbar** (Fotos): schwarzes Nasenschild „zappbar“ an der Hauswand zur Straße, am OSM-Punkt der Kneipe
+- **Waldstadion nach Fotos:** Ränge aus schwarzen Schalensitzen, in denen weiße Sitze „EINTRACHT FRANKFURT“ bilden, helle Treppen; Fassade aus grauen Lamellen statt Glas; Membrandach mit Bögen; schlanke graue Türme mit offenen Geschossen. Das FSV-Stadion bekommt schlichte schwarze Sitze ohne Schrift
+- **Messeturm nach Fotos:** Schaft bis 190 m, darauf der dunkle Glaszylinder und die Pyramide
+- **Messeturm** (Foto Messe): rotbrauner Granit mit engem Fensterraster und dunklen Glasecken, oben die 36 m hohe Pyramide; in der fernen Skyline tagsüber rotbraun, die Glastürme um 155 m blau
+- **Hauptwache** in hellem Putz mit rotem Sandstein an Ecken, Fenstern und Gesims (Foto B-Ebene)
+- **Innenstadt-Gründerzeit in rotem Sandstein** (Foto Metropolis): Rundbogenfenster, Gesimse, Lisenen; etwa jedes dritte hohe Haus zwischen Eschenheimer Tor, Hauptwache und Zeil
+- **Fachwerk in Alt-Bornheim** (nach Foto Eulengasse): kleine Häuser mit Steildach rund um Eulengasse, Turmstraße und Rendeler Straße sind meist Fachwerk (weiße Gefache, dunkle Balken mit Streben, blaue Fensterläden), manche schieferverkleidet; außerhalb gelegentlich Schieferhäuser
+- **Skyline bei Nacht** (nach Nachtfotos vom Mainufer): ferne Hochhäuser haben nachts eine dunkle Fassade mit vielen hellen Fenstern in Warm- und Kaltweiß und eine angestrahlte Krone; tagsüber unverändert, weiter ein Draw-Call
+- **Wache 2 korrigiert:** Der Google-Maps-Punkt liegt im westlichen Gebäudeteil; die Wache sind die beiden Teile an der Heinrichstraße, der Nachbarbau (37 x 32 m) ist wieder normal
+- **Feuer- und Rettungswache 2 (Heinrichstraße 8, Gallus):** Hauptbau und Fahrzeughalle bekommen die Wachen-Fassade samt roten Toren; in OSM ohne Namen, Lage über die Adresse gefunden
+- **Alte Schulen wie die Kirchnerschule** (nach Foto): Schulgebäude mit Steildach bekommen weißen Putz, Fenster mit Sandsteinrahmen, Verdachung und Sohlbank, Gurtgesims je Geschoss und ein Sandsteinportal mit Glastür; flache Schulbauten behalten den IGS-Stil
+- **Kommandowagen der Feuerwehr** (nach Foto Amtsleiter Branddirektion): E-Auto in Leuchtrot mit weißer Flanke, rot-weißen Warnschrägen, Blaulichtbalken und Dachschild „FEUERWEHR“; parkt in der Nähe von Feuerwachen
+- **Feuerwachen** (nach Foto der alten Wache 3): heller Putz, Fenster und Ecksteine aus rotem Sandstein, im Erdgeschoss rote Falttore; erkannt am Gebäudenamen (Feuerwache, Rettungswache, Feuerwehr)
+- **Schulen** (nach den IGS-Luftbildern): weiße Bänder, Fensterbänder, Klinkersockel, Glasfront im Erdgeschoss; für Gebäude mit Schulnamen oder auf einem Schulgelände aus OSM
+- **Drei neue Wohnhaus-Fassaden:** Nachkriegsblock (hellgrün/beige, Balkonsäule), Neubau (weiße Bänder, grauer Klinker, Holzfenster), Mainufer-Klinker (rot oder braun mit Balkonreihen); die Hälfte der Wohnhäuser bekommt eine davon, je Haus fest
+- **Waldstadion und FSV-Stadion am Bornheimer Hang** frei nachgebaut, ohne Namen und Werbung: Glasfassade, rotes Leuchtband, Membrandach, Ränge, Rasen; Waldstadion mit zwei Türmen
+- Ungetestet im Spiel; Fassadenbilder einzeln angesehen
+- **E-Auto als Taxi und Streifenwagen:** Taxi hellelfenbein mit gelbem Dachschild; Streifenwagen nach Foto vom Uhrtürmchen (Stadtpolizei): weiß, breites blaues Seitenband, neongelbes Heck; Polizei nimmt halb das E-Auto, Spielstände mit Polizeiwagen laden weiter
+- **Fahrbahn:** Mittelstreifen verblasst mit Abrieb statt grellem Weiß, runde Kanaldeckel in der Fahrspur, Straßenabläufe am Bordstein (je zwei Meshes für alles)
+- **Uhrtürmchen nach Foto neu:** schlanke dunkelgraue Vierkantsäule auf Granitsockel, kleiner Uhrkopf mit vier weißen Zifferblättern, flache Spitze statt Sandstein und Kupferdach
+- **Eigenes E-Auto als häufigstes Auto:** markenfrei im Code gezeichnet (kein Modell aus dem Netz, keine Lizenzfrage), rund 3.000 Dreiecke: Crossover mit Fastback, schwebendem Dach über dunklem Glashaus, durchgehenden LED-Leisten vorn (weiß) und hinten (rot), Diffusor, Dachspoiler, Aero-Felgen mit fünf Speichen. Läuft über dieselben Wege wie die anderen Autos (Wagenfarbe, Scheinwerfer, Bremslicht, Radumdrehung, geparkte Instanzen). Eine von Kia stammende ev6.glb (618.000 Dreiecke, Lizenz unbekannt) wurde bewusst nicht übernommen
+- **Fahrbahn gezeichnet:** Asphalt mit feinem Splitt, vergossenen Rissen, zwei Flickstellen und einem Ölfleck statt der einheitlichen Fototextur; ein Bild für 8 x 8 m, gleiche mittlere Helligkeit wie vorher (#5a5a55), Normal-Map bleibt
+- Ungetestet im Spiel; Auto und Fahrbahnbild einzeln angesehen
+- **Spielzeit:** Jedes Spiel beginnt morgens um 8 Uhr, auch „Fortsetzen“. Die Zeit läuft langsamer: 1 Spielstunde dauert 4 Minuten statt 1 Minute, ein ganzer Tag also gut eineinhalb Stunden. Wer den alten Standard gespeichert hatte, bekommt einmalig den neuen. Der Regler „Zeitlauf“ geht jetzt von 0 bis 4 Std./Min. in Viertelschritten
+- **Startcheck vor dem Ausrollen:** Der Pages-Workflow prüft mit eslint (nur die Regel no-undef), ob irgendwo ein Name benutzt wird, den es nicht gibt, und bricht sonst ab. Gegenprobe: Gegen story.js aus 697e8b0 meldet er sechs Fehler (berger, U0), gegen den jetzigen Stand keinen
+- **Gefunden vom Startcheck:** `loadPlaced` rief `addPlaced` auf, das es nie gab; der Fehler wurde verschluckt, gebaute Objekte im Kreativmodus wurden nie wiederhergestellt (gespeichert wird ohnehin nur der Typ, keine Position). Die Funktion ist jetzt bewusst leer, mit Begründung im Code
+- **Hotfix Startabbruch:** Nach 697e8b0 startete das Spiel nicht mehr („berger is not defined“, story.js Zeile 162). Der Commit hatte in `story.js` die Variablen `berger` und `U0` entfernt, die Story 1 bis 3 noch brauchen. Beide sind wieder da, `U0` jetzt vom neuen Uhrtürmchen-Platz (-193, 425) aus berechnet
+- **Gehwege und Wege neu gezeichnet (Ticket #11, ungetestet, Test über GitHub Pages):** Viele Fußwege sind in OSM als eigene Linie direkt neben der Fahrbahn eingetragen und lagen als 2 m breite, braun-bunte Pflaster-Fototextur auf dem grauen Gehwegband, dazu Kreis-Kappen an jedem Knoten: braune Streifen und Flecken auf dem Gehweg. Jetzt fallen Wegstücke, die ganz im Gehwegband einer Straße liegen, weg. Der Gehweg ist ein gezeichnetes Bild aus Frankfurter Betonplatten (50 x 50 cm, Halbverband, leicht unterschiedliche Grautöne), die übrigen Wege in Parks und auf Plätzen sind wassergebundene Decke (beiger Sand mit Splitt). Beide Bilder 512 px für 2 m, keine Normal-Maps
+- **Ticket #11 behoben (Schwarze Wände vor Häusern & braune Bodenplatten auf Plätzen):**
+  - *Schwarze 4-m-Wände vor den Läden:* Fußgängerzonen-Flächen wie der `Wochenmarkt Bornheim` oder der `Eskişehirplatz` liegen in den OSM-Daten als geschlossene Polygone (`ped: 1`) vor, deren Außenring exakt durch die Eckpunkte der angrenzenden Häuser läuft. `buildingPassages`/`passageAdd` wertete diese Eckberührung (`t = 0` / `t = 1` bei `pointInPoly`) fälschlich als Hausdurchfahrt (`b.pass`), woraufhin `gateQuads` 4 m hohe und bis zu 16 m breite tiefschwarze Tor-Blenden (`0x1b1d22`) quer über Gehwege und Schaufenster zog. Geschlossene Platzpolygone (`isPedArea`) und reine Eck-/Wandberührungen werden jetzt ausgeschlossen (`deepInPoly` mit 0,75 m Innenabstand), und `gateQuads` prüft den Schnittwinkel (`sinA >= 0.5`) und begrenzt Torblenden strikt auf die Hauswandbreite.
+  - *Braune Platten / Erddreiecke auf dem Platz:* Geschlossene Fußgängerplätze (`isPedArea`) werden jetzt vollflächig mit dem Gehwegpflaster (`WALK_MAT`) aufs Gelände gedraped statt nur als hohler Randstreifen gezeichnet. Zudem berücksichtigt `corridorH`/`groundH` bei grobem Geländeraster (`Stufe niedrig`/`mittel`, 8–12 m Maschenweite) auch `pathGrid` sowie die lokalen 4-m-Stützpunkte der Zelle, damit keine groben Erddreiecke durch Gehwege stechen.
+- **Uhrtürmchen in die Platzmitte versetzt:** Das Uhrtürmchen (`landmarks.js`) und der Story-Startpunkt `B` (`story.js`) stehen jetzt nicht mehr hinten an der Arnsburger Straße (`-235, 455`), sondern ~50 m weiter vorn mitten auf dem Platz am Bornheimer Wochenmarkt (`x: -196, z: 427`, Platzbrunnen daneben bei `x: -180, z: 411`).
+- **Ausbau 2026 (Gemini) gemergt:** Touch- und iPhone-Steuerung, Kreativmodus am Handy, Frankfurter Skyline am Horizont, Vertex-AO, dynamisches Scheinwerfer- und Blaulicht (Hoch/Ultra), Gyro-Lenkung, Vibration, Offline-Service-Worker
+- **Service Worker, Korrektur beim Mergen:** Bilder, CSS und Vendor-Dateien lagen dauerhaft unter einem festen Cache-Namen (`bornheim-static-v2`), geänderte Bilder oder CSS wären bei Spielern nie angekommen, und jede Version hätte den Cache vergrößert. Der Pages-Workflow benennt den Cache jetzt je Deploy (`bornheim-static-<sha>`), der alte wird beim Aktivieren gelöscht. Stadtkacheln bleiben im eigenen Cache
+- **Uhrtürmchen-Standort & Bornheimer Brunnen korrigiert:** Zwischen dem Buchhandlungs-Anker (`-229.14, 491.16`) und dem Straßenende der Berger Straße (`-236.24, 450.26`) stehen zwei Häuserblöcke (#482 und #42); da `solidAt` am Anker `-1` lieferte, schob der frühere 1,8-m-Schritt das Uhrtürmchen direkt in Gebäude #482 (`solidAt === 482`). Jetzt wird vom Straßenpunkt aus 5,2 m auf den freien Platz am Uhrtürmchen (`-235.35, 455.38`, direkt neben dem lila Story-B) gegangen, der gesamte Sockelradius (1,8 m) gegen Gebäude geprüft und der Sichtradius auf 800 m erhöht. Zudem erhalten alle Brunnen eine sichtbare Wasserfontäne und die Berger Straße zwei feste Platzbrunnen (obere Berger am Startplatz sowie Marktplatz Bornheim Mitte)
+- **Uhrtürmchen wieder an, jetzt am richtigen Ort:** Es ist in den OSM-Daten kein eigenes Objekt. Die Namenssuche traf die „Buchhandlung Schutt am Uhrtürmchen“, deren Punkt im Gebäude liegt (Turm unsichtbar im Haus), oder die gleichnamige Kneipe 1,6 km entfernt. Jetzt wird vom Buchladen zur Berger Straße gegangen, bis der Boden frei ist, und dann 1,8 m auf den Gehweg. Gerechnet wird erst, wenn die Kachel geladen ist. Saalbau-Eingang, Parktor und Zusatz-Laternen bleiben aus
+- **U-Bahn-Mast:** endet jetzt unter dem U-Würfel. Das Namensschild hängt mit einer Schelle vor und hinter dem Mast, statt dass der Mast durch Würfel und Schild schneidet
+- **Pickups als Frankfurter Symbole:** Leben ist ein Bembel (grauer Steinzeugkrug mit blauem Muster, Henkel, Tülle), Geld eine Goldmünze mit rotem Adler, Munition eine Kiste mit Adler-Schild; dazu ein farbiger Ring am Boden. Geometrie und Material werden einmal gebaut und geteilt (vorher je Pickup neu und beim Entfernen nie freigegeben)
+- **Brunnen** (125 aus OSM): Becken mit Rand, Wasserfläche, Säule und Schale statt zweier grauer Zylinder, weiter gemergt
+- Ungetestet, Test über GitHub Pages
+- **Zurückgenommen:** Die Wahrzeichen (Uhrtürmchen, Saalbau-Eingang, Parktor, Laternen auf der Berger) sind im Spiel wieder aus. André sah live kein Uhrtürmchen, dafür schwarze Flächen vor den Läden. `landmarks.js` bleibt im Repo, wird aber nicht mehr gestartet; Ursache wird erst mit einem Test gesucht. U-Bahn-Schilder, Automaten und die Story-Karte bleiben
+- **Webseite:** Im Abschnitt „Story“ steht jetzt eine isometrische Abendkarte von Bornheim (statisches SVG, kein Script). Zu sehen sind die Berger Straße mit dem Uhrtürmchen und dem lila B, der Günthersburgpark mit Bauzaun, Kran und geplanten Türmen, die Schule mit dem blauen S und der Saalbau mit dem orangen K, Absperrgittern und dem geschlossenen Kiosk. Eine Demo zieht die Berger hinauf; bei „weniger Bewegung“ steht alles still
+- **Weitere Wahrzeichen (ungetestet, Test über GitHub Pages):** Am Eingang des Saalbau Bornheim ein Vordach mit Schriftzug und Wandleuchten. Am Zugang zum Günthersburgpark zwei Sandsteinpfeiler mit Kugeln, ein Eisenbogen und ein beidseitiges Schild. Auf der Berger Straße im Umkreis von 400 m um das Uhrtürmchen Frankfurter Laternen, alle 26 m wechselseitig, als zwei InstancedMesh (Mast und Leuchte). Alles wird erst im Umkreis von 450 m gebaut und ab 600 m wieder abgebaut
+- **U-Bahn, von Hand ausgearbeitet (ungetestet, Test im Nachtfenster):** Eingänge mit höherem Mast, U-Würfel (weißer Rand) und darunter ein beidseitiges Namensschild mit farbigen Linienkürzeln. Am Bahnsteig blaue Stationsschilder mit U-Logo, Name und Linien. Zwei Zugzielanzeiger mit bernsteinfarbener Schrift (echte Endstationen der Linien aus `metro.json`). Zwei Fahrkartenautomaten statt grauem Kasten: Kopf „Fahrkarten“, Bildschirm mit Zielen, Tasten Kurzstrecke, Einzelfahrt und Tageskarte, Münzschlitz, Kartenleser, Ausgabe und Vordach
+- **Leistung:** Eingänge teilen jetzt Geometrie und Material, das Namensschild gibt es je Station einmal (mit Zähler freigegeben). Vorher baute jeder Eingang alles neu, und die U-Texturen wurden beim Abbau nie freigegeben (kleines Leck beim Herumfahren). Alle Details sind Canvas-Texturen auf wenigen Flächen
+- **Uhrtürmchen** auf der Berger Straße als Wahrzeichen (`landmarks.js`): Sandsteinsockel, Gusssäule, vier Zifferblätter mit der echten Uhrzeit (einmal pro Minute neu gezeichnet), grünes Kupferdach mit goldener Spitze, vier Laternen. Wird erst im Umkreis von 450 m gebaut und ab 600 m wieder abgebaut, rund 1.500 Dreiecke
+- Testbefehl für die Nacht (22–6 Uhr, einzeln): Spiel laden, `await import('/tools/selftest.js'); await T.checks()`, dann zum Uhrtürmchen und in eine U-Bahn-Station (F am Eingang), Bildrate und GPU-Texturen vorher/nachher vergleichen
+- README verweist für Tests auf `CLAUDE.md` statt auf den nicht mehr vorhandenen Skill `spieltest`
 - Unsichtbare Wände an Zäunen behoben: Bild und Kollision kommen aus einer Quelle (`barrierSegs`), Hindernisse werden erst beim Bau der Kachel eingetragen und mit ihr wieder entfernt. Zäune in Stücken bis 4 m auf dem Gelände statt langer Kästen über Kuppen, erfundene Zäune (Schulen, Kitas, Bolzplätze, Kleingärten) mit 3 m Lücke an jedem kreuzenden Weg, Spielplätze ohne Zaun. Zaun-Selbsttest war vor dem Absturz grün, der Rest ist ungetestet (Test im Nachtfenster)
-- U-Bahn-Eingänge: Stationsname unter dem U, leuchtende Stele und Fahrkartenautomat; Texturen werden beim Entfernen freigegeben. Ungetestet (Test im Nachtfenster)
 - Fehlerbericht per Mail geht an service@creavisions.de
 
 - Regel `CLAUDE.md`: Spieltests im Browser nur von 22 bis 6 Uhr, immer nur einer zur selben Zeit (Notebook-Absturz durch Testlast neben anderen Sitzungen)
