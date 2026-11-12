@@ -1845,10 +1845,10 @@ if (CAR_TPL.ev) { // 12.11.2026: E-Auto auch als Frankfurter Taxi (hellelfenbein
   const schildM = new THREE.MeshLambertMaterial({ map: schildTex }); schildM.name = 'KdowSign';
   const blauL = new THREE.MeshLambertMaterial({ color: 0x2a5cff, emissive: 0x2a5cff, emissiveIntensity: 0.6 }); blauL.name = 'KdowBlue';
   const kd = [];
-  for (const sx of [-1, 1]) { const fl = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.34, 1.5), [schildM, schildM, weiss, weiss, weiss, weiss]); /* Schriftzug FEUERWEHR seitlich, lesbar von außen */ fl.position.set(sx * 1.05, 0.68, -0.1); kd.push(fl);
+  for (const sx of [-1, 1]) { const fl = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.34, 1.5), weiss); { const pl = new THREE.Mesh(new THREE.PlaneGeometry(1.4, 0.3), schildM); pl.position.set(sx * 1.068, 0.68, -0.1); pl.rotation.y = sx * Math.PI / 2; kd.push(pl); } /* Schriftzug FEUERWEHR seitlich, je ein Mesh (Materiallisten brachen withColor) */ fl.position.set(sx * 1.05, 0.68, -0.1); kd.push(fl);
     const sv = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.2, 0.9), schraegM); sv.position.set(sx * 1.05, 0.5, 1.9); kd.push(sv); }
   for (const z of [2.54, -2.54]) { const s = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.18, 0.03), schraegM); s.position.set(0, 0.5, z); kd.push(s); }
-  { const bb = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.1, 0.3), blauL); bb.position.set(0, D0.h + 0.05, 0.1); kd.push(bb); const sg = new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.16, 0.05), [weiss, weiss, weiss, weiss, schildM, schildM]); sg.position.set(0, D0.h + 0.17, 0.25); kd.push(sg); }
+  { const bb = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.1, 0.3), blauL); bb.position.set(0, D0.h + 0.05, 0.1); kd.push(bb); const sg = new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.16, 0.05), weiss); for (const s of [1, -1]) { const pl = new THREE.Mesh(new THREE.PlaneGeometry(0.6, 0.15), schildM); pl.position.set(0, D0.h + 0.17, 0.25 + s * 0.027); if (s < 0) pl.rotation.y = Math.PI; kd.push(pl); } sg.position.set(0, D0.h + 0.17, 0.25); kd.push(sg); }
   CAR_TPL.evkdow = ab(kd); CAR_TPL.evkdow.root.traverse(o => { if (o.isMesh && o.material.name === 'KdowBlue') o.material.name = 'BlueLights'; });
 }
 { // Stadtbus 12 m, türkis (Foto 12.11.2026): Kasten mit Fensterband, Leuchtanzeige vorn, rote Rückleuchten, drei Achsen nicht nötig: zwei

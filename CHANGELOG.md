@@ -2,6 +2,7 @@
 
 ## 2026-11-12
 
+- **Fix Startfehler** nach #51: Kommandowagen-Schrift als eigene Flächen statt Materialliste (geparkte Autos brachen ab)
 - **Fix Poller:** die drei Poller an jedem Straßenschild sind entfernt; sie standen teils auf Fahrbahnen und blockierten Straßen wie die Mainzer Landstraße
 - **Container nie auf der Fahrbahn:** liegt der Kartenpunkt auf einer Straße, rücken sie auf Gehweg oder Grünstreifen, sonst entfallen sie; Glascontainer als drei dunkelblaue Glocken mit weißem, braunem und grünem Einwurfring, Altkleidercontainer rot mit Klappe und weißem Feld „DANKE! ALTKLEIDER SCHUHE“
 - **Kommandowagen:** Schriftzug FEUERWEHR nur auf den Schauseiten (war auf die Kanten gestreckt), zusätzlich an beiden Flanken
