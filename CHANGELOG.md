@@ -2,6 +2,7 @@
 
 ## 2026-11-12
 
+- **Friedhöfe (#57):** Grabfelder auf allen Friedhofsflächen, ausgerichtet an der längsten Kante: Grabeinfassungen mit Bepflanzung, stehende Steine, Holzkreuze und Liegeplatten, Wege alle fünf Reihen und neun Spalten, Abstand zu Rand, Häusern und Wegen; höchstens 2400 Gräber je Kachel. Ungetestet im Spiel, Test im Nachtfenster
 - **U-Bahn vollständig begehbar:** alle 46 oberirdischen Stationen ohne Treppenabgang (Hausen bis Hohemark, Enkheim, Preungesheim, Riedberg …) haben jetzt einen Bahnsteig mit Mast, U-Würfel, Namensschild und Infokasten; mit F fährt man ab
 - **U-Bahn-Netz auf der großen Karte (M):** alle neun Linien in ihren Farben mit Stationsnamen
 - **Bushaltestellen mit Namen:** 771 von 866 Halten aus den Kartendaten benannt (tools/busroute_names.py); Namen und Linien auf Menükarte und großer Karte beim Hineinzoomen
