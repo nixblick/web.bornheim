@@ -443,6 +443,18 @@ function facadeStyle(style) {
       for (let y = 0; y < h; y += 24) { c.fillRect(0, y, (y / 24) % 2 ? 14 : 22, 18); c.fillRect(w - ((y / 24) % 2 ? 14 : 22), y, 22, 18); }
       for (let r = 0; r < 4; r++) for (let q = 0; q < 4; q++) fenster(q * cw + cw * 0.27, r * ch + ch * 0.2, cw * 0.46, ch * 0.55, '#9a4f3e', '#3a4250');
       return; }
+    if (style === 'messeturm') { // rotbrauner Granit, enges Fensterraster, dunkle Glasbänder an den Ecken
+      c.fillStyle = '#8a5a4e'; c.fillRect(0, 0, w, h); for (let r = 0; r < 12; r++) for (let q = 0; q < 8; q++) { const x = q * w / 8 + 10, y = r * h / 12 + 8; if (q === 0 || q === 7) { c.fillStyle = '#1e2733'; c.fillRect(q * w / 8, y - 8, w / 8, h / 12); continue; } fenster(x, y, w / 8 - 20, h / 12 - 18, '#6e443b', '#26303c'); }
+      return; }
+    if (style === 'barock') { // Hauptwache: heller Putz, roter Sandstein an Ecken, Fenstern und Gesims
+      c.fillStyle = '#efe6d8'; c.fillRect(0, 0, w, h); const s = '#9a4e3c'; c.fillStyle = s; c.fillRect(0, 0, 18, h); c.fillRect(w - 18, 0, 18, h);
+      for (let r = 0; r < 4; r++) { c.fillStyle = s; c.fillRect(0, r * ch + ch - 8, w, 8); for (let q = 0; q < 4; q++) { const x = q * cw + cw * 0.3, y = r * ch + ch * 0.2; c.fillStyle = s; c.fillRect(x - 8, y - 14, cw * 0.4 + 16, 9); fenster(x, y, cw * 0.4, ch * 0.58, s, '#2d3540'); } }
+      return; }
+    if (style === 'sandstein') { // Gründerzeit in rotem Sandstein (Foto Metropolis, Eschenheimer Tor): Rundbogenfenster, Gesimse, Lisenen
+      c.fillStyle = '#8f4d3e'; c.fillRect(0, 0, w, h); for (let y = 0; y < h; y += 16) { c.fillStyle = 'rgba(0,0,0,0.08)'; c.fillRect(0, y, w, 2); }
+      for (let r = 0; r < 4; r++) { c.fillStyle = '#7a3f33'; c.fillRect(0, r * ch + ch - 9, w, 9); for (let q = 0; q <= 4; q++) c.fillRect(q * cw - 5, r * ch, 10, ch);
+        for (let q = 0; q < 4; q++) { const x = q * cw + cw * 0.27, y = r * ch + ch * 0.22, ww = cw * 0.46, wh = ch * 0.56; c.fillStyle = '#6e372c'; c.beginPath(); c.arc(x + ww / 2, y + 2, ww / 2 + 6, Math.PI, 0); c.fill(); fenster(x, y, ww, wh, '#6e372c', '#2a323e'); c.fillStyle = '#2a323e'; c.beginPath(); c.arc(x + ww / 2, y + 1, ww / 2, Math.PI, 0); c.fill(); } }
+      return; }
     if (style === 'fw') { // Fachwerk Alt-Bornheim (Foto Eulengasse): weiße Gefache, dunkle Balken mit Streben, blaue Läden, Bruchsteinsockel in der untersten Reihe
       c.fillStyle = '#f1f2ef'; c.fillRect(0, 0, w, h); const bk = '#2b221c';
       for (let r = 0; r < 4; r++) { const y = r * ch; c.fillStyle = bk; c.fillRect(0, y, w, 9); c.fillRect(0, y + ch * 0.5, w, 6);
@@ -731,7 +743,7 @@ const SKYLINE_TOWERS = [
   [-3059, 976, 20, 48, 96, -1.27, -8, 2], [-2767, 815, 29, 36, 95, -1.32, -7, 2], [-1826, 27, 34, 42, 93, 0.31, -5, 0],
   [546, 1277, 18, 86, 90, -0.21, 1, 3], [-4404, 1463, 21, 61, 87, -0.87, -12, 3]
 ];
-const _skyO = new THREE.Object3D(), _skyC1 = new THREE.Color(), _skyC2 = new THREE.Color();
+const _skyO = new THREE.Object3D(), _skyC1 = new THREE.Color(), _skyC2 = new THREE.Color(), _skyTint = new THREE.Color();
 function buildSky() {
   skyU = { top: { value: new THREE.Color(0x6a8fd0) }, bot: { value: new THREE.Color(0xb9cde6) } };
   const mat = new THREE.ShaderMaterial({ uniforms: skyU, side: THREE.BackSide, depthWrite: false, fog: false,
@@ -799,7 +811,7 @@ function updateSky(dt) {
         _skyO.updateMatrix();
         skylineMesh.setMatrixAt(i, _skyO.matrix);
         const haze = clamp((dist - 450) / 4200 + weather.fog * 0.45 + weather.rain * 0.25, 0.2, 0.82);
-        _skyC2.copy(baseCol).lerp(_cFog, haze);
+        _skyC2.copy(baseCol); if (!world.night) { if (h > 250 && h < 260 && w < 45) _skyC2.multiply(_skyTint.setHex(0xc89a8c)); else if (h > 150 && h < 160) _skyC2.multiply(_skyTint.setHex(0x9fbde6)); } _skyC2.lerp(_cFog, haze); // Messeturm-Granit, Glastürme blau (Fotos)
         skylineMesh.setColorAt(i, _skyC2);
         if (world.night) {
           const r = (blink || i % 3 !== 0) ? Math.max(1.6, dist * 0.0022) * s : 0;
@@ -1121,15 +1133,21 @@ function* buildCity() {
   const kindOf = b => { if (b._kind) return b._kind; const n = b.n || ''; let k = b.k || 'res';
     if (/Feuerwache|Rettungswache|Feuer- und Rettungs|Feuerwehr/i.test(n) && !/Training/i.test(n)) k = 'wache';
     else if (!n && WACHE_OHNE_NAMEN.some(([x, z]) => { const [cx, cz] = centroidOf(b.p); return Math.hypot(cx - x, cz - z) < 6; })) k = 'wache';
+    else if (/^Messeturm$/.test(n)) k = 'messeturm';
+    else if (/^Hauptwache$/.test(n)) k = 'barock';
     else if (/schule|gymnasium|\bIGS\b/i.test(n)) k = 'school';
     else if ((k === 'res' || k === 'public' || k === 'small') && SCHULHOF.length) { const [cx, cz] = centroidOf(b.p); if (SCHULHOF.some(s => cx > s.x0 && cx < s.x1 && cz > s.z0 && cz < s.z1 && pointInPoly(cx, cz, s.p))) k = 'school'; }
     if (k === 'school' && b.r && b.rh > 0) k = 'altschule'; // Steildach: Gründerzeitbau wie die Kirchnerschule (Foto 12.11.2026)
     return (b._kind = k); };
-  const facKind = (b, kind) => { if (kind === 'wache' || kind === 'school' || kind === 'altschule') return kind; if (kind !== 'res') return kind; const hsh = Math.abs((b.p[0][0] * 31 + b.p[0][1] * 17) | 0) % 12;
+  const facKind = (b, kind) => { if (['wache', 'school', 'altschule', 'messeturm', 'barock'].includes(kind)) return kind;
+    { const [cx, cz] = centroidOf(b.p); if ((kind === 'res' || kind === 'public') && b.h >= 14 && cx > -3000 && cx < -1500 && cz > 1200 && cz < 2600 && Math.abs((b.p[0][0] * 13 + b.p[0][1] * 7) | 0) % 10 < 3) return 'sandstein'; } /* Innenstadt: rote Sandsteinbauten wie das Metropolis */
+    if (kind !== 'res') return kind; const hsh = Math.abs((b.p[0][0] * 31 + b.p[0][1] * 17) | 0) % 12;
     if (b.r && b.rh > 0 && b.h <= 11.5) { const [cx, cz] = centroidOf(b.p); const alt = cx > -80 && cx < 460 && cz > -400 && cz < 220; /* Alt-Bornheim: Eulengasse, Turmstraße, Rendeler Straße */ if (alt && hsh < 7) return 'fw'; if (alt && hsh < 9) return 'schiefer'; if (!alt && hsh === 0) return 'schiefer'; } return hsh < 6 ? 'res' : hsh < 8 ? 'nk' : hsh < 10 ? 'nb' : 'zi'; };
   for (const b of CITY.buildings) { if (++YC % 10 === 0) yield;
     const kind = kindOf(b);
     if (kind === 'wache') WACHEN.push(centroidOf(b.p));
+    if (kind === 'messeturm' && !b._pyr) { b._pyr = 1; b.h = 221; const [mx, mz] = centroidOf(b.p); let rr = 0; for (const [x, z] of b.p) rr = Math.max(rr, Math.hypot(x - mx, z - mz)); // Pyramidenspitze, 36 m, rotbraun wie der Granit (Foto 12.11.2026)
+      const pm = new THREE.Mesh(new THREE.ConeGeometry(rr * 0.62, 36, 4), shLambert(0x7a4a40)); pm.rotation.y = Math.PI / 4; pm.position.set(mx, TH(mx, mz) + 221 + 18, mz); pm.castShadow = true; scene.add(pm); }
     if (!b._stad && b.h >= 8 && b.p.length > 3) { let x0 = 1e9, x1 = -1e9, z0 = 1e9, z1 = -1e9; for (const [x, z] of b.p) { x0 = Math.min(x0, x); x1 = Math.max(x1, x); z0 = Math.min(z0, z); z1 = Math.max(z1, z); }
       const mx = (x0 + x1) / 2, mz = (z0 + z1) / 2; // Waldstadion (Niederrad) und FSV-Stadion am Bornheimer Hang
       if (x1 - x0 > 200 && z1 - z0 > 200 && Math.hypot(mx + 4583, mz - 6771) < 80) { b._stad = 1; b.h = 3; scene.add(waldstadion(mx, mz, (x1 - x0) / 2, (z1 - z0) / 2, 1)); }
@@ -1147,7 +1165,7 @@ function* buildCity() {
       if (Math.abs(ny) > 0.5) uv.setXY(i, x, z); else { const nx = nrm.getX(i), nz = nrm.getZ(i); uv.setXY(i, Math.abs(nx) > Math.abs(nz) ? z : x, y - tTop - GF_H); }
     }
     const fk = facKind(b, kind);
-    const c = fk !== kind || kind === 'wache' || kind === 'school' || kind === 'altschule' ? 0xf6f6f6 : kind === 'church' ? 0x9a8f86 : kind === 'hall' ? pick([0xbfc3c7, 0xd0d4d8, 0xb9b1a6]) : palette[Math.abs((b.p[0][0] * 7 + b.p[0][1] * 13) | 0) % palette.length];
+    const c = fk !== kind || ['wache', 'school', 'altschule', 'messeturm', 'barock'].includes(kind) ? 0xf6f6f6 : kind === 'church' ? 0x9a8f86 : kind === 'hall' ? pick([0xbfc3c7, 0xd0d4d8, 0xb9b1a6]) : palette[Math.abs((b.p[0][0] * 7 + b.p[0][1] * 13) | 0) % palette.length];
     const key = fk + '|' + c; if (!byKey.has(key)) byKey.set(key, []);
     for (const grp of g.groups) {
       const sub = new THREE.BufferGeometry();
@@ -1200,7 +1218,7 @@ function* buildCity() {
       }
     }
   }
-  const facByKind = FAC_CACHE || (FAC_CACHE = (() => { const f = {}; for (const k of ['res', 'house', 'public', 'hall', 'small', 'church']) f[k] = [facadeTextures(k), facadeTextures(k)]; for (const k of ['wache', 'school', 'altschule', 'nk', 'nb', 'zi', 'fw', 'schiefer']) { const s = facadeStyle(k); f[k] = [s, k === 'nk' || k === 'zi' ? facadeStyle(k) : s]; } return f; })());
+  const facByKind = FAC_CACHE || (FAC_CACHE = (() => { const f = {}; for (const k of ['res', 'house', 'public', 'hall', 'small', 'church']) f[k] = [facadeTextures(k), facadeTextures(k)]; for (const k of ['wache', 'school', 'altschule', 'nk', 'nb', 'zi', 'fw', 'schiefer', 'messeturm', 'barock', 'sandstein']) { const s = facadeStyle(k); f[k] = [s, k === 'nk' || k === 'zi' ? facadeStyle(k) : s]; } return f; })());
   const counters = {};
   const groups = new Map(); const tmpC = new THREE.Color();
   for (const [key, geos] of byKey) {

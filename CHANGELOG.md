@@ -2,6 +2,9 @@
 
 ## 2026-11-12
 
+- **Messeturm** (Foto Messe): rotbrauner Granit mit engem Fensterraster und dunklen Glasecken, oben die 36 m hohe Pyramide; in der fernen Skyline tagsüber rotbraun, die Glastürme um 155 m blau
+- **Hauptwache** in hellem Putz mit rotem Sandstein an Ecken, Fenstern und Gesims (Foto B-Ebene)
+- **Innenstadt-Gründerzeit in rotem Sandstein** (Foto Metropolis): Rundbogenfenster, Gesimse, Lisenen; etwa jedes dritte hohe Haus zwischen Eschenheimer Tor, Hauptwache und Zeil
 - **Fachwerk in Alt-Bornheim** (nach Foto Eulengasse): kleine Häuser mit Steildach rund um Eulengasse, Turmstraße und Rendeler Straße sind meist Fachwerk (weiße Gefache, dunkle Balken mit Streben, blaue Fensterläden), manche schieferverkleidet; außerhalb gelegentlich Schieferhäuser
 - **Skyline bei Nacht** (nach Nachtfotos vom Mainufer): ferne Hochhäuser haben nachts eine dunkle Fassade mit vielen hellen Fenstern in Warm- und Kaltweiß und eine angestrahlte Krone; tagsüber unverändert, weiter ein Draw-Call
 - **Wache 2 korrigiert:** Der Google-Maps-Punkt liegt im westlichen Gebäudeteil; die Wache sind die beiden Teile an der Heinrichstraße, der Nachbarbau (37 x 32 m) ist wieder normal
