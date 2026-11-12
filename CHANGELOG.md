@@ -2,6 +2,10 @@
 
 ## 2026-11-12
 
+- **U-Bahn vollständig begehbar:** alle 46 oberirdischen Stationen ohne Treppenabgang (Hausen bis Hohemark, Enkheim, Preungesheim, Riedberg …) haben jetzt einen Bahnsteig mit Mast, U-Würfel, Namensschild und Infokasten; mit F fährt man ab
+- **U-Bahn-Netz auf der großen Karte (M):** alle neun Linien in ihren Farben mit Stationsnamen
+- **Bushaltestellen mit Namen:** 771 von 866 Halten aus den Kartendaten benannt (tools/busroute_names.py); Namen und Linien auf Menükarte und großer Karte beim Hineinzoomen
+- Ungetestet im Spiel, Test im Nachtfenster
 - **Menükarte am Handy:** ein Finger verschiebt, zwei Finger zoomen, Tippen springt bzw. fährt zur Station
 - **Suche in der Menükarte:** Straßen der geladenen Gegend und alle U-Bahn-Stationen mit Vorschlagsliste; Enter zeigt den Ort, Umschalt+Enter springt hin
 - Ungetestet im Spiel, Test im Nachtfenster

@@ -250,6 +250,16 @@ export function initInteriors(X, W, D, SH) {
   const nameMat = st => { let e = nameMats.get(st.id); if (!e) { e = { n: 0, m: new THREE.MeshBasicMaterial({ map: canvasTex(512, 118, (c, w, h) => { c.fillStyle = '#fbfbf8'; c.fillRect(0, 0, w, h); /* Foto Seckbacher Landstraße: weißes Leuchtschild, türkises U, grauer Name */
       c.fillStyle = '#1f9aa8'; c.fillRect(16, 24, 70, 70); c.fillStyle = '#fff'; c.fillRect(30, 34, 12, 40); c.fillRect(60, 34, 12, 40); c.fillRect(30, 64, 42, 12); let x = 100; c.fillStyle = '#4a4e55'; fitFont(c, st.name, w - x - 16, 58, 18); c.textAlign = 'left'; c.textBaseline = 'middle'; c.fillText(st.name, x + 6, 60); }, 1, 1) }) }; nameMats.set(st.id, e); } e.n++; return e.m; };
   const dropName = id => { const e = nameMats.get(id); if (e && --e.n <= 0) { e.m.map.dispose(); e.m.dispose(); nameMats.delete(id); } };
+  // Oberirdische Station (kein Treppenabgang in OSM): Bahnsteig mit Mast, U-Würfel und Namensschild, F fährt ab
+  function surfaceStopMesh(st) {
+    const E = eg(); const g = new THREE.Group(); const p = st.p; const y = TH(p[0], p[1]); g.userData.st = st.id;
+    const pl = new THREE.Mesh(new THREE.BoxGeometry(3.0, 0.3, 40), E.stepM); pl.position.set(0, 0.15, 0); pl.receiveShadow = true; g.add(pl);
+    const pole = new THREE.Mesh(E.pole, E.metal); pole.position.set(1.1, 1.65, 0); g.add(pole); const cu = new THREE.Mesh(E.cubeG, E.cubeM); cu.position.set(1.1, 3.75, 0); g.add(cu);
+    const bx = new THREE.Mesh(E.boxG, E.metal); bx.position.set(0, 2.9, 8); g.add(bx); for (const x of [-1.38, 1.38]) { const ps = new THREE.Mesh(E.postG, E.metal); ps.position.set(x, 1.35, 8); g.add(ps); }
+    const nm = nameMat(st); for (const ry of [0, Math.PI]) { const n = new THREE.Mesh(E.boxNameG, nm); n.position.set(0, 2.9, 8 + (ry ? -0.115 : 0.115)); n.rotation.y = ry; g.add(n); }
+    { const ib = new THREE.Mesh(E.infoG, E.infoM); ib.position.set(-1.2, 1.25, -6); ib.rotation.y = Math.PI / 2; g.add(ib); }
+    const ne = X.nearestRoadDir ? X.nearestRoadDir(p[0], p[1], 40) : null; if (ne) g.rotation.y = ne.ang;
+    g.position.set(p[0], y, p[1]); scene.add(g); return g; }
   function entranceMesh(p, st) {
     const E = eg(); const g = new THREE.Group(); const y = TH(p[0], p[1]); g.userData.st = st.id;
     const hole = new THREE.Mesh(E.hole, E.holeM); hole.rotation.x = -Math.PI / 2; hole.position.set(0, 0.04, 0); g.add(hole);
@@ -270,6 +280,7 @@ export function initInteriors(X, W, D, SH) {
   function updateEntrances(dt) {
     scanT -= dt; if (scanT > 0) return; scanT = 1;
     const want = new Set(); for (const s of metro.stations) for (let i = 0; i < s.entr.length; i++) { const p = s.entr[i]; if ((p[0] - player.pos.x) ** 2 + (p[1] - player.pos.z) ** 2 < 300 * 300) { const k = s.id + '#' + i; want.add(k); if (!entrGroups.has(k)) entrGroups.set(k, entranceMesh(p, s)); } }
+    for (const s of metro.stations) { if (s.entr.length || (s.p[0] - player.pos.x) ** 2 + (s.p[1] - player.pos.z) ** 2 > 300 * 300) continue; const k = s.id + '#h'; want.add(k); if (!entrGroups.has(k)) entrGroups.set(k, surfaceStopMesh(s)); }
     for (const [k, g] of entrGroups) if (!want.has(k)) { scene.remove(g); dropName(g.userData.st); entrGroups.delete(k); } /* Geometrie ist geteilt, nicht freigeben */
   }
   function nearMetro() {
