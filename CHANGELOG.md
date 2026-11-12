@@ -2,6 +2,10 @@
 
 ## 2026-11-12
 
+- **U-Würfel zurück** (Foto Am Röthenek): am Eingang zusätzlich der leuchtende grün-türkise U-Würfel auf dem Mast, neben dem Portal
+- **Infokasten** neben jedem U-Bahn-Eingang mit selbst gezeichnetem Liniennetz
+- **Sonnenblumen-Bäckerei innen:** blauer Getränkekühlschrank, Korbstühle, bunte Lichterkette, Leuchtschild „Coffee to go“
+- **Feuerdorn-Hecken** mit roten Beeren an der Wöllstädter Straße
 - **U-Bahn-Eingänge nach Foto (Seckbacher Landstraße):** dunkles Portal mit zwei Stützen über dem Treppenkopf, weißer Leuchtkasten mit türkisem U und grauem Stationsnamen, Glasbrüstung über niedriger dunkler Brüstung; der alte Mast mit Würfel entfällt
 - **Zappbar begehbar** (Fotos): langer Holztresen mit Barhockern, Flaschenregal, Hängelampen, Poster, Ledersitzbank und Schachtisch mit zwei Brettern; Bier am Tresen für 3 €
 - **Laternenlicht an Hauswänden:** nachts ein großer warmer Schein in Wandhöhe neben jeder Straßenlaterne (Nachtfoto Wöllstädter Straße)

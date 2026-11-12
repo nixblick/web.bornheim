@@ -891,6 +891,7 @@ const staticParked = []; let parkedMesh = null; let roadMeshRef = null; const ro
 const instRefs = [];
 let PARK_TG = null, PARK_LOW = null;
 // Wachen ohne Namen in OSM, Lage aus der Adresse (Nominatim) und Gebäudegröße: Feuer- und Rettungswache 2, Heinrichstraße 8; Lage per Google-Maps-Punkt bestätigt (50.107023, 8.651487), beide Gebäudeteile
+const HECKE_DONE = { v: 0 };
 const WOELL = [[406, -503], [356, -491], [301, -479], [245, -468], [186, -459], [136, -457]]; // Wöllstädter Straße (OSM)
 const SCHILDER = [ // Nasenschilder nach Fotos (OSM-Punkte): [x, z, Text, Grund, Schrift]
   { x: -1288, z: 239, t: 'zappbar', bg: '#0e0e10', fg: '#f2f2f2' }, { x: 248, z: -488, t: 'CARAVAN', bg: '#efe9dc', fg: '#e8501c' }, { x: 191, z: -449, t: 'BÄCKEREI', bg: '#f2c230', fg: '#5a2a10', brezel: 1 }];
@@ -1175,6 +1176,11 @@ function* buildCity() {
   for (const b of CITY.buildings) { if (++YC % 10 === 0) yield;
     const kind = kindOf(b);
     if (kind === 'wache') WACHEN.push(centroidOf(b.p));
+    if (!HECKE_DONE.v && CITY.buildings.length) { HECKE_DONE.v = 1; // Feuerdorn-Hecken mit roten Beeren an der Wöllstädter Straße (Foto Caravan)
+      const ht = canvasTex(128, 64, (c, w, h) => { c.fillStyle = '#2c4a26'; c.fillRect(0, 0, w, h); for (let i = 0; i < 500; i++) { c.fillStyle = Math.random() < 0.12 ? '#e0521c' : pick(['#36592e', '#24401f', '#41693a']); c.fillRect(Math.random() * w, Math.random() * h, 3, 3); } }, 1, 1);
+      const hm = new THREE.MeshLambertMaterial({ map: ht }); const hg = [];
+      for (let i = 1; i < WOELL.length; i++) { const [ax, az] = WOELL[i - 1], [bx, bz] = WOELL[i]; const l = Math.hypot(bx - ax, bz - az); const nx = -(bz - az) / l, nz = (bx - ax) / l; for (const sd of [-1, 1]) for (let s = 3; s < l - 3; s += 9) { if (Math.random() < 0.45) continue; const x = ax + (bx - ax) * s / l + nx * sd * 7.2, z = az + (bz - az) * s / l + nz * sd * 7.2; if (solidAt(x, z) >= 0) continue; const g2 = new THREE.BoxGeometry(4, 1.1, 0.9); g2.rotateY(Math.atan2(bx - ax, bz - az) + Math.PI / 2); g2.translate(x, TH(x, z) + 0.55, z); hg.push(g2); } }
+      if (hg.length) { const m = new THREE.Mesh(mergeGeometries(hg), hm); m.castShadow = m.receiveShadow = true; scene.add(m); } }
     for (const ZAPP of SCHILDER) if (!ZAPP.done && pointInPoly(ZAPP.x, ZAPP.z, b.p)) { ZAPP.done = 1; let best = null; for (let i = 0; i < b.p.length; i++) { const [ax, az] = b.p[i], [bx, bz] = b.p[(i + 1) % b.p.length]; const l = Math.hypot(bx - ax, bz - az); if (l < 2) continue; const t = Math.max(0, Math.min(1, ((ZAPP.x - ax) * (bx - ax) + (ZAPP.z - az) * (bz - az)) / (l * l))); const px = ax + (bx - ax) * t, pz = az + (bz - az) * t; const d = Math.hypot(px - ZAPP.x, pz - ZAPP.z); if (!best || d < best.d) best = { d, px, pz, ux: (bx - ax) / l, uz: (bz - az) / l }; }
       if (best) { const tex = canvasTex(256, 96, (c, w, h) => { c.fillStyle = ZAPP.bg; c.fillRect(0, 0, w, h); if (ZAPP.brezel) { c.strokeStyle = '#7a3a12'; c.lineWidth = 9; c.beginPath(); c.arc(w / 2 - 22, h / 2, 26, 0, 6.3); c.arc(w / 2 + 22, h / 2, 26, 3.14, 9.4); c.stroke(); } else { c.fillStyle = ZAPP.fg; c.font = 'bold 52px sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(ZAPP.t, w / 2, h / 2 + 2); } }, 1, 1);
         const rand = shLambert(0x2a2a2a); const sg = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.5, 1.3), [rand, rand, rand, rand, new THREE.MeshBasicMaterial({ map: tex }), new THREE.MeshBasicMaterial({ map: tex })]);

@@ -93,6 +93,11 @@ export function initInteriors(X, W, D, SH) {
     const kx = -W2 + 1.6, kz = -D2 + 1.4; box(g, 1.6, 1.0, 0.7, kx, 0.5, kz + 0.6, counter); R.walls.push([kx - 0.9, kz + 0.2, kx + 0.9, kz + 1.0]);
     const cash = makeHuman(Math.random() < 0.5, { top: 0xc0392b }); cash.position.set(PX + kx, 0, PZ + kz + 1.4); cash.rotation.y = Math.PI; g.add(cash); try { playAnim(cash, 'idle'); } catch (e) {} R.npc = [cash];
     panel(g, signTex(s.name, '#1d6a3a'), Math.min(W2 * 1.6, 7), 0.9, 0, H - 0.6, D2 - 0.02, Math.PI);
+    if (/Sonnenblumen/.test(s.name)) { // Foto 12.11.2026: gelbe Wände, Getränkekühlschrank, Korbstühle, Lichterkette, Leuchtschild
+      box(g, 0.9, 2.0, 0.7, W2 - 0.6, 1.0, D2 - 1.2, M(0x1d4fa8, 0.4)); box(g, 0.75, 1.7, 0.02, W2 - 0.6, 1.05, D2 - 1.56, new THREE.MeshBasicMaterial({ color: 0xcfe8ff }));
+      for (const x of [-1.2, 0.2]) { box(g, 0.5, 0.45, 0.5, x, 0.23, 0.8, M(0xb08850, 0.3)); box(g, 0.5, 0.5, 0.06, x, 0.7, 1.03, M(0xb08850, 0.3)); }
+      for (let i = 0; i < 24; i++) box(g, 0.06, 0.06, 0.06, -W2 + 0.3 + i * (W2 * 2 - 0.6) / 24, H - 0.25, -D2 + 0.1, new THREE.MeshBasicMaterial({ color: [0xff3030, 0x30ff60, 0x3070ff, 0xffd030][i % 4] }));
+      panel(g, signTex('Coffee to go', '#1a1030', '#ff4fa0'), 1.4, 0.45, -W2 + 1.2, 2.2, -D2 + 0.03, 0); }
     box(g, 1.4, 2.3, 0.08, 0, 1.15, -D2 + 0.02, new THREE.MeshLambertMaterial({ color: 0x9fc4e8, transparent: true, opacity: 0.4 })); // Glastür
     trig(R, kx, kz, 1.6, 'F · Kasse: einkaufen', () => SH.open(s));
     trig(R, 0, -D2 + 0.9, 1.2, 'F · Raus auf die Straße', leave);
@@ -227,7 +232,8 @@ export function initInteriors(X, W, D, SH) {
   // Seit 12.11.2026: Geometrie und Material einmal für alle Eingänge (vorher je Eingang neu, und die
   // U-Texturen wurden beim Abbau nie freigegeben). Das Namensschild gibt es je Station einmal, mit Zähler.
   let EG = null; const nameMats = new Map();
-  const eg = () => EG || (EG = { metal: M(0x2e3134, 0.2), glass: new THREE.MeshLambertMaterial({ color: 0xdfe8ee, emissive: 0xcfe0ea, emissiveIntensity: 0.35, transparent: true, opacity: 0.45, side: THREE.DoubleSide }), glassG: new THREE.PlaneGeometry(4, 0.8), postG: new THREE.BoxGeometry(0.14, 2.7, 0.14), boxG: new THREE.BoxGeometry(2.9, 0.62, 0.22), boxNameG: new THREE.PlaneGeometry(2.7, 0.48), hole: new THREE.PlaneGeometry(2.4, 4), holeM: new THREE.MeshBasicMaterial({ color: 0x0b0c0f }), step: new THREE.BoxGeometry(2.3, 0.02, 0.08), stepM: M(0x777777, 0.3),
+  const eg = () => EG || (EG = { metal: M(0x2e3134, 0.2), glass: new THREE.MeshLambertMaterial({ color: 0xdfe8ee, emissive: 0xcfe0ea, emissiveIntensity: 0.35, transparent: true, opacity: 0.45, side: THREE.DoubleSide }), glassG: new THREE.PlaneGeometry(4, 0.8), cubeM: new THREE.MeshBasicMaterial({ map: canvasTex(128, 128, (c) => { c.fillStyle = '#17a589'; c.fillRect(0, 0, 128, 128); c.strokeStyle = '#f4fff8'; c.lineWidth = 18; c.beginPath(); c.moveTo(34, 18); c.lineTo(34, 72); c.arc(64, 72, 30, Math.PI, 0, true); c.lineTo(94, 18); c.stroke(); }, 1, 1) }), cubeG: new THREE.BoxGeometry(0.9, 0.9, 0.9),
+    infoG: new THREE.BoxGeometry(1.2, 1.9, 0.18), infoM: new THREE.MeshBasicMaterial({ map: canvasTex(256, 384, (c, w, h) => { c.fillStyle = '#f3f3ee'; c.fillRect(0, 0, w, h); c.fillStyle = '#16202a'; c.font = 'bold 18px Arial'; c.fillText('Liniennetz', 12, 26); const L = [['#2a6fd1', 40], ['#5aa0e6', 70], ['#c0392b', 100], ['#e67e22', 130], ['#27ae60', 160], ['#8e44ad', 190]]; for (const [col, y] of L) { c.strokeStyle = col; c.lineWidth = 6; c.beginPath(); c.moveTo(14, y + 30); c.bezierCurveTo(90, y - 20, 160, y + 120, 242, y + 60); c.stroke(); } c.fillStyle = '#fff'; c.strokeStyle = '#16202a'; c.lineWidth = 2; for (let i = 0; i < 14; i++) { const x = 20 + (i * 37) % 220, y = 70 + (i * 53) % 260; c.beginPath(); c.arc(x, y, 5, 0, 7); c.fill(); c.stroke(); } }, 1, 1) }), postG: new THREE.BoxGeometry(0.14, 2.7, 0.14), boxG: new THREE.BoxGeometry(2.9, 0.62, 0.22), boxNameG: new THREE.PlaneGeometry(2.7, 0.48), hole: new THREE.PlaneGeometry(2.4, 4), holeM: new THREE.MeshBasicMaterial({ color: 0x0b0c0f }), step: new THREE.BoxGeometry(2.3, 0.02, 0.08), stepM: M(0x777777, 0.3),
     railS: new THREE.BoxGeometry(0.06, 1.0, 4), railB: new THREE.BoxGeometry(2.5, 1.0, 0.06), tube: new THREE.CylinderGeometry(0.035, 0.035, 4, 6), pole: new THREE.CylinderGeometry(0.07, 0.08, 3.3, 8), cap: new THREE.CylinderGeometry(0.1, 0.1, 0.12, 8),
     sign: new THREE.BoxGeometry(1.1, 1.1, 0.1), uM: new THREE.MeshBasicMaterial({ map: canvasTex(128, 128, (c) => { c.fillStyle = '#0a3d8f'; c.fillRect(0, 0, 128, 128); uLogo(c, 0, 0, 128); }, 1, 1) }),
     nameG: new THREE.PlaneGeometry(2.0, 0.46), clamp: new THREE.BoxGeometry(0.12, 0.5, 0.2) });
@@ -245,6 +251,8 @@ export function initInteriors(X, W, D, SH) {
     // Portal wie am Foto: zwei dunkle Stützen über dem Treppenkopf, darauf der Leuchtkasten mit Namen (beidseitig)
     for (const x of [-1.38, 1.38]) { const ps = new THREE.Mesh(E.postG, E.metal); ps.position.set(x, 1.35, -1.9); g.add(ps); }
     const bx = new THREE.Mesh(E.boxG, E.metal); bx.position.set(0, 2.9, -1.9); g.add(bx);
+    { const pole = new THREE.Mesh(E.pole, E.metal); pole.position.set(2.1, 1.65, 1.6); g.add(pole); const cu = new THREE.Mesh(E.cubeG, E.cubeM); cu.position.set(2.1, 3.75, 1.6); g.add(cu); } // leuchtender U-Würfel am Mast (Foto Am Röthenek)
+    { const ib = new THREE.Mesh(E.infoG, E.infoM); ib.position.set(-2.0, 0.95, 1.2); ib.rotation.y = Math.PI / 2; g.add(ib); } // Infokasten mit gezeichnetem Liniennetz
     const nm = nameMat(st); for (const ry of [0, Math.PI]) { const n = new THREE.Mesh(E.boxNameG, nm); n.position.set(0, 2.9, -1.9 + (ry ? -0.115 : 0.115)); n.rotation.y = ry; g.add(n); }
     const ne = nearestEdge(p[0], p[1], 20); if (ne) { const e = edgeNormal(ne.b.p, ne.e); g.rotation.y = Math.atan2(e.dx, e.dz); }
     g.position.set(p[0], y, p[1]); scene.add(g); return g;
