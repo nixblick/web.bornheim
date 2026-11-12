@@ -2,6 +2,9 @@
 
 ## 2026-11-12
 
+- **Eigenes E-Auto als häufigstes Auto:** markenfrei im Code gezeichnet (kein Modell aus dem Netz, keine Lizenzfrage), rund 3.000 Dreiecke: Crossover mit Fastback, schwebendem Dach über dunklem Glashaus, durchgehenden LED-Leisten vorn (weiß) und hinten (rot), Diffusor, Dachspoiler, Aero-Felgen mit fünf Speichen. Läuft über dieselben Wege wie die anderen Autos (Wagenfarbe, Scheinwerfer, Bremslicht, Radumdrehung, geparkte Instanzen). Eine von Kia stammende ev6.glb (618.000 Dreiecke, Lizenz unbekannt) wurde bewusst nicht übernommen
+- **Fahrbahn gezeichnet:** Asphalt mit feinem Splitt, vergossenen Rissen, zwei Flickstellen und einem Ölfleck statt der einheitlichen Fototextur; ein Bild für 8 x 8 m, gleiche mittlere Helligkeit wie vorher (#5a5a55), Normal-Map bleibt
+- Ungetestet im Spiel; Auto und Fahrbahnbild einzeln angesehen
 - **Spielzeit:** Jedes Spiel beginnt morgens um 8 Uhr, auch „Fortsetzen“. Die Zeit läuft langsamer: 1 Spielstunde dauert 4 Minuten statt 1 Minute, ein ganzer Tag also gut eineinhalb Stunden. Wer den alten Standard gespeichert hatte, bekommt einmalig den neuen. Der Regler „Zeitlauf“ geht jetzt von 0 bis 4 Std./Min. in Viertelschritten
 - **Startcheck vor dem Ausrollen:** Der Pages-Workflow prüft mit eslint (nur die Regel no-undef), ob irgendwo ein Name benutzt wird, den es nicht gibt, und bricht sonst ab. Gegenprobe: Gegen story.js aus 697e8b0 meldet er sechs Fehler (berger, U0), gegen den jetzigen Stand keinen
 - **Gefunden vom Startcheck:** `loadPlaced` rief `addPlaced` auf, das es nie gab; der Fehler wurde verschluckt, gebaute Objekte im Kreativmodus wurden nie wiederhergestellt (gespeichert wird ohnehin nur der Typ, keine Position). Die Funktion ist jetzt bewusst leer, mit Begründung im Code
