@@ -2265,10 +2265,10 @@ function toggleMap() { mapOpen = !mapOpen; if (mapOpen) { mapPanX = 0; mapPanZ =
 function drawBigMap() {
   const cv = $('bigmap'); const W = cv.width = Math.min(innerWidth - 40, 900), H = cv.height = Math.min(innerHeight - 40, 700); const c2 = cv.getContext('2d');
   const span = mapZoom; const sc = W / span; const cx0 = player.pos.x + mapPanX - span / 2, cz0 = player.pos.z + mapPanZ - span * H / W / 2; // Meter -> Pixel
-  c2.fillStyle = '#111'; c2.fillRect(0, 0, W, H); const P = (x, z) => [(x - cx0) * sc, (z - cz0) * sc];
+  c2.fillStyle = '#111'; c2.fillRect(0, 0, W, H); const P = (x, z) => [(x - cx0) * sc, (z - cz0) * sc]; drawOverview(c2, P, W, H, sc);
   for (const [, t] of TILES) { if (!t.data) continue; const [x, y] = P(t.tx * TS, t.tz * TS); if (x > W || y > H || x + TS * sc < 0 || y + TS * sc < 0) continue; c2.drawImage(t.mm || (t.mm = tileMap(t)), x, y, TS * sc, TS * sc); }
   c2.font = 'bold 11px system-ui'; c2.fillStyle = '#ddd'; const seen = new Set(); for (const r of WORLD.roads) { if (!r || !r.n || seen.has(r.n) || r.w < 8) continue; const m = r.p[Math.floor(r.p.length / 2)]; const [x, y] = P(m[0], m[1]); if (x < 0 || y < 0 || x > W || y > H) continue; seen.add(r.n); c2.fillText(r.n, x + 3, y - 3); }
-  { const M = INTERIORS && INTERIORS.metro; if (M) { c2.lineWidth = 3; for (const l of M.lines) { c2.strokeStyle = l.color || '#888'; c2.beginPath(); let f = true; for (const id of l.stops) { const s = INTERIORS.ST.get(id); if (!s) continue; const [x, y] = P(s.p[0], s.p[1]); if (f) c2.moveTo(x, y); else c2.lineTo(x, y); f = false; } c2.stroke(); }
+  { const M = INTERIORS && INTERIORS.metro; if (M) { c2.lineWidth = 3; for (const l of M.lines) drawMetroLine(c2, P, l);
       c2.font = 'bold 11px system-ui'; for (const s of M.stations) { const [x, y] = P(s.p[0], s.p[1]); if (x < -10 || y < -10 || x > W + 10 || y > H + 10) continue; c2.fillStyle = '#fff'; c2.strokeStyle = '#1e5fb4'; c2.lineWidth = 2.5; c2.beginPath(); c2.arc(x, y, 5, 0, 7); c2.fill(); c2.stroke(); if (mapZoom < 9000) c2.fillText(s.name, x + 7, y + 4); } }
     if (mapZoom < 4500) { PM_STOPS = PM_STOPS || pmStops(); c2.font = '10px system-ui'; for (const s of PM_STOPS) { const [x, y] = P(s.x, s.z); if (x < 0 || y < 0 || x > W || y > H) continue; c2.fillStyle = '#2e9c3a'; c2.fillRect(x - 3, y - 3, 6, 6); if (mapZoom < 2500 && s.n) { c2.fillStyle = '#bfe8c4'; c2.fillText(s.n, x + 5, y + 3); } } } }
   for (const c of cars) if (c.userData.police) { const [x, y] = P(c.position.x, c.position.z); c2.fillStyle = '#4f8bff'; c2.beginPath(); c2.arc(x, y, 4, 0, 7); c2.fill(); }
@@ -2924,16 +2924,25 @@ function quickSync() { for (const [o, c, show] of quickPairs) { if (c.type === '
 MENU_HOOKS.push(() => setTimeout(() => { quickSync(); MENU_TAB('schnell'); }, 0));
 // Karte im Menü: springen, U-Bahn und Bus fahren
 let pmX = 0, pmZ = 0, pmSpan = 3000; const PM_OFF = new Set(); const pmHits = [];
+// Übersicht der ganzen Stadt (data/overview.json, tools/build_overview.py): Hintergrund für Gegenden ohne geladene Kachel
+let OVERVIEW = null; fetch('data/overview.json').then(r => r.ok ? r.json() : null).then(d => { OVERVIEW = d; }).catch(() => {});
+function drawOverview(c2, P, W, H, sc) { if (!OVERVIEW) return; const vis = p => { const [x, y] = P(p[0][0], p[0][1]); return x > -3000 && y > -3000 && x < W + 3000 && y < H + 3000; };
+  const poly = (arr, col) => { c2.fillStyle = col; for (const p of arr) { if (!vis(p)) continue; c2.beginPath(); p.forEach((q, i) => { const [x, y] = P(q[0], q[1]); if (i) c2.lineTo(x, y); else c2.moveTo(x, y); }); c2.fill(); } };
+  const line = (arr, col, w) => { c2.strokeStyle = col; c2.lineWidth = w; c2.beginPath(); for (const p of arr) { if (!vis(p)) continue; p.forEach((q, i) => { const [x, y] = P(q[0], q[1]); if (i) c2.lineTo(x, y); else c2.moveTo(x, y); }); } c2.stroke(); };
+  poly(OVERVIEW.wood, '#22351f'); poly(OVERVIEW.green, '#2c4a2a'); poly(OVERVIEW.water, '#1d3d5c');
+  if (sc > 0.08) line(OVERVIEW.r3, '#3a3d44', Math.max(1, 5 * sc)); line(OVERVIEW.r2, '#55595f', Math.max(1, 8 * sc)); line(OVERVIEW.r1, '#8a8478', Math.max(1.4, 12 * sc)); c2.setLineDash([4, 3]); line(OVERVIEW.rail, '#6c6c74', 1); c2.setLineDash([]); }
+// U-Bahn-Linie: echter Streckenverlauf (Feld g aus tools/metro_geometry.py), sonst Station zu Station
+function drawMetroLine(c2, P, l) { c2.strokeStyle = l.color || '#888'; c2.beginPath(); if (l.g && l.g.length) { for (const w of l.g) w.forEach((q, i) => { const [x, y] = P(q[0], q[1]); if (i) c2.lineTo(x, y); else c2.moveTo(x, y); }); } else { let f = true; for (const id of l.stops) { const s = INTERIORS.ST.get(id); if (!s) continue; const [x, y] = P(s.p[0], s.p[1]); if (f) c2.moveTo(x, y); else c2.lineTo(x, y); f = false; } } c2.stroke(); }
 function pmCenter() { pmX = player.pos.x; pmZ = player.pos.z; }
 function pmStops() { const seen = new Map(); for (const l of BUSLINES) (l.s || []).forEach(([x, z], i) => { const k = Math.round(x / 25) + ',' + Math.round(z / 25); if (!seen.has(k)) seen.set(k, { x, z, lines: new Set(), n: '' }); const s = seen.get(k); s.lines.add(l.ref); if (!s.n && l.sn) s.n = l.sn[i] || ''; }); return [...seen.values()]; }
 let PM_STOPS = null;
 function drawPMap() {
   const cv = $('pmap'); if (!cv || !cv.clientWidth) return; const W = cv.width = cv.clientWidth, H = cv.height = cv.clientHeight; const c2 = cv.getContext('2d'); const sc = W / pmSpan; const cx0 = pmX - pmSpan / 2, cz0 = pmZ - pmSpan * H / W / 2; const P = (x, z) => [(x - cx0) * sc, (z - cz0) * sc];
-  c2.fillStyle = '#111'; c2.fillRect(0, 0, W, H); pmHits.length = 0;
+  c2.fillStyle = '#111'; c2.fillRect(0, 0, W, H); pmHits.length = 0; drawOverview(c2, P, W, H, sc);
   for (const [, t] of TILES) { if (!t.data) continue; const [x, y] = P(t.tx * TS, t.tz * TS); if (x > W || y > H || x + TS * sc < 0 || y + TS * sc < 0) continue; c2.drawImage(t.mm || (t.mm = tileMap(t)), x, y, TS * sc, TS * sc); }
   const M = INTERIORS && INTERIORS.metro;
   if (M && $('pm_u').checked) { const ST = INTERIORS.ST; c2.lineWidth = 3;
-    for (const l of M.lines) { if (PM_OFF.has(l.ref)) continue; c2.strokeStyle = l.color || '#888'; c2.beginPath(); let first = true; for (const id of l.stops) { const s = ST.get(id); if (!s) continue; const [x, y] = P(s.p[0], s.p[1]); if (first) c2.moveTo(x, y); else c2.lineTo(x, y); first = false; } c2.stroke(); }
+    for (const l of M.lines) { if (PM_OFF.has(l.ref)) continue; drawMetroLine(c2, P, l); } void ST;
     c2.font = 'bold 12px system-ui'; for (const s of M.stations) { if (s.lines.every(r => PM_OFF.has(r))) continue; const [x, y] = P(s.p[0], s.p[1]); if (x < -10 || y < -10 || x > W + 10 || y > H + 10) continue; c2.fillStyle = '#fff'; c2.strokeStyle = '#1e5fb4'; c2.lineWidth = 3; c2.beginPath(); c2.arc(x, y, 6, 0, 7); c2.fill(); c2.stroke(); if (pmSpan < 9000) { c2.fillStyle = '#fff'; c2.fillText(s.name, x + 9, y + 4); } pmHits.push({ x, y, kind: 'u', s }); } }
   if ($('pm_b').checked && pmSpan < 7000) { PM_STOPS = PM_STOPS || pmStops(); c2.font = '11px system-ui'; for (const s of PM_STOPS) { const [x, y] = P(s.x, s.z); if (x < 0 || y < 0 || x > W || y > H) continue; c2.fillStyle = '#2e9c3a'; c2.fillRect(x - 4, y - 4, 8, 8); if (pmSpan < 4500) { c2.fillStyle = '#bfe8c4'; c2.fillText((s.n ? s.n + ' · ' : '') + [...s.lines].slice(0, 4).join(' '), x + 6, y + 4); } pmHits.push({ x, y, kind: 'b', s }); } }
   const [px, py] = P(player.pos.x, player.pos.z); c2.fillStyle = '#ffd84a'; c2.beginPath(); c2.arc(px, py, 7, 0, 7); c2.fill(); c2.strokeStyle = '#000'; c2.lineWidth = 2; c2.stroke();

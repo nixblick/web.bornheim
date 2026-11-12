@@ -2,6 +2,10 @@
 
 ## 2026-11-12
 
+- **Karte zeigt die ganze Stadt:** Übersicht aus allen Kacheln (Straßen in drei Stufen, Gleise, Main und Gewässer, Parks und Wald; data/overview.json, tools/build_overview.py) als Hintergrund für Menükarte und große Karte, auch dort, wo noch nichts geladen ist
+- **U-Bahn mit echtem Streckenverlauf** statt gerader Linien von Station zu Station (OSM-Routen, tools/metro_geometry.py)
+- **Rundgang-Modus menue** (tools/rundgang.mjs): Menü öffnen, Schnell, Karte, Bus, Statistik, große Karte fotografieren
+- Nachttest 12.11. 22:25 (vor dieser Änderung): Menü und Karten ohne Fehler, U-Bahn-Daten geladen (9 Linien)
 - **Polizeihubschrauber (#63):** ab 4 Sternen kreist ein blau-silberner Hubschrauber über dem Spieler (bei 5 Sternen zwei), nachts mit Suchlicht; steht man bei 5 Sternen auf einem Dach, zielt der Scharfschütze (roter Laser) und schießt nach 8 s alle 2,5 s, Treffer 45 Leben, Trefferquote steigt; abschießbar (450 Treffpunkte), Abschuss = +1 Stern, Ersatz nach 30 s; aus bei Polizei aus, Kreativmodus, Innenräumen und 0–3 Sternen. Ungetestet im Spiel, Test im Nachtfenster
 - **Alle 866 Bushalte benannt:** die 95 ohne Namen in den Kacheln per Overpass (nächster OSM-Halt im Umkreis 120 m) nachbenannt
 - U6/U7 geprüft: Daten stimmen mit traffiQ überein (U6 Hausen–Ostbahnhof, U7 Heerstraße–Enkheim), keine Änderung
