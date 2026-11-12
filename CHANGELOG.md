@@ -3,6 +3,36 @@
 ## 2026-11-12
 
 - **Wahrzeichen nach Wikipedia (#73):** Alte Oper (Mittelrisalit mit Inschrift, Pegasus, Goethe und Mozart, Kupferdächer), Römer (drei Stufengiebel, Balkon, Uhr), Kaiserdom (Westturm 95 m mit Kuppelhelm), Paulskirche (Oval, Turm im Süden, flaches Kupferdach), Commerzbank Tower, Main Tower, Westend Tower, Eurotower und Trianon als eigene Modelle (wahrzeichen.js) statt OSM-Klotz; nur in Spielernähe gebaut, nachts angestrahlt. Ungetestet (Test im Nachtfenster)
+- **S-Bahn S1–S9** (OSM-Routen, Farben aus dem OSM-Tag, echter Streckenverlauf; tools/build_sbahn.py) im selben Netz wie die U-Bahn: Umsteigen an gemeinsamen Halten (Hauptwache, Konstablerwache, Hauptbahnhof, Südbahnhof …), Fahrt über Karte oder F an der Haltestelle; S-Bahn-Halte mit grünem S am Mast und Namensschild, ohne Bahnsteig
+- **Netz auf das Spielgebiet zugeschnitten:** 18 Linien, 105 Stationen; Halte ohne Kachel (Hohemark, Oberursel, Bad Homburg, Wiesbaden …) fallen weg, damit keine Fahrt im Leeren endet
+- Oberirdische Haltestellen werden vom Fahrbahnrand auf den Gehweg geschoben
+- Nachttest 12.11. 23:05: Fahrten Schweizer Platz, Südbahnhof, Lokalbahnhof, Höchst samt Aussteigen ohne Fehler, kein Schwimmen, Höhe = Gelände
+- **Frischlufteulen im Spiel (#61, erster Kunde):** Strecken nur aus dem Endpunkt frischlufteulen.de/api/spiel/strecken.json, keine ausgedachten Strecken; solange dort nichts freigegeben ist, bleibt alles aus (Datenwunsch: frischlufteulen.de-Ticket). Eine Strecke mit „Marathon“ im Namen wird die Marathon-Mission
+  - Litfaßsäulen mit gezeichnetem Eulen-Plakat an bis zu vier Bushalten in der Nähe; F startet den Eulen-Lauf
+  - Eulen-Marathon: grüne Säule am Start der Strecke, Wegpunkt-Ringe, Zeit, nur zu Fuß (Auto, Rad, Bahn oder Sprung = disqualifiziert), alle fünf Wegpunkte Verpflegung mit Speichern und +30 Leben
+  - Ziel Festhalle: grüner Zielbogen, 40 m roter Teppich, jubelnde Zuschauer, Konfetti; +10.000 €, volles Leben, Erfolg „Marathon gefinisht“ mit Zeit; Link zur Strecke mit ?von=bornheim
+  - Pausemenü → Spiel: „Trainingspläne auf frischlufteulen.de“
+- **Karte zeigt die ganze Stadt:** Übersicht aus allen Kacheln (Straßen in drei Stufen, Gleise, Main und Gewässer, Parks und Wald; data/overview.json, tools/build_overview.py) als Hintergrund für Menükarte und große Karte, auch dort, wo noch nichts geladen ist
+- **U-Bahn mit echtem Streckenverlauf** statt gerader Linien von Station zu Station (OSM-Routen, tools/metro_geometry.py)
+- **Rundgang-Modus menue** (tools/rundgang.mjs): Menü öffnen, Schnell, Karte, Bus, Statistik, große Karte fotografieren
+- Nachttest 12.11. 22:25 (vor dieser Änderung): Menü und Karten ohne Fehler, U-Bahn-Daten geladen (9 Linien)
+- Zäune im Sparmodus: Zäune, Mauern und Hecken werden in einem eigenen Bauschritt gebaut, der auch im Sparmodus läuft. Vorher fehlten dort Bild und Kollision (Selbsttest „Zäune halten Autos auf“ war rot). Getestet (Nachttest 12.11.)
+- Sternesystem wie GTA: Jede Tat hat eine Obergrenze (Passanten höchstens 2 Sterne, Polizisten 3–4, Hubschrauber 5), höchstens ein Stern mehr alle 8 s. Einen Passanten schlagen gibt 1 Stern statt 2. Getestet (Nachttest 12.11.)
+- Polizeihubschrauber: Es kommt nur noch einer, und zu Fuß kann man steil nach oben zielen (auch vom Dach), um sich zu wehren. Getestet (Nachttest 12.11.)
+- Innenräume und U-Bahn-Stationen: Die graue Ersatz-Bodenplatte stand nicht mehr hüfthoch im Raum. Getestet (Nachttest 12.11.)
+- Keine einheitliche Hausnummer mehr an allen Häusern (stand in der geteilten Erdgeschoss-Textur). Getestet (Nachttest 12.11.)
+- Mehr spontane Demos mit zehn Themen (Fridays for Future, Klimastreik, Schulen sanieren, marode Turnhallen, für den Bürgermeister, autofreie Innenstadt, gegen Nazis, gegen AfD, für Demokratie, gegen Rassismus): eigene Transparente, Schilder und Sprechchöre, Polizei begleitet nur und greift nie an. Getestet (Nachttest 12.11.)
+- Kreativmodus: Eine gesetzte Demo kommt ohne Polizei, nur mit Leuten. Getestet (Nachttest 12.11.)
+- Gleise: U-Bahn oberirdisch nicht mehr gezeichnet, Schienen folgen dem Gelände in 4-m-Stücken (wirkten unterbrochen), keine Bäume auf sichtbaren Gleisen (Ludwig-Landmann-Straße). Getestet (Nachttest 12.11.)
+- Blinker sitzen an den echten Scheinwerfern und Rückleuchten statt neben dem Auto. Getestet (Nachttest 12.11.)
+- Stadtmöbel nie auf der Fahrbahn: Fahrradständer, Laternen, Mülleimer, Bänke und Automaten werden an den Rand geschoben (rund 4400 lagen auf der Straße). Roller nicht mehr auf Nachbarstraßen. Getestet (Nachttest 12.11.)
+- Frankfurter Sparkasse (auch 1822) immer rot statt blau. Getestet (Nachttest 12.11.)
+- Motorradhelm sitzt am Kopfknochen und wandert mit, wenn der Fahrer sich vorbeugt. Getestet (Nachttest 12.11.)
+- Garagentore flackern nicht mehr (lagen gleich weit vor der Wand wie das Erdgeschossband). Graffiti wie auf den Fotos: SGE und „Stadt für alle“ in vier Varianten. Getestet (Nachttest 12.11.)
+- Hausnummern, Türen und Schaufenster im Erdgeschoss von außen nicht mehr spiegelverkehrt: Die Eckreihenfolge folgt jetzt der Umrissrichtung (betraf rund zwei Drittel der Häuser). Getestet (Nachttest 12.11.)
+- Bushaltestellen nicht mehr auf der Fahrbahn (Reichsburgstraße): Mast an den Rand geschoben, Wartehäuschen auf der straßenabgewandten Seite. Getestet (Nachttest 12.11.)
+- U-Bahn-Eingänge nicht mehr auf der Fahrbahn (#55): doppelt eingetragene OSM-Punkte unter 6 m zusammengelegt, Portal mindestens 3,2 m vom Fahrbahnrand. OSM-Zäune bekommen an Fahrbahnen eine Lücke in Straßenbreite (1297 von 9552 lagen mit einem Punkt auf der Straße). Getestet (Nachttest 12.11.)
+- **Polizeihubschrauber (#63):** ab 4 Sternen kreist ein blau-silberner Hubschrauber über dem Spieler (bei 5 Sternen zwei), nachts mit Suchlicht; steht man bei 5 Sternen auf einem Dach, zielt der Scharfschütze (roter Laser) und schießt nach 8 s alle 2,5 s, Treffer 45 Leben, Trefferquote steigt; abschießbar (450 Treffpunkte), Abschuss = +1 Stern, Ersatz nach 30 s; aus bei Polizei aus, Kreativmodus, Innenräumen und 0–3 Sternen. Ungetestet im Spiel, Test im Nachtfenster
 - **Alle 866 Bushalte benannt:** die 95 ohne Namen in den Kacheln per Overpass (nächster OSM-Halt im Umkreis 120 m) nachbenannt
 - U6/U7 geprüft: Daten stimmen mit traffiQ überein (U6 Hausen–Ostbahnhof, U7 Heerstraße–Enkheim), keine Änderung
 - **Friedhöfe (#57):** Grabfelder auf allen Friedhofsflächen, ausgerichtet an der längsten Kante: Grabeinfassungen mit Bepflanzung, stehende Steine, Holzkreuze und Liegeplatten, Wege alle fünf Reihen und neun Spalten, Abstand zu Rand, Häusern und Wegen; höchstens 2400 Gräber je Kachel. Ungetestet im Spiel, Test im Nachtfenster
@@ -145,6 +175,9 @@
 - **Uhrtürmchen** auf der Berger Straße als Wahrzeichen (`landmarks.js`): Sandsteinsockel, Gusssäule, vier Zifferblätter mit der echten Uhrzeit (einmal pro Minute neu gezeichnet), grünes Kupferdach mit goldener Spitze, vier Laternen. Wird erst im Umkreis von 450 m gebaut und ab 600 m wieder abgebaut, rund 1.500 Dreiecke
 - Testbefehl für die Nacht (22–6 Uhr, einzeln): Spiel laden, `await import('/tools/selftest.js'); await T.checks()`, dann zum Uhrtürmchen und in eine U-Bahn-Station (F am Eingang), Bildrate und GPU-Texturen vorher/nachher vergleichen
 - README verweist für Tests auf `CLAUDE.md` statt auf den nicht mehr vorhandenen Skill `spieltest`
+- Unsichtbare Wände an Zäunen behoben: Bild und Kollision kommen aus einer Quelle (`barrierSegs`), Hindernisse werden erst beim Bau der Kachel eingetragen und mit ihr wieder entfernt. Zäune in Stücken bis 4 m auf dem Gelände statt langer Kästen über Kuppen, erfundene Zäune (Schulen, Kitas, Bolzplätze, Kleingärten) mit 3 m Lücke an jedem kreuzenden Weg, Spielplätze ohne Zaun. Getestet (Nachttest 12.11.)
+- Fehlerbericht per Mail geht an service@creavisions.de
+
 - Regel `CLAUDE.md`: Spieltests im Browser nur von 22 bis 6 Uhr, immer nur einer zur selben Zeit (Notebook-Absturz durch Testlast neben anderen Sitzungen)
 - Fehler melden ohne GitHub: Bildschirmfoto des Spiels (Vorschau, abwählbar); „Teilen“ öffnet am Handy das Teilen-Menü (WhatsApp, Signal, Mail) mit Text und Bild, „Per E-Mail schicken“ lädt das Bild herunter und öffnet die Mail mit Anhang-Hinweis; GitHub nur noch als Link für Leute mit Konto, das Bild liegt dann in der Zwischenablage
 - Getestet (Headless-Chrome): `forceContextLoss` zeigt den Hinweis und speichert beide Fehler; nach Neuladen stehen sie im Bericht unter „Vorige Sitzung“, das Bildschirmfoto ist nicht schwarz

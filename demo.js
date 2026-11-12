@@ -33,6 +33,20 @@ export function initDemo(X, W) {
   // ---------- Schilder und Transparente ----------
   const SLOGANS = ['Es gibt keinen Planet B', 'Miete runter – Bäume rauf', 'Park statt Penthouse', '38 °C und ihr baut Glas?', 'Wohnen ist kein Luxus', 'Wir sind die Hitze', 'Lieber Schatten als Rendite', 'Unsere Zukunft ist kein Investment', 'Luxustürme? Nein danke', 'Erst die Bäume, dann wir?', '1,5 Grad statt 25 €/m²', 'Oma gegen Abriss', 'Die Erde kocht – ihr kassiert', 'Hitzefrei für alle'];
   const SCHOOL_SLOGANS = ['34 Grad im Klassenraum', 'Bildung statt Bonzen', 'Freitag ist Pflicht', 'Unsere Turnhalle ist seit 2 Jahren zu', 'Verweis? Gern geschehen', 'Saniert die Schulen, nicht die Banken', 'Ich schwänze für eure Enkel', 'Klimakrise ist auch Schulstoff', 'Mehr Lehrer, weniger Polizei', 'Wir sind nicht leise'];
+  // Friedliche Themen-Demos, oft von Schüler:innen (André 12.11.2026): eigenes Transparent, eigene Schilder und Sprechchöre.
+  // Polizei begleitet nur (maxStage 1), greift nie an, kein schwarzer Block.
+  const THEMEN = [
+    { b: 'FRIDAYS FOR FUTURE', st: 1, s: ['There is no Planet B', 'Klimaschutz jetzt!', 'Schule schwänzen fürs Klima', 'Ihr habt es versaut', '1,5 Grad!'], c: ['Wir sind hier, wir sind laut, weil ihr uns die Zukunft klaut!', 'Hoch die Hände, Klimawende!', 'What do we want? Climate justice!'] },
+    { b: 'KLIMASTREIK', st: 0, s: ['Klimastreik!', 'Kohle stoppen', 'Bus und Bahn für alle', 'Klimagerechtigkeit'], c: ['Hoch die Hände, Klimawende!', 'Wir streiken, bis ihr handelt!', 'Klimaschutz statt Kohleschmutz!'] },
+    { b: 'SCHULEN SANIEREN – JETZT!', st: 1, s: ['Unser Klo ist seit Monaten kaputt', 'Saniert die Schulen, nicht die Banken', '34 Grad im Klassenraum', 'Schimmel ist kein Lehrplan'], c: ['Bildung ist kein Luxus!', 'Saniert die Schulen, jetzt!', 'Wir lernen hier, nicht im Ruin!'] },
+    { b: 'MARODE TURNHALLEN? NICHT MIT UNS!', st: 1, s: ['Unsere Turnhalle ist seit 2 Jahren zu', 'Sport braucht Hallen', 'Turnhalle statt Ruine', 'Wir wollen Sport!'], c: ['Wir wollen Sport! Gebt uns die Halle!', 'Turnhalle auf, Schule rauf!'] },
+    { b: 'FÜR UNSEREN BÜRGERMEISTER', st: 0, s: ['Danke, Bürgermeister!', 'Frankfurt hält zusammen', 'Gemeinsam für die Stadt', 'Weiter so!'], c: ['Frankfurt, wir sind dabei!', 'Gemeinsam für unsere Stadt!'] },
+    { b: 'AUTOFREIE INNENSTADT', st: 0, s: ['Straßen für Menschen', 'Platz da!', 'Rad statt Stau', 'Zeil autofrei', 'Kinder statt Karren'], c: ['Wem gehört die Stadt? Uns gehört die Stadt!', 'Platz für Menschen, nicht für Blech!'] },
+    { b: 'GEGEN NAZIS', st: 1, s: ['Nazis raus!', 'Nie wieder ist jetzt', 'Kein Platz für Nazis', 'Frankfurt bleibt bunt'], c: ['Nie wieder Faschismus!', 'Alerta, alerta, antifascista!', 'Nazis raus!'] },
+    { b: 'GEGEN DIE AFD', st: 0, s: ['AfD ist keine Alternative', 'Hass ist keine Meinung', 'Nicht mit uns', 'Brandmauer halten'], c: ['Ganz Frankfurt hasst die AfD!', 'Nie wieder ist jetzt!'] },
+    { b: 'FÜR DEMOKRATIE', st: 0, s: ['Demokratie verteidigen', 'Wir sind die Brandmauer', 'Vielfalt statt Einfalt', 'Grundgesetz Art. 1'], c: ['Wir sind mehr!', 'Demokratie, wir sind dabei!', 'Hand in Hand für Demokratie!'] },
+    { b: 'GEGEN RASSISMUS', st: 1, s: ['Kein Mensch ist illegal', 'Rassismus tötet', 'Wir sind alle Frankfurt', 'Say their names'], c: ['Say it loud, say it clear, refugees are welcome here!', 'Gegen Rassismus, für Solidarität!'] },
+  ];
   const BANNERS = ['BORNHEIM BLEIBT', 'PARK BLEIBT · MIETE RUNTER', 'KLIMA GERECHT · WOHNEN FÜR ALLE'];
   const texCache = {};
   function signTex(text, bg) { const key = text + bg; if (texCache[key]) return texCache[key]; const t = canvasTex(256, 168, (ctx, w, h) => { ctx.fillStyle = bg; ctx.fillRect(0, 0, w, h); ctx.strokeStyle = '#00000022'; ctx.lineWidth = 6; ctx.strokeRect(3, 3, w - 6, h - 6); ctx.fillStyle = bg === '#202020' ? '#ffe14d' : '#1a1a1a'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
@@ -52,7 +66,7 @@ export function initDemo(X, W) {
     const name = opt.model || pick(YOUNG); const h = makeHuman(/woman/.test(name), { model: name }); h.position.set(x, TH(x, z), z);
     Object.assign(h.userData, { road: pick(pedRoads()), seg: 0, dir: 1, side: 1, speed: 1.4, hp: 100, state: 'demo', t: Math.random() * 10, young: true, jit: [rnd(-0.35, 0.35), rnd(-0.4, 0.4)] });
     if (opt.student) { h.scale.multiplyScalar(rnd(0.86, 0.94)); const bp = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.34, 0.13), new THREE.MeshLambertMaterial({ color: pick([0xd83a3a, 0x2d6fd8, 0x2fbf6f, 0x222222, 0xf2c418, 0x9b4f96]) })); bp.position.set(0, 1.22, -0.17); h.add(bp); h.userData.student = true; }
-    if (opt.black) { blackClothes(h); h.userData.black = true; } else if (Math.random() < (opt.signs ?? 0.42)) addSign(h, opt.student && Math.random() < 0.7 ? pick(SCHOOL_SLOGANS) : null);
+    if (opt.black) { blackClothes(h); h.userData.black = true; } else if (Math.random() < (opt.signs ?? 0.42)) addSign(h, opt.slogans && Math.random() < 0.85 ? pick(opt.slogans) : opt.student && Math.random() < 0.7 ? pick(SCHOOL_SLOGANS) : null);
     scene.add(h); peds.push(h); shootables.push(h); return h; }
   const batonGeo = new THREE.CylinderGeometry(0.022, 0.022, 0.62, 8); batonGeo.rotateX(Math.PI / 2); batonGeo.translate(0, 0, -0.22); const batonMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.6 });
   const shieldMat = new THREE.MeshStandardMaterial({ color: 0xbfd4e6, roughness: 0.15, metalness: 0.1, transparent: true, opacity: 0.55 }); const shieldGeo = new THREE.BoxGeometry(0.6, 1.05, 0.04);
@@ -105,7 +119,7 @@ export function initDemo(X, W) {
     // Treffer entlang der Bahn
     for (let t = 0.05; t < 1.5; t += 0.06) { const px = o.x + d.x * sp * t, py = o.y + d.y * sp * t - 4.9 * t * t, pz = o.z + d.z * sp * t; const gy = TH(px, pz); if (X.douse && py < gy + 3.5) X.douse(px, py, pz, dt * 0.09); if (py < gy || solidAt(px, pz) >= 0) { if (Math.random() < 0.3) W.puff(new V3(px, Math.max(py, gy) + 0.3, pz), 0xeef6ff, 0.8, 0.8, new V3(rnd(-2, 2), rnd(1, 3), rnd(-2, 2)), 2.5, 0.55); break; }
       for (const p of peds) { const pu = p.userData; if (pu.state === 'dead' || pu === u.crew) continue; const dx = p.position.x - px, dz = p.position.z - pz; if (dx * dx + dz * dz > 1.7 || py < p.position.y - 0.2 || py > p.position.y + 2.3) continue; if (pu.cop && c !== player.car) continue;
-        moveWithCollision(p.position, d.x * 7 * dt, d.z * 7 * dt, 0.3); if (pu.state !== 'stunned' && pu.state !== 'arrested') { W.stun(p, 'water', rnd(2.2, 3.4)); pu.prevState = pu.cop ? pu.prevState : 'flee'; if (pu.demo) leaveDemo(p); if (c === player.car) { if (pu.cop) raiseWanted(0.5); emit(pu.cop ? 'waterCop' : 'waterPed', p.position, { ped: p }); } } }
+        moveWithCollision(p.position, d.x * 7 * dt, d.z * 7 * dt, 0.3); if (pu.state !== 'stunned' && pu.state !== 'arrested') { W.stun(p, 'water', rnd(2.2, 3.4)); pu.prevState = pu.cop ? pu.prevState : 'flee'; if (pu.demo) leaveDemo(p); if (c === player.car) { if (pu.cop) raiseWanted(0.5, 2); emit(pu.cop ? 'waterCop' : 'waterPed', p.position, { ped: p }); } } }
       if (c !== player.car && !player.car) { const dx = player.pos.x - px, dz = player.pos.z - pz; if (dx * dx + dz * dz < 1.8 && py > player.pos.y - 0.2 && py < player.pos.y + 2.2) { moveWithCollision(player.pos, d.x * 6.5 * dt, d.z * 6.5 * dt, 0.35); X.hurtPlayer('water', 7 * dt); } }
       for (const o2 of cars) { if (o2 === c) continue; const dx = o2.position.x - px, dz = o2.position.z - pz; if (dx * dx + dz * dz < 4 && py < o2.position.y + 1.8) { o2.position.x += d.x * 1.2 * dt; o2.position.z += d.z * 1.2 * dt; } } }
     jetSound(true, clamp(0.5 - c.position.distanceTo(player.pos) / 160, 0.05, 0.5));
@@ -125,14 +139,14 @@ export function initDemo(X, W) {
   const COPSAY = { escort: 'Hier spricht die Polizei. Wir begleiten Ihre Versammlung. Bitte bleiben Sie auf der Fahrbahn.', line: 'Hier spricht die Polizei. Bleiben Sie stehen. Die Strecke ist gesperrt.', kessel: 'Achtung, Achtung. Sie sind eingeschlossen. Verhalten Sie sich ruhig.', cannon: 'Achtung. Wir setzen jetzt Wasserwerfer ein. Verlassen Sie sofort den Bereich.', raeumung: 'Die Versammlung ist aufgelöst. Wir räumen jetzt.' };
   function spawnDemo(o = {}) {
     const n = Math.round((o.n ?? 20) * clamp(opts.peds ?? 1, 0.5, 1.4)); const x = o.x ?? player.pos.x, z = o.z ?? player.pos.z;
-    const d = { id: Math.random(), members: [], state: o.leadPlayer ? 'lead' : (o.gather ? 'gather' : 'march'), cx: x, cz: z, tension: o.tension ?? 0.05, energy: 0.5, age: 0, chantT: 2, max: Math.round((o.max ?? 34) * clamp(opts.peds ?? 1, 0.5, 1.4)), leadPlayer: !!o.leadPlayer, story: !!o.story, theme: o.banner || pick(BANNERS),
+    const d = { id: Math.random(), members: [], state: o.leadPlayer ? 'lead' : (o.gather ? 'gather' : 'march'), cx: x, cz: z, tension: o.tension ?? 0.05, energy: 0.5, age: 0, chantT: 2, max: Math.round((o.max ?? 34) * clamp(opts.peds ?? 1, 0.5, 1.4)), leadPlayer: !!o.leadPlayer, story: !!o.story, theme: o.banner || pick(BANNERS), slogans: o.slogans || null, chants: o.chants || null, peaceful: !!o.peaceful,
       pol: { stage: 0, cops: [], cars: [], cannon: null, t: 0, calmT: 0, lineS: null, lineOpened: false, cannonT: 0 }, maxStage: o.maxStage ?? 5, blockAt: o.blockAt ?? null, speed: o.speed ?? 1.25, quietT: 0, joinT: 0, playerT: 0, s: 0, result: null, onEnd: o.onEnd, noPolice: !!o.noPolice, kesselR: 6, label: o.label || '' };
     if (o.dest) { const r = route(x, z, o.dest[0], o.dest[1]); if (r && r.length > 1) { d.trail = trailFrom(r); d.total = d.trail[d.trail.length - 1].s; } }
     if (!d.trail) { d.trail = [{ x, z, s: 0 }]; d.total = 0; }
     if (d.leadPlayer) { d.trail = [{ x: player.pos.x, z: player.pos.z, s: 0 }]; d.total = 0; }
     for (const h of o.members || []) { h.userData.state = 'demo'; h.userData.demo = d; h.userData.jit = h.userData.jit || [rnd(-0.35, 0.35), rnd(-0.4, 0.4)]; if (!h.userData.sign && Math.random() < 0.35) addSign(h); d.members.push(h); }
-    const nBlack = o.black ?? Math.round(n * 0.1);
-    for (let i = d.members.length; i < n; i++) { const a = rnd(0, 6.28), r = rnd(1, 6); const [qx, qz] = freeSpot(x + Math.cos(a) * r, z + Math.sin(a) * r, 1.5); const h = makeMember(qx, qz, { black: i < nBlack + (o.members || []).length && i >= (o.members || []).length, student: o.student }); h.userData.demo = d; d.members.push(h); }
+    const nBlack = o.peaceful ? 0 : (o.black ?? Math.round(n * 0.1));
+    for (let i = d.members.length; i < n; i++) { const a = rnd(0, 6.28), r = rnd(1, 6); const [qx, qz] = freeSpot(x + Math.cos(a) * r, z + Math.sin(a) * r, 1.5); const h = makeMember(qx, qz, { slogans: o.slogans, signs: o.slogans ? 0.6 : undefined, black: i < nBlack + (o.members || []).length && i >= (o.members || []).length, student: o.student }); h.userData.demo = d; d.members.push(h); }
     d.student = !!o.student; d.mob = !!o.mob;
     d.banner = bannerMesh(d.theme); demos.push(d); emit('demoStart', new V3(x, 0, z), { demo: d }); return d;
   }
@@ -283,7 +297,7 @@ export function initDemo(X, W) {
       d.quietT += dt; const st = d.pol.stage; const atLine = d.state === 'halt' || (d.leadPlayer && st === 2 && !d.pol.lineOpened); d.tension += dt * (atLine ? 0.012 : d.state === 'kessel' ? 0.008 : st >= 1 ? 0.0012 : 0); if (d.quietT > 10 && d.state !== 'kessel' && !atLine) d.tension -= dt * 0.006; d.tension = clamp(d.tension, 0, 1.2); d.energy = clamp(d.energy - dt * 0.006, 0, 1);
       if (d.state === 'march' || d.state === 'lead' || d.state === 'halt') { d.joinT -= dt; if (d.joinT <= 0 && d.members.length < d.max * (0.6 + d.energy * 0.4)) { d.joinT = rnd(3, 7) / (0.3 + d.energy); arrive(d); } }
       // Sprechchöre
-      d.chantT -= dt; d.chantShow = (d.chantShow || 0) - dt; if (d.chantT <= 0 && d.members.length >= 3) { d.chantT = rnd(7, 12); const list = CHANTS[d.state === 'kessel' ? 'kessel' : d.state === 'halt' ? 'halt' : d.state === 'rally' ? 'rally' : 'march']; const tx = d.tension > 0.5 && Math.random() < 0.4 ? 'Keine Gewalt!' : pick(list); showChant(d, tx); const dd = Math.hypot(player.pos.x - d.cx, player.pos.z - d.cz); if (dd < 55) say(tx, (1 - dd / 70) * 0.9, rnd(1.0, 1.3), 1.08); }
+      d.chantT -= dt; d.chantShow = (d.chantShow || 0) - dt; if (d.chantT <= 0 && d.members.length >= 3) { d.chantT = rnd(7, 12); const list = CHANTS[d.state === 'kessel' ? 'kessel' : d.state === 'halt' ? 'halt' : d.state === 'rally' ? 'rally' : 'march']; const tx = d.tension > 0.5 && Math.random() < 0.4 ? 'Keine Gewalt!' : pick(d.chants && (d.state === 'march' || d.state === 'gather' || d.state === 'rally') ? d.chants : list); showChant(d, tx); const dd = Math.hypot(player.pos.x - d.cx, player.pos.z - d.cz); if (dd < 55) say(tx, (1 - dd / 70) * 0.9, rnd(1.0, 1.3), 1.08); }
       const dd = Math.hypot(player.pos.x - d.cx, player.pos.z - d.cz); const vol = clamp(1 - dd / 110, 0, 1) * Math.min(1, d.members.length / 16); if (vol > crowdVol) { crowdVol = vol; crowdE = d.energy; }
       // Spieler läuft mit
       if (dd < 9 + Math.sqrt(d.members.length) && !player.car) { d.playerT += dt; if (d.playerT > 18 && !d.joinedSent) { d.joinedSent = true; emit('joinedDemo', player.pos, { demo: d }); addRep('kollektiv', 2); } }
@@ -294,19 +308,19 @@ export function initDemo(X, W) {
     crowdSound(crowdVol, crowdE); crowdBeats(dt, crowdVol, crowdE); placeChant();
     updateFollowers(dt); updateArrested(dt); updateJet(dt); playerCannon(dt);
     // Spontane Versammlungen in der Hitze des Tages
-    if (opts.demos !== false && !X.creative.on && !demos.some(d => !d.result) && !X.storyBusy()) { spontT -= dt; if (spontT <= 0) { spontT = rnd(240, 420); if (world.hour > 9 && world.hour < 21) spontaneous(); } }
+    if (opts.demos !== false && !X.creative.on && demos.filter(d => !d.result).length < 2 && !X.storyBusy()) { spontT -= dt; if (spontT <= 0) { spontT = rnd(120, 240); /* mehr Demos in der Stadt (André 12.11.2026) */ if (world.hour > 9 && world.hour < 21) spontaneous(); } }
   }
   function arrive(d) { // Neue Leute kommen aus einer Seitenstraße dazu
     const a = rnd(0, 6.28); const r = rnd(35, 55); let [x, z] = [d.cx + Math.cos(a) * r, d.cz + Math.sin(a) * r]; if (solidAt(x, z) >= 0) { const rp = X.randomRoadPoint(pick(pedRoads())); if (Math.hypot(rp.x - d.cx, rp.z - d.cz) > 120) return; x = rp.x; z = rp.z; }
-    const h = makeMember(x, z, { black: Math.random() < (d.mob ? 0.2 : 0.08), student: d.student && Math.random() < 0.8 }); h.userData.demo = d; d.members.push(h); }
+    const h = makeMember(x, z, { slogans: d.slogans, signs: d.slogans ? 0.6 : undefined, black: !d.peaceful && Math.random() < (d.mob ? 0.2 : 0.08), student: d.student && Math.random() < 0.8 }); h.userData.demo = d; d.members.push(h); }
   function updateArrested(dt) { for (let i = peds.length - 1; i >= 0; i--) { const h = peds[i], u = h.userData; if (u.state !== 'arrested') continue; u.arrT += dt; if (u.mixer && !u.lod) { u.mixer.update(dt); } if (u.arrT > 9 && h.position.distanceTo(player.pos) > 12) removePed(h); else if (u.arrT > 30) removePed(h); } }
 
   // ---------- Spontane Demo und Leute sammeln (Taste G) ----------
-  function spontaneous(at) {
+  function spontaneous(at, o = {}) { /* o.noPolice: Kreativmodus, nur Leute (André 12.11.2026) */
     let p = at; if (!p) { for (let k = 0; k < 30; k++) { const rp = X.randomRoadPoint(pick(pedRoads().filter(r => r.w >= 6))); const dd = Math.hypot(rp.x - player.pos.x, rp.z - player.pos.z); if (dd > 90 && dd < 200) { p = [rp.x, rp.z]; break; } } } if (!p) return null;
     let goal = null; for (let k = 0; k < 30; k++) { const rp = X.randomRoadPoint(pick(pedRoads().filter(r => r.w >= 7))); const dd = Math.hypot(rp.x - p[0], rp.z - p[1]); if (dd > 260 && dd < 520) { goal = [rp.x, rp.z]; break; } }
-    const d = spawnDemo({ x: p[0], z: p[1], n: 6, gather: true, max: 30 }); d.goal = goal; d.joinT = 1; d.energy = 0.7; const st = X.streetAt(p[0], p[1]);
-    post('kollektiv', `Spontandemo ${st ? 'in der ' + st : 'in Bornheim'}! ${world.hour > 11 && world.hour < 19 ? '38 Grad und die Stadt baut Parkplätze. ' : ''}Kommt alle! #Hitzefrei`, Math.round(rnd(300, 1200))); return d;
+    const th = o.thema === false ? null : pick(THEMEN); const d = spawnDemo(Object.assign({ x: p[0], z: p[1], n: 6, gather: true, max: 30, noPolice: !!o.noPolice }, th ? { banner: th.b, slogans: th.s, chants: th.c, peaceful: true, maxStage: 1, student: !!th.st, tension: 0 } : {})); d.goal = goal; d.joinT = 1; d.energy = 0.7; const st = X.streetAt(p[0], p[1]);
+    post('kollektiv', th ? `${th.st ? 'Schüler:innen-Demo' : 'Spontandemo'} „${th.b}“ ${st ? 'in der ' + st : 'in Frankfurt'}! Kommt alle, friedlich und laut.` : `Spontandemo ${st ? 'in der ' + st : 'in Bornheim'}! ${world.hour > 11 && world.hour < 19 ? '38 Grad und die Stadt baut Parkplätze. ' : ''}Kommt alle! #Hitzefrei`, Math.round(rnd(300, 1200))); return d;
   }
   function rally() {
     if (X.onG && X.onG()) return;
@@ -331,7 +345,7 @@ export function initDemo(X, W) {
 
   // ---------- Wasserwerfer selbst fahren ----------
   let cannonTrig = false; function carTrigger(on) { cannonTrig = on; }
-  function playerCannon(dt) { const c = player.car; updateFilm(dt); if (!c || !c.userData.cannon) return; const u = c.userData; if (!u.stolen) { u.stolen = true; if (u.fireTruck) { raiseWanted(1); post('feuerwehr', 'Unbekannte haben eines unserer Löschfahrzeuge entwendet. Bitte melden Sie Hinweise.', 900); } else { raiseWanted(2); post('presse', 'Unbekannte entwenden Wasserwerfer der Polizei. Präsidium: „Sehr unangenehm."', 6200); } emit('cannonStolen', c.position, { car: c }); }
+  function playerCannon(dt) { const c = player.car; updateFilm(dt); if (!c || !c.userData.cannon) return; const u = c.userData; if (!u.stolen) { u.stolen = true; if (u.fireTruck) { raiseWanted(1, 2); post('feuerwehr', 'Unbekannte haben eines unserer Löschfahrzeuge entwendet. Bitte melden Sie Hinweise.', 900); } else { raiseWanted(1, 3); post('presse', 'Unbekannte entwenden Wasserwerfer der Polizei. Präsidium: „Sehr unangenehm."', 6200); } emit('cannonStolen', c.position, { car: c }); }
     u.turret.rotation.y = lerpAngle(u.turret.rotation.y, camYaw.v - u.heading, Math.min(1, dt * 6)); u.pitch.rotation.x += (clamp(-camPitch.v * 0.9 + 0.12, -0.6, 0.5) - u.pitch.rotation.x) * Math.min(1, dt * 6);
     if (cannonTrig) cannonSpray(c, dt); else u.tank = Math.min(100, u.tank + dt * 2); }
 
