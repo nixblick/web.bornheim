@@ -81,7 +81,7 @@ export function initInteriors(X, W, D, SH) {
   const SIZE = { super: [12, 8, 3.6], kiosk: [3.5, 3, 3], food: [6, 4.5, 3.2], bakery: [4.5, 3.5, 3.1], pharmacy: [5, 4, 3.2], hardware: [11, 8, 4.2], sports: [7, 5, 3.4] };
   const PROD = [0xd94b3b, 0x3f8fd2, 0xf2c94c, 0x5cb85c, 0xe67e22, 0x9b59b6, 0xecf0f1, 0x1abc9c, 0x8e5a3c];
   function shop(s, door) {
-    const [W2, D2, H] = SIZE[s.k] || SIZE.food; const R = room('shop', W2, D2, H, { floorTex: tileTex('#d9d4c8', '#c4bdae'), wallCol: s.k === 'pharmacy' ? 0xe8f4ea : 0xf2efe6 });
+    const [W2, D2, H] = SIZE[s.k] || SIZE.food; const R = room('shop', W2, D2, H, { floorTex: tileTex('#d9d4c8', '#c4bdae'), wallCol: s.k === 'pharmacy' ? 0xe8f4ea : /Sonnenblumen/.test(s.name) ? 0xf2c94a : 0xf2efe6 });
     const g = R.g; const shelfM = M(0xd8d8d8, 0.3), counter = M(0x6b4a33, 0.3);
     if (W2 >= 5 && s.k !== 'pharmacy') { // Regalreihen mit Waren (Apotheke hat Vitrinen)
       const items = []; for (let x = -W2 + 2.5; x < W2 - 3.5; x += 3) { box(g, 0.6, 1.9, D2 * 2 - 4.5, x, 0.95, 0.6, shelfM); R.walls.push([x - 0.4, -D2 + 2.6, x + 0.4, D2 - 1.4]);
