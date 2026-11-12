@@ -1,5 +1,5 @@
 // Rundgang durch das echte Spiel (live auf GitHub Pages) per Chrome DevTools Protocol, ohne Abhängigkeiten (Node 22).
-//   node tools/rundgang.mjs <ausgabeordner> <chrome-pfad> [start|orte]
+//   node tools/rundgang.mjs <ausgabeordner> <chrome-pfad> [start|orte|menue]
 // start: Spiel laden, „Rein da“, 20 s laufen lassen, Fehler sammeln, ein Bild. Exit 1 bei Fehlern oder wenn die Stadt nicht lädt.
 // orte:  zusätzlich zu festen Orten springen (über window.G) und je Ort ein Bild bei Tag und eins bei Nacht.
 // Lokal NUR im Nachtfenster 22–06 Uhr (CLAUDE.md). Auf GitHub läuft „start“ nach jedem Deploy.
@@ -28,6 +28,13 @@ try {
     if (MODE === 'orte') for (const [n, x, z] of ORTE) for (const [tag, h] of [['tag', 13], ['nacht', 22]]) {
       await ev(`(() => { const G = window.G; G.world.hour = ${h}; G.player.pos.set(${x}, G.TH ? G.TH(${x}, ${z}) : G.player.pos.y, ${z}); if (G.player.mesh) G.player.mesh.position.copy(G.player.pos); })()`);
       await sleep(12000); await shot(`${n}_${tag}`); }
+    if (MODE === 'menue') { // Pausemenü: Schnell, Karte, große Karte (M); dazu Zustand der U-Bahn-Daten
+      console.log('metro:', await ev("JSON.stringify({ m: !!(window.G.INTERIORS && window.G.INTERIORS.metro), lines: window.G.INTERIORS?.metro?.lines?.length, menu: !!document.getElementById('pmap') })"));
+      await ev("document.dispatchEvent(new KeyboardEvent('keydown', { code: 'Escape', key: 'Escape', bubbles: true }))"); await sleep(1500); await shot('m1_schnell');
+      await ev("document.querySelector('#menu .tabs [data-tab=karte]')?.click()"); await sleep(1500); await shot('m2_karte');
+      await ev("document.getElementById('pm_b').click()"); await sleep(800); await shot('m3_karte_bus');
+      await ev("document.querySelector('#menu .tabs [data-tab=fortschritt]')?.click()"); await sleep(800); await shot('m4_statistik');
+      await ev("document.getElementById('m_resume')?.click()"); await sleep(1500); await ev("document.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyM', key: 'm', bubbles: true }))"); await sleep(1500); await shot('m5_grosse_karte'); }
   }
   const e = [...new Set(errs)]; writeFileSync(`${OUT}/fehler.txt`, e.join('\n')); console.log(e.length ? `FEHLER:\n${e.join('\n')}` : 'keine Fehler'); if (e.length) code = 1; ws.close();
 } finally { ch.kill(); }
