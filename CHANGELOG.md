@@ -2,6 +2,8 @@
 
 ## 2026-11-12
 
+- **Waldstadion nach Fotos:** Ränge aus schwarzen Schalensitzen, in denen weiße Sitze „EINTRACHT FRANKFURT“ bilden, helle Treppen; Fassade aus grauen Lamellen statt Glas; Membrandach mit Bögen; schlanke graue Türme mit offenen Geschossen. Das FSV-Stadion bekommt schlichte schwarze Sitze ohne Schrift
+- **Messeturm nach Fotos:** Schaft bis 190 m, darauf der dunkle Glaszylinder und die Pyramide
 - **Messeturm** (Foto Messe): rotbrauner Granit mit engem Fensterraster und dunklen Glasecken, oben die 36 m hohe Pyramide; in der fernen Skyline tagsüber rotbraun, die Glastürme um 155 m blau
 - **Hauptwache** in hellem Putz mit rotem Sandstein an Ecken, Fenstern und Gesims (Foto B-Ebene)
 - **Innenstadt-Gründerzeit in rotem Sandstein** (Foto Metropolis): Rundbogenfenster, Gesimse, Lisenen; etwa jedes dritte hohe Haus zwischen Eschenheimer Tor, Hauptwache und Zeil

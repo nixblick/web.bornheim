@@ -422,13 +422,23 @@ function waldstadion(cx, cz, rx, rz, s = 1) { // s = Höhe (FSV-Stadion 0,55, oh
   const g = new THREE.Group(); const y0 = TH(cx, cz);
   if (!STAD_MATS) { STAD_MATS = { glas: new THREE.MeshLambertMaterial({ color: 0x8fa3b4, emissive: 0xffd9a0, emissiveIntensity: 0.18, side: THREE.DoubleSide }), band: new THREE.MeshLambertMaterial({ color: 0xd8261c, emissive: 0xff2a1a, emissiveIntensity: 0.7, side: THREE.DoubleSide }),
     dach: new THREE.MeshLambertMaterial({ color: 0xe9ecef, side: THREE.DoubleSide }), rang: new THREE.MeshLambertMaterial({ color: 0x7c8590, side: THREE.DoubleSide }), rasen: new THREE.MeshLambertMaterial({ color: 0x3f7d36 }), beton: new THREE.MeshLambertMaterial({ color: 0xb8b6b0 }) };
+    // nach Andrés Fotos (12.11.2026): Ränge aus schwarzen Schalensitzen, weiße Sitze bilden den Vereinsnamen; Fassade aus grauen Lamellen; Membrandach mit Bögen
+    const sitze = (txt) => canvasTex(2048, 128, (c, w, h) => { c.fillStyle = '#16181b'; c.fillRect(0, 0, w, h); for (let y = 2; y < h; y += 6) for (let x = 1; x < w; x += 5) { c.fillStyle = '#23262a'; c.fillRect(x, y, 3, 3); }
+      for (let x = 0; x < w; x += w / 16) { c.fillStyle = '#cfcfcf'; c.fillRect(x, 0, 6, h); } // Treppen
+      if (txt) { c.fillStyle = '#ececec'; c.font = 'bold 74px sans-serif'; c.textBaseline = 'middle'; c.textAlign = 'center'; for (const x of [w * 0.25, w * 0.75]) c.fillText(txt, x, h * 0.55); } }, 1, 1);
+    STAD_MATS.rang.map = sitze('EINTRACHT FRANKFURT'); STAD_MATS.rang.color.setHex(0xffffff);
+    STAD_MATS.rangFSV = new THREE.MeshLambertMaterial({ map: sitze(''), side: THREE.DoubleSide });
+    STAD_MATS.glas.map = canvasTex(512, 64, (c, w, h) => { c.fillStyle = '#9ea3a8'; c.fillRect(0, 0, w, h); for (let x = 0; x < w; x += 8) { c.fillStyle = x % 64 === 0 ? '#c9ccce' : '#b4b8bb'; c.fillRect(x, 0, 5, h); } c.fillStyle = '#5d6268'; c.fillRect(0, h * 0.48, w, 3); }, 1, 1);
+    STAD_MATS.glas.color.setHex(0xffffff); STAD_MATS.glas.emissiveIntensity = 0.08;
+    STAD_MATS.dach.map = canvasTex(1024, 64, (c, w, h) => { c.fillStyle = '#eef0f2'; c.fillRect(0, 0, w, h); c.strokeStyle = '#a69a90'; c.lineWidth = 3; for (let x = 0; x < w; x += 64) { c.beginPath(); c.arc(x + 32, h, 34, Math.PI, 0); c.stroke(); } }, 1, 1);
+    STAD_MATS.beton.color.setHex(0xc6c8ca);
     for (const m of Object.values(STAD_MATS)) m.userData.shared = true; }
   const M = STAD_MATS; const ring = (r0, h, mat, y, open = true) => { const m = new THREE.Mesh(new THREE.CylinderGeometry(r0, r0, h, 48, 1, open), mat); m.scale.set(rx, 1, rz); m.position.y = y; return m; };
   g.add(ring(1, 20, M.glas, 10)); g.add(ring(1.01, 2.4, M.band, 21.5)); g.add(ring(1.0, 3, M.beton, 24));
-  const rg = new THREE.Mesh(new THREE.CylinderGeometry(0.78, 0.98, 18, 48, 1, true), M.rang); rg.scale.set(rx, 1, rz); rg.position.y = 11; g.add(rg);
+  const rg = new THREE.Mesh(new THREE.CylinderGeometry(0.78, 0.98, 18, 48, 1, true), s === 1 ? M.rang : M.rangFSV); rg.scale.set(rx, 1, rz); rg.position.y = 11; g.add(rg);
   const dg = new THREE.RingGeometry(0.62, 1.03, 48, 1); dg.rotateX(-Math.PI / 2); const d = new THREE.Mesh(dg, M.dach); d.scale.set(rx, 1, rz); d.position.y = 27; d.castShadow = true; g.add(d);
   const pg = new THREE.PlaneGeometry(rx * 1.1, rz * 0.8); pg.rotateX(-Math.PI / 2); const p = new THREE.Mesh(pg, M.rasen); p.position.y = 0.3; p.receiveShadow = true; g.add(p);
-  for (const s of [-1, 1]) { const tw = new THREE.Mesh(new THREE.BoxGeometry(5, 62, 5), M.beton); tw.position.set(s * (rx + 45), 31, s * rz * 0.3); tw.castShadow = true; g.add(tw); const k = new THREE.Mesh(new THREE.BoxGeometry(8, 6, 8), M.beton); k.position.set(s * (rx + 45), 64, s * rz * 0.3); g.add(k); }
+  for (const s of [-1, 1]) { const tw = new THREE.Mesh(new THREE.BoxGeometry(7, 62, 7), M.turm || (M.turm = Object.assign(new THREE.MeshLambertMaterial({ map: canvasTex(64, 512, (c, w, h) => { c.fillStyle = '#c9cbcd'; c.fillRect(0, 0, w, h); for (let y = 30; y < h; y += 46) { c.fillStyle = '#3d4248'; c.fillRect(10, y, w - 20, 20); } }, 1, 1) }), { userData: { shared: true } }))); tw.position.set(s * (rx + 45), 31, s * rz * 0.3); tw.castShadow = true; g.add(tw); const k = new THREE.Mesh(new THREE.BoxGeometry(8, 6, 8), M.beton); k.position.set(s * (rx + 45), 64, s * rz * 0.3); g.add(k); }
   g.position.set(cx, y0, cz); if (s !== 1) { g.scale.y = s; g.children.slice(-4).forEach(o => { if (o.geometry.type === 'BoxGeometry') o.visible = false; }); } return g;
 }
 // Fassaden nach Fotos aus Frankfurt (12.11.2026). Eine Kachel = 12 x 12,8 m (vier Geschosse), Farben stecken im Bild, Vertexfarbe bleibt hell.
@@ -1146,7 +1156,8 @@ function* buildCity() {
   for (const b of CITY.buildings) { if (++YC % 10 === 0) yield;
     const kind = kindOf(b);
     if (kind === 'wache') WACHEN.push(centroidOf(b.p));
-    if (kind === 'messeturm' && !b._pyr) { b._pyr = 1; b.h = 221; const [mx, mz] = centroidOf(b.p); let rr = 0; for (const [x, z] of b.p) rr = Math.max(rr, Math.hypot(x - mx, z - mz)); // Pyramidenspitze, 36 m, rotbraun wie der Granit (Foto 12.11.2026)
+    if (kind === 'messeturm' && !b._pyr) { b._pyr = 1; b.h = 190; const [mx, mz] = centroidOf(b.p); let rr = 0; for (const [x, z] of b.p) rr = Math.max(rr, Math.hypot(x - mx, z - mz));
+      { const zy = new THREE.Mesh(new THREE.CylinderGeometry(rr * 0.62, rr * 0.66, 31, 24), shLambert(0x2a3340)); zy.position.set(mx, TH(mx, mz) + 190 + 15.5, mz); zy.castShadow = true; scene.add(zy); } // Glaszylinder unter der Spitze // Pyramidenspitze, 36 m, rotbraun wie der Granit (Foto 12.11.2026)
       const pm = new THREE.Mesh(new THREE.ConeGeometry(rr * 0.62, 36, 4), shLambert(0x7a4a40)); pm.rotation.y = Math.PI / 4; pm.position.set(mx, TH(mx, mz) + 221 + 18, mz); pm.castShadow = true; scene.add(pm); }
     if (!b._stad && b.h >= 8 && b.p.length > 3) { let x0 = 1e9, x1 = -1e9, z0 = 1e9, z1 = -1e9; for (const [x, z] of b.p) { x0 = Math.min(x0, x); x1 = Math.max(x1, x); z0 = Math.min(z0, z); z1 = Math.max(z1, z); }
       const mx = (x0 + x1) / 2, mz = (z0 + z1) / 2; // Waldstadion (Niederrad) und FSV-Stadion am Bornheimer Hang
