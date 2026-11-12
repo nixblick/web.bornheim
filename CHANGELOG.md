@@ -2,6 +2,7 @@
 
 ## 2026-11-12
 
+- **Fix Rundgang:** wartet bis 40 s auf Chrome (auf dem Runner war er nach 3 s noch nicht bereit)
 - **Kita-Stelen an allen Kitas:** auch an benannten Kita-Gebäuden ohne Kartenpunkt, bis 64 je Kachel; ohne passende Hauswand steht die Stele am Kartenpunkt
 - **Liniennummern an Bushaltestellen:** weißes Schild unter dem H mit den Linien, die dort halten (aus den OSM-Linien)
 - **Fix:** `data/busroutes.json` wurde nicht ausgerollt, live fuhren keine Linienbusse

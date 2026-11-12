@@ -8,11 +8,11 @@ const [OUT, B, MODE = 'orte'] = process.argv.slice(2); mkdirSync(OUT, { recursiv
 const URL = process.env.RUNDGANG_URL || 'https://nixblick.github.io/web.bornheim/play.html';
 const ORTE = [['woellstaedter', 220, -470], ['tg_bornheim', 262, 52], ['zappbar', -1281, 247], ['nahkauf_eulengasse', 75, -203], ['berger_uhrtuermchen', 0, 0]];
 const sleep = ms => new Promise(r => setTimeout(r, ms));
-const ch = spawn(B, ['--headless=new', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--window-size=1280,720', '--remote-debugging-port=9333', `--user-data-dir=${OUT}/prof`, 'about:blank'], { stdio: 'ignore' });
+const ch = spawn(B, ['--headless=new', '--no-sandbox', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--window-size=1280,720', '--remote-debugging-port=9333', `--user-data-dir=${OUT}/prof`, 'about:blank'], { stdio: 'ignore' });
 let code = 0;
 try {
-  await sleep(3000);
-  const tl = await (await fetch('http://127.0.0.1:9333/json')).json(); const ws = new WebSocket(tl.find(t => t.type === 'page').webSocketDebuggerUrl);
+  let tl = null; for (let i = 0; i < 40 && !tl; i++) { await sleep(1000); try { tl = await (await fetch('http://127.0.0.1:9333/json')).json(); } catch (e) { tl = null; } } // Chrome braucht auf dem Runner länger
+  if (!tl) throw new Error('Chrome nicht erreichbar'); const ws = new WebSocket(tl.find(t => t.type === 'page').webSocketDebuggerUrl);
   await new Promise(r => { ws.onopen = r; }); let id = 0; const pend = new Map(); const errs = [];
   ws.onmessage = ev => { const m = JSON.parse(ev.data); if (m.id && pend.has(m.id)) { pend.get(m.id)(m.result); pend.delete(m.id); }
     if (m.method === 'Runtime.exceptionThrown') errs.push(m.params.exceptionDetails.exception?.description || m.params.exceptionDetails.text);
