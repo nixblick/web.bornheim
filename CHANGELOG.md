@@ -2,6 +2,8 @@
 
 ## 2026-11-12
 
+- **Echte Buslinien** aus OpenStreetMap (48 Stadtbus-Linienwege, u. a. M32, M34, M36, M43, 38): Busse fahren ihre Linie ab, halten an den Haltestellen der Linie und zeigen vorn Liniennummer und Ziel (`data/busroutes.json`, Stand 12.11.2026)
+- **Radwegweiser mit echten Zielen:** jeder Finger zeigt in Richtung eines der drei nächsten Stadtteile, mit echter Entfernung in Kilometern
 - **TG Bornheim** (Foto): Leuchtkreise und Schriftzug „TG BORNHEIM“ an der Hallenwand
 - **Gauben** auf flach eingetragenen Wohnhäusern ab 12 m: Reihe aus Schiefergauben mit Fenster an der Straßenseite (Foto ABG-Haus)
 - **Garagentore** (dunkle Schwingtore) an kleinen Nebengebäuden bis 4 m Höhe (Foto Kita Eulengasse)
