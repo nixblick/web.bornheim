@@ -2,6 +2,9 @@
 
 ## 2026-11-12
 
+- **Flugwarnlichter:** rote Lichter an Dachkanten, auf zwei Dritteln Höhe und auf einem Mast über jedem Hochhaus ab 100 m, blinken im Sekundentakt
+- **EZB:** gläsernes, leicht verdrehtes Atrium zwischen den Türmen, hell durchscheinend
+- Ungetestet im Spiel, Test im Nachtfenster
 - **Fix Startfehler** nach #51: Kommandowagen-Schrift als eigene Flächen statt Materialliste (geparkte Autos brachen ab)
 - **Fix Poller:** die drei Poller an jedem Straßenschild sind entfernt; sie standen teils auf Fahrbahnen und blockierten Straßen wie die Mainzer Landstraße
 - **Container nie auf der Fahrbahn:** liegt der Kartenpunkt auf einer Straße, rücken sie auf Gehweg oder Grünstreifen, sonst entfallen sie; Glascontainer als drei dunkelblaue Glocken mit weißem, braunem und grünem Einwurfring, Altkleidercontainer rot mit Klappe und weißem Feld „DANKE! ALTKLEIDER SCHUHE“
