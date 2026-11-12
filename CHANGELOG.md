@@ -2,6 +2,12 @@
 
 ## 2026-11-12
 
+- **Straßennamenschilder:** Schild sitzt neben dem Mast statt mittig auf ihm, Vorder- und Rückseite leicht versetzt, von beiden Seiten richtig lesbar
+- **Radwegweiser:** eigene Rückseite, von beiden Seiten lesbar, Pfeil zeigt auf beiden Seiten zur Spitze; Finger beginnen neben dem Mast
+- **Voi-E-Scooter** (Fotos): bis zu sechs abgestellt in der Nähe, mit E mieten: 1 € Entsperren, 2 € je Minute, bei leerem Guthaben endet die Fahrt; ersetzen die Deko-Roller
+- **Jahreszeiten:** Herbstlaub September bis November, Schnee Dezember bis Februar, Blütenblätter April und Mai; zum Ansehen `play.html?saison=winter|fruehling|herbst`
+- **Läden im Erdgeschoss nur mit Gewerbe:** Ladenfront nur, wo OpenStreetMap am Haus ein Geschäft, Lokal oder Gewerbe kennt; sonst Wohnhaus-Erdgeschoss (vorher bekam zufällig fast jedes Haus einen Laden)
+- Ungetestet im Spiel, Test im Nachtfenster
 - **Granitplatten** statt Asphalt in Fußgängerzonen und auf breiten Fußwegen (Fotos Innenstadt, TG Bornheim)
 - **Nasenschilder** Döneria (mint, pinke Schrift) und Moni's Frisierstubb (altes gelbes Schild)
 - **Sozialrathaus Ost** (Foto, Lage nach André: rechts neben der Kita Eulengasse): Name am Gebäude, dunkles Vordach über die ganze Front mit „SOZIALRATHAUS OST / DIENSTORT BORNHEIM“, Stützen, hell erleuchtetes verglastes Erdgeschoss
