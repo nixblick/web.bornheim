@@ -449,6 +449,13 @@ function facadeStyle(style) {
     const fenster = (x, y, ww, wh, rahmen, glas = '#2c3442') => { if (emis) { if (R() < 0.3) { c.fillStyle = pick(['#e8b25e', '#f0c98a', '#dfe8f0']); c.fillRect(x, y, ww, wh); } return; }
       if (rahmen) { c.fillStyle = rahmen; c.fillRect(x - 5, y - 5, ww + 10, wh + 10); } c.fillStyle = glas; c.fillRect(x, y, ww, wh); c.fillStyle = 'rgba(255,255,255,0.16)'; c.fillRect(x, y, ww * 0.45, wh * 0.4); c.fillStyle = '#e6e2da'; c.fillRect(x + ww / 2 - 1.5, y, 3, wh); };
     const ziegel = (x, y, ww, hh, tone) => { if (emis) return; for (let yy = y; yy < y + hh; yy += 8) for (let xx = x - ((yy / 8) % 2) * 8; xx < x + ww; xx += 16) { const k = tone(); c.fillStyle = k; c.fillRect(Math.max(x, xx), yy, Math.min(15, x + ww - xx), 7); } };
+    if (style === 'ezb') { // EZB (Fotos 12.11.2026): Glasfassade, silbergraue Stahlsprossen, Geschossdecken nur angedeutet; nachts viele kühl-weiß erleuchtete Scheiben in Gruppen
+      const rows = 4, cols = 10, pw = w / cols, ph = h / rows; c.fillStyle = emis ? '#000' : '#8e979f'; c.fillRect(0, 0, w, h);
+      for (let r = 0; r < rows; r++) { const band = R() < 0.55; for (let q = 0; q < cols; q++) { const x = q * pw + 2, y = r * ph + 3, ww = pw - 4, hh = ph - 6;
+        if (emis) { if ((band && R() < 0.85) || R() < 0.2) { c.fillStyle = pick(['#eef3f8', '#dfe8f2', '#f4f1e6']); c.fillRect(x, y, ww, hh); } continue; }
+        const g = c.createLinearGradient(x, y, x + ww, y + hh); g.addColorStop(0, '#3c4a58'); g.addColorStop(0.5, '#56677a'); g.addColorStop(1, '#2c3846'); c.fillStyle = g; c.fillRect(x, y, ww, hh); }
+        if (!emis) { c.fillStyle = '#b4bcc4'; c.fillRect(0, r * ph, w, 2); } }
+      if (!emis) { c.fillStyle = '#c4ccd4'; for (let q = 0; q <= cols; q++) c.fillRect(q * pw - 1, 0, 2, h); } return; }
     c.fillStyle = '#000'; c.fillRect(0, 0, w, h); if (emis) { for (let r = 0; r < 4; r++) for (let q = 0; q < 4; q++) fenster(q * cw + cw * 0.28, r * ch + ch * 0.25, cw * 0.44, ch * 0.45); return; }
     if (style === 'wache') { // hell verputzt, Fensterrahmen und Ecksteine aus rotem Sandstein, Gesimsband
       c.fillStyle = '#efe3d6'; c.fillRect(0, 0, w, h); c.fillStyle = '#9a4f3e'; c.fillRect(0, h - ch * 0.08 - 4, w, 6);
@@ -1277,12 +1284,13 @@ function* buildCity() {
     if (/Feuerwache|Rettungswache|Feuer- und Rettungs|Feuerwehr/i.test(n) && !/Training/i.test(n)) k = 'wache';
     else if (!n && WACHE_OHNE_NAMEN.some(([x, z]) => { const [cx, cz] = centroidOf(b.p); return Math.hypot(cx - x, cz - z) < 6; })) k = 'wache';
     else if (/^Messeturm$/.test(n)) k = 'messeturm';
+    else if (/Europäische Zentralbank/.test(n)) k = 'ezb';
     else if (/^Hauptwache$/.test(n)) k = 'barock';
     else if (/schule|gymnasium|\bIGS\b/i.test(n)) k = 'school';
     else if ((k === 'res' || k === 'public' || k === 'small') && SCHULHOF.length) { const [cx, cz] = centroidOf(b.p); if (SCHULHOF.some(s => cx > s.x0 && cx < s.x1 && cz > s.z0 && cz < s.z1 && pointInPoly(cx, cz, s.p))) k = 'school'; }
     if (k === 'school' && b.r && b.rh > 0) k = 'altschule'; // Steildach: Gründerzeitbau wie die Kirchnerschule (Foto 12.11.2026)
     return (b._kind = k); };
-  const facKind = (b, kind) => { if (['wache', 'school', 'altschule', 'messeturm', 'barock'].includes(kind)) return kind;
+  const facKind = (b, kind) => { if (['wache', 'school', 'altschule', 'messeturm', 'barock', 'ezb'].includes(kind)) return kind;
     { const [cx, cz] = centroidOf(b.p); if ((kind === 'res' || kind === 'public') && b.h >= 14 && cx > -3000 && cx < -1500 && cz > 1200 && cz < 2600 && Math.abs((b.p[0][0] * 13 + b.p[0][1] * 7) | 0) % 10 < 3) return 'sandstein'; } /* Innenstadt: rote Sandsteinbauten wie das Metropolis */
     if (kind !== 'res') return kind; const hsh = Math.abs((b.p[0][0] * 31 + b.p[0][1] * 17) | 0) % 12;
     { const [cx, cz] = centroidOf(b.p); if (b.h >= 10 && WOELL.some((p, i) => i && distSegSq(cx, cz, WOELL[i - 1][0], WOELL[i - 1][1], p[0], p[1]) < 625)) return 'zwanziger'; if (b.h >= 10 && hsh >= 6 && hsh < 8 && cz < -300 && cz > -900 && cx > -700 && cx < 900) return 'zwanziger'; if (b.h >= 11 && b.h <= 19 && hsh >= 8 && hsh < 10 && cz < 300 && cz > -1600 && cx > -1600 && cx < 1600) return 'abg'; } // Wöllstädter Straße und Bornheim-Nord; ABG-Häuser
@@ -1375,7 +1383,7 @@ function* buildCity() {
       }
     }
   }
-  const facByKind = FAC_CACHE || (FAC_CACHE = (() => { const f = {}; for (const k of ['res', 'house', 'public', 'hall', 'small', 'church']) f[k] = [facadeTextures(k), facadeTextures(k)]; for (const k of ['wache', 'school', 'altschule', 'nk', 'nb', 'zi', 'fw', 'schiefer', 'messeturm', 'barock', 'sandstein', 'gruender', 'zwanziger', 'abg']) { const s = facadeStyle(k); f[k] = [s, k === 'nk' || k === 'zi' ? facadeStyle(k) : s]; } return f; })());
+  const facByKind = FAC_CACHE || (FAC_CACHE = (() => { const f = {}; for (const k of ['res', 'house', 'public', 'hall', 'small', 'church']) f[k] = [facadeTextures(k), facadeTextures(k)]; for (const k of ['wache', 'school', 'altschule', 'nk', 'nb', 'zi', 'fw', 'schiefer', 'messeturm', 'barock', 'sandstein', 'gruender', 'zwanziger', 'abg', 'ezb']) { const s = facadeStyle(k); f[k] = [s, k === 'nk' || k === 'zi' ? facadeStyle(k) : s]; } return f; })());
   const counters = {};
   const groups = new Map(); const tmpC = new THREE.Color();
   for (const [key, geos] of byKey) {

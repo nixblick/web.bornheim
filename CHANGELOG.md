@@ -2,6 +2,7 @@
 
 ## 2026-11-12
 
+- **EZB** (Fotos): Glasfassade statt Stein, silbergraue Stahlsprossen, Geschossdecken nur als feine Linien, nachts viele kühl-weiß erleuchtete Scheiben in Bändern. Ungetestet im Spiel, Test im Nachtfenster
 - **Stahl-Bogenbrücken** (Wunsch André, Foto Brücke an der EZB): über jeder Brücke ab 60 m zwei Stahlbögen mit Hängern; oben begehbar und befahrbar (zu Fuß, Rad, Motorrad, E-Scooter, nicht mit dem Auto); zweimal geduldet, beim dritten Mal kommt die Polizei
 - **Kita-Frankfurt-Stelen nur an städtischen Kitas** („Kita 110“, „KiZ 126“, Kinderzentrum), freie Träger wie Zwergenplanet ohne Stele; Stele von beiden Seiten lesbar
 - **Straßenbahn** türkis wie in Frankfurt, grüne Linienanzeige vorn und hinten (Foto Linie 12)
