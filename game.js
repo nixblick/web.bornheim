@@ -2850,7 +2850,9 @@ const neighborsReady = (tx, tz) => { for (let a = -1; a <= 1; a++) for (let b = 
 let streamT = 0, buildT = 0;
 function streamUpdate(dt, force = false) {
   const cx = POCKET ? POCKET.anchor[0] : player.car ? player.car.position.x : player.pos.x, cz = POCKET ? POCKET.anchor[1] : player.car ? player.car.position.z : player.pos.z;
-  farPlane.position.set(camera.position.x, TH(cx, cz) - 12, camera.position.z);
+  // Im Innenraum (Taschenraum, Boden auf y = 0) keine Ersatz-Bodenplatte: sie lag auf Geländehöhe des Eingangs − 12 m und damit
+  // überall über 12 m Gelände (Bornheim) hüfthoch im Raum wie Dreckwasser (André 12.11.2026)
+  farPlane.visible = !POCKET; farPlane.position.set(camera.position.x, TH(cx, cz) - 12, camera.position.z);
   const ptx = Math.floor(cx / TS), ptz = Math.floor(cz / TS);
   R_MESH = (opts.view || 700) > 550 ? 2 : 1;
   streamT -= dt; if (streamT <= 0 || force) { streamT = 0.3;

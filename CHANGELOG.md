@@ -2,6 +2,7 @@
 
 ## 2026-11-12
 
+- Innenräume und U-Bahn-Stationen: Die graue Ersatz-Bodenplatte stand nicht mehr hüfthoch im Raum. Ungetestet (Test im Nachtfenster)
 - Keine einheitliche Hausnummer mehr an allen Häusern (stand in der geteilten Erdgeschoss-Textur). Ungetestet (Test im Nachtfenster)
 - Mehr spontane Demos mit zehn Themen (Fridays for Future, Klimastreik, Schulen sanieren, marode Turnhallen, für den Bürgermeister, autofreie Innenstadt, gegen Nazis, gegen AfD, für Demokratie, gegen Rassismus): eigene Transparente, Schilder und Sprechchöre, Polizei begleitet nur und greift nie an. Ungetestet (Test im Nachtfenster)
 - Kreativmodus: Eine gesetzte Demo kommt ohne Polizei, nur mit Leuten. Ungetestet (Test im Nachtfenster)
