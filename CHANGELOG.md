@@ -2,6 +2,10 @@
 
 ## 2026-11-12
 
+- **Pausemenü neu** (Wunsch André): größer (bis 1400 × 900), links Speichern, Laden, Fehler melden und die Einstellungen untereinander (Grafik, Kamera, Welt, Spiel, Ton), oben die Themen ⚡ Schnell, 🗺 Karte, 📊 Statistik, 📖 Story, ❓ Hilfe
+- **Schnell** (erste Seite): Grafikqualität, Sichtweite, Uhrzeit, Zeitlauf, Wetter, Verkehr, Passanten, Polizei, Unendlich Munition, Unverwundbar, Lautstärke auf einen Blick
+- **Karte im Menü:** Klick ins Freie springt dorthin; U-Bahn-Stationen (Linien einzeln aufklappbar) und Bushaltestellen ein- und ausblendbar, Klick auf eine Station fährt hin (U-Bahn wie am Eingang, 3 €; Bus 2,80 €, Fahrzeit läuft)
+- Ungetestet im Spiel, Test im Nachtfenster
 - **Flugwarnlichter:** rote Lichter an Dachkanten, auf zwei Dritteln Höhe und auf einem Mast über jedem Hochhaus ab 100 m, blinken im Sekundentakt
 - **EZB:** gläsernes, leicht verdrehtes Atrium zwischen den Türmen, hell durchscheinend
 - Ungetestet im Spiel, Test im Nachtfenster
