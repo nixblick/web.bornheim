@@ -145,8 +145,9 @@ export function initWeapons(X) {
   const _ray = new THREE.Raycaster(), _v = new V3(), _ndc = new THREE.Vector2();
   function candidates(range) { const dir = camera.getWorldDirection(new V3()); const cp = camera.position; return shootables.filter(o => { if (!o.visible || o === player.car || o.userData.hp <= 0 && !cars.includes(o)) return false; const dx = o.position.x - cp.x, dz = o.position.z - cp.z, dy = o.position.y - cp.y; const L = Math.hypot(dx, dy, dz); if (L > range + 5) return false; return (dx * dir.x + dy * dir.y + dz * dir.z) > -3; }); }
   function wallDist(ray, range) { for (let s = 2.5; s < range; s += 1.25) { const p = ray.at(s, _v); if (p.y <= TH(p.x, p.z) || solidAtH(p.x, p.z, p.y) !== -1) return s; } return range; }
-  function owner(o) { while (o && !cars.includes(o) && !peds.includes(o)) o = o.parent; return o; }
+  function owner(o) { while (o && !cars.includes(o) && !peds.includes(o) && !(o.userData && o.userData.pheli)) o = o.parent; return o; }
   function hitTarget(o, dmg, dir) {
+    if (o.userData.pheli) { o.userData.hp -= dmg; o.userData.hitT = 0.15; return; } /* Polizeihubschrauber (#63) */
     if (peds.includes(o)) { const u = o.userData; if (u.cop && u.hp > 0) { raiseWanted(0.6); emit('hitCop', o.position, { ped: o }); } else emit('hitPed', o.position, { ped: o }); damage(o, dmg, dir); if (u.hp > 0 && u.state !== 'dead' && dmg >= 15 && (u.state === 'demo' || u.state === 'riot')) stun(o, 'hit', 1.2); }
     else damage(o, o.userData.bike ? dmg : dmg * 0.6, dir);
   }
