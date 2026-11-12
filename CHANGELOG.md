@@ -2,6 +2,7 @@
 
 ## 2026-11-12
 
+- Bushaltestellen nicht mehr auf der Fahrbahn (Reichsburgstraße): Mast an den Rand geschoben, Wartehäuschen auf der straßenabgewandten Seite. Ungetestet (Test im Nachtfenster)
 - U-Bahn-Eingänge nicht mehr auf der Fahrbahn (#55): doppelt eingetragene OSM-Punkte unter 6 m zusammengelegt, Portal mindestens 3,2 m vom Fahrbahnrand. OSM-Zäune bekommen an Fahrbahnen eine Lücke in Straßenbreite (1297 von 9552 lagen mit einem Punkt auf der Straße). Ungetestet (Test im Nachtfenster)
 - **Pausemenü neu** (Wunsch André): größer (bis 1400 × 900), links Speichern, Laden, Fehler melden und die Einstellungen untereinander (Grafik, Kamera, Welt, Spiel, Ton), oben die Themen ⚡ Schnell, 🗺 Karte, 📊 Statistik, 📖 Story, ❓ Hilfe
 - **Schnell** (erste Seite): Grafikqualität, Sichtweite, Uhrzeit, Zeitlauf, Wetter, Verkehr, Passanten, Polizei, Unendlich Munition, Unverwundbar, Lautstärke auf einen Blick
