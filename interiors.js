@@ -10,8 +10,11 @@ export function initInteriors(X, W, D, SH) {
   /* U-Bahn-Eingänge auf der Minikarte: blaues „U“ im Umkreis der Karte, damit man die Stationen findet (09.11.2026) */
   if (X.mmHooks) X.mmHooks.push((ctx, P, R) => { const done = new Set(); for (const s of metro.stations) { if (s.entr.length === 0) continue; const e = s.entr[0]; const [x, y] = P(e[0], e[1]); if (x * x + y * y > R * R || done.has(s.id)) continue; done.add(s.id);
     ctx.fillStyle = '#0a3d8f'; ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5; ctx.fillRect(x - 6, y - 6, 12, 12); ctx.strokeRect(x - 6, y - 6, 12, 12); ctx.fillStyle = '#fff'; ctx.font = 'bold 10px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('U', x, y + 0.5); } });
-  fetch('data/metro.json').then(r => r.ok ? r.json() : null).then(m => { if (!m) return; metro = m; for (const s of m.stations) ST.set(s.id, s); }).catch(() => {});
+  fetch('data/metro.json').then(r => r.ok ? r.json() : null).then(m => { if (!m) return; metro = m; for (const s of m.stations) { ST.set(s.id, s); s.entr = mergeEntr(s.entr); } }).catch(() => {});
 
+  // OSM trägt eine Treppe oft mehrfach ein (Konstablerwache: 16 Punkte); Punkte unter 6 m zusammenlegen,
+  // sonst stehen mehrere Portale ineinander und ragen bis auf die Fahrbahn (12.11.2026)
+  function mergeEntr(E) { const out = []; for (const p of E) { const q = out.find(o => Math.hypot(o[0] / o[2] - p[0], o[1] / o[2] - p[1]) < 6); if (q) { q[0] += p[0]; q[1] += p[1]; q[2]++; } else out.push([p[0], p[1], 1]); } return out.map(o => [o[0] / o[2], o[1] / o[2]]); }
   // ---------- Baukasten ----------
   const M = (col, em = 0.35) => new THREE.MeshLambertMaterial({ color: col, emissive: col, emissiveIntensity: em });
   const box = (g, w, h, d, x, y, z, mat, ry = 0) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat); m.position.set(PX + x, y, PZ + z); m.rotation.y = ry; g.add(m); return m; };
@@ -263,6 +266,8 @@ export function initInteriors(X, W, D, SH) {
     const ne = X.nearestRoadDir ? X.nearestRoadDir(p[0], p[1], 40) : null; if (ne) g.rotation.y = ne.ang;
     g.position.set(p[0], y, p[1]); scene.add(g); return g; }
   function entranceMesh(p, st) {
+    // Portal ist gut 5 m breit: Mitte mindestens 3,2 m vom Fahrbahnrand, sonst steht es halb auf der Straße (Konstablerwache)
+    if (X.pushOffRoads && !p.off) { const [qx, qz] = X.pushOffRoads(p[0], p[1], 3.2); if (!Number.isNaN(qx) && Math.hypot(qx - p[0], qz - p[1]) < 8) { p[0] = qx; p[1] = qz; } p.off = true; }
     const E = eg(); const g = new THREE.Group(); const y = TH(p[0], p[1]); g.userData.st = st.id;
     const hole = new THREE.Mesh(E.hole, E.holeM); hole.rotation.x = -Math.PI / 2; hole.position.set(0, 0.04, 0); g.add(hole);
     for (let i = 0; i < 7; i++) { const s = new THREE.Mesh(E.step, E.stepM); s.position.set(0, 0.05, -1.8 + i * 0.55); g.add(s); }
