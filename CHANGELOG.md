@@ -2,6 +2,10 @@
 
 ## 2026-11-12
 
+- **Stadtbusse** in Türkis (Foto Seckbacher Landstraße): 12 m, Fensterband, Leuchtanzeige vorn, rote Rückleuchten; etwa jedes zwanzigste Fahrzeug auf breiteren Straßen
+- **Herbstlaub** im Oktober und November auf Gehwegen und am Fahrbahnrand (eine Punktwolke je Kachel)
+- **Baustellen-Warnleuchten blinken nachts**; Bauzäune sind weiter nicht fest
+- **Schilder nach Fotos:** Der Bäcker Eifler hellgrün mit roter Schrift, Döneria mint mit pinker Schrift (alle Filialen)
 - **Straßennamenschilder** an Einmündungen, Frankfurter Art: dunkelblau mit weißem Rand und weißer Schrift, beidseitig, dazu drei Poller an der Ecke (ein Atlas, wenige Meshes je Kachel)
 - **Hauseingänge nach Foto:** Granitrahmen, Milchglastür mit Briefkastenfeld, Klingeltableau, Leuchte mit Hausnummer (nachts hell)
 - **Baustellen:** ein bis zwei je Kachel, rot-weiße Bauzäune mit gelben Warnleuchten; beleuchtete Schaufenster gab es schon, Läden bleiben nachts hell
