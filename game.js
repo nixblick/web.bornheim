@@ -1507,10 +1507,15 @@ function* buildCity() {
     if (run.length > 1) freiePfade.push(Object.assign({}, pa, { p: run })); }
   const pathG = ribbon(freiePfade, 0.03, () => 2); if (pathG) { if (!PATH_MAT) { PATH_MAT = new THREE.MeshLambertMaterial({ map: kiesTex }); /* wassergebundene Decke statt buntem Pflaster-Foto (12.11.2026) */ PATH_MAT.userData.shared = true; PATH_MAT.polygonOffset = true; PATH_MAT.polygonOffsetFactor = 1; PATH_MAT.polygonOffsetUnits = 4; /* Gehweg der Querstraße liegt am Hang bis 3 cm über der Fahrbahn: Fahrbahn gewinnt im Tiefenpuffer */ } flatMat(pathG, PATH_MAT); }
   buildBridges();
-  const railG = ribbon(CITY.rails, 0.05, () => 3); if (railG) { const rm = shLambert(0x6b6258); rm.userData.onRoad = true; /* Gleisbett liegt gewollt auf der Fahrbahn */ flatMat(railG, rm); }
+  // U-Bahn (railway=subway) fährt in Frankfurt unter der Erde: oben nie zeichnen, auch wenn OSM den Tunnel nicht markiert (André 12.11.2026)
+  const SURF_RAILS = CITY.rails.filter(r => r.k !== 'subway');
+  const railG = ribbon(SURF_RAILS, 0.05, () => 3); if (railG) { const rm = shLambert(0x6b6258); rm.userData.onRoad = true; /* Gleisbett liegt gewollt auf der Fahrbahn */ flatMat(railG, rm); }
   // Schienen
   const railLines = [];
-  for (const r of CITY.rails) for (const off of [-0.72, 0.72]) for (let i = 0; i < r.p.length - 1; i++) { const [ax, az] = r.p[i], [bx, bz] = r.p[i + 1]; const l = Math.hypot(bx - ax, bz - az) || 1; const nx = -(bz - az) / l * off, nz = (bx - ax) / l * off; const g = new THREE.BoxGeometry(0.08, 0.1, l); g.rotateY(Math.atan2(bx - ax, bz - az)); g.rotateX(Math.atan2(TH(ax, az) - TH(bx, bz), l)); g.translate((ax + bx) / 2 + nx, 0.1 + TH((ax + bx) / 2, (az + bz) / 2), (az + bz) / 2 + nz); railLines.push(g); }
+  // Schienen in Stücken von höchstens 4 m, je Stück eigene Geländehöhe: vorher ein Balken je OSM-Abschnitt auf Höhe der Mitte,
+  // auf welligem Gelände tauchte er stellenweise in den Boden und die Gleise wirkten unterbrochen (André 12.11.2026)
+  for (const r of SURF_RAILS) for (const off of [-0.72, 0.72]) for (let i = 0; i < r.p.length - 1; i++) { const [ax0, az0] = r.p[i], [bx0, bz0] = r.p[i + 1]; const L = Math.hypot(bx0 - ax0, bz0 - az0) || 1; const nseg = Math.max(1, Math.ceil(L / 4));
+    for (let k = 0; k < nseg; k++) { const ax = ax0 + (bx0 - ax0) * k / nseg, az = az0 + (bz0 - az0) * k / nseg, bx = ax0 + (bx0 - ax0) * (k + 1) / nseg, bz = az0 + (bz0 - az0) * (k + 1) / nseg; const l = L / nseg; const nx = -(bz0 - az0) / L * off, nz = (bx0 - ax0) / L * off; const ya = TH(ax + nx, az + nz), yb = TH(bx + nx, bz + nz); const g = new THREE.BoxGeometry(0.08, 0.1, l + 0.04); g.rotateX(Math.atan2(ya - yb, l)); g.rotateY(Math.atan2(bx - ax, bz - az)); g.translate((ax + bx) / 2 + nx, 0.1 + (ya + yb) / 2, (az + bz) / 2 + nz); railLines.push(g); } }
   if (railLines.length) scene.add(new THREE.Mesh(mergeGeometries(railLines), shLambert(0x9a9a9a)));
   // Ampeln
   const sigSpots = [], sigLight = [];
@@ -1552,7 +1557,10 @@ function* buildCity() {
   // Bäume
   const trunk = TRUNK_G || (TRUNK_G = Object.assign(new THREE.CylinderGeometry(0.15, 0.2, 2.2, 5), { userData: { shared: true } }));
   const crown = opts.quality === 'niedrig' ? (CROWN_LOW_G || (CROWN_LOW_G = (() => { const g = new THREE.IcosahedronGeometry(1.9, 0); g.computeVertexNormals(); g.userData.shared = true; return g; })())) : (CROWN_HI_G || (CROWN_HI_G = (() => { const g = mergeGeometries([new THREE.IcosahedronGeometry(1.75, 0), new THREE.IcosahedronGeometry(1.3, 0).translate(0.95, 0.45, 0.35), new THREE.IcosahedronGeometry(1.2, 0).translate(-0.75, 0.6, -0.55), new THREE.IcosahedronGeometry(1.05, 0).translate(0.1, 1.2, -0.2)]); g.computeVertexNormals(); g.userData.shared = true; return g; })()));
-  const trees = CITY.trees.concat(extraTrees(Math.min(700, CITY.green.length * 5)), streetTrees()).map(([x, z]) => pushOffRoads(x, z, 0.9)).filter(([x, z]) => !Number.isNaN(x) && solidAt(x, z) < 0 && waterAt(x, z) === null && deckAt(x, z, 1e9, 0) === null); treeSpots.push(...trees);
+  // Keine Bäume auf sichtbaren Gleisen (Ludwig-Landmann-Straße, André 12.11.2026): Raster der Gleisabschnitte, 2,6 m Abstand zur Gleismitte
+  const RGRID = new Map(); for (const r of SURF_RAILS) for (let i = 0; i < r.p.length - 1; i++) { const [ax, az] = r.p[i], [bx, bz] = r.p[i + 1]; for (let cx = Math.floor((Math.min(ax, bx) - 3) / 8); cx <= Math.floor((Math.max(ax, bx) + 3) / 8); cx++) for (let cz = Math.floor((Math.min(az, bz) - 3) / 8); cz <= Math.floor((Math.max(az, bz) + 3) / 8); cz++) { const k = cx + ',' + cz; if (!RGRID.has(k)) RGRID.set(k, []); RGRID.get(k).push([ax, az, bx, bz]); } }
+  const onRail = (x, z) => { const l = RGRID.get(Math.floor(x / 8) + ',' + Math.floor(z / 8)); if (l) for (const [ax, az, bx, bz] of l) if (distSegSq(x, z, ax, az, bx, bz) < 2.6 * 2.6) return true; return false; };
+  const trees = CITY.trees.concat(extraTrees(Math.min(700, CITY.green.length * 5)), streetTrees()).map(([x, z]) => pushOffRoads(x, z, 0.9)).filter(([x, z]) => !Number.isNaN(x) && !onRail(x, z) && solidAt(x, z) < 0 && waterAt(x, z) === null && deckAt(x, z, 1e9, 0) === null); treeSpots.push(...trees);
   const tm = new THREE.InstancedMesh(trunk, shLambert(0x5a3f2a), trees.length);
   if (!CROWN_MAT) { CROWN_MAT = new THREE.MeshLambertMaterial({ color: 0xffffff }); CROWN_MAT.userData.shared = true; } const cm = new THREE.InstancedMesh(crown, CROWN_MAT, trees.length);
   const o = new THREE.Object3D();
