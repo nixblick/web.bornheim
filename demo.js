@@ -302,10 +302,10 @@ export function initDemo(X, W) {
   function updateArrested(dt) { for (let i = peds.length - 1; i >= 0; i--) { const h = peds[i], u = h.userData; if (u.state !== 'arrested') continue; u.arrT += dt; if (u.mixer && !u.lod) { u.mixer.update(dt); } if (u.arrT > 9 && h.position.distanceTo(player.pos) > 12) removePed(h); else if (u.arrT > 30) removePed(h); } }
 
   // ---------- Spontane Demo und Leute sammeln (Taste G) ----------
-  function spontaneous(at) {
+  function spontaneous(at, o = {}) { /* o.noPolice: Kreativmodus, nur Leute (André 12.11.2026) */
     let p = at; if (!p) { for (let k = 0; k < 30; k++) { const rp = X.randomRoadPoint(pick(pedRoads().filter(r => r.w >= 6))); const dd = Math.hypot(rp.x - player.pos.x, rp.z - player.pos.z); if (dd > 90 && dd < 200) { p = [rp.x, rp.z]; break; } } } if (!p) return null;
     let goal = null; for (let k = 0; k < 30; k++) { const rp = X.randomRoadPoint(pick(pedRoads().filter(r => r.w >= 7))); const dd = Math.hypot(rp.x - p[0], rp.z - p[1]); if (dd > 260 && dd < 520) { goal = [rp.x, rp.z]; break; } }
-    const d = spawnDemo({ x: p[0], z: p[1], n: 6, gather: true, max: 30 }); d.goal = goal; d.joinT = 1; d.energy = 0.7; const st = X.streetAt(p[0], p[1]);
+    const d = spawnDemo({ x: p[0], z: p[1], n: 6, gather: true, max: 30, noPolice: !!o.noPolice }); d.goal = goal; d.joinT = 1; d.energy = 0.7; const st = X.streetAt(p[0], p[1]);
     post('kollektiv', `Spontandemo ${st ? 'in der ' + st : 'in Bornheim'}! ${world.hour > 11 && world.hour < 19 ? '38 Grad und die Stadt baut Parkplätze. ' : ''}Kommt alle! #Hitzefrei`, Math.round(rnd(300, 1200))); return d;
   }
   function rally() {

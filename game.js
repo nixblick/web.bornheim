@@ -2332,7 +2332,7 @@ function creativePlace() {
   if (it.s === 'car') { const c = makeCar(false); c.position.set(p.x, TH(p.x, p.z), p.z); c.userData.heading = camYaw.v; c.rotation.y = camYaw.v; c.userData.mode = 'parked'; scene.add(c); cars.push(c); shootables.push(c); }
   else if (it.s === 'ped') spawnPedAt(p.x, p.z);
   else if (it.s === 'firework') WPN.firework(p);
-  else if (it.s === 'demo') { const d = DEMO.spontaneous([p.x, p.z]); if (d) { d.joinT = 0; for (let i = 0; i < 10; i++) { const a = Math.random() * 6.28, r = 2 + Math.random() * 5; const h = DEMO.makeMember(p.x + Math.cos(a) * r, p.z + Math.sin(a) * r); h.userData.demo = d; d.members.push(h); } d.age = 20; } }
+  else if (it.s === 'demo') { const d = DEMO.spontaneous([p.x, p.z], { noPolice: true }); if (d) { d.joinT = 0; for (let i = 0; i < 10; i++) { const a = Math.random() * 6.28, r = 2 + Math.random() * 5; const h = DEMO.makeMember(p.x + Math.cos(a) * r, p.z + Math.sin(a) * r); h.userData.demo = d; d.members.push(h); } d.age = 20; } }
   else if (it.s === 'police') DEMO.spawnSquad(p);
   else if (it.s === 'cannon') DEMO.spawnCannon(p.x, p.z, camYaw.v + Math.PI, 'parked');
   else if (it.s === 'firetruck') DEMO.spawnCannon(p.x, p.z, camYaw.v + Math.PI, 'parked', 'fire');
