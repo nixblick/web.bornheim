@@ -2,6 +2,7 @@
 
 ## 2026-11-12
 
+- **Feuer- und Rettungswache 2 (Heinrichstraße 8, Gallus):** Hauptbau und Fahrzeughalle bekommen die Wachen-Fassade samt roten Toren; in OSM ohne Namen, Lage über die Adresse gefunden
 - **Alte Schulen wie die Kirchnerschule** (nach Foto): Schulgebäude mit Steildach bekommen weißen Putz, Fenster mit Sandsteinrahmen, Verdachung und Sohlbank, Gurtgesims je Geschoss und ein Sandsteinportal mit Glastür; flache Schulbauten behalten den IGS-Stil
 - **Kommandowagen der Feuerwehr** (nach Foto Amtsleiter Branddirektion): E-Auto in Leuchtrot mit weißer Flanke, rot-weißen Warnschrägen, Blaulichtbalken und Dachschild „FEUERWEHR“; parkt in der Nähe von Feuerwachen
 - **Feuerwachen** (nach Foto der alten Wache 3): heller Putz, Fenster und Ecksteine aus rotem Sandstein, im Erdgeschoss rote Falttore; erkannt am Gebäudenamen (Feuerwache, Rettungswache, Feuerwehr)

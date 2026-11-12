@@ -835,6 +835,8 @@ function* buildDetails2() {
 const staticParked = []; let parkedMesh = null; let roadMeshRef = null; const roadChunks = [];
 const instRefs = [];
 let PARK_TG = null, PARK_LOW = null;
+// Wachen ohne Namen in OSM, Lage aus der Adresse (Nominatim) und Gebäudegröße: Feuer- und Rettungswache 2, Heinrichstraße 8 (Hauptbau und Fahrzeughalle)
+const WACHE_OHNE_NAMEN = [[-4105, 2517], [-4136, 2487]];
 const WACHEN = []; // Mittelpunkte der Feuerwachen (aus dem Gebäudebau), dort parkt der Kommandowagen
 function buildParked() {
   const local = [];
@@ -1099,6 +1101,7 @@ function* buildCity() {
   const SCHULHOF = CITY_SCHOOLS(); // Schulgelände (OSM-Flächen) mit Rahmen, für Gebäude ohne Namen
   const kindOf = b => { if (b._kind) return b._kind; const n = b.n || ''; let k = b.k || 'res';
     if (/Feuerwache|Rettungswache|Feuer- und Rettungs|Feuerwehr/i.test(n) && !/Training/i.test(n)) k = 'wache';
+    else if (!n && WACHE_OHNE_NAMEN.some(([x, z]) => { const [cx, cz] = centroidOf(b.p); return Math.hypot(cx - x, cz - z) < 6; })) k = 'wache';
     else if (/schule|gymnasium|\bIGS\b/i.test(n)) k = 'school';
     else if ((k === 'res' || k === 'public' || k === 'small') && SCHULHOF.length) { const [cx, cz] = centroidOf(b.p); if (SCHULHOF.some(s => cx > s.x0 && cx < s.x1 && cz > s.z0 && cz < s.z1 && pointInPoly(cx, cz, s.p))) k = 'school'; }
     if (k === 'school' && b.r && b.rh > 0) k = 'altschule'; // Steildach: Gründerzeitbau wie die Kirchnerschule (Foto 12.11.2026)
