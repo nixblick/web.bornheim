@@ -351,7 +351,7 @@ function moveWithCollision(pos, dx, dz, r, y, extra) {
 const _allCanvasTex = [];
 const _lamCache = new Map(), _basCache = new Map(), WALL_MATS = new Map(), GF_MATS = new Map(), sharedEmissiveMats = [];
 let ROOF_MAT = null, TILE_ROOF_MAT = null, WALK_MAT = null, PATH_MAT = null, SIG_LENS_MAT = null, SPOT_GLOW_MAT = null, PTS_GLOW_MAT = null, SHELTER_GLASS_MAT = null, DORMER_GLASS_MAT = null;
-let WALL_WASH_MAT = null, BAUZAUN_MAT = null, BAU_LAMP_MAT = null; let TRUNK_G = null, CROWN_LOW_G = null, CROWN_HI_G = null, LAMP_G = null, LAMP_HEAD_G = null, LAMP_SPOT_G = null, SIG_LENS_G = null, SIG_POLE_G = null, SIG_BOX_G = null, BUSH_LOW_G = null, BUSH_HI_G = null;
+let WALL_WASH_MAT = null, BAUZAUN_MAT = null, BAU_LAMP_MAT = null, LAUB_MAT = null; let TRUNK_G = null, CROWN_LOW_G = null, CROWN_HI_G = null, LAMP_G = null, LAMP_HEAD_G = null, LAMP_SPOT_G = null, SIG_LENS_G = null, SIG_POLE_G = null, SIG_BOX_G = null, BUSH_LOW_G = null, BUSH_HI_G = null;
 function shLambert(col, side = THREE.FrontSide) {
   const k = col * 4 + side; let m = _lamCache.get(k);
   if (!m) { m = new THREE.MeshLambertMaterial({ color: col, side }); m.userData.shared = true; _lamCache.set(k, m); }
@@ -651,7 +651,7 @@ function* buildDetails() {
   const COLS = 8, ROWS = Math.max(1, Math.min(64, Math.ceil(items.length / 8))), CW = 256, CH = 32; const atlas = document.createElement('canvas'); atlas.width = COLS * CW; atlas.height = ROWS * CH; const ac = atlas.getContext('2d');
   const sv = [], suv = [], sn = []; let si = 0;
   for (const it of items.slice(0, COLS * ROWS)) {
-    const col = si % COLS, row = Math.floor(si / COLS); const [bg, fg] = SIGN_STYLES[it.k] || SIGN_STYLES.default;
+    const col = si % COLS, row = Math.floor(si / COLS); const [bg, fg] = /Eifler/.test(it.n) ? ['#b6ff2e', '#e0141c'] : /D[öo]neria/.test(it.n) ? ['#dff5ec', '#d4165a'] : SIGN_STYLES[it.k] || SIGN_STYLES.default;
     ac.fillStyle = bg; ac.fillRect(col * CW, row * CH, CW, CH); ac.fillStyle = fg; let fs = 20; ac.font = `bold ${fs}px Arial, sans-serif`; let txt = it.n.length > 26 ? it.n.slice(0, 25) + '…' : it.n; while (ac.measureText(txt).width > CW - 12 && fs > 9) { fs--; ac.font = `bold ${fs}px Arial, sans-serif`; } ac.textBaseline = 'middle'; ac.textAlign = 'center'; ac.fillText(txt, col * CW + CW / 2, row * CH + CH / 2 + 1);
     const en = edgeNormal(it.b.p, it.e); const w = Math.min(en.l - 0.6, Math.max(2.4, txt.length * 0.32)); if (w < 1.5) { si++; continue; }
     let t = 0.5; if (it.px !== null) t = clamp(((it.px - en.ax) * en.dx + (it.pz - en.az) * en.dz) / (en.l * en.l), (w / 2 + 0.2) / en.l, 1 - (w / 2 + 0.2) / en.l);
@@ -733,6 +733,9 @@ function* buildDetails() {
       for (let k = -1; k <= 1; k++) { const px = sx + ux * k * 1.3 + uz * 0.5, pz = sz + uz * k * 1.3 - ux * 0.5; if (solidAt(px, pz) >= 0) continue; const b = new THREE.CylinderGeometry(0.07, 0.08, 0.9, 6); b.translate(px, TH(px, pz) + 0.45, pz); bol.push(b); } });
     if (poles.length) addMerged(poles, shLambert(0x6a6e72), false); if (bol.length) addMerged(bol, shLambert(0x2c2e30), false);
     if (sv.length) { const tex = new THREE.CanvasTexture(at); tex.colorSpace = THREE.SRGBColorSpace; const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(sv, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(suv, 2)); g.computeVertexNormals(); scene.add(new THREE.Mesh(g, new THREE.MeshLambertMaterial({ map: tex, side: THREE.DoubleSide }))); } }
+  // --- Herbstlaub (Oktober/November, nach Fotos 12.11.2026): Blätter am Fahrbahnrand und auf Gehwegen, eine Punktwolke je Kachel ---
+  { const mo = new Date().getMonth(); if (mo === 9 || mo === 10) { const lp = []; for (const r of CITY.roads) { if (r.mw || r.w < 4) continue; for (let i = 0; i < r.p.length - 1; i++) { const [ax, az] = r.p[i], [bx, bz] = r.p[i + 1]; const l = Math.hypot(bx - ax, bz - az); const nx = -(bz - az) / (l || 1), nz = (bx - ax) / (l || 1); for (let k = 0; k < l * 1.2; k++) { const s = Math.random(), sd = Math.random() < 0.5 ? -1 : 1, off = r.w / 2 + (Math.random() < 0.6 ? -Math.random() * 0.8 : Math.random() * 3); const x = ax + (bx - ax) * s + nx * off * sd, z = az + (bz - az) * s + nz * off * sd; lp.push(x, TH(x, z) + 0.07, z); } } }
+    if (lp.length) { const gg = new THREE.BufferGeometry(); gg.setAttribute('position', new THREE.Float32BufferAttribute(lp, 3)); if (!LAUB_MAT) LAUB_MAT = Object.assign(new THREE.PointsMaterial({ size: 0.28, sizeAttenuation: true, transparent: true, alphaTest: 0.4, map: canvasTex(32, 32, (c) => { c.fillStyle = pick(['#c8781e', '#a85a16', '#d9a020']); c.beginPath(); c.ellipse(16, 16, 13, 8, 0.6, 0, 7); c.fill(); }, 1, 1), color: 0xffffff }), { userData: { shared: true } }); scene.add(new THREE.Points(gg, LAUB_MAT)); } } }
   // --- Baustellen: rot-weiße Bauzäune mit gelben Warnleuchten, ein bis zwei je Kachel ---
   { const bz = [], lamps = []; const rs = CITY.roads.filter(r => !r.ped && !r.mw && r.w >= 6 && r.w <= 12); for (let n = 0; n < Math.min(2, rs.length); n++) { if (Math.random() < 0.4) continue; const r = pick(rs); const i = Math.floor(Math.random() * (r.p.length - 1)); const [ax, az] = r.p[i], [bx, bz2] = r.p[i + 1]; const l = Math.hypot(bx - ax, bz2 - az); if (l < 12) continue; const ux = (bx - ax) / l, uz = (bz2 - az) / l, nx = -uz, nz = ux; const cx = ax + ux * l / 2 + nx * r.w / 4, cz = az + uz * l / 2 + nz * r.w / 4; const ang = Math.atan2(ux, uz);
       for (const [du, dn, rot] of [[-3, 1.2, 0], [-1, 1.2, 0], [1, 1.2, 0], [3, 1.2, 0], [-3, -1.2, 0], [-1, -1.2, 0], [1, -1.2, 0], [3, -1.2, 0], [-4, 0, 1], [4, 0, 1]]) { const x = cx + ux * du + nx * dn, z = cz + uz * du + nz * dn; const g = new THREE.BoxGeometry(0.06, 1.0, 2.0); g.rotateY(ang + (rot ? Math.PI / 2 : 0) + Math.PI / 2); g.translate(x, TH(x, z) + 0.6, z); bz.push(g); if (Math.abs(du) === 3 || rot) { const s = new THREE.SphereGeometry(0.12, 8, 6); s.translate(x, TH(x, z) + 1.25, z); lamps.push(s); } } }
@@ -826,6 +829,7 @@ function buildSky() {
 }
 const _sunV = new THREE.Vector3();
 function updateSky(dt) {
+  if (BAU_LAMP_MAT) BAU_LAMP_MAT.color.setHex(world.night && Math.floor(performance.now() / 500) % 2 ? 0x4a3a10 : 0xffc21a); // Baustellen-Warnleuchten blinken nachts
   if (!skyDome) return; skyDome.position.copy(camera.position);
   const sd = _sunV.copy(world.sunDir).normalize(); sunDisk.position.copy(camera.position).addScaledVector(sd, 700); sunDisk.material.opacity = clamp(world.day * 1.2 - weather.cloud * 0.9, 0, 1); sunDisk.visible = sunDisk.material.opacity > 0.02;
   const bright = 0.25 + 0.75 * world.day; const grey = 1 - weather.cloud * 0.45; const cov = 0.25 + 0.75 * weather.cloud;
@@ -1746,8 +1750,16 @@ if (CAR_TPL.ev) { // 12.11.2026: E-Auto auch als Frankfurter Taxi (hellelfenbein
   { const bb = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.1, 0.3), blauL); bb.position.set(0, D0.h + 0.05, 0.1); kd.push(bb); const sg = new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.16, 0.05), schildM); sg.position.set(0, D0.h + 0.17, 0.25); kd.push(sg); }
   CAR_TPL.evkdow = ab(kd); CAR_TPL.evkdow.root.traverse(o => { if (o.isMesh && o.material.name === 'KdowBlue') o.material.name = 'BlueLights'; });
 }
+{ // Stadtbus 12 m, türkis (Foto 12.11.2026): Kasten mit Fensterband, Leuchtanzeige vorn, rote Rückleuchten, drei Achsen nicht nötig: zwei
+  const root = new THREE.Group(), inner = new THREE.Group(); root.add(inner); const lam = (n, c, e = 0) => { const m = new THREE.MeshLambertMaterial({ color: c, emissive: e ? c : 0, emissiveIntensity: e }); m.name = n; return m; };
+  const lack = lam('Main', 0xffffff), glas = lam('Glass', 0x141c26, 0.2), schw = lam('Black', 0x16181b), anz = lam('Display', 0xffa020, 0.9), tl = lam('TailLights', 0x8a1010, 0.3), hl = lam('Headlights', 0xf2f4f6, 0.4);
+  const bx = (w, h, d, m, x, y, z) => { const o = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m); o.position.set(x, y, z); o.castShadow = true; inner.add(o); };
+  bx(2.5, 2.6, 12, lack, 0, 1.65, 0); bx(2.52, 1.0, 10.6, glas, 0, 2.1, -0.4); bx(2.3, 1.3, 0.04, glas, 0, 2.0, 6.01); bx(1.6, 0.22, 0.05, anz, 0, 2.78, 6.02); bx(2.52, 0.3, 12.02, schw, 0, 0.5, 0);
+  for (const sx of [-0.9, 0.9]) { bx(0.3, 0.14, 0.05, hl, sx, 0.75, 6.02); bx(0.25, 0.4, 0.05, tl, sx, 0.9, -6.02); }
+  for (const z of [3.9, -3.2]) for (const sx of [-1, 1]) { const piv = new THREE.Object3D(); piv.position.set(sx * 1.1, 0.5, z); piv.userData.wheel = true; const w = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 0.3, 16), schw); w.rotation.z = Math.PI / 2; piv.add(w); inner.add(piv); }
+  root.updateMatrixWorld(true); const b = new THREE.Box3().setFromObject(root), s = b.getSize(new THREE.Vector3()); inner.position.y = -b.min.y; CAR_TPL.bus = { root, dims: { w: s.x, h: s.y, l: s.z } }; }
 const CAR_PICK = ['ev', 'ev', 'ev', 'evtaxi', 'sedan', 'sedan', 'small', 'small', 'suv', 'hatchback', 'hatchback', 'wagon', 'wagon', 'taxi'].filter(n => CAR_TPL[n]); /* eigenes E-Auto am häufigsten (12.11.2026) */
-function carBodyColor(name) { return name === 'taxi' || name === 'evtaxi' ? 0xf0e3b8 : name === 'evpolice' ? 0xf3f5f7 : name === 'evkdow' ? 0xe8281e : name === 'police' ? 0xd5dbe2 : pick(CARCOL); }
+function carBodyColor(name) { if (name === 'bus') return 0x19a7b8; return name === 'taxi' || name === 'evtaxi' ? 0xf0e3b8 : name === 'evpolice' ? 0xf3f5f7 : name === 'evkdow' ? 0xe8281e : name === 'police' ? 0xd5dbe2 : pick(CARCOL); }
 function setCarColor(c, col) { c.userData.col = col; for (const m of c.userData.bodyMats || []) m.color.setHex(col).convertSRGBToLinear(); if (!c.userData.bodyMats) c.traverse(o => { if (o.isMesh && o.material?.color && o === c.children[0]) o.material.color.setHex(col); }); }
 const CONE_MAT = new THREE.MeshBasicMaterial({ map: coneTex, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide }); CONE_MAT.userData.shared = true;
 const POLICE_BAR_G = new THREE.BoxGeometry(1.0, 0.14, 0.28); POLICE_BAR_G.userData.shared = true;
@@ -1902,7 +1914,7 @@ function spawnCar(police = false, near = null, minD = 60, maxD = 220, bike = fal
   const pool = near ? roadsNear(near.x, near.z, 1, true) : roadsDrivable; if (!pool.length) return null; let p; for (let k = 0; k < 40; k++) { p = randomRoadPoint(pick(pool)); const d = near ? Math.hypot(p.x - near.x, p.z - near.z) : 0; if (!near || (d < maxD && d > minD)) break; }
   const moto = bike && Math.random() < 0.35, amb = !police && !bike && Math.random() < 0.035; if (bike && !moto && (p.road.mw || p.road.ry)) return null; // keine Fahrräder auf Autobahn und Hochstraße (Motorräder schon)
   const minGap = bike ? 9 : 64; for (const o of cars) if ((o.position.x - p.x) ** 2 + (o.position.z - p.z) ** 2 < minGap) return null; // nicht in ein anderes Fahrzeug setzen
-  const c = moto ? makeMoto() : bike ? makeBike() : amb ? makeAmbulance() : makeCar(police); c.position.set(p.x, roadY(p.road, p.x, p.z), p.z);
+  const c = moto ? makeMoto() : bike ? makeBike() : amb ? makeAmbulance() : makeCar(police, !police && !bike && CAR_TPL.bus && p.road.w >= 7 && !p.road.mw && Math.random() < 0.05 ? 'bus' : null); c.position.set(p.x, roadY(p.road, p.x, p.z), p.z);
   const u = c.userData; u.heading = p.heading; u.road = p.road; u.seg = p.seg; u.dir = p.road.o ? p.road.o : p.dir; if (u.dir < 0) u.heading += Math.PI;
   u.mode = police ? 'police' : (Math.random() < (bike ? 0.65 : 0.55) || p.road.mw || p.road.ry ? 'ai' : 'parked'); u.maxv = moto ? Math.min((p.road.v || 50) / 3.6, 22) * rnd(0.9, 1.15) : bike ? rnd(3.8, 6.2) : Math.min((p.road.v || 50) / 3.6, 15) * rnd(0.8, 1.05);
   if (u.mode === 'parked') { const side = Math.random() < 0.5 ? 1 : -1; const w = p.road.w / 2 + (bike ? 0.7 : 1.1); c.position.x += Math.cos(u.heading) * side * w; c.position.z -= Math.sin(u.heading) * side * w; if (bike) u.heading += side * Math.PI / 2 * (Math.random() < 0.5 ? 1 : -1) * 0.5; }
