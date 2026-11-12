@@ -268,18 +268,27 @@ function solidAt(x, z) {
   for (const i of c) { const b = WORLD.buildings[i]; if (pointInPoly(x, z, b.p) && !(b.pass && inPassage(b, x, z))) return i; }
   return -1;
 }
-// Hausdurchfahrten (OSM tunnel=building_passage): Korridor durch das Gebäude ist frei begehbar und befahrbar
+// Hausdurchfahrten (OSM tunnel=building_passage): Korridor durch das Gebäude ist frei begehbar und befahrbar.
+// WICHTIG (Fix #11, 12.11.2026): Geschlossene Fußgängerplatz-Umrisse (wie Wochenmarkt Bornheim) und Wege, die nur eine
+// Hausecke berühren oder außen an der Fassade entlanglaufen, dürfen niemals als Hausdurchfahrt eingetragen werden –
+// sonst baut gateQuads 4 m hohe schwarze Wände quer vor die Läden. Punkt muss mindestens 0,75 m tief IM Haus liegen.
+const isPedArea = r => !!(r && r.ped && r.p && r.p.length >= 4 && Math.hypot(r.p[0][0] - r.p[r.p.length - 1][0], r.p[0][1] - r.p[r.p.length - 1][1]) < 1);
+function deepInPoly(x, z, poly, m2 = 0.5625) {
+  if (!pointInPoly(x, z, poly)) return false;
+  for (let i = 0, n = poly.length; i < n; i++) { const a = poly[i], b = poly[(i + 1) % n]; if (distSegSq(x, z, a[0], a[1], b[0], b[1]) < m2) return false; }
+  return true;
+}
 function inPassage(b, x, z) { for (const q of b.pass) if (distSegSq(x, z, q[0], q[1], q[2], q[3]) < q[4] * q[4]) return true; return false; }
-// neues Gebäude: Straßenstücke aus dem Straßenraster, die durch den Grundriss laufen, als Durchfahrt eintragen
+// neues Gebäude: Straßenstücke aus dem Straßenraster, die echt durch den Grundriss laufen, als Durchfahrt eintragen
 function buildingPassages(bi) { const b = WORLD.buildings[bi]; if (b.mh >= 2.2) return; let x0 = 1e9, x1 = -1e9, z0 = 1e9, z1 = -1e9; for (const [x, z] of b.p) { x0 = Math.min(x0, x); x1 = Math.max(x1, x); z0 = Math.min(z0, z); z1 = Math.max(z1, z); }
   const g = getRoadGrid(), seen = new Map(); /* Raster liefert die Straße selbst (kein Index): je Straße die schon geprüften Segmente merken */
   for (let cx = Math.floor(x0 / CELL); cx <= Math.floor(x1 / CELL); cx++) for (let cz = Math.floor(z0 / CELL); cz <= Math.floor(z1 / CELL); cz++) { const c = g.get(key(cx, cz)); if (!c) continue;
-    for (const [r, i] of c) { let sg = seen.get(r); if (!sg) seen.set(r, sg = new Set()); if (sg.has(i)) continue; sg.add(i); if (r.mw) continue; const [ax, az] = r.p[i], [bx, bz] = r.p[i + 1]; if (Math.max(ax, bx) < x0 || Math.min(ax, bx) > x1 || Math.max(az, bz) < z0 || Math.min(az, bz) > z1) continue;
-      const L = Math.hypot(bx - ax, bz - az) || 1; for (let t = 0; t <= L; t += 2) { if (pointInPoly(ax + (bx - ax) * t / L, az + (bz - az) * t / L, b.p)) { const hw = Math.max(1.6, r.w / 2 + 0.3); const q = b.pass || (b.pass = []); if (!q.some(e => e[0] === ax && e[1] === az && e[2] === bx && e[3] === bz)) q.push([ax, az, bx, bz, hw]); break; } } } } }
-function passageAdd(r, minBi = 0) { const hw = Math.max(1.6, r.w / 2 + 0.3);
-  for (let i = 0; i < r.p.length - 1; i++) { const [ax, az] = r.p[i], [bx, bz] = r.p[i + 1]; const L = Math.hypot(bx - ax, bz - az); const seen = new Set();
-    for (let s = 0; s <= L; s += 2) { const x = ax + (bx - ax) * s / (L || 1), z = az + (bz - az) * s / (L || 1); const c = grid.get(key(Math.floor(x / CELL), Math.floor(z / CELL))); if (!c) continue;
-      for (const bi of c) { if (bi < minBi || seen.has(bi)) continue; const b = WORLD.buildings[bi]; if (!pointInPoly(x, z, b.p)) continue; seen.add(bi); const q = b.pass || (b.pass = []); if (!q.some(e => e[0] === ax && e[1] === az && e[2] === bx && e[3] === bz)) q.push([ax, az, bx, bz, hw]); } } } }
+    for (const [r, i] of c) { let sg = seen.get(r); if (!sg) seen.set(r, sg = new Set()); if (sg.has(i)) continue; sg.add(i); if (r.mw || isPedArea(r)) continue; const [ax, az] = r.p[i], [bx, bz] = r.p[i + 1]; if (Math.max(ax, bx) < x0 || Math.min(ax, bx) > x1 || Math.max(az, bz) < z0 || Math.min(az, bz) > z1) continue;
+      const L = Math.hypot(bx - ax, bz - az); if (L < 2.5) continue; for (let t = 1.2; t <= L - 1.2; t += 1.5) { if (deepInPoly(ax + (bx - ax) * t / L, az + (bz - az) * t / L, b.p)) { const hw = Math.max(1.6, r.w / 2 + 0.3); const q = b.pass || (b.pass = []); if (!q.some(e => e[0] === ax && e[1] === az && e[2] === bx && e[3] === bz)) q.push([ax, az, bx, bz, hw]); break; } } } } }
+function passageAdd(r, minBi = 0) { if (isPedArea(r)) return; const hw = Math.max(1.6, r.w / 2 + 0.3);
+  for (let i = 0; i < r.p.length - 1; i++) { const [ax, az] = r.p[i], [bx, bz] = r.p[i + 1]; const L = Math.hypot(bx - ax, bz - az); if (L < 2.5) continue; const seen = new Set();
+    for (let s = 1.2; s <= L - 1.2; s += 1.5) { const x = ax + (bx - ax) * s / L, z = az + (bz - az) * s / L; const c = grid.get(key(Math.floor(x / CELL), Math.floor(z / CELL))); if (!c) continue;
+      for (const bi of c) { if (bi < minBi || seen.has(bi)) continue; const b = WORLD.buildings[bi]; if (!deepInPoly(x, z, b.p)) continue; seen.add(bi); const q = b.pass || (b.pass = []); if (!q.some(e => e[0] === ax && e[1] === az && e[2] === bx && e[3] === bz)) q.push([ax, az, bx, bz, hw]); } } } }
 // Dachhöhe an einem Punkt (Flachdach oder Sattel-/Walmdach)
 function roofHeight(b, x, z) {
   const top = (b.base ?? 0) + b.h;
@@ -477,7 +486,7 @@ function nearestEdge(x, z, maxD = 20) { // nächste Gebäudekante über das Koll
 }
 const SIGN_STYLES = { pharmacy: ['#c8102e', '#ffffff'], bank: ['#1a4f9c', '#ffffff'], cafe: ['#5b3a1e', '#f6e7c8'], restaurant: ['#2b2b2b', '#f2d16b'], fast_food: ['#d8471c', '#ffffff'], bakery: ['#d99a2b', '#3a2a10'], bar: ['#1f1f2e', '#ff6f91'], pub: ['#163a2a', '#e8d9a0'], supermarket: ['#1d6fb8', '#ffffff'], convenience: ['#2a7f3e', '#ffffff'], hairdresser: ['#7a2e8e', '#ffffff'], clothes: ['#222222', '#ffffff'], kiosk: ['#c4342d', '#ffe9a0'], florist: ['#2f7d4a', '#ffd1dc'], ice_cream: ['#ff9ab3', '#3a1a2a'], doctors: ['#ffffff', '#1a4f9c'], dentist: ['#ffffff', '#1a8f8f'], post_office: ['#ffcc00', '#000000'], butcher: ['#b3272d', '#ffffff'], books: ['#3a3a7a', '#ffffff'], optician: ['#ffffff', '#222222'], beauty: ['#c77dba', '#ffffff'], chemist: ['#1a5fb4', '#ffffff'], default: ['#2b3a67', '#ffffff'] };
 // Flächen aufs Gelände legen: Dreiecke teilen, bis sie dem Gelände auf ~10 cm folgen (flache Stellen bleiben grob)
-function drape(geo, lift, minLen = 2.5, tol = 0.1, maxLen = 40) { // maxLen: Kanten darüber werden immer geteilt; die Prüfung an Kantenmitten und Schwerpunkt übersieht sonst Buckel im 4-m-Raster
+function drape(geo, lift, minLen = 2.5, tol = 0.1, maxLen = 40, withUV = false) { // maxLen: Kanten darüber werden immer geteilt; die Prüfung an Kantenmitten und Schwerpunkt übersieht sonst Buckel im 4-m-Raster
   const src = geo.index ? geo.toNonIndexed() : geo; const p = src.attributes.position; const out = []; const H = (x, z) => TH(x, z) + lift;
   const tri = (a, b, c, depth) => { const ha = H(a[0], a[1]), hb = H(b[0], b[1]), hc = H(c[0], c[1]);
     const lab = Math.hypot(a[0] - b[0], a[1] - b[1]), lbc = Math.hypot(b[0] - c[0], b[1] - c[1]), lca = Math.hypot(c[0] - a[0], c[1] - a[1]); const L = Math.max(lab, lbc, lca);
@@ -486,7 +495,9 @@ function drape(geo, lift, minLen = 2.5, tol = 0.1, maxLen = 40) { // maxLen: Kan
       if (dev > tol || L > maxLen) { if (L === lab) { const q = m(a, b); tri(a, q, c, depth + 1); tri(q, b, c, depth + 1); } else if (L === lbc) { const q = m(b, c); tri(a, b, q, depth + 1); tri(a, q, c, depth + 1); } else { const q = m(c, a); tri(a, b, q, depth + 1); tri(q, b, c, depth + 1); } return; } }
     out.push(a[0], ha, a[1], b[0], hb, b[1], c[0], hc, c[1]); };
   for (let i = 0; i < p.count; i += 3) tri([p.getX(i), p.getZ(i)], [p.getX(i + 1), p.getZ(i + 1)], [p.getX(i + 2), p.getZ(i + 2)], 0);
-  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(out, 3)); g.computeVertexNormals(); return g;
+  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(out, 3));
+  if (withUV) { const uv = new Float32Array(out.length / 3 * 2); for (let i = 0, j = 0; i < out.length; i += 3, j += 2) { uv[j] = out[i]; uv[j + 1] = out[i + 2]; } g.setAttribute('uv', new THREE.BufferAttribute(uv, 2)); }
+  g.computeVertexNormals(); return g;
 }
 function* buildDetails() {
   // --- Schilder: ein Atlas, ein Mesh ---
@@ -951,10 +962,14 @@ function groundMul() { const q = opts.quality || 'mittel'; return q === 'niedrig
 // Straßenkorridor: Höhe der Mittellinie, wenn (x,z) auf Fahrbahn oder Gehweg liegt
 function corridorH(x, z) { const g = getRoadGrid(); const cx0 = Math.floor(x / CELL), cz0 = Math.floor(z / CELL); let best = null;
   const pad = DEM.step * groundMul() + 1.5;
-  { const c = g.get(key(cx0, cz0)); if (!c) return null;
-  for (const [r, i] of c) { if (r.ry && (r.el[i] || r.el[i + 1])) continue; const [ax, az] = r.p[i], [bx, bz] = r.p[i + 1]; const lim = r.w / 2 + (r.mw ? 1.6 : 2.6) + pad; const dx = bx - ax, dz = bz - az, L2 = dx * dx + dz * dz || 1; const t = clamp(((x - ax) * dx + (z - az) * dz) / L2, 0, 1); const ex = x - ax - dx * t, ez = z - az - dz * t; if (ex * ex + ez * ez > lim * lim) continue; const px = ax + dx * t, pz = az + dz * t; let h = TH(px, pz); if (r.mw && deckAt(px, pz, 1e9, 0) !== null) h = Math.min(h, TH(ax, az) * (1 - t) + TH(bx, bz) * t); if (best === null || h < best) best = h; } }
+  { const c = g.get(key(cx0, cz0)); if (c) {
+  for (const [r, i] of c) { if (r.ry && (r.el[i] || r.el[i + 1])) continue; const [ax, az] = r.p[i], [bx, bz] = r.p[i + 1]; const lim = r.w / 2 + (r.mw ? 1.6 : 2.6) + pad; const dx = bx - ax, dz = bz - az, L2 = dx * dx + dz * dz || 1; const t = clamp(((x - ax) * dx + (z - az) * dz) / L2, 0, 1); const ex = x - ax - dx * t, ez = z - az - dz * t; if (ex * ex + ez * ez > lim * lim) continue; const px = ax + dx * t, pz = az + dz * t; let h = TH(px, pz); if (r.mw && deckAt(px, pz, 1e9, 0) !== null) h = Math.min(h, TH(ax, az) * (1 - t) + TH(bx, bz) * t); if (best === null || h < best) best = h; } } }
+  { const pc = pathGrid.get(key(cx0, cz0)); if (pc) { const lim2 = (1.5 + pad) ** 2;
+  for (const [r, i] of pc) { const [ax, az] = r.p[i], [bx, bz] = r.p[i + 1]; const dx = bx - ax, dz = bz - az, L2 = dx * dx + dz * dz || 1; const t = clamp(((x - ax) * dx + (z - az) * dz) / L2, 0, 1); const ex = x - ax - dx * t, ez = z - az - dz * t; if (ex * ex + ez * ez > lim2) continue; const h = TH(ax + dx * t, az + dz * t); if (best === null || h < best) best = h; } } }
   return best; }
-function groundH(x, z, mul) { const cr = corridorH(x, z); const g = groundH0(x, z, mul); return cr === null ? g : Math.min(g, cr - 0.05); }
+function groundH(x, z, mul) { const cr = corridorH(x, z); const g = groundH0(x, z, mul); if (cr === null) return g;
+  let m = Math.min(g, cr); if (mul > 1) { const s = DEM.step * (mul - 1) * 0.5; m = Math.min(m, TH(x - s, z), TH(x + s, z), TH(x, z - s), TH(x, z + s)); }
+  return m - 0.05 * mul; }
 // Grobes Gelände folgt der echten Höhe (früher: tiefster Punkt der Umgebung, das ließ Grünflächen und Plätze am Hang bis 0,5 m schweben); Straßen senkt corridorH ab
 function groundH0(x, z, mul) { return TH(x, z); }
 function buildGround() {
@@ -972,12 +987,15 @@ const leafMeshes = [], crownMeshes = [];
 function applyTreeQuality() { if (!leafMat) return; const leafy = opts.quality === 'hoch' || opts.quality === 'ultra'; leafMat.visible = leafy; blobMat.visible = !leafy; for (let i = 0; i < leafMeshes.length; i++) leafMeshes[i].visible = leafy; for (let i = 0; i < crownMeshes.length; i++) crownMeshes[i].visible = !leafy; }
 // Stützen unter aufgeständerten Bauten: Ecken des Grundrisses, höchstens 8
 function pillarSpots(b) { const P = b.p; const n = P.length; const step = Math.max(1, Math.floor(n / 8)); const out = []; for (let i = 0; i < n; i += step) { const [x, z] = P[i]; const [cx, cz] = [P.reduce((a, p) => a + p[0], 0) / n, P.reduce((a, p) => a + p[1], 0) / n]; const d = Math.hypot(cx - x, cz - z) || 1; out.push([x + (cx - x) / d * 0.5, z + (cz - z) / d * 0.5]); } return out; }
-// Tor einer Durchfahrt: wo der Korridor die Hauswand schneidet, eine dunkle Öffnung knapp vor der Fassade
+// Tor einer Durchfahrt: wo der Korridor die Hauswand echt schneidet, eine dunkle Öffnung knapp vor der Fassade (auf Wandlänge geklemmt, ragt nie über Hausecken hinaus)
 function gateQuads(b, q, out) { const [ax, az, bx, bz, hw] = q; const P = b.p; const sgn = polyArea(P) > 0 ? 1 : -1;
   for (let i = 0; i < P.length; i++) { const [cx, cz] = P[i], [dx, dz] = P[(i + 1) % P.length]; const rx = bx - ax, rz = bz - az, sx = dx - cx, sz = dz - cz; const den = rx * sz - rz * sx; if (Math.abs(den) < 1e-9) continue;
-    const t = ((cx - ax) * sz - (cz - az) * sx) / den, u = ((cx - ax) * rz - (cz - az) * rx) / den; if (t < 0 || t > 1 || u < 0 || u > 1) continue;
-    const l = Math.hypot(sx, sz) || 1, ex = sx / l, ez = sz / l, nx = ez * sgn, nz = -ex * sgn; const px = ax + rx * t + nx * 0.07, pz = az + rz * t + nz * 0.07; const y0 = TH(px, pz) - 0.3, y1 = Math.min((b.base ?? y0) + Math.min(4, b.h - 0.6), (b.base ?? y0) + 4);
-    const w = hw / Math.max(0.35, Math.abs(rx * ez - rz * ex) / (Math.hypot(rx, rz) || 1)); const A = [px - ex * w, y0, pz - ez * w], B = [px + ex * w, y0, pz + ez * w], C = [px + ex * w, y1, pz + ez * w], D = [px - ex * w, y1, pz - ez * w];
+    const t = ((cx - ax) * sz - (cz - az) * sx) / den, u = ((cx - ax) * rz - (cz - az) * rx) / den; if (t < 0.02 || t > 0.98 || u < 0.05 || u > 0.95) continue;
+    const l = Math.hypot(sx, sz) || 1, ex = sx / l, ez = sz / l, sinA = Math.abs(rx * ez - rz * ex) / (Math.hypot(rx, rz) || 1); if (sinA < 0.5) continue;
+    const nx = ez * sgn, nz = -ex * sgn, w = hw / sinA, s0 = Math.max(0.25, u * l - w), s1 = Math.min(l - 0.25, u * l + w); if (s1 - s0 < 1.6) continue;
+    const ox = nx * 0.07, oz = nz * 0.07, ax0 = cx + ex * s0 + ox, az0 = cz + ez * s0 + oz, bx0 = cx + ex * s1 + ox, bz0 = cz + ez * s1 + oz;
+    const y0 = Math.min(TH(ax0, az0), TH(bx0, bz0)) - 0.3, y1 = Math.min((b.base ?? y0) + Math.min(4, b.h - 0.6), (b.base ?? y0) + 4);
+    const A = [ax0, y0, az0], B = [bx0, y0, bz0], C = [bx0, y1, bz0], D = [ax0, y1, az0];
     const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute([...A, ...B, ...C, ...A, ...C, ...D], 3)); g.setAttribute('normal', new THREE.Float32BufferAttribute([nx, 0, nz, nx, 0, nz, nx, 0, nz, nx, 0, nz, nx, 0, nz, nx, 0, nz], 3)); out.push(g); } }
 function* buildCity() {
   const palette = [0xd9c7b0, 0xcdb8a3, 0xe3d6c4, 0xb8a894, 0xd4b9a0, 0xc8c2b6, 0xe8dccb, 0xb49f8c, 0xd6cfc2, 0xc49e85, 0xb7c4c9, 0xd8b0a8];
@@ -1142,7 +1160,9 @@ function* buildCity() {
   };
   const flatMat = (geo, mat) => { const m = new THREE.Mesh(geo, mat); m.receiveShadow = true; scene.add(m); };
   const walkG = ribbon(CITY.roads, 0.02, r => r.w + (r.mw ? 1.6 : 5)); if (walkG) { if (!WALK_MAT) { WALK_MAT = new THREE.MeshLambertMaterial({ map: gehwegTex }); /* gezeichnete Betonplatten statt Fototextur (12.11.2026) */ WALK_MAT.userData.shared = true; WALK_MAT.polygonOffset = true; WALK_MAT.polygonOffsetFactor = 1; WALK_MAT.polygonOffsetUnits = 4; /* Gehweg der Querstraße liegt am Hang bis 3 cm über der Fahrbahn: Fahrbahn gewinnt im Tiefenpuffer */ } flatMat(walkG, WALK_MAT); }
-  const roadG = ribbon(CITY.roads, 0.04, r => r.w); if (roadG) { const rm = new THREE.Mesh(roadG, roadMatRef || ((LOW_GFX || opts.potato) ? new THREE.MeshLambertMaterial(TEX.asphalt ? { map: TEX.asphalt, color: 0xb8b8b8 } : { map: asphaltTex }) : new THREE.MeshStandardMaterial(Object.assign(TEX.asphalt ? { map: TEX.asphalt, normalMap: TEX.asphaltN, color: 0xb8b8b8 } : { map: asphaltTex }, { roughness: 0.92, metalness: 0, roughnessMap: null })))); /* Sparmodus und „Sehr schwacher Rechner“: Lambert mit Map */ if (!rm.material.userData.pud) { rm.material.userData.pud = puddleTex(); rm.material.userData.shared = true; } rm.receiveShadow = true; scene.add(rm); roadMatRef = rm.material; }
+  const plazas = []; for (const r of CITY.roads) if (isPedArea(r)) { const sh = new THREE.Shape(r.p.map(([x, z]) => new THREE.Vector2(x, -z))); const pg = new THREE.ShapeGeometry(sh); pg.rotateX(-Math.PI / 2); plazas.push(drape(pg, 0.025, 2.5, 0.05, 10, true)); }
+  if (plazas.length && WALK_MAT) flatMat(mergeGeometries(plazas), WALK_MAT);
+  const roadG = ribbon(CITY.roads.filter(r => !isPedArea(r)), 0.04, r => r.w); if (roadG) { const rm = new THREE.Mesh(roadG, roadMatRef || ((LOW_GFX || opts.potato) ? new THREE.MeshLambertMaterial(TEX.asphalt ? { map: TEX.asphalt, color: 0xb8b8b8 } : { map: asphaltTex }) : new THREE.MeshStandardMaterial(Object.assign(TEX.asphalt ? { map: TEX.asphalt, normalMap: TEX.asphaltN, color: 0xb8b8b8 } : { map: asphaltTex }, { roughness: 0.92, metalness: 0, roughnessMap: null })))); /* Sparmodus und „Sehr schwacher Rechner“: Lambert mit Map */ if (!rm.material.userData.pud) { rm.material.userData.pud = puddleTex(); rm.material.userData.shared = true; } rm.receiveShadow = true; scene.add(rm); roadMatRef = rm.material; }
   // Fußwege: Stücke, die im Gehwegband einer Straße liegen (in OSM oft als eigene Linie direkt neben der Fahrbahn), weglassen;
   // sonst liegen zwei Beläge übereinander (12.11.2026, Ticket #11: braune Streifen auf dem Gehweg)
   const freiePfade = []; for (const pa of CITY.paths) { if (pa.ry) { freiePfade.push(pa); continue; } let run = [];
@@ -2253,7 +2273,7 @@ function tileMap(t) {
 }
 function registerTile(t) {
   const d = t.data;
-  if (t.k === '0_-1' || t.k === '-1_0') { const fn = d.furniture || (d.furniture = []); const pt = t.k === '0_-1' ? { x: 255, z: -25, k: 'fountain' } : { x: -210, z: 438, k: 'fountain' }; if (!fn.some(f => f.k === 'fountain' && Math.hypot(f.x - pt.x, f.z - pt.z) < 20)) fn.push(pt); }
+  if (t.k === '0_-1' || t.k === '-1_0') { const fn = d.furniture || (d.furniture = []); const pt = t.k === '0_-1' ? { x: 255, z: -25, k: 'fountain' } : { x: -180, z: 411, k: 'fountain' }; if (!fn.some(f => f.k === 'fountain' && Math.hypot(f.x - pt.x, f.z - pt.z) < 20)) fn.push(pt); }
   const nb0 = WORLD.buildings.length; t.bi = [];
   for (const b of d.buildings || []) { const i = WORLD.buildings.length; WORLD.buildings.push(b); if (!(b.mh >= 2.2)) addToGrid(i, b.p); t.bi.push(i); /* aufgeständert (Überbauung, Tankstellendach): darunter frei */ }
 
