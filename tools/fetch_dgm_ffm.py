@@ -1,7 +1,7 @@
 """Geländehöhen für ganz Frankfurt aus dem DGM1 Hessen (HVBG, Datenlizenz Deutschland Zero 2.0), 4-m-Raster.
 Ergebnis: je Spielkachel (500 m) data/dem/<tx>_<tz>.bin mit 126 x 126 Werten (Uint16, (h - BASE + 50) * 100, zeilenweise nach z).
 Braucht data/raw/ring.json (Stadtgrenze, von tools/fetch_osm_ffm.py). Vorhandene Kacheln werden übersprungen.
-Aufruf: python -I tools/fetch_dgm_ffm.py"""
+Aufruf: python -I tools/fetch_dgm_ffm.py [kachelliste.json]"""
 import json, math, os, re, struct, sys, time, urllib.request
 LAT0, LON0, R = 50.129441, 8.7096938, 6371000.0
 BASE = 89.02; TS = 500; N = 126; STEP = 4
@@ -38,10 +38,13 @@ def tiles_for_ring(ring, pad=1):
             for dz in range(-pad, pad + 1): out.add((tx + dx, tz + dz))
     return sorted(core), sorted(out)
 if __name__ == "__main__":
-    ring = json.load(open("data/raw/ring.json"))
-    core, tiles = tiles_for_ring(ring)
-    json.dump({"ts": TS, "core": core, "tiles": tiles}, open("data/raw/tiles.json", "w"))
-    print(len(core), "Kacheln in der Stadt,", len(tiles), "mit Rand", flush=True)
+    if len(sys.argv) > 1:  # Kachelliste aus Datei (tools/fetch_umland.py: data/raw/umland_tiles.json), Stadtgebiet bleibt unberührt
+        tiles = [tuple(t) for t in json.load(open(sys.argv[1]))["tiles"]]; print(len(tiles), "Kacheln aus", sys.argv[1], flush=True)
+    else:
+        ring = json.load(open("data/raw/ring.json"))
+        core, tiles = tiles_for_ring(ring)
+        json.dump({"ts": TS, "core": core, "tiles": tiles}, open("data/raw/tiles.json", "w"))
+        print(len(core), "Kacheln in der Stadt,", len(tiles), "mit Rand", flush=True)
     todo = [t for t in tiles if not os.path.exists(f"{OUT}/{t[0]}_{t[1]}.bin")]
     blocks = sorted({(math.floor(tx / 4), math.floor(tz / 4)) for tx, tz in todo})
     print(len(blocks), "Blöcke zu laden", flush=True)
