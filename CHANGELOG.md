@@ -2,6 +2,7 @@
 
 ## 2026-11-12
 
+- **U-Bahn-Eingänge nach Foto (Seckbacher Landstraße):** dunkles Portal mit zwei Stützen über dem Treppenkopf, weißer Leuchtkasten mit türkisem U und grauem Stationsnamen, Glasbrüstung über niedriger dunkler Brüstung; der alte Mast mit Würfel entfällt
 - **Zappbar begehbar** (Fotos): langer Holztresen mit Barhockern, Flaschenregal, Hängelampen, Poster, Ledersitzbank und Schachtisch mit zwei Brettern; Bier am Tresen für 3 €
 - **Laternenlicht an Hauswänden:** nachts ein großer warmer Schein in Wandhöhe neben jeder Straßenlaterne (Nachtfoto Wöllstädter Straße)
 - **Ladenzeilen:** Läden im Erdgeschoss mit roter Sandsteinfront, Fugen und hellem Rollladen neben der Tür (Foto Berger Straße)

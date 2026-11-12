@@ -227,26 +227,25 @@ export function initInteriors(X, W, D, SH) {
   // Seit 12.11.2026: Geometrie und Material einmal für alle Eingänge (vorher je Eingang neu, und die
   // U-Texturen wurden beim Abbau nie freigegeben). Das Namensschild gibt es je Station einmal, mit Zähler.
   let EG = null; const nameMats = new Map();
-  const eg = () => EG || (EG = { metal: M(0x5a6068, 0.25), hole: new THREE.PlaneGeometry(2.4, 4), holeM: new THREE.MeshBasicMaterial({ color: 0x0b0c0f }), step: new THREE.BoxGeometry(2.3, 0.02, 0.08), stepM: M(0x777777, 0.3),
+  const eg = () => EG || (EG = { metal: M(0x2e3134, 0.2), glass: new THREE.MeshLambertMaterial({ color: 0xdfe8ee, emissive: 0xcfe0ea, emissiveIntensity: 0.35, transparent: true, opacity: 0.45, side: THREE.DoubleSide }), glassG: new THREE.PlaneGeometry(4, 0.8), postG: new THREE.BoxGeometry(0.14, 2.7, 0.14), boxG: new THREE.BoxGeometry(2.9, 0.62, 0.22), boxNameG: new THREE.PlaneGeometry(2.7, 0.48), hole: new THREE.PlaneGeometry(2.4, 4), holeM: new THREE.MeshBasicMaterial({ color: 0x0b0c0f }), step: new THREE.BoxGeometry(2.3, 0.02, 0.08), stepM: M(0x777777, 0.3),
     railS: new THREE.BoxGeometry(0.06, 1.0, 4), railB: new THREE.BoxGeometry(2.5, 1.0, 0.06), tube: new THREE.CylinderGeometry(0.035, 0.035, 4, 6), pole: new THREE.CylinderGeometry(0.07, 0.08, 3.3, 8), cap: new THREE.CylinderGeometry(0.1, 0.1, 0.12, 8),
     sign: new THREE.BoxGeometry(1.1, 1.1, 0.1), uM: new THREE.MeshBasicMaterial({ map: canvasTex(128, 128, (c) => { c.fillStyle = '#0a3d8f'; c.fillRect(0, 0, 128, 128); uLogo(c, 0, 0, 128); }, 1, 1) }),
     nameG: new THREE.PlaneGeometry(2.0, 0.46), clamp: new THREE.BoxGeometry(0.12, 0.5, 0.2) });
-  const nameMat = st => { let e = nameMats.get(st.id); if (!e) { e = { n: 0, m: new THREE.MeshBasicMaterial({ map: canvasTex(512, 118, (c, w, h) => { c.fillStyle = '#f7f7f4'; c.fillRect(0, 0, w, h); c.fillStyle = '#0a3d8f'; c.fillRect(0, h - 10, w, 10);
-      let x = 12; for (const l of st.lines.slice(0, 4)) x += badge(c, l, x, 16, 54) + 8; c.fillStyle = '#16202a'; fitFont(c, st.name, w - x - 16, 46, 18); c.textAlign = 'left'; c.textBaseline = 'middle'; c.fillText(st.name, x + 6, 44);
-      c.fillStyle = '#5a6b78'; c.font = '20px Arial'; c.fillText('U-Bahn', x + 6, 88); }, 1, 1) }) }; nameMats.set(st.id, e); } e.n++; return e.m; };
+  const nameMat = st => { let e = nameMats.get(st.id); if (!e) { e = { n: 0, m: new THREE.MeshBasicMaterial({ map: canvasTex(512, 118, (c, w, h) => { c.fillStyle = '#fbfbf8'; c.fillRect(0, 0, w, h); /* Foto Seckbacher Landstraße: weißes Leuchtschild, türkises U, grauer Name */
+      c.fillStyle = '#1f9aa8'; c.fillRect(16, 24, 70, 70); c.fillStyle = '#fff'; c.fillRect(30, 34, 12, 40); c.fillRect(60, 34, 12, 40); c.fillRect(30, 64, 42, 12); let x = 100; c.fillStyle = '#4a4e55'; fitFont(c, st.name, w - x - 16, 58, 18); c.textAlign = 'left'; c.textBaseline = 'middle'; c.fillText(st.name, x + 6, 60); }, 1, 1) }) }; nameMats.set(st.id, e); } e.n++; return e.m; };
   const dropName = id => { const e = nameMats.get(id); if (e && --e.n <= 0) { e.m.map.dispose(); e.m.dispose(); nameMats.delete(id); } };
   function entranceMesh(p, st) {
     const E = eg(); const g = new THREE.Group(); const y = TH(p[0], p[1]); g.userData.st = st.id;
     const hole = new THREE.Mesh(E.hole, E.holeM); hole.rotation.x = -Math.PI / 2; hole.position.set(0, 0.04, 0); g.add(hole);
     for (let i = 0; i < 7; i++) { const s = new THREE.Mesh(E.step, E.stepM); s.position.set(0, 0.05, -1.8 + i * 0.55); g.add(s); }
-    for (const [geo, x, z] of [[E.railS, -1.25, 0], [E.railS, 1.25, 0], [E.railB, 0, 2.0]]) { const r = new THREE.Mesh(geo, E.metal); r.position.set(x, 0.55, z); g.add(r); }
+    for (const [geo, x, z] of [[E.railS, -1.25, 0], [E.railS, 1.25, 0], [E.railB, 0, 2.0]]) { const r = new THREE.Mesh(geo, E.metal); r.position.set(x, 0.3, z); r.scale.y = 0.5; g.add(r); }
+    for (const x of [-1.25, 1.25]) { const gl = new THREE.Mesh(E.glassG, E.glass); gl.rotation.y = Math.PI / 2; gl.position.set(x, 0.95, 0); g.add(gl); } // Glasbrüstung
     for (const x of [-1.25, 1.25]) { const h = new THREE.Mesh(E.tube, E.metal); h.rotation.x = Math.PI / 2; h.position.set(x, 1.1, 0); g.add(h); }
     // Mast mit U-Würfel und Namensschild darunter, beidseitig lesbar: von der Straße aus erkennbar
-    const pole = new THREE.Mesh(E.pole, E.metal); pole.position.set(1.6, 1.65, 2.2); g.add(pole); /* Mast endet am U-Würfel (12.11.: ging vorher durch Würfel und Schild) */
-    const cap = new THREE.Mesh(E.cap, E.metal); cap.position.set(1.6, 4.46, 2.2); g.add(cap);
-    const sg = new THREE.Mesh(E.sign, E.uM); sg.position.set(1.6, 3.85, 2.2); g.add(sg);
-    const nm = nameMat(st); for (const ry of [0, Math.PI]) { const n = new THREE.Mesh(E.nameG, nm); n.position.set(1.6, 2.95, 2.2 + (ry ? -0.11 : 0.11)); n.rotation.y = ry; g.add(n); }
-    const cl = new THREE.Mesh(E.clamp, E.metal); cl.position.set(1.6, 2.95, 2.2); g.add(cl);
+    // Portal wie am Foto: zwei dunkle Stützen über dem Treppenkopf, darauf der Leuchtkasten mit Namen (beidseitig)
+    for (const x of [-1.38, 1.38]) { const ps = new THREE.Mesh(E.postG, E.metal); ps.position.set(x, 1.35, -1.9); g.add(ps); }
+    const bx = new THREE.Mesh(E.boxG, E.metal); bx.position.set(0, 2.9, -1.9); g.add(bx);
+    const nm = nameMat(st); for (const ry of [0, Math.PI]) { const n = new THREE.Mesh(E.boxNameG, nm); n.position.set(0, 2.9, -1.9 + (ry ? -0.115 : 0.115)); n.rotation.y = ry; g.add(n); }
     const ne = nearestEdge(p[0], p[1], 20); if (ne) { const e = edgeNormal(ne.b.p, ne.e); g.rotation.y = Math.atan2(e.dx, e.dz); }
     g.position.set(p[0], y, p[1]); scene.add(g); return g;
   }
