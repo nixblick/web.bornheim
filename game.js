@@ -657,6 +657,25 @@ function drape(geo, lift, minLen = 2.5, tol = 0.1, maxLen = 40, withUV = false) 
   if (withUV) { const uv = new Float32Array(out.length / 3 * 2); for (let i = 0, j = 0; i < out.length; i += 3, j += 2) { uv[j] = out[i]; uv[j + 1] = out[i + 2]; } g.setAttribute('uv', new THREE.BufferAttribute(uv, 2)); }
   g.computeVertexNormals(); return g;
 }
+// Zäune, Mauern, Hecken einer Kachel. Eigene Funktion, damit auch der Sparmodus (ohne buildDetails) sie baut:
+// sonst gab es dort weder Bild noch Kollision (Nachttest 12.11.2026).
+function buildFences() {
+  // --- Zäune, Mauern, Hecken ---
+  const fenceRail = [], fencePost = [], wall = [], hedge = [], rwall = [];
+  // Stücke bis 4 m, jedes auf dem Gelände: lange gerade Kästen lagen über Kuppen im Boden (Hindernis ohne Bild)
+  const BSEG = barrierSegs(CITY); if (BUILD_TILE) barrierRegister(BUILD_TILE, BSEG);
+  for (const [ax, az, bx, bz, k] of BSEG) { const L = Math.hypot(bx - ax, bz - az), n = Math.ceil(L / 4), ang = Math.atan2(bx - ax, bz - az);
+    for (let j = 0; j < n; j++) { const px = ax + (bx - ax) * j / n, pz = az + (bz - az) * j / n, qx = ax + (bx - ax) * (j + 1) / n, qz = az + (bz - az) * (j + 1) / n, l = L / n, mx = (px + qx) / 2, mz = (pz + qz) / 2; const ty = TH(mx, mz), slope = Math.atan2(TH(px, pz) - TH(qx, qz), l);
+      const box = (w, h, d, y, arr) => { const g = new THREE.BoxGeometry(w, h, d); g.rotateX(slope); g.rotateY(ang); g.translate(mx, ty + y, mz); arr.push(g); };
+      if (k === 'fence') { box(0.05, 0.07, l, 1.2, fenceRail); box(0.05, 0.07, l, 0.65, fenceRail); box(0.05, 0.07, l, 0.15, fenceRail); for (const [x, z] of j === n - 1 ? [[px, pz], [qx, qz]] : [[px, pz]]) { const g = new THREE.BoxGeometry(0.09, 1.3, 0.09); g.translate(x, TH(x, z) + 0.65, z); fencePost.push(g); } }
+      else if (k === 'wall' || k === 'city_wall') box(0.3, 1.7, l, 0.85, wall);
+      else if (k === 'retaining_wall') box(0.4, 1.0, l, 0.5, rwall);
+      else if (k === 'hedge') box(0.8, 1.3, l, 0.65, hedge);
+    } }
+  const addMerged = (arr, mat, shadow = true) => { if (!arr.length) return; const m = new THREE.Mesh(mergeGeometries(arr), mat); m.castShadow = shadow; m.receiveShadow = true; scene.add(m); };
+  addMerged(fenceRail, shLambert(0x55575a), false); addMerged(fencePost, shLambert(0x55575a), false);
+  addMerged(wall, shLambert(0x9a9388)); addMerged(rwall, shLambert(0x8a847a)); addMerged(hedge, shLambert(0x3f6f2f));
+}
 function* buildDetails() {
   // --- Schilder: ein Atlas, ein Mesh ---
   const items = [];
@@ -676,21 +695,8 @@ function* buildDetails() {
     tri(A, B, C, [u0, v0], [u1, v0], [u1, v1]); tri(A, C, D, [u0, v0], [u1, v1], [u0, v1]); si++;
   }
   if (sv.length) { const tex = new THREE.CanvasTexture(atlas); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = ANISO; const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(sv, 3)); g.setAttribute('normal', new THREE.Float32BufferAttribute(sn, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(suv, 2)); { const mt = new THREE.MeshBasicMaterial({ map: tex, side: THREE.DoubleSide }); mt.userData.ownTex = true; scene.add(new THREE.Mesh(g, mt)); } }
-  // --- Zäune, Mauern, Hecken ---
-  const fenceRail = [], fencePost = [], wall = [], hedge = [], rwall = [];
-  // Stücke bis 4 m, jedes auf dem Gelände: lange gerade Kästen lagen über Kuppen im Boden (Hindernis ohne Bild)
-  const BSEG = barrierSegs(CITY); if (BUILD_TILE) barrierRegister(BUILD_TILE, BSEG);
-  for (const [ax, az, bx, bz, k] of BSEG) { const L = Math.hypot(bx - ax, bz - az), n = Math.ceil(L / 4), ang = Math.atan2(bx - ax, bz - az);
-    for (let j = 0; j < n; j++) { const px = ax + (bx - ax) * j / n, pz = az + (bz - az) * j / n, qx = ax + (bx - ax) * (j + 1) / n, qz = az + (bz - az) * (j + 1) / n, l = L / n, mx = (px + qx) / 2, mz = (pz + qz) / 2; const ty = TH(mx, mz), slope = Math.atan2(TH(px, pz) - TH(qx, qz), l);
-      const box = (w, h, d, y, arr) => { const g = new THREE.BoxGeometry(w, h, d); g.rotateX(slope); g.rotateY(ang); g.translate(mx, ty + y, mz); arr.push(g); };
-      if (k === 'fence') { box(0.05, 0.07, l, 1.2, fenceRail); box(0.05, 0.07, l, 0.65, fenceRail); box(0.05, 0.07, l, 0.15, fenceRail); for (const [x, z] of j === n - 1 ? [[px, pz], [qx, qz]] : [[px, pz]]) { const g = new THREE.BoxGeometry(0.09, 1.3, 0.09); g.translate(x, TH(x, z) + 0.65, z); fencePost.push(g); } }
-      else if (k === 'wall' || k === 'city_wall') box(0.3, 1.7, l, 0.85, wall);
-      else if (k === 'retaining_wall') box(0.4, 1.0, l, 0.5, rwall);
-      else if (k === 'hedge') box(0.8, 1.3, l, 0.65, hedge);
-    } }
+  buildFences(); // Zäune: Bild und Kollision aus einer Quelle, eigener Schritt (läuft auch im Sparmodus)
   const addMerged = (arr, mat, shadow = true) => { if (!arr.length) return null; const m = new THREE.Mesh(mergeGeometries(arr), mat); m.castShadow = shadow; m.receiveShadow = true; scene.add(m); return m; };
-  addMerged(fenceRail, shLambert(0x55575a), false); addMerged(fencePost, shLambert(0x55575a), false);
-  addMerged(wall, shLambert(0x9a9388)); addMerged(rwall, shLambert(0x8a847a)); addMerged(hedge, shLambert(0x3f6f2f));
   // --- Schulhöfe ---
   const yard = []; for (const a of CITY.areas) { const shape = new THREE.Shape(a.p.map(([x, z]) => new THREE.Vector2(x, -z))); const geo = new THREE.ShapeGeometry(shape); geo.rotateX(-Math.PI / 2); yard.push(drape(geo, 0.06, 2.5, 0.05, 10)); }
   addMerged(yard, shLambert(0x8f8d88), false);
@@ -2851,7 +2857,7 @@ function* buildTileGround(t) {
   const m = new THREE.Mesh(gg, GROUND_MAT); m.receiveShadow = true; scene.add(m); rayTargets.push(m);
 }
 let YC = 0; const BUILD_STEPS = ['ground', 'city', 'det', 'det2', 'park'];
-const STEP_FN = { ground: t => buildTileGround(t), city: () => buildCity(), det: () => buildDetails(), det2: () => buildDetails2(), park: function* () { buildParked(); } };
+const STEP_FN = { ground: t => buildTileGround(t), city: () => buildCity(), det: () => buildDetails(), det2: () => buildDetails2(), park: function* () { buildParked(); }, fence: function* () { buildFences(); } };
 const _tileFrustum = new THREE.Frustum(), _tileProj = new THREE.Matrix4();
 function updateTileVis() {
   camera.updateMatrixWorld();
@@ -2865,7 +2871,7 @@ function updateTileVis() {
   }
 }
 function finishTile(t, grp, owned) { t.grp = grp; t.owned = owned; t.box = new THREE.Box3(new THREE.Vector3(t.tx * TS - 24, -40, t.tz * TS - 24), new THREE.Vector3((t.tx + 1) * TS + 24, 260, (t.tz + 1) * TS + 24)); scene.add(grp); t.built = true; t.mul = groundMul(); t.ms = Object.values(t.prof).reduce((a, b) => a + b, 0); }
-function makeJob(t, far = false) { t.prof = {}; t.lod = far ? 'far' : 'near'; t.potato = !!opts.potato; return { t, steps: far ? ['ground', 'city'] : opts.potato ? ['ground', 'city', 'park'] : BUILD_STEPS.slice(), gen: null, grp: new THREE.Group(), owned: OWN_LISTS().map(() => []) }; }
+function makeJob(t, far = false) { t.prof = {}; t.lod = far ? 'far' : 'near'; t.potato = !!opts.potato; return { t, steps: far ? ['ground', 'city'] : opts.potato ? ['ground', 'city', 'fence', 'park'] : BUILD_STEPS.slice(), gen: null, grp: new THREE.Group(), owned: OWN_LISTS().map(() => []) }; }
 // Fernstufe nachrüsten: Details (Schilder, Zäune, Balkone, Gesimse, Möbel, Parkautos) in die vorhandene Gruppe bauen
 function makeUpgrade(t) { return { t, steps: ['det', 'det2', 'park'], gen: null, grp: t.grp, owned: t.owned, upgrade: true }; }
 // arbeitet am Job, bis das Zeitbudget (ms) verbraucht ist; true = Kachel fertig
