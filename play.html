@@ -64,9 +64,9 @@
   #menu .sidetabs button{text-align:left;background:#202533}#menu .sidetabs button.on{background:#ffd84a;color:#111}
   #menu .tabs button{font-size:15px!important;padding:9px 16px!important}
   #menu .quick{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px}#menu .quick .qc{background:#202533;border-radius:10px;padding:10px 14px}#menu .quick .qc label{margin:0}#menu .quick .qh{grid-column:1/-1;font-size:11px;letter-spacing:2px;color:#8a93a8;text-transform:uppercase;margin-top:6px}
-  #menu .pmbar{display:flex;flex-wrap:wrap;gap:14px;align-items:center;margin-bottom:8px}#menu .pmbar label{margin:0;gap:6px}#menu .pmhint{font-size:12px;color:#8a93a8}
+  #menu .pmbar{display:flex;flex-wrap:wrap;gap:14px;align-items:center;margin-bottom:8px}#menu .pmbar label{margin:0;gap:6px}#menu #pm_q{background:#2a3040;color:#eee;border:0;border-radius:6px;padding:6px 10px;width:220px}#menu .pmhint{font-size:12px;color:#8a93a8}
   #menu .pmlines summary{cursor:pointer;font-size:13px}#menu #pm_lines{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;max-width:640px}#menu #pm_lines label{margin:0;font-size:12px;gap:4px;padding:2px 8px;border-radius:12px;background:#202533}
-  #menu #pmap{width:100%;height:calc(min(900px,94vh) - 150px);border-radius:10px;background:#111;cursor:crosshair;display:block}
+  #menu #pmap{width:100%;height:calc(min(900px,94vh) - 150px);border-radius:10px;background:#111;cursor:crosshair;display:block;touch-action:none}
   #menu h2{margin:0 0 14px;font-size:22px;letter-spacing:2px}
   #menu button{display:block;width:100%;margin:6px 0;padding:10px;border:0;border-radius:8px;background:#2a3040;color:#eee;font-size:15px;cursor:pointer}
   #menu button:disabled{opacity:.4}
@@ -158,7 +158,7 @@
   <div class="opts">
     <div class="tabs"><button data-tab="schnell" class="on">⚡ Schnell</button><button data-tab="karte">🗺 Karte</button><button data-tab="fortschritt">📊 Statistik</button><button data-tab="story">📖 Story</button><button data-tab="hilfe">❓ Hilfe</button></div>
     <div class="pane" data-tab="schnell"><div id="quick" class="quick"></div></div>
-    <div class="pane" data-tab="karte" style="display:none"><div class="pmbar"><label><input type="checkbox" id="pm_u" checked> 🚇 U-Bahn</label><label><input type="checkbox" id="pm_b"> 🚌 Bus</label><details class="pmlines"><summary>Linien</summary><div id="pm_lines"></div></details><span class="pmhint">Klick auf Station: hinfahren · Klick ins Freie: hinspringen · Mausrad: Zoom · Ziehen: verschieben</span></div><canvas id="pmap"></canvas></div>
+    <div class="pane" data-tab="karte" style="display:none"><div class="pmbar"><label><input type="checkbox" id="pm_u" checked> 🚇 U-Bahn</label><label><input type="checkbox" id="pm_b"> 🚌 Bus</label><details class="pmlines"><summary>Linien</summary><div id="pm_lines"></div></details><input id="pm_q" list="pm_ql" placeholder="🔍 Straße oder Station …" autocomplete="off"><datalist id="pm_ql"></datalist><span class="pmhint">Klick auf Station: hinfahren · Klick ins Freie: hinspringen · Mausrad: Zoom · Ziehen: verschieben</span></div><canvas id="pmap"></canvas></div>
     <div class="pane" data-tab="fortschritt" style="display:none"><div id="ovstat"></div><div id="progpane"></div></div>
     <div class="pane" data-tab="grafik" style="display:none">
       <label>Grafikqualität <select id="o_quality"><option value="niedrig">Niedrig</option><option value="mittel">Mittel</option><option value="hoch">Hoch (Leuchten, feine Schatten)</option><option value="ultra">Ultra (starke Grafikkarte)</option></select></label>

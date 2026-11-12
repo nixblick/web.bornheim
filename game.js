@@ -2910,13 +2910,25 @@ async function pmJump(x, z, why, cost, minutes) {
 { const cv = $('pmap'); let drag = false, moved = 0, lx = 0, ly = 0;
   if (cv) { cv.addEventListener('mousedown', e => { drag = true; moved = 0; lx = e.clientX; ly = e.clientY; });
     addEventListener('mousemove', e => { if (!drag) return; const k = pmSpan / (cv.clientWidth || 600); pmX -= (e.clientX - lx) * k; pmZ -= (e.clientY - ly) * k; moved += Math.abs(e.clientX - lx) + Math.abs(e.clientY - ly); lx = e.clientX; ly = e.clientY; drawPMap(); });
-    addEventListener('mouseup', e => { if (!drag) return; drag = false; if (moved > 6 || e.target !== cv) return; const r = cv.getBoundingClientRect(); const mx = (e.clientX - r.left) * cv.width / r.width, my = (e.clientY - r.top) * cv.height / r.height;
+    addEventListener('mouseup', e => { if (!drag) return; drag = false; if (moved > 6 || e.target !== cv) return; pmTap(e.clientX, e.clientY); });
+    function pmTap(clX, clY) { const r = cv.getBoundingClientRect(); const mx = (clX - r.left) * cv.width / r.width, my = (clY - r.top) * cv.height / r.height;
       let hit = null, hd = 12; for (const h of pmHits) { const d = Math.hypot(h.x - mx, h.y - my); if (d < hd) { hd = d; hit = h; } }
       if (hit && hit.kind === 'u') { const M = INTERIORS.metro; let from = null, fd = 1e12; for (const s of M.stations) { const d = Math.hypot(s.p[0] - player.pos.x, s.p[1] - player.pos.z); if (d < fd && s.id !== hit.s.id) { fd = d; from = s; } } if (from) { closeMenu(); if (player.car) exitCar(); INTERIORS.ride(from, hit.s); } return; }
       if (hit && hit.kind === 'b') { const km = Math.hypot(hit.s.x - player.pos.x, hit.s.z - player.pos.z) / 1000; pmJump(hit.s.x, hit.s.z, '🚌 Bus fährt … ' + Math.max(3, Math.round(km * 3)) + ' Minuten', 2.8, Math.max(3, km * 3)); return; }
-      const sc = pmSpan / cv.width; pmJump(pmX - pmSpan / 2 + mx * sc, pmZ - pmSpan * cv.height / cv.width / 2 + my * sc, '📍 Springe …', 0, 0); });
+      const sc = pmSpan / cv.width; pmJump(pmX - pmSpan / 2 + mx * sc, pmZ - pmSpan * cv.height / cv.width / 2 + my * sc, '📍 Springe …', 0, 0); }
     cv.addEventListener('wheel', e => { e.preventDefault(); pmSpan = clamp(pmSpan * (e.deltaY > 0 ? 1.2 : 1 / 1.2), 300, 30000); drawPMap(); }, { passive: false });
-    cv.addEventListener('dblclick', () => { pmCenter(); drawPMap(); }); } }
+    cv.addEventListener('dblclick', () => { pmCenter(); drawPMap(); });
+    // Touch: ein Finger zieht, zwei Finger zoomen, kurzes Tippen wirkt wie ein Klick
+    let pd = 0, tx = 0, ty = 0;
+    cv.addEventListener('touchstart', e => { e.preventDefault(); if (e.touches.length === 1) { drag = true; moved = 0; lx = tx = e.touches[0].clientX; ly = ty = e.touches[0].clientY; } else if (e.touches.length === 2) { drag = false; moved = 99; pd = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY); } }, { passive: false });
+    cv.addEventListener('touchmove', e => { e.preventDefault(); if (e.touches.length === 1 && drag) { const t0 = e.touches[0]; const k = pmSpan / (cv.clientWidth || 600); pmX -= (t0.clientX - lx) * k; pmZ -= (t0.clientY - ly) * k; moved += Math.abs(t0.clientX - lx) + Math.abs(t0.clientY - ly); lx = t0.clientX; ly = t0.clientY; drawPMap(); } else if (e.touches.length === 2 && pd > 10) { const d = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY); if (d > 10) { pmSpan = clamp(pmSpan * pd / d, 300, 30000); pd = d; drawPMap(); } } }, { passive: false });
+    cv.addEventListener('touchend', e => { e.preventDefault(); const tap = drag && moved <= 10 && !e.touches.length; drag = false; pd = 0; if (tap) pmTap(tx, ty); }, { passive: false }); } }
+// Suche in der Menükarte: Straßen der geladenen Gegend und alle U-Bahn-Stationen
+function pmPlaces() { const out = new Map(); const M = INTERIORS && INTERIORS.metro; if (M) for (const s of M.stations) out.set('🚇 ' + s.name, { x: s.p[0], z: s.p[1], st: s }); for (const r of WORLD.roads) { if (!r || !r.n || out.has(r.n)) continue; const m = r.p[Math.floor(r.p.length / 2)]; out.set(r.n, { x: m[0], z: m[1] }); } return out; }
+{ const q = $('pm_q'), dl = $('pm_ql'); if (q && dl) { let P = new Map();
+  MENU_HOOKS.push(() => { P = pmPlaces(); dl.replaceChildren(...[...P.keys()].sort((a, b) => a.localeCompare(b, 'de')).slice(0, 1500).map(k => Object.assign(document.createElement('option'), { value: k }))); });
+  const go = () => { const v = q.value.trim().toLowerCase(); if (!v) return; let hit = null; for (const [k, p] of P) if (k.toLowerCase() === v || k.toLowerCase().replace('🚇 ', '') === v) { hit = p; break; } if (!hit) for (const [k, p] of P) if (k.toLowerCase().includes(v)) { hit = p; break; } if (!hit) { showMsg('NICHT GEFUNDEN', 1200); return; } pmX = hit.x; pmZ = hit.z; pmSpan = Math.min(pmSpan, 1500); drawPMap(); };
+  q.addEventListener('change', go); q.addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter') { go(); const v = q.value.trim().toLowerCase(); const p = [...P].find(([k]) => k.toLowerCase().includes(v)); if (p && e.shiftKey) pmJump(p[1].x, p[1].z, '📍 Springe …', 0, 0); } }); } }
 /* F1: Menü direkt auf der Hilfe öffnen */ addEventListener('keydown', e => { if (e.code !== 'F1' || !started) return; e.preventDefault(); if (!menuOpen) openMenu(); MENU_TAB('hilfe'); });
 if ($('m_creative')) $('m_creative').onclick = () => { closeMenu(); if (started) toggleCreative(); };
 $('o_quality').onchange = () => { const before = opts.quality; opts.quality = $('o_quality').value; applyOpts(); if ((before === 'niedrig') !== (opts.quality === 'niedrig')) showMsg('Texturdetails nach Neustart', 1800); };

@@ -2,6 +2,9 @@
 
 ## 2026-11-12
 
+- **Menükarte am Handy:** ein Finger verschiebt, zwei Finger zoomen, Tippen springt bzw. fährt zur Station
+- **Suche in der Menükarte:** Straßen der geladenen Gegend und alle U-Bahn-Stationen mit Vorschlagsliste; Enter zeigt den Ort, Umschalt+Enter springt hin
+- Ungetestet im Spiel, Test im Nachtfenster
 - **Pausemenü neu** (Wunsch André): größer (bis 1400 × 900), links Speichern, Laden, Fehler melden und die Einstellungen untereinander (Grafik, Kamera, Welt, Spiel, Ton), oben die Themen ⚡ Schnell, 🗺 Karte, 📊 Statistik, 📖 Story, ❓ Hilfe
 - **Schnell** (erste Seite): Grafikqualität, Sichtweite, Uhrzeit, Zeitlauf, Wetter, Verkehr, Passanten, Polizei, Unendlich Munition, Unverwundbar, Lautstärke auf einen Blick
 - **Karte im Menü:** Klick ins Freie springt dorthin; U-Bahn-Stationen (Linien einzeln aufklappbar) und Bushaltestellen ein- und ausblendbar, Klick auf eine Station fährt hin (U-Bahn wie am Eingang, 3 €; Bus 2,80 €, Fahrzeit läuft)
