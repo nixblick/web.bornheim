@@ -2,6 +2,7 @@
 
 ## 2026-11-12
 
+- Sternesystem wie GTA: Jede Tat hat eine Obergrenze (Passanten höchstens 2 Sterne, Polizisten 3–4, Hubschrauber 5), höchstens ein Stern mehr alle 8 s. Einen Passanten schlagen gibt 1 Stern statt 2. Ungetestet (Test im Nachtfenster)
 - Polizeihubschrauber: Es kommt nur noch einer, und zu Fuß kann man steil nach oben zielen (auch vom Dach), um sich zu wehren. Ungetestet (Test im Nachtfenster)
 - Innenräume und U-Bahn-Stationen: Die graue Ersatz-Bodenplatte stand nicht mehr hüfthoch im Raum. Ungetestet (Test im Nachtfenster)
 - Keine einheitliche Hausnummer mehr an allen Häusern (stand in der geteilten Erdgeschoss-Textur). Ungetestet (Test im Nachtfenster)

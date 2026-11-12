@@ -148,7 +148,7 @@ export function initWeapons(X) {
   function owner(o) { while (o && !cars.includes(o) && !peds.includes(o) && !(o.userData && o.userData.pheli)) o = o.parent; return o; }
   function hitTarget(o, dmg, dir) {
     if (o.userData.pheli) { o.userData.hp -= dmg; o.userData.hitT = 0.15; return; } /* Polizeihubschrauber (#63) */
-    if (peds.includes(o)) { const u = o.userData; if (u.cop && u.hp > 0) { raiseWanted(0.6); emit('hitCop', o.position, { ped: o }); } else emit('hitPed', o.position, { ped: o }); damage(o, dmg, dir); if (u.hp > 0 && u.state !== 'dead' && dmg >= 15 && (u.state === 'demo' || u.state === 'riot')) stun(o, 'hit', 1.2); }
+    if (peds.includes(o)) { const u = o.userData; if (u.cop && u.hp > 0) { raiseWanted(0.5, 3); emit('hitCop', o.position, { ped: o }); } else emit('hitPed', o.position, { ped: o }); damage(o, dmg, dir); if (u.hp > 0 && u.state !== 'dead' && dmg >= 15 && (u.state === 'demo' || u.state === 'riot')) stun(o, 'hit', 1.2); }
     else damage(o, o.userData.bike ? dmg : dmg * 0.6, dir);
   }
   function fireGun(d) {
@@ -217,7 +217,7 @@ export function initWeapons(X) {
   function sprayCone(pos, dir, who) {
     const h = Math.hypot(dir.x, dir.z) || 1, fx = dir.x / h, fz = dir.z / h;
     for (const p of peds) { const u = p.userData; if (u.state === 'dead' || (u.state === 'stunned' && u.stunKind === 'spray') || (who !== 'player' && u.cop)) continue; const dx = p.position.x - pos.x, dz = p.position.z - pos.z, L = Math.hypot(dx, dz); if (L > 5.5 || L < 0.2 || (dx * fx + dz * fz) / L < 0.86) continue;
-      stun(p, 'spray', rnd(4.5, 7) * X.losFactor(pos.x, pos.y + 1.3, pos.z, p.position.x, p.position.y + 1.3, p.position.z)); /* Wand dazwischen: nur kurz */ if (who === 'player') { if (u.cop) { raiseWanted(0.7); emit('sprayCop', p.position, { ped: p }); } else emit('sprayPed', p.position, { ped: p }); } }
+      stun(p, 'spray', rnd(4.5, 7) * X.losFactor(pos.x, pos.y + 1.3, pos.z, p.position.x, p.position.y + 1.3, p.position.z)); /* Wand dazwischen: nur kurz */ if (who === 'player') { if (u.cop) { raiseWanted(0.4, 2); emit('sprayCop', p.position, { ped: p }); } else emit('sprayPed', p.position, { ped: p }); } }
     if (who !== 'player') { const dx = player.pos.x - pos.x, dz = player.pos.z - pos.z, L = Math.hypot(dx, dz); if (L < 5 && L > 0.2 && (dx * fx + dz * fz) / L > 0.8 && !player.car) X.hurtPlayer('spray', 6 * X.losFactor(pos.x, pos.y + 1.3, pos.z, player.pos.x, player.pos.y + 1.3, player.pos.z)); }
   }
 
@@ -231,7 +231,7 @@ export function initWeapons(X) {
     let best = null, bd = 1.2; for (const p of peds) { const u = p.userData; if (u.state === 'dead') continue; const c = p.position.clone(); c.y += 1.1; const t = c.clone().sub(ray.ray.origin).dot(ray.ray.direction); if (t < 2 || t > d.range + 4) continue; if (c.distanceTo(player.pos) > d.range) continue; const dd = ray.ray.distanceToPoint(c); if (dd < bd) { bd = dd; best = p; } }
     const end = best ? best.position.clone().setY(best.position.y + 1.1) : ray.ray.at(d.range + 3, new V3());
     for (const off of [-0.06, 0.06]) { const g = new THREE.BufferGeometry().setFromPoints([from.clone().setY(from.y + off), end.clone().setY(end.y + off)]); const l = new THREE.Line(g, wireMat); scene.add(l); wires.push({ l, t: 1.4 }); }
-    if (best) { stun(best, 'taser', 6); sfx('taser', 0.8); if (best.userData.cop) { raiseWanted(1); emit('taserCop', best.position, { ped: best }); } else emit('taserPed', best.position, { ped: best }); }
+    if (best) { stun(best, 'taser', 6); sfx('taser', 0.8); if (best.userData.cop) { raiseWanted(0.6, 3); emit('taserCop', best.position, { ped: best }); } else emit('taserPed', best.position, { ped: best }); }
   }
 
   // ---------- Wurfsachen ----------
@@ -349,7 +349,7 @@ export function initWeapons(X) {
   }
   function splatBody(o, pt, p) {
     if (o === 'player') { X.hurtPlayer('paint', 0); return; }
-    if (peds.includes(o)) { const n = new V3(pt.x - o.position.x, 0, pt.z - o.position.z).normalize(); const s = addSplat(pt, n, p.col, 0.7, o); const u = o.userData; if (u.cop) { if (p.who === 'player') raiseWanted(0.6); emit('paintCop', pt, { ped: o, who: p.who }); } else { if (u.state === 'walk') { u.state = 'flee'; u.fleeT = 5; } emit('paintPed', pt, { ped: o, who: p.who }); } return s; }
+    if (peds.includes(o)) { const n = new V3(pt.x - o.position.x, 0, pt.z - o.position.z).normalize(); const s = addSplat(pt, n, p.col, 0.7, o); const u = o.userData; if (u.cop) { if (p.who === 'player') raiseWanted(0.3, 2); emit('paintCop', pt, { ped: o, who: p.who }); } else { if (u.state === 'walk') { u.state = 'flee'; u.fleeT = 5; } emit('paintPed', pt, { ped: o, who: p.who }); } return s; }
     const c = o; const n = new V3(pt.x - c.position.x, 0.6, pt.z - c.position.z).normalize(); addSplat(pt, n, p.col, 1.1, c); emit('paintCar', pt, { car: c, who: p.who }); if (c.userData.police && p.who === 'player') raiseWanted(0.4);
   }
 

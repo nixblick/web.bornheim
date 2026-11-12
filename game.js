@@ -2411,7 +2411,7 @@ function damage(o, amt, dir, src = 'player') {
   const u = o.userData; if (u.hp <= 0) return;
   if (u.bike && u.rider) { const d = tipBike(o, src); if (d) damage(d, amt, dir, src); return; }
   u.hp -= amt;
-  if (peds.includes(o)) { sfx('hit', 0.5); if (u.hp <= 0) { u.state = 'dead'; u.fallDir = dir.clone(); o.rotation.x = 0; if (src === 'player') { player.score += 10; raiseWanted(u.cop ? 1.5 : 1); } if (u.cop && u.car) u.car.userData.officer = null; } else if (!u.cop && u.state !== 'stunned') { u.state = 'flee'; u.fleeT = 6; o.rotation.x = 0; } }
+  if (peds.includes(o)) { sfx('hit', 0.5); if (u.hp <= 0) { u.state = 'dead'; u.fallDir = dir.clone(); o.rotation.x = 0; if (src === 'player') { player.score += 10; raiseWanted(u.cop ? 1 : 0.5, u.cop ? 4 : 2); } if (u.cop && u.car) u.car.userData.officer = null; } else if (!u.cop && u.state !== 'stunned') { u.state = 'flee'; u.fleeT = 6; o.rotation.x = 0; } }
   else { burst(o.position.clone().setY(1), 0x333333, 6, 1.5); if (u.hp <= 0) explode(o, src); }
 }
 function explode(c, src = 'player') {
@@ -2420,7 +2420,7 @@ function explode(c, src = 'player') {
   burst(c.position.clone().setY(1), 0xff7a1a, 40, 6); burst(c.position.clone().setY(1.5), 0x222222, 20, 3);
   if (c === player.car) { player.hp -= 50; exitCar(); }
   if (player.pos.distanceTo(c.position) < 7 && !player.car) player.hp -= 40 * losFactor(c.position.x, c.position.y + 0.8, c.position.z, player.pos.x, player.pos.y + 1, player.pos.z);
-  if (src === 'player') raiseWanted(1.5);
+  if (src === 'player') raiseWanted(1, 3);
   for (const f of X.listeners) f('carExploded', c.position, { car: c });
 }
 // ---------- Partikel-Pool: Rauch, Spray, Funken und Explosionen als ein instanziertes Quad = ein Draw-Call ----------
@@ -2496,7 +2496,7 @@ function policeHeli(dt) {
   if (PHELI.length < want && PHELI_WAIT <= 0) { const h = makePoliceHeli(); const a = Math.random() * 6.28; h.position.set(player.pos.x + Math.cos(a) * 260, player.pos.y + 70, player.pos.z + Math.sin(a) * 260); scene.add(h); shootables.push(h); PHELI.push(h); PHELI_WAIT = 4; showMsg('POLIZEIHUBSCHRAUBER IM ANFLUG', 1500); }
   const ground = TH(player.pos.x, player.pos.z); const high = player.pos.y > ground + 4; const night = world.hour < 6.5 || world.hour > 19;
   for (const h of [...PHELI]) { const u = h.userData;
-    if (u.hp <= 0) { try { burst(h.position.clone(), 0xff8a30, 40); } catch (e) { /* nur Effekt */ } sfx('explosion', 1); dropPoliceHeli(h); PHELI_WAIT = 30; raiseWanted(1); showMsg('HUBSCHRAUBER ABGESCHOSSEN', 1600); continue; }
+    if (u.hp <= 0) { try { burst(h.position.clone(), 0xff8a30, 40); } catch (e) { /* nur Effekt */ } sfx('explosion', 1); dropPoliceHeli(h); PHELI_WAIT = 30; raiseWanted(1, 5); showMsg('HUBSCHRAUBER ABGESCHOSSEN', 1600); continue; }
     u.ang += dt * 0.35; const R = 45, tx = player.pos.x + Math.cos(u.ang + PHELI.indexOf(h) * 3.14) * R, tz = player.pos.z + Math.sin(u.ang + PHELI.indexOf(h) * 3.14) * R, ty = Math.max(player.pos.y, ground) + 32;
     const dx = tx - h.position.x, dy = ty - h.position.y, dz = tz - h.position.z, L = Math.hypot(dx, dy, dz) || 1, sp = Math.min(L, 30 * dt); h.position.x += dx / L * sp; h.position.y += dy / L * sp; h.position.z += dz / L * sp;
     h.rotation.y = Math.atan2(player.pos.x - h.position.x, player.pos.z - h.position.z); h.rotation.x = 0.12; if (u.rotor) u.rotor.rotation.y += dt * 40; u.lamp.material.color.setHex(night ? 0xffffee : 0x666666);
@@ -2509,8 +2509,12 @@ function policeHeli(dt) {
 function archCheck() { const o = player.car || null; if (o && !o.userData.bike) return; const p = o ? o.position : player.pos; const c = deckGrid.get(Math.floor(p.x / DCELL) + ',' + Math.floor(p.z / DCELL)); if (!c) return;
   for (const s of c) { if (!s.arch || !s.apex) continue; const dx = s.bx - s.ax, dz = s.bz - s.az, L2 = dx * dx + dz * dz || 1; const tt = clamp(((p.x - s.ax) * dx + (p.z - s.az) * dz) / L2, 0, 1); if ((p.x - s.ax - dx * tt) ** 2 + (p.z - s.az - dz * tt) ** 2 > 1.2 || Math.abs(p.y - (s.ya + (s.yb - s.ya) * tt)) > 2) continue;
     const now = performance.now(); if (ARCH_LAST === s.arch && now - (ARCH_RIDES.get(s.arch) || 0) < 30000) return; ARCH_RIDES.set(s.arch, now); ARCH_LAST = s.arch; ARCH_COUNT++;
-    if (ARCH_COUNT === 1) showMsg('ÜBER DEN BOGEN! (1/2 GEDULDET)', 1600); else if (ARCH_COUNT === 2) showMsg('NOCHMAL GUTGEGANGEN (2/2)', 1600); else { showMsg('POLIZEI: RUNTER VOM BRÜCKENBOGEN!', 2000); raiseWanted(2); } return; } }
-function raiseWanted(n) { if (opts.police === false) return; player.wanted = clamp(player.wanted + n, 0, 5); player.wantedTimer = 15; }
+    if (ARCH_COUNT === 1) showMsg('ÜBER DEN BOGEN! (1/2 GEDULDET)', 1600); else if (ARCH_COUNT === 2) showMsg('NOCHMAL GUTGEGANGEN (2/2)', 1600); else { showMsg('POLIZEI: RUNTER VOM BRÜCKENBOGEN!', 2000); raiseWanted(1, 2); } return; } }
+// Sterne wie in GTA (André 12.11.2026): jede Tat hat eine Obergrenze (Passant geschlagen/getötet höchstens 1–2 Sterne, Polizist 3–4,
+// Hubschrauber 5); über der Grenze nur Fahndung verlängern. Höchstens ein Stern Zuwachs je 8 s, damit drei Schüsse nicht hochtreiben.
+let WANT_GAIN = 0, WANT_GAIN_T = 0;
+function raiseWanted(n, cap = 5) { if (opts.police === false) return; player.wantedTimer = 15; const now = performance.now() / 1000; if (now - WANT_GAIN_T > 8) { WANT_GAIN = 0; WANT_GAIN_T = now; }
+  if (player.wanted >= cap) return; const add = Math.min(n, 1 - WANT_GAIN, cap - player.wanted); if (add <= 0) return; WANT_GAIN += add; player.wanted = clamp(player.wanted + add, 0, 5); }
 
 // ---------- Auto fahren ----------
 function toggleCar() {
@@ -2523,7 +2527,7 @@ function toggleCar() {
   if (u.voi) { if (player.money < 1) { showMsg('VOI: ZU WENIG GELD', 1200); return; } player.money -= 1; u.voiT = 0; showMsg('VOI ENTSPERRT · 1 € + 2 € JE MINUTE', 1600); }
   if (u.mode === 'ai' || u.mode === 'police' || u.mode === 'medicAI') {
     if (u.bike) dropRider(best, true); else { const d = spawnPedAt(best.position.x + Math.cos(u.heading) * 2.2, best.position.z - Math.sin(u.heading) * 2.2); if (d) { d.userData.state = 'flee'; d.userData.fleeT = 8; } }
-    raiseWanted(u.police ? 2 : u.ambulance ? 1 : u.moto ? 0.6 : u.bike ? 0.3 : 0.6); showMsg(u.police ? 'STREIFENWAGEN GEKLAUT' : u.ambulance ? 'RETTUNGSWAGEN GEKLAUT' : u.moto ? 'MOTORRAD GEKLAUT' : u.bike ? 'RAD GEKLAUT' : 'AUTO GEKLAUT', 1200);
+    raiseWanted(u.police ? 1 : u.ambulance ? 1 : u.bike && !u.moto ? 0.3 : 0.5, u.police ? 3 : u.ambulance ? 2 : 1); showMsg(u.police ? 'STREIFENWAGEN GEKLAUT' : u.ambulance ? 'RETTUNGSWAGEN GEKLAUT' : u.moto ? 'MOTORRAD GEKLAUT' : u.bike ? 'RAD GEKLAUT' : 'AUTO GEKLAUT', 1200);
   }
   if (u.ambulance && !u.healedPlayer && player.hp < 100) { player.hp = Math.min(100, player.hp + 35); u.healedPlayer = true; showMsg('+35 LEBEN (VERBANDKASTEN)', 1200, 'ok'); }
   sfx(u.bike && !u.moto ? 'bell' : 'door'); player.car = best; if (u.moto && !player.mesh.userData.helmet) addHelmet(player.mesh, 0x111111); if (player.mesh.userData.helmet) player.mesh.userData.helmet.visible = !!u.moto; u.mode = 'player'; u.driver = 'player'; player.mesh.visible = !!u.bike; player.pos.copy(best.position); vehName(best);
@@ -2639,7 +2643,7 @@ function driveCar(c, dt, ctrl) {
     const mv = Math.hypot(p.x - px0, p.z - pz0) / Math.max(dt, 1e-3); if (u.vel && mv > 0.01) u.vel.set((p.x - px0) / Math.max(dt, 1e-3), (p.z - pz0) / Math.max(dt, 1e-3)); u.speed *= Math.pow(0.55, dt); if (impact > 1.5 && c === player.car && Math.random() < dt * 6) sfx('bump', 0.2); }
   else if (hit) { if (impact > 5 && (u.dents || 0) < 12) { const sg = Math.sign(u.speed) || 1; const fx = Math.sin(u.heading) * sg, fz = Math.cos(u.heading) * sg; const L = (u.dims ? u.dims.l : 4.2) / 2; const side = (Math.random() - 0.5) * 1.2; const wp = new THREE.Vector3(c.position.x + fx * (L - 0.15) + fz * side, c.position.y + 0.65, c.position.z + fz * (L - 0.15) - fx * side); dentCar(c, wp, new THREE.Vector3(-fx, 0, -fz), Math.min(0.32, impact * 0.013)); } u.pv = (u.pv || 0) + clamp(u.speed * 0.05, -1.2, 1.2); u.rv = (u.rv || 0) + (Math.random() - 0.5) * impact * 0.03; u.hv = (u.hv || 0) + impact * 0.015; if (u.vel) u.vel.multiplyScalar(-0.12); if (impact > 6 && c === player.car) camShake(Math.min(0.5, impact / 45)); if (impact > 11) { if (c === player.car) sfx('crash', clamp(impact / 30, 0.3, 1)); u.hp -= (impact - 8) * 2.2 * dmgK; burst(p.clone().setY(p.y + 0.8), 0xaaaaaa, 4, 2); if (u.hp <= 0) explode(c); } else if (impact > 5 && c === player.car) sfx('bump', 0.5); u.speed = -Math.sign(u.speed) * Math.min(2.5, impact * 0.12); }
   c.rotation.y = u.heading; carFx(c, dt, ctrl.brake || (ctrl.back && u.speed > 0)); carTerrain(c);
-  if (Math.abs(u.speed) > 3) for (const ped of peds) { if (ped.userData.state === 'dead') continue; if (ped.position.distanceTo(p) < 3.5 && (() => { const D = u.dims || { l: 4.4, w: 1.9 }; const sg = Math.sign(u.speed) || 1; const hx = Math.sin(u.heading) * sg, hz = Math.cos(u.heading) * sg; const rx = ped.position.x - p.x, rz = ped.position.z - p.z; const al = rx * hx + rz * hz, ac = rx * hz - rz * hx; return al > -D.l / 2 + 0.6 && al < D.l / 2 + 0.3 && Math.abs(ac) < D.w / 2 + 0.25; })()) { const dir = new THREE.Vector3(dx, 0, dz).normalize(); if (c !== player.car) { /* KI-Fahrer weichen aus und schubsen nur */ const sx = ped.position.x - p.x, sz = ped.position.z - p.z, sl = Math.hypot(sx, sz) || 1; moveWithCollision(ped.position, sx / sl * 1.2, sz / sl * 1.2, 0.3); if (ped.userData.state !== 'stunned' && ped.userData.state !== 'cop') WPN.stun(ped, 'hit', 1.5); u.speed *= 0.5; continue; } damage(ped, u.bike ? 35 : 100, dir); const v = Math.abs(u.speed); ped.userData.fly = new THREE.Vector3(dir.x * v * 0.75 + rnd(-1, 1), 2.5 + v * 0.22, dir.z * v * 0.75 + rnd(-1, 1)); ped.userData.spin = rnd(-6, 6); sfx('hit', 0.9); if (c === player.car) raiseWanted(0.8); } }
+  if (Math.abs(u.speed) > 3) for (const ped of peds) { if (ped.userData.state === 'dead') continue; if (ped.position.distanceTo(p) < 3.5 && (() => { const D = u.dims || { l: 4.4, w: 1.9 }; const sg = Math.sign(u.speed) || 1; const hx = Math.sin(u.heading) * sg, hz = Math.cos(u.heading) * sg; const rx = ped.position.x - p.x, rz = ped.position.z - p.z; const al = rx * hx + rz * hz, ac = rx * hz - rz * hx; return al > -D.l / 2 + 0.6 && al < D.l / 2 + 0.3 && Math.abs(ac) < D.w / 2 + 0.25; })()) { const dir = new THREE.Vector3(dx, 0, dz).normalize(); if (c !== player.car) { /* KI-Fahrer weichen aus und schubsen nur */ const sx = ped.position.x - p.x, sz = ped.position.z - p.z, sl = Math.hypot(sx, sz) || 1; moveWithCollision(ped.position, sx / sl * 1.2, sz / sl * 1.2, 0.3); if (ped.userData.state !== 'stunned' && ped.userData.state !== 'cop') WPN.stun(ped, 'hit', 1.5); u.speed *= 0.5; continue; } damage(ped, u.bike ? 35 : 100, dir); const v = Math.abs(u.speed); ped.userData.fly = new THREE.Vector3(dir.x * v * 0.75 + rnd(-1, 1), 2.5 + v * 0.22, dir.z * v * 0.75 + rnd(-1, 1)); ped.userData.spin = rnd(-6, 6); sfx('hit', 0.9); if (c === player.car) raiseWanted(0.5, 2); } }
   { const D = u.dims || { l: 4.4, w: 1.9 }; const hx = Math.sin(u.heading), hz = Math.cos(u.heading);
     for (const o of cars) { if (o === c || o.userData.mode === 'tram' || o.userData.heli || Math.abs(o.position.y - p.y) > 2.5) continue; const rx = o.position.x - p.x, rz = o.position.z - p.z; if (rx * rx + rz * rz > 49) continue; const ou = o.userData, OD = ou.dims || { l: 4.4, w: 1.9 };
       // Zwei gedrehte Rechtecke (Trennachsen-Test über die vier Kantenrichtungen): Stoßrichtung = Achse mit der kleinsten Überlappung.
