@@ -474,6 +474,23 @@ const kiesTex = canvasTex(512, 512, (ctx, w, h) => {
   for (let i = 0; i < 14; i++) { ctx.fillStyle = `rgba(${r() < 0.5 ? '255,245,220' : '120,95,60'},0.07)`; ctx.beginPath(); ctx.ellipse(r() * w, r() * h, 30 + r() * 70, 20 + r() * 50, r() * 3, 0, Math.PI * 2); ctx.fill(); }
   for (let i = 0; i < 5000; i++) { const t = r(); ctx.fillStyle = t < 0.4 ? 'rgba(110,90,60,0.35)' : t < 0.75 ? 'rgba(235,225,200,0.5)' : 'rgba(150,140,125,0.45)'; const s = 1 + r() * 2.2; ctx.fillRect(r() * w, r() * h, s, s); }
 }, 1 / 2, 1 / 2);
+// Fahrbahn gezeichnet (12.11.2026): Asphalt mit feinem Splitt, vergossenen Rissen, zwei Flickstellen und einem Ölfleck.
+// Ein Bild = 8 m x 8 m (uv = Weltmeter), Grundton wie die alte Fototextur (#5a5a54), damit die Abdunklung im Spiel gleich bleibt.
+const fahrbahnTex = canvasTex(1024, 1024, (ctx, w, h) => {
+  let seed = 0x9e3779b9; const r = () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let q = Math.imul(seed ^ seed >>> 15, 1 | seed); q = q + Math.imul(q ^ q >>> 7, 61 | q) ^ q; return ((q ^ q >>> 14) >>> 0) / 4294967296; }; /* mulberry32: ohne Streifenmuster */
+  ctx.fillStyle = '#5b5b56'; ctx.fillRect(0, 0, w, h);
+  for (let i = 0; i < 26; i++) { ctx.fillStyle = r() < 0.5 ? 'rgba(255,255,250,0.035)' : 'rgba(0,0,0,0.05)'; ctx.beginPath(); ctx.ellipse(r() * w, r() * h, 60 + r() * 160, 40 + r() * 120, r() * 3, 0, Math.PI * 2); ctx.fill(); }
+  // Flickstellen: leicht dunklere, kantige Rechtecke mit Fugenrand
+  for (const [x, y, ww, hh] of [[120, 610, 230, 140], [690, 180, 150, 260]]) { ctx.fillStyle = 'rgba(20,20,22,0.12)'; ctx.fillRect(x, y, ww, hh); ctx.strokeStyle = 'rgba(15,15,15,0.3)'; ctx.lineWidth = 2; ctx.strokeRect(x, y, ww, hh); }
+  // Splitt
+  for (let i = 0; i < 52000; i++) { const t = r(); ctx.fillStyle = t < 0.45 ? 'rgba(25,25,25,0.45)' : t < 0.85 ? 'rgba(150,150,145,0.35)' : 'rgba(205,200,190,0.35)'; const s = 1 + r() * 1.8; ctx.fillRect(r() * w, r() * h, s, s); }
+  // Vergossene Risse (Bitumen), leicht wellig
+  ctx.strokeStyle = 'rgba(28,28,26,0.75)'; ctx.lineCap = 'round';
+  for (let i = 0; i < 4; i++) { let x = r() * w, y = r() * h, a = r() * 6.3; ctx.lineWidth = 3 + r() * 3; ctx.beginPath(); ctx.moveTo(x, y);
+    for (let k = 0; k < 14; k++) { a += (r() - 0.5) * 0.9; x += Math.cos(a) * 18; y += Math.sin(a) * 18; ctx.lineTo(x, y); } ctx.stroke(); }
+  // Ölfleck
+  { const g = ctx.createRadialGradient(470, 820, 4, 470, 820, 70); g.addColorStop(0, 'rgba(10,10,12,0.35)'); g.addColorStop(1, 'rgba(10,10,12,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.ellipse(470, 820, 80, 55, 0.4, 0, Math.PI * 2); ctx.fill(); }
+}, 1 / 8, 1 / 8);
 const roofTex = canvasTex(128, 128, (ctx, w, h) => { ctx.fillStyle = '#7d6b62'; ctx.fillRect(0, 0, w, h); for (let i = 0; i < 2000; i++) { ctx.fillStyle = `rgba(0,0,0,${Math.random() * 0.12})`; ctx.fillRect(Math.random() * w, Math.random() * h, 2, 2); } }, 1 / 5, 1 / 5);
 
 
@@ -1162,7 +1179,7 @@ function* buildCity() {
   const walkG = ribbon(CITY.roads, 0.02, r => r.w + (r.mw ? 1.6 : 5)); if (walkG) { if (!WALK_MAT) { WALK_MAT = new THREE.MeshLambertMaterial({ map: gehwegTex }); /* gezeichnete Betonplatten statt Fototextur (12.11.2026) */ WALK_MAT.userData.shared = true; WALK_MAT.polygonOffset = true; WALK_MAT.polygonOffsetFactor = 1; WALK_MAT.polygonOffsetUnits = 4; /* Gehweg der Querstraße liegt am Hang bis 3 cm über der Fahrbahn: Fahrbahn gewinnt im Tiefenpuffer */ } flatMat(walkG, WALK_MAT); }
   const plazas = []; for (const r of CITY.roads) if (isPedArea(r)) { const sh = new THREE.Shape(r.p.map(([x, z]) => new THREE.Vector2(x, -z))); const pg = new THREE.ShapeGeometry(sh); pg.rotateX(-Math.PI / 2); plazas.push(drape(pg, 0.025, 2.5, 0.05, 10, true)); }
   if (plazas.length && WALK_MAT) flatMat(mergeGeometries(plazas), WALK_MAT);
-  const roadG = ribbon(CITY.roads.filter(r => !isPedArea(r)), 0.04, r => r.w); if (roadG) { const rm = new THREE.Mesh(roadG, roadMatRef || ((LOW_GFX || opts.potato) ? new THREE.MeshLambertMaterial(TEX.asphalt ? { map: TEX.asphalt, color: 0xb8b8b8 } : { map: asphaltTex }) : new THREE.MeshStandardMaterial(Object.assign(TEX.asphalt ? { map: TEX.asphalt, normalMap: TEX.asphaltN, color: 0xb8b8b8 } : { map: asphaltTex }, { roughness: 0.92, metalness: 0, roughnessMap: null })))); /* Sparmodus und „Sehr schwacher Rechner“: Lambert mit Map */ if (!rm.material.userData.pud) { rm.material.userData.pud = puddleTex(); rm.material.userData.shared = true; } rm.receiveShadow = true; scene.add(rm); roadMatRef = rm.material; }
+  const roadG = ribbon(CITY.roads.filter(r => !isPedArea(r)), 0.04, r => r.w); if (roadG) { const rm = new THREE.Mesh(roadG, roadMatRef || ((LOW_GFX || opts.potato) ? new THREE.MeshLambertMaterial({ map: fahrbahnTex, color: 0xb8b8b8 }) : new THREE.MeshStandardMaterial(Object.assign({ map: fahrbahnTex, normalMap: TEX.asphaltN, color: 0xb8b8b8 }, { roughness: 0.92, metalness: 0, roughnessMap: null })))); /* Sparmodus und „Sehr schwacher Rechner“: Lambert mit Map */ if (!rm.material.userData.pud) { rm.material.userData.pud = puddleTex(); rm.material.userData.shared = true; } rm.receiveShadow = true; scene.add(rm); roadMatRef = rm.material; }
   // Fußwege: Stücke, die im Gehwegband einer Straße liegen (in OSM oft als eigene Linie direkt neben der Fahrbahn), weglassen;
   // sonst liegen zwei Beläge übereinander (12.11.2026, Ticket #11: braune Streifen auf dem Gehweg)
   const freiePfade = []; for (const pa of CITY.paths) { if (pa.ry) { freiePfade.push(pa); continue; } let run = [];
@@ -1460,7 +1477,47 @@ CAR_FILES.forEach((name, i) => { const g = gCars[i]; if (!g) return; const s = g
   inner.updateMatrixWorld(true); box = new THREE.Box3().setFromObject(inner); const c = box.getCenter(new THREE.Vector3()); inner.position.set(-c.x, -box.min.y, -c.z); root.updateMatrixWorld(true);
   box = new THREE.Box3().setFromObject(root); sz = box.getSize(new THREE.Vector3());
   CAR_TPL[name] = { root, dims: { w: sz.x, h: sz.y, l: sz.z } }; });
-const CAR_PICK = ['sedan', 'sedan', 'small', 'small', 'suv', 'hatchback', 'hatchback', 'wagon', 'wagon', 'taxi'].filter(n => CAR_TPL[n]);
+// --- Eigenes E-Auto (12.11.2026): markenfrei, im Code gezeichnet, rund 3.000 Dreiecke ---
+// Crossover mit langer Motorhaube-Kurzform, Fastback, durchgehenden LED-Leisten vorn und hinten, Aero-Felgen.
+// Seitenprofil als Form (Länge x Höhe), zur Breite extrudiert; Radhäuser als Bögen im Profil. Vorn = +z.
+(() => {
+  const root = new THREE.Group(); const inner = new THREE.Group(); root.add(inner);
+  const lam = (name, col, em = 0, emCol = col) => { const m = new THREE.MeshLambertMaterial({ color: col, emissive: em ? emCol : 0x000000, emissiveIntensity: em }); m.name = name; return m; };
+  const main = lam('Main', 0xffffff), glas = lam('Glass', 0x10161f, 0.25, 0x1c2735), schwarz = lam('Black', 0x16181b), felge = lam('Rim', 0x9aa1a8), felgeD = lam('RimDark', 0x2a2e33);
+  const head = lam('Headlights', 0xf2f4f6, 0.4), tail = lam('TailLights', 0x8a1010, 0.3, 0x500808);
+  const ext = (pts, depth, mat, bevel = 0.05) => { const s = new THREE.Shape(); pts.forEach(([u, v], i) => i ? s.lineTo(u, v) : s.moveTo(u, v)); return ext2(s, depth, mat, bevel); };
+  const ext2 = (shape, depth, mat, bevel) => { const g = new THREE.ExtrudeGeometry(shape, { depth: depth - bevel * 2, bevelEnabled: bevel > 0, bevelThickness: bevel, bevelSize: bevel, bevelSegments: 2, curveSegments: 10 });
+    g.translate(0, 0, -(depth - bevel * 2) / 2); g.rotateY(-Math.PI / 2); const m = new THREE.Mesh(g, mat); m.castShadow = true; m.receiveShadow = true; return m; };
+  // Karosserie bis zur Gürtellinie, mit zwei Radhäusern
+  const AV = 1.45, AH = -1.42, R = 0.43, Y0 = 0.3;
+  const k = new THREE.Shape(); k.moveTo(-2.33, Y0); k.lineTo(AH - R, Y0); k.absarc(AH, 0.37, R, Math.PI, 0, true); k.lineTo(AV - R, Y0); k.absarc(AV, 0.37, R, Math.PI, 0, true);
+  [[2.3, Y0], [2.42, 0.42], [2.42, 0.6], [2.25, 0.72], [1.5, 0.84], [0.9, 0.92], [-0.8, 0.95], [-1.95, 0.97], [-2.33, 0.93], [-2.42, 0.7], [-2.4, 0.42]].forEach(([u, v]) => k.lineTo(u, v));
+  inner.add(ext2(k, 1.9, main, 0.1));
+  // Glashaus (dunkel), etwas schmaler; darauf ein Dach in Wagenfarbe mit schwarzer Abrisskante
+  inner.add(ext([[0.9, 0.9], [0.05, 1.42], [-1.0, 1.47], [-1.9, 1.2], [-2.2, 0.94], [-0.8, 0.93]], 1.6, glas, 0.06));
+  inner.add(ext([[0.0, 1.43], [-1.0, 1.48], [-1.82, 1.22], [-1.82, 1.26], [-1.0, 1.52], [0.0, 1.47]], 1.34, main, 0.02));
+  inner.add(ext([[-1.86, 1.2], [-2.0, 1.12], [-1.98, 1.17], [-1.84, 1.25]], 1.5, schwarz, 0.01)); /* Dachspoiler */
+  { const d = new THREE.Mesh(new THREE.BoxGeometry(1.7, 0.16, 0.12), schwarz); d.position.set(0, 0.42, -2.5); inner.add(d); } /* Diffusor */
+  // Schweller und Radlaufverkleidung schwarz
+  const sill = new THREE.Mesh(new THREE.BoxGeometry(1.94, 0.12, 1.9), schwarz); sill.position.set(0, 0.36, 0); inner.add(sill);
+  // LED-Leisten über die ganze Breite
+  const leiste = (z, y, mat, w = 1.62) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, 0.045, 0.05), mat); m.position.set(0, y, z); inner.add(m); };
+  leiste(2.53, 0.64, head); leiste(-2.53, 0.8, tail, 1.6); leiste(2.53, 0.47, schwarz, 1.2);
+  // Räder: Reifen, Aero-Felge mit fünf Speichen, Drehpunkt in der Radmitte
+  const reifenG = new THREE.CylinderGeometry(0.37, 0.37, 0.25, 22); reifenG.rotateZ(Math.PI / 2);
+  const felgeG = new THREE.CylinderGeometry(0.27, 0.27, 0.26, 18); felgeG.rotateZ(Math.PI / 2);
+  const nabeG = new THREE.CylinderGeometry(0.07, 0.07, 0.27, 8); nabeG.rotateZ(Math.PI / 2);
+  const speicheG = new THREE.BoxGeometry(0.265, 0.05, 0.2);
+  for (const z of [AV, AH]) for (const sx of [-1, 1]) {
+    const piv = new THREE.Object3D(); piv.position.set(sx * 0.82, 0.37, z); piv.userData.wheel = true; piv.name = 'wheel';
+    piv.add(new THREE.Mesh(reifenG, schwarz)); piv.add(new THREE.Mesh(felgeG, felgeD)); piv.add(new THREE.Mesh(nabeG, felge));
+    for (let i = 0; i < 5; i++) { const s = new THREE.Mesh(speicheG, felge); s.position.set(0, Math.cos(i / 5 * Math.PI * 2) * 0.13, Math.sin(i / 5 * Math.PI * 2) * 0.13); s.rotation.x = i / 5 * Math.PI * 2 - Math.PI / 2; piv.add(s); }
+    inner.add(piv); }
+  root.updateMatrixWorld(true); const box = new THREE.Box3().setFromObject(root); const sz = box.getSize(new THREE.Vector3());
+  inner.position.y = -box.min.y; root.updateMatrixWorld(true);
+  CAR_TPL.ev = { root, dims: { w: sz.x, h: sz.y, l: sz.z } };
+})();
+const CAR_PICK = ['ev', 'ev', 'ev', 'sedan', 'sedan', 'small', 'small', 'suv', 'hatchback', 'hatchback', 'wagon', 'wagon', 'taxi'].filter(n => CAR_TPL[n]); /* eigenes E-Auto am häufigsten (12.11.2026) */
 function carBodyColor(name) { return name === 'taxi' ? 0xf0e3b8 : name === 'police' ? 0xd5dbe2 : pick(CARCOL); }
 function setCarColor(c, col) { c.userData.col = col; for (const m of c.userData.bodyMats || []) m.color.setHex(col).convertSRGBToLinear(); if (!c.userData.bodyMats) c.traverse(o => { if (o.isMesh && o.material?.color && o === c.children[0]) o.material.color.setHex(col); }); }
 const CONE_MAT = new THREE.MeshBasicMaterial({ map: coneTex, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide }); CONE_MAT.userData.shared = true;
