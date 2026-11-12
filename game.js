@@ -533,10 +533,11 @@ function* buildDetails() {
     else if (f.k === 'vending_machine') { if (Math.random() < 0.3) bx(0.8, 1.8, 0.6, 0.9, vend); }
     else if (f.k === 'recycling') { bx(1.2, 1.3, 1.0, 0.65, recyc); bx(1.2, 1.3, 1.0, 0.65, recyc, Math.sin(ang) * 1.4, Math.cos(ang) * 1.4); }
     else if (f.k === 'post_box') { bx(0.5, 1.1, 0.4, 0.55, post); }
-    else if (f.k === 'fountain') { /* Becken mit Rand, Wasser, Säule und Schale (12.11.2026) */ const L2 = (p, s) => new THREE.LatheGeometry(p.map(([r, h]) => new THREE.Vector2(r, h)), s);
+    else if (f.k === 'fountain') { /* Becken mit Rand, Wasser, Säule, Schale und Wasserfontäne (12.11.2026) */ const L2 = (p, s) => new THREE.LatheGeometry(p.map(([r, h]) => new THREE.Vector2(r, h)), s);
       const b = L2([[2.0, 0], [2.3, 0], [2.3, 0.5], [2.45, 0.56], [2.45, 0.64], [2.1, 0.64], [2.1, 0.5], [2.0, 0.42]], 20); b.translate(f.x, ty, f.z); fount.push(b);
       const s = L2([[0, 0], [0.32, 0], [0.24, 0.3], [0.2, 1.2], [0.75, 1.35], [0.85, 1.5], [0.7, 1.52], [0.16, 1.45], [0.14, 1.9], [0.24, 2.0], [0, 2.1]], 12); s.translate(f.x, ty, f.z); fount.push(s);
-      const w = new THREE.CircleGeometry(2.05, 20); w.rotateX(-Math.PI / 2); w.translate(f.x, ty + 0.4, f.z); fountW.push(w); const w2 = new THREE.CircleGeometry(0.72, 12); w2.rotateX(-Math.PI / 2); w2.translate(f.x, ty + 1.47, f.z); fountW.push(w2); }
+      const w = new THREE.CircleGeometry(2.05, 20); w.rotateX(-Math.PI / 2); w.translate(f.x, ty + 0.4, f.z); fountW.push(w); const w2 = new THREE.CircleGeometry(0.72, 12); w2.rotateX(-Math.PI / 2); w2.translate(f.x, ty + 1.47, f.z); fountW.push(w2);
+      const jet = L2([[0, 2.05], [0.06, 2.05], [0.05, 2.75], [0.22, 2.95], [0.38, 2.55], [0.44, 1.5], [0.38, 1.5], [0.32, 2.45], [0.16, 2.8], [0, 2.98]], 10); jet.translate(f.x, ty, f.z); fountW.push(jet); }
   }
   addMerged(benchW, shLambert(0x8b5a2b)); addMerged(bins, shLambert(0x2f3a2f), false); addMerged(bikes, shLambert(0x777777), false); addMerged(vend, shLambert(0xc0392b)); addMerged(recyc, shLambert(0x2f7d4a)); addMerged(post, shLambert(0xffcc00)); addMerged(fount, shLambert(0xb5aa96)); addMerged(fountW, new THREE.MeshLambertMaterial({ color: 0x3f7fa8, emissive: 0x1d4a66, emissiveIntensity: 0.5 }), false);
   // --- Zebrastreifen ---
@@ -2225,6 +2226,7 @@ function tileMap(t) {
 }
 function registerTile(t) {
   const d = t.data;
+  if (t.k === '0_-1' || t.k === '-1_0') { const fn = d.furniture || (d.furniture = []); const pt = t.k === '0_-1' ? { x: 255, z: -25, k: 'fountain' } : { x: -210, z: 438, k: 'fountain' }; if (!fn.some(f => f.k === 'fountain' && Math.hypot(f.x - pt.x, f.z - pt.z) < 20)) fn.push(pt); }
   const nb0 = WORLD.buildings.length; t.bi = [];
   for (const b of d.buildings || []) { const i = WORLD.buildings.length; WORLD.buildings.push(b); if (!(b.mh >= 2.2)) addToGrid(i, b.p); t.bi.push(i); /* aufgeständert (Überbauung, Tankstellendach): darunter frei */ }
 
