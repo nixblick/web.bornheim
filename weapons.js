@@ -109,6 +109,12 @@ export function initWeapons(X) {
 
   // ---------- HUD ----------
   const barEl = document.getElementById('wbar'), wEl = document.getElementById('weapon'); let lastW = '', lastB = '', lastBarDisp = '';
+  if (barEl) {
+    barEl.style.pointerEvents = 'auto';
+    const pickW = e => { const sl = e.target.closest && e.target.closest('[data-w]'); if (!sl) return; e.stopPropagation(); e.preventDefault(); select(sl.dataset.w); };
+    barEl.addEventListener('mousedown', pickW);
+    barEl.addEventListener('touchstart', pickW, { passive: false });
+  }
   function ammoText(id) { const d = DEF[id], it = inv[id]; if (!it) return ''; if (unlimited()) return d.kind === 'melee' ? '' : '∞';
     if (d.kind === 'gun') return it.mag + ' / ' + it.res; if (d.kind === 'spray') return Math.ceil(it.mag) + ' %' + (it.res ? ' +' + it.res : ''); if (d.kind === 'taser') return it.mag + ' / ' + it.res; if (d.kind === 'throw') return '× ' + it.res; return ''; }
   function drawBar() {
@@ -116,7 +122,7 @@ export function initWeapons(X) {
     const fTxt = DEF[cur].fuse ? ` <small style="opacity:.85">· ⏱ ${fuseOf(cur)}s [T]</small>` : '';
     const wh = `<b>${DEF[cur].ic}</b> ${DEF[cur].n} <span>${ammoText(cur)}</span>${fTxt}${lockMode ? ' <span title="In diesem Kapitel gesperrt">🔒</span>' : ''}`; if (wEl && wh !== lastW) { lastW = wh; wEl.innerHTML = wh; }
     if (!barEl) return; const disp = barT > 0 ? 'flex' : 'none'; if (disp !== lastBarDisp) { lastBarDisp = disp; barEl.style.display = disp; } if (barT <= 0) return;
-    const bh = ORDER.map(k => `<div class="${k === cur ? 'sel' : ''}${inv[k] && allowed(k) ? '' : ' off'}"><i>${inv[k] && !allowed(k) ? '🔒' : DEF[k].ic}</i><small>${(DEF[k].slot)}</small><span>${DEF[k].n}</span></div>`).join(''); if (bh !== lastB) { lastB = bh; barEl.innerHTML = bh; }
+    const bh = ORDER.map(k => `<div data-w="${k}" class="${k === cur ? 'sel' : ''}${inv[k] && allowed(k) ? '' : ' off'}"><i>${inv[k] && !allowed(k) ? '🔒' : DEF[k].ic}</i><small>${(DEF[k].slot)}</small><span>${DEF[k].n}</span></div>`).join(''); if (bh !== lastB) { lastB = bh; barEl.innerHTML = bh; }
   }
   const inClosedCar = () => !!(player.car && player.car.userData.cannon);
   const muzzlePos = out => {
