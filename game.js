@@ -444,6 +444,27 @@ function orientedBox(p) { // Achse = längste Kante
 }
 const asphaltTex = canvasTex(256, 256, (ctx, w, h) => { ctx.fillStyle = '#56565b'; ctx.fillRect(0, 0, w, h); for (let i = 0; i < 6000; i++) { ctx.fillStyle = `rgba(${Math.random() < 0.5 ? 0 : 255},${Math.random() < 0.5 ? 0 : 255},${Math.random() < 0.5 ? 0 : 255},${Math.random() * 0.08})`; ctx.fillRect(Math.random() * w, Math.random() * h, 2, 2); } }, 1 / 6, 1 / 6);
 const pavingTex = canvasTex(256, 256, (ctx, w, h) => { ctx.fillStyle = '#b3aca0'; ctx.fillRect(0, 0, w, h); ctx.strokeStyle = 'rgba(0,0,0,0.18)'; ctx.lineWidth = 2; for (let i = 0; i <= 8; i++) { ctx.beginPath(); ctx.moveTo(i * w / 8, 0); ctx.lineTo(i * w / 8, h); ctx.stroke(); ctx.beginPath(); ctx.moveTo(0, i * h / 8); ctx.lineTo(w, i * h / 8); ctx.stroke(); } for (let i = 0; i < 3000; i++) { ctx.fillStyle = `rgba(0,0,0,${Math.random() * 0.07})`; ctx.fillRect(Math.random() * w, Math.random() * h, 3, 3); } }, 1 / 4, 1 / 4);
+// Gezeichnete Bodenbeläge (12.11.2026). uv = Weltmeter, ein Bild = 2 m x 2 m (Wiederholung 1/2).
+// Gehweg: Frankfurter Betonplatten 50 x 50 cm im Halbverband, leicht unterschiedliche Grautöne, feine Fugen.
+const gehwegTex = canvasTex(512, 512, (ctx, w, h) => {
+  const S = 128; let seed = 11; const r = () => (seed = (seed * 9301 + 49297) % 233280) / 233280;
+  ctx.fillStyle = '#8c8880'; ctx.fillRect(0, 0, w, h);
+  const ton = []; for (let i = 0; i < 16; i++) ton.push(176 + Math.floor(r() * 16));
+  for (let row = 0; row < 4; row++) for (let col = -1; col < 4; col++) {
+    const x = col * S + (row % 2 ? S / 2 : 0), y = row * S; const g = ton[row * 4 + ((col + 4) % 4)];
+    ctx.fillStyle = `rgb(${g},${g - 2},${g - 7})`; ctx.fillRect(x + 2, y + 2, S - 4, S - 4);
+    for (let i = 0; i < 90; i++) { const a = r() < 0.5 ? 0.06 : -0.05; ctx.fillStyle = a > 0 ? `rgba(255,255,255,${a})` : `rgba(0,0,0,${-a})`; ctx.fillRect(x + 2 + r() * (S - 6), y + 2 + r() * (S - 6), 2, 2); }
+    ctx.fillStyle = 'rgba(255,255,255,0.10)'; ctx.fillRect(x + 2, y + 2, S - 4, 2); ctx.fillRect(x + 2, y + 2, 2, S - 4);
+  }
+  for (let i = 0; i < 3; i++) { ctx.fillStyle = 'rgba(70,60,50,0.06)'; ctx.beginPath(); ctx.ellipse(r() * w, r() * h, 10 + r() * 24, 6 + r() * 14, r() * 3, 0, Math.PI * 2); ctx.fill(); }
+}, 1 / 2, 1 / 2);
+// Parkweg: wassergebundene Decke, beiger Sand mit feinem Splitt
+const kiesTex = canvasTex(512, 512, (ctx, w, h) => {
+  let seed = 7; const r = () => (seed = (seed * 9301 + 49297) % 233280) / 233280;
+  ctx.fillStyle = '#c7b08a'; ctx.fillRect(0, 0, w, h);
+  for (let i = 0; i < 14; i++) { ctx.fillStyle = `rgba(${r() < 0.5 ? '255,245,220' : '120,95,60'},0.07)`; ctx.beginPath(); ctx.ellipse(r() * w, r() * h, 30 + r() * 70, 20 + r() * 50, r() * 3, 0, Math.PI * 2); ctx.fill(); }
+  for (let i = 0; i < 5000; i++) { const t = r(); ctx.fillStyle = t < 0.4 ? 'rgba(110,90,60,0.35)' : t < 0.75 ? 'rgba(235,225,200,0.5)' : 'rgba(150,140,125,0.45)'; const s = 1 + r() * 2.2; ctx.fillRect(r() * w, r() * h, s, s); }
+}, 1 / 2, 1 / 2);
 const roofTex = canvasTex(128, 128, (ctx, w, h) => { ctx.fillStyle = '#7d6b62'; ctx.fillRect(0, 0, w, h); for (let i = 0; i < 2000; i++) { ctx.fillStyle = `rgba(0,0,0,${Math.random() * 0.12})`; ctx.fillRect(Math.random() * w, Math.random() * h, 2, 2); } }, 1 / 5, 1 / 5);
 
 
@@ -1120,9 +1141,15 @@ function* buildCity() {
     g.setAttribute('normal', new THREE.BufferAttribute(n, 3)); g.setAttribute('uv', new THREE.BufferAttribute(uv, 2)); return g;
   };
   const flatMat = (geo, mat) => { const m = new THREE.Mesh(geo, mat); m.receiveShadow = true; scene.add(m); };
-  const walkG = ribbon(CITY.roads, 0.02, r => r.w + (r.mw ? 1.6 : 5)); if (walkG) { if (!WALK_MAT) { WALK_MAT = new THREE.MeshLambertMaterial(TEX.paving ? { map: TEX.paving, normalMap: TEX.pavingN, color: 0xd8d4cc } : { map: pavingTex }); WALK_MAT.userData.shared = true; WALK_MAT.polygonOffset = true; WALK_MAT.polygonOffsetFactor = 1; WALK_MAT.polygonOffsetUnits = 4; /* Gehweg der Querstraße liegt am Hang bis 3 cm über der Fahrbahn: Fahrbahn gewinnt im Tiefenpuffer */ } flatMat(walkG, WALK_MAT); }
+  const walkG = ribbon(CITY.roads, 0.02, r => r.w + (r.mw ? 1.6 : 5)); if (walkG) { if (!WALK_MAT) { WALK_MAT = new THREE.MeshLambertMaterial({ map: gehwegTex }); /* gezeichnete Betonplatten statt Fototextur (12.11.2026) */ WALK_MAT.userData.shared = true; WALK_MAT.polygonOffset = true; WALK_MAT.polygonOffsetFactor = 1; WALK_MAT.polygonOffsetUnits = 4; /* Gehweg der Querstraße liegt am Hang bis 3 cm über der Fahrbahn: Fahrbahn gewinnt im Tiefenpuffer */ } flatMat(walkG, WALK_MAT); }
   const roadG = ribbon(CITY.roads, 0.04, r => r.w); if (roadG) { const rm = new THREE.Mesh(roadG, roadMatRef || ((LOW_GFX || opts.potato) ? new THREE.MeshLambertMaterial(TEX.asphalt ? { map: TEX.asphalt, color: 0xb8b8b8 } : { map: asphaltTex }) : new THREE.MeshStandardMaterial(Object.assign(TEX.asphalt ? { map: TEX.asphalt, normalMap: TEX.asphaltN, color: 0xb8b8b8 } : { map: asphaltTex }, { roughness: 0.92, metalness: 0, roughnessMap: null })))); /* Sparmodus und „Sehr schwacher Rechner“: Lambert mit Map */ if (!rm.material.userData.pud) { rm.material.userData.pud = puddleTex(); rm.material.userData.shared = true; } rm.receiveShadow = true; scene.add(rm); roadMatRef = rm.material; }
-  const pathG = ribbon(CITY.paths, 0.03, () => 2); if (pathG) { if (!PATH_MAT) { PATH_MAT = new THREE.MeshLambertMaterial(TEX.cobble ? { map: TEX.cobble, normalMap: TEX.cobbleN, color: 0xd0c8bc } : { map: pavingTex, color: 0xcfc8bb }); PATH_MAT.userData.shared = true; PATH_MAT.polygonOffset = true; PATH_MAT.polygonOffsetFactor = 1; PATH_MAT.polygonOffsetUnits = 4; /* Gehweg der Querstraße liegt am Hang bis 3 cm über der Fahrbahn: Fahrbahn gewinnt im Tiefenpuffer */ } flatMat(pathG, PATH_MAT); }
+  // Fußwege: Stücke, die im Gehwegband einer Straße liegen (in OSM oft als eigene Linie direkt neben der Fahrbahn), weglassen;
+  // sonst liegen zwei Beläge übereinander (12.11.2026, Ticket #11: braune Streifen auf dem Gehweg)
+  const freiePfade = []; for (const pa of CITY.paths) { if (pa.ry) { freiePfade.push(pa); continue; } let run = [];
+    for (let i = 0; i < pa.p.length - 1; i++) { const [ax, az] = pa.p[i], [bx, bz] = pa.p[i + 1]; const im = onOtherRoad((ax + bx) / 2, (az + bz) / 2, null, 2.3) && onOtherRoad(ax, az, null, 2.6) && onOtherRoad(bx, bz, null, 2.6);
+      if (im) { if (run.length > 1) freiePfade.push(Object.assign({}, pa, { p: run })); run = []; } else { if (!run.length) run.push(pa.p[i]); run.push(pa.p[i + 1]); } }
+    if (run.length > 1) freiePfade.push(Object.assign({}, pa, { p: run })); }
+  const pathG = ribbon(freiePfade, 0.03, () => 2); if (pathG) { if (!PATH_MAT) { PATH_MAT = new THREE.MeshLambertMaterial({ map: kiesTex }); /* wassergebundene Decke statt buntem Pflaster-Foto (12.11.2026) */ PATH_MAT.userData.shared = true; PATH_MAT.polygonOffset = true; PATH_MAT.polygonOffsetFactor = 1; PATH_MAT.polygonOffsetUnits = 4; /* Gehweg der Querstraße liegt am Hang bis 3 cm über der Fahrbahn: Fahrbahn gewinnt im Tiefenpuffer */ } flatMat(pathG, PATH_MAT); }
   buildBridges();
   const railG = ribbon(CITY.rails, 0.05, () => 3); if (railG) { const rm = shLambert(0x6b6258); rm.userData.onRoad = true; /* Gleisbett liegt gewollt auf der Fahrbahn */ flatMat(railG, rm); }
   // Schienen
