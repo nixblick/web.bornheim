@@ -318,7 +318,7 @@ function losFactor(ax, ay, az, bx, by, bz) { const L = Math.hypot(bx - ax, by - 
 // Zäune, Mauern, Hecken als Liniensegmente im Raster
 const barrierGrid = new Map();
 function barrierAdd(ax, az, bx, bz, h) { const seg = [ax, az, bx, bz, h]; for (let cx = Math.floor((Math.min(ax, bx) - 2) / CELL); cx <= Math.floor((Math.max(ax, bx) + 2) / CELL); cx++) for (let cz = Math.floor((Math.min(az, bz) - 2) / CELL); cz <= Math.floor((Math.max(az, bz) + 2) / CELL); cz++) { const k = key(cx, cz); if (!barrierGrid.has(k)) barrierGrid.set(k, []); barrierGrid.get(k).push(seg); } return seg; }
-function barrierOnRoad(ax, az, bx, bz) { return onOtherRoad((ax + bx) / 2, (az + bz) / 2, null, 0.8) || onOtherRoad(ax * 0.75 + bx * 0.25, az * 0.75 + bz * 0.25, null, 0.6) || onOtherRoad(ax * 0.25 + bx * 0.75, az * 0.25 + bz * 0.75, null, 0.6); }
+function barrierOnRoad(ax, az, bx, bz) { /* Stück liegt auf einer Fahrbahn: Mitte oder ein Ende (Abstand 0,3 m vom Ende) */ if (onOtherRoad((ax + bx) / 2, (az + bz) / 2, null, 0.8)) return true; const l = Math.hypot(bx - ax, bz - az) || 1, e = Math.min(0.45, 0.3 / l); return onOtherRoad(ax + (bx - ax) * e, az + (bz - az) * e, null, 0.4) || onOtherRoad(bx + (ax - bx) * e, bz + (az - bz) * e, null, 0.4); }
 function barrierHit(x, z, r, y) { const c = barrierGrid.get(key(Math.floor(x / CELL), Math.floor(z / CELL))); if (!c) return false; /* Zäune quer über der Fahrbahn fallen schon beim Eintragen weg (barrierOnRoad); die frühere Freigabe der ganzen Fahrbahn ließ Autos durch Zäune am Straßenrand */ for (const [ax, az, bx, bz, h] of c) { if (distSegSq(x, z, ax, az, bx, bz) < (r + 0.15) * (r + 0.15)) { if (y === undefined || y < TH(x, z) + h) return true; } } return false; }
 // Gewässer (Main, Hafenbecken, Weiher) im Raster; Brücken, Stege und Uferwege bleiben trocken befahr-/begehbar
 const waterGrid = new Map(), pathGrid = new Map();
@@ -2678,15 +2678,17 @@ function ringRuns(o) { const P = o.p.concat([o.p[0]]); if (!o.cut) return [P]; c
 // OSM-Barrieren wie eingetragen; erfundene Zäune um Schulen, Kitas, Bolzplätze und Kleingärten bekommen an jedem Weg
 // und jeder Straße, die den Rand kreuzt, eine Lücke von 3 m. Spielplätze bleiben offen (meist ohne Zaun, oft mitten im Park).
 function barrierSegs(d) {
-  const out = [], ways = (d.paths || []).concat(d.roads || []);
+  const out = [], ways = (d.paths || []).concat(d.roads || []), carWays = (d.roads || []).filter(r => !r.ped && !r.ry);
   const add = (pts, k, auto) => { for (let i = 0; i < pts.length - 1; i++) { const [ax, az] = pts[i], [bx, bz] = pts[i + 1]; const l = Math.hypot(bx - ax, bz - az); if (l < 0.5) continue;
-    let cuts = [];
-    if (auto) { const x0 = Math.min(ax, bx) - 1, x1 = Math.max(ax, bx) + 1, z0 = Math.min(az, bz) - 1, z1 = Math.max(az, bz) + 1;
-      for (const w of ways) for (let j = 0; j < w.p.length - 1; j++) { const [cx, cz] = w.p[j], [dx, dz] = w.p[j + 1]; if (Math.max(cx, dx) < x0 || Math.min(cx, dx) > x1 || Math.max(cz, dz) < z0 || Math.min(cz, dz) > z1) continue; const t = segX(ax, az, bx, bz, cx, cz, dx, dz); if (t !== null) cuts.push(t); } }
-    cuts.sort((a, b) => a - b); const g = 1.5 / l; let t0 = 0;
-    for (const t of cuts.concat([null])) { const t1 = t === null ? 1 : Math.max(t0, t - g); if ((t1 - t0) * l >= 0.5) { const px = ax + (bx - ax) * t0, pz = az + (bz - az) * t0, qx = ax + (bx - ax) * t1, qz = az + (bz - az) * t1;
+    // Lücken: erfundene Zäune an jedem Weg und jeder Straße (3 m); OSM-Zäune nur an Fahrbahnen, dort so breit wie die
+    // Fahrbahn plus Rand (12.11.2026: 1297 von 9552 OSM-Barrieren lagen mit einem Punkt auf der Fahrbahn, z. B. Konstablerwache)
+    let cuts = []; const x0 = Math.min(ax, bx) - 1, x1 = Math.max(ax, bx) + 1, z0 = Math.min(az, bz) - 1, z1 = Math.max(az, bz) + 1;
+    for (const w of (auto ? ways : carWays)) for (let j = 0; j < w.p.length - 1; j++) { const [cx, cz] = w.p[j], [dx, dz] = w.p[j + 1]; if (Math.max(cx, dx) < x0 || Math.min(cx, dx) > x1 || Math.max(cz, dz) < z0 || Math.min(cz, dz) > z1) continue; const t = segX(ax, az, bx, bz, cx, cz, dx, dz); if (t === null) continue;
+      const half = auto && !w.w ? 1.5 : (w.w || 3) / 2 + 0.8; const sn = Math.abs(((bx - ax) * (dz - cz) - (bz - az) * (dx - cx)) / (l * (Math.hypot(dx - cx, dz - cz) || 1))) || 1; cuts.push([t, Math.min(12, half / Math.max(0.35, sn)) / l]); }
+    cuts.sort((a, b) => a[0] - b[0]); let t0 = 0;
+    for (const c of cuts.concat([null])) { const t = c && c[0], g = c ? c[1] : 0; const t1 = c === null ? 1 : Math.max(t0, t - g); if ((t1 - t0) * l >= 0.5) { const px = ax + (bx - ax) * t0, pz = az + (bz - az) * t0, qx = ax + (bx - ax) * t1, qz = az + (bz - az) * t1;
         if (solidAt((px + qx) / 2, (pz + qz) / 2) < 0 && !barrierOnRoad(px, pz, qx, qz)) out.push([px, pz, qx, qz, k]); }
-      if (t !== null) t0 = Math.min(1, t + g); } } };
+      if (c !== null) t0 = Math.min(1, t + g); } } };
   for (const b of d.barriers || []) add(b.p, b.k, false);
   for (const a of d.areas || []) for (const r of ringRuns(a)) add(r, 'fence', true);
   for (const g of d.green || []) if (g.k === 'allotments' || g.k === 'pitch') for (const r of ringRuns(g)) add(r, g.k === 'allotments' ? 'hedge' : 'fence', true);
@@ -2945,7 +2947,7 @@ $('cont').onclick = () => { let d = null; try { d = JSON.parse(localStorage.getI
 while (solidAt(player.pos.x, player.pos.z) >= 0) player.pos.x += 3;
 const X = { THREE, scene, camera, renderer, player, peds, cars, shootables, pickups, FX, puff, losFactor, keys, camYaw, camPitch, opts, world, weather, CITY, TH, solidAt, solidAtH, floorAt, nearestEdge, edgeNormal, moveWithCollision, makeHuman, makeCar, makeAmbulance, dropRider, tipBike, rehome, spawnCar, spawnPedAt, playAnim, animateWalk, damage, explode, burst, smoke, wakeParked, wakeParkedRay, sfx, SND, showMsg, raiseWanted, camShake, freeSkel, canvasTex, tracerMat, makeGun, dentCar, rnd, clamp, pick, lerpAngle, distSegSq, pointInPoly, randomRoadPoint, roadsDrivable, driveCar, carFx, carTerrain, exitCar, syncHand, CHAR, coneTex, hurtPlayer, card, closeMenu, saveGame, lockMouse, disposeCar,
   listeners: [], mmHooks: MM_HOOKS, menuHooks: MENU_HOOKS, rallyLimit: 8, get creative() { return creative; }, creativeSpawnerActive, pedRoads: () => pedRoads, roadsNear: (x, z, R, car) => roadsNear(x, z, R, car), streetAt: (x, z) => streetNameAt(x, z), barrierNear: (x, z, r) => barrierHit(x, z, r), storyBusy: () => STORY ? STORY.busy : false };
-var WPN = initWeapons(X); var DEMO = initDemo(X, WPN); var FIRE = initFire(X, WPN, DEMO); var STORY = initStory(X, WPN, DEMO, FIRE); var SHOPS = initShops(X, WPN); Object.assign(X, { wachen: WACHEN, nearestRoadDir, setPocket: p => { POCKET = p; camera.userData.init = false; }, inPocket, streamInit, roofHeight, WORLD, TILES, TS, WIDX }); var INTERIORS = initInteriors(X, WPN, DEMO, SHOPS); var PROGRESS = initProgress(X); var HELI = initHeli(X); var LANDMARKS = initLandmarks(X);
+var WPN = initWeapons(X); var DEMO = initDemo(X, WPN); var FIRE = initFire(X, WPN, DEMO); var STORY = initStory(X, WPN, DEMO, FIRE); var SHOPS = initShops(X, WPN); Object.assign(X, { wachen: WACHEN, nearestRoadDir, pushOffRoads, setPocket: p => { POCKET = p; camera.userData.init = false; }, inPocket, streamInit, roofHeight, WORLD, TILES, TS, WIDX }); var INTERIORS = initInteriors(X, WPN, DEMO, SHOPS); var PROGRESS = initProgress(X); var HELI = initHeli(X); var LANDMARKS = initLandmarks(X);
 for (let i = 0; i < 200 && cars.length < 60; i++) spawnCar(false, player.pos, 10, 260);
 for (let i = 0; i < 55; i++) spawnPed(null);
 spawnPickups(40);

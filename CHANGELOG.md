@@ -2,6 +2,7 @@
 
 ## 2026-11-12
 
+- U-Bahn-Eingänge nicht mehr auf der Fahrbahn (#55): doppelt eingetragene OSM-Punkte unter 6 m zusammengelegt, Portal mindestens 3,2 m vom Fahrbahnrand. OSM-Zäune bekommen an Fahrbahnen eine Lücke in Straßenbreite (1297 von 9552 lagen mit einem Punkt auf der Straße). Ungetestet (Test im Nachtfenster)
 - **Pausemenü neu** (Wunsch André): größer (bis 1400 × 900), links Speichern, Laden, Fehler melden und die Einstellungen untereinander (Grafik, Kamera, Welt, Spiel, Ton), oben die Themen ⚡ Schnell, 🗺 Karte, 📊 Statistik, 📖 Story, ❓ Hilfe
 - **Schnell** (erste Seite): Grafikqualität, Sichtweite, Uhrzeit, Zeitlauf, Wetter, Verkehr, Passanten, Polizei, Unendlich Munition, Unverwundbar, Lautstärke auf einen Blick
 - **Karte im Menü:** Klick ins Freie springt dorthin; U-Bahn-Stationen (Linien einzeln aufklappbar) und Bushaltestellen ein- und ausblendbar, Klick auf eine Station fährt hin (U-Bahn wie am Eingang, 3 €; Bus 2,80 €, Fahrzeit läuft)
