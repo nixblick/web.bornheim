@@ -15,6 +15,17 @@
 - Hausnummern, Türen und Schaufenster im Erdgeschoss von außen nicht mehr spiegelverkehrt: Die Eckreihenfolge folgt jetzt der Umrissrichtung (betraf rund zwei Drittel der Häuser). Ungetestet (Test im Nachtfenster)
 - Bushaltestellen nicht mehr auf der Fahrbahn (Reichsburgstraße): Mast an den Rand geschoben, Wartehäuschen auf der straßenabgewandten Seite. Ungetestet (Test im Nachtfenster)
 - U-Bahn-Eingänge nicht mehr auf der Fahrbahn (#55): doppelt eingetragene OSM-Punkte unter 6 m zusammengelegt, Portal mindestens 3,2 m vom Fahrbahnrand. OSM-Zäune bekommen an Fahrbahnen eine Lücke in Straßenbreite (1297 von 9552 lagen mit einem Punkt auf der Straße). Ungetestet (Test im Nachtfenster)
+- **Polizeihubschrauber (#63):** ab 4 Sternen kreist ein blau-silberner Hubschrauber über dem Spieler (bei 5 Sternen zwei), nachts mit Suchlicht; steht man bei 5 Sternen auf einem Dach, zielt der Scharfschütze (roter Laser) und schießt nach 8 s alle 2,5 s, Treffer 45 Leben, Trefferquote steigt; abschießbar (450 Treffpunkte), Abschuss = +1 Stern, Ersatz nach 30 s; aus bei Polizei aus, Kreativmodus, Innenräumen und 0–3 Sternen. Ungetestet im Spiel, Test im Nachtfenster
+- **Alle 866 Bushalte benannt:** die 95 ohne Namen in den Kacheln per Overpass (nächster OSM-Halt im Umkreis 120 m) nachbenannt
+- U6/U7 geprüft: Daten stimmen mit traffiQ überein (U6 Hausen–Ostbahnhof, U7 Heerstraße–Enkheim), keine Änderung
+- **Friedhöfe (#57):** Grabfelder auf allen Friedhofsflächen, ausgerichtet an der längsten Kante: Grabeinfassungen mit Bepflanzung, stehende Steine, Holzkreuze und Liegeplatten, Wege alle fünf Reihen und neun Spalten, Abstand zu Rand, Häusern und Wegen; höchstens 2400 Gräber je Kachel. Ungetestet im Spiel, Test im Nachtfenster
+- **U-Bahn vollständig begehbar:** alle 46 oberirdischen Stationen ohne Treppenabgang (Hausen bis Hohemark, Enkheim, Preungesheim, Riedberg …) haben jetzt einen Bahnsteig mit Mast, U-Würfel, Namensschild und Infokasten; mit F fährt man ab
+- **U-Bahn-Netz auf der großen Karte (M):** alle neun Linien in ihren Farben mit Stationsnamen
+- **Bushaltestellen mit Namen:** 771 von 866 Halten aus den Kartendaten benannt (tools/busroute_names.py); Namen und Linien auf Menükarte und großer Karte beim Hineinzoomen
+- Ungetestet im Spiel, Test im Nachtfenster
+- **Menükarte am Handy:** ein Finger verschiebt, zwei Finger zoomen, Tippen springt bzw. fährt zur Station
+- **Suche in der Menükarte:** Straßen der geladenen Gegend und alle U-Bahn-Stationen mit Vorschlagsliste; Enter zeigt den Ort, Umschalt+Enter springt hin
+- Ungetestet im Spiel, Test im Nachtfenster
 - **Pausemenü neu** (Wunsch André): größer (bis 1400 × 900), links Speichern, Laden, Fehler melden und die Einstellungen untereinander (Grafik, Kamera, Welt, Spiel, Ton), oben die Themen ⚡ Schnell, 🗺 Karte, 📊 Statistik, 📖 Story, ❓ Hilfe
 - **Schnell** (erste Seite): Grafikqualität, Sichtweite, Uhrzeit, Zeitlauf, Wetter, Verkehr, Passanten, Polizei, Unendlich Munition, Unverwundbar, Lautstärke auf einen Blick
 - **Karte im Menü:** Klick ins Freie springt dorthin; U-Bahn-Stationen (Linien einzeln aufklappbar) und Bushaltestellen ein- und ausblendbar, Klick auf eine Station fährt hin (U-Bahn wie am Eingang, 3 €; Bus 2,80 €, Fahrzeit läuft)
