@@ -487,20 +487,18 @@ function* buildDetails() {
   if (sv.length) { const tex = new THREE.CanvasTexture(atlas); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = ANISO; const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(sv, 3)); g.setAttribute('normal', new THREE.Float32BufferAttribute(sn, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(suv, 2)); { const mt = new THREE.MeshBasicMaterial({ map: tex, side: THREE.DoubleSide }); mt.userData.ownTex = true; scene.add(new THREE.Mesh(g, mt)); } }
   // --- Zäune, Mauern, Hecken ---
   const fenceRail = [], fencePost = [], wall = [], hedge = [], rwall = [];
-  const runBarrier = (pts, k, autoFence = false) => {
-    for (let i = 0; i < pts.length - 1; i++) { const [ax, az] = pts[i], [bx, bz] = pts[i + 1]; const l = Math.hypot(bx - ax, bz - az); if (l < 0.5) continue; const mx = (ax + bx) / 2, mz = (az + bz) / 2; if (solidAt(mx, mz) >= 0 || barrierOnRoad(ax, az, bx, bz)) continue; const ang = Math.atan2(bx - ax, bz - az); const ty = TH(mx, mz); const slope = Math.atan2(TH(ax, az) - TH(bx, bz), l);
+  // Stücke bis 4 m, jedes auf dem Gelände: lange gerade Kästen lagen über Kuppen im Boden (Hindernis ohne Bild)
+  const BSEG = barrierSegs(CITY); if (BUILD_TILE) barrierRegister(BUILD_TILE, BSEG);
+  for (const [ax, az, bx, bz, k] of BSEG) { const L = Math.hypot(bx - ax, bz - az), n = Math.ceil(L / 4), ang = Math.atan2(bx - ax, bz - az);
+    for (let j = 0; j < n; j++) { const px = ax + (bx - ax) * j / n, pz = az + (bz - az) * j / n, qx = ax + (bx - ax) * (j + 1) / n, qz = az + (bz - az) * (j + 1) / n, l = L / n, mx = (px + qx) / 2, mz = (pz + qz) / 2; const ty = TH(mx, mz), slope = Math.atan2(TH(px, pz) - TH(qx, qz), l);
       const box = (w, h, d, y, arr) => { const g = new THREE.BoxGeometry(w, h, d); g.rotateX(slope); g.rotateY(ang); g.translate(mx, ty + y, mz); arr.push(g); };
-      if (k === 'fence') { box(0.04, 0.06, l, 1.15, fenceRail); box(0.04, 0.06, l, 0.6, fenceRail); box(0.04, 0.06, l, 0.15, fenceRail); if (opts.quality !== 'niedrig') for (let d = 0; d <= l; d += 2.5) { const px = ax + (bx - ax) * d / l, pz = az + (bz - az) * d / l; const g = new THREE.BoxGeometry(0.08, 1.3, 0.08); g.translate(px, TH(px, pz) + 0.65, pz); fencePost.push(g); } }
+      if (k === 'fence') { box(0.05, 0.07, l, 1.2, fenceRail); box(0.05, 0.07, l, 0.65, fenceRail); box(0.05, 0.07, l, 0.15, fenceRail); for (const [x, z] of j === n - 1 ? [[px, pz], [qx, qz]] : [[px, pz]]) { const g = new THREE.BoxGeometry(0.09, 1.3, 0.09); g.translate(x, TH(x, z) + 0.65, z); fencePost.push(g); } }
       else if (k === 'wall' || k === 'city_wall') box(0.3, 1.7, l, 0.85, wall);
       else if (k === 'retaining_wall') box(0.4, 1.0, l, 0.5, rwall);
       else if (k === 'hedge') box(0.8, 1.3, l, 0.65, hedge);
-    }
-  };
-  for (const b of CITY.barriers) runBarrier(b.p, b.k);
-  for (const a of CITY.areas) for (const run of ringRuns(a)) runBarrier(run, 'fence', true);
-  for (const g of CITY.green) if (g.k === 'allotments' || g.k === 'pitch' || g.k === 'playground') for (const run of ringRuns(g)) runBarrier(run, g.k === 'allotments' ? 'hedge' : 'fence', true);
+    } }
   const addMerged = (arr, mat, shadow = true) => { if (!arr.length) return null; const m = new THREE.Mesh(mergeGeometries(arr), mat); m.castShadow = shadow; m.receiveShadow = true; scene.add(m); return m; };
-  addMerged(fenceRail, shLambert(0x3a3a3a), false); addMerged(fencePost, shLambert(0x4a4a4a), false);
+  addMerged(fenceRail, shLambert(0x55575a), false); addMerged(fencePost, shLambert(0x55575a), false);
   addMerged(wall, shLambert(0x9a9388)); addMerged(rwall, shLambert(0x8a847a)); addMerged(hedge, shLambert(0x3f6f2f));
   // --- Schulhöfe ---
   const yard = []; for (const a of CITY.areas) { const shape = new THREE.Shape(a.p.map(([x, z]) => new THREE.Vector2(x, -z))); const geo = new THREE.ShapeGeometry(shape); geo.rotateX(-Math.PI / 2); yard.push(drape(geo, 0.06, 2.5, 0.05, 10)); }
@@ -2079,13 +2077,29 @@ function deckAddRoad(r) {
 // Ränder einer Fläche ohne die Schnittkanten an Kachelgrenzen (dort steht kein Zaun)
 function ringRuns(o) { const P = o.p.concat([o.p[0]]); if (!o.cut) return [P]; const onCut = (a, b) => { for (const i of [0, 1]) { const m = a[i] / TS; if (Math.abs(m - Math.round(m)) < 1e-4 && Math.abs(a[i] - b[i]) < 0.02) return true; } return false; };
   const runs = []; let cur = [P[0]]; for (let i = 0; i < P.length - 1; i++) { if (onCut(P[i], P[i + 1])) { if (cur.length > 1) runs.push(cur); cur = [P[i + 1]]; } else cur.push(P[i + 1]); } if (cur.length > 1) runs.push(cur); return runs; }
-function barrierRegister(d) {
-  const out = []; const run = (pts, k) => { for (let i = 0; i < pts.length - 1; i++) { const [ax, az] = pts[i], [bx, bz] = pts[i + 1]; if (Math.hypot(bx - ax, bz - az) < 0.5) continue; if (solidAt((ax + bx) / 2, (az + bz) / 2) >= 0 || barrierOnRoad(ax, az, bx, bz)) continue; out.push(barrierAdd(ax, az, bx, bz, k === 'retaining_wall' ? 1.0 : k === 'fence' || k === 'hedge' ? 1.3 : 1.7)); } };
-  for (const b of d.barriers || []) run(b.p, b.k);
-  for (const a of d.areas || []) for (const r of ringRuns(a)) run(r, 'fence');
-  for (const g of d.green || []) if (g.k === 'allotments' || g.k === 'pitch' || g.k === 'playground') for (const r of ringRuns(g)) run(r, g.k === 'allotments' ? 'hedge' : 'fence');
-  return out; // Segmente der Kachel, damit unregisterTile sie wieder aus dem Raster nehmen kann
+// Zaun-/Mauer-/Heckenstücke einer Kachel, eine Quelle für Bild und Kollision (sonst gibt es unsichtbare Wände).
+// OSM-Barrieren wie eingetragen; erfundene Zäune um Schulen, Kitas, Bolzplätze und Kleingärten bekommen an jedem Weg
+// und jeder Straße, die den Rand kreuzt, eine Lücke von 3 m. Spielplätze bleiben offen (meist ohne Zaun, oft mitten im Park).
+function barrierSegs(d) {
+  const out = [], ways = (d.paths || []).concat(d.roads || []);
+  const add = (pts, k, auto) => { for (let i = 0; i < pts.length - 1; i++) { const [ax, az] = pts[i], [bx, bz] = pts[i + 1]; const l = Math.hypot(bx - ax, bz - az); if (l < 0.5) continue;
+    let cuts = [];
+    if (auto) { const x0 = Math.min(ax, bx) - 1, x1 = Math.max(ax, bx) + 1, z0 = Math.min(az, bz) - 1, z1 = Math.max(az, bz) + 1;
+      for (const w of ways) for (let j = 0; j < w.p.length - 1; j++) { const [cx, cz] = w.p[j], [dx, dz] = w.p[j + 1]; if (Math.max(cx, dx) < x0 || Math.min(cx, dx) > x1 || Math.max(cz, dz) < z0 || Math.min(cz, dz) > z1) continue; const t = segX(ax, az, bx, bz, cx, cz, dx, dz); if (t !== null) cuts.push(t); } }
+    cuts.sort((a, b) => a - b); const g = 1.5 / l; let t0 = 0;
+    for (const t of cuts.concat([null])) { const t1 = t === null ? 1 : Math.max(t0, t - g); if ((t1 - t0) * l >= 0.5) { const px = ax + (bx - ax) * t0, pz = az + (bz - az) * t0, qx = ax + (bx - ax) * t1, qz = az + (bz - az) * t1;
+        if (solidAt((px + qx) / 2, (pz + qz) / 2) < 0 && !barrierOnRoad(px, pz, qx, qz)) out.push([px, pz, qx, qz, k]); }
+      if (t !== null) t0 = Math.min(1, t + g); } } };
+  for (const b of d.barriers || []) add(b.p, b.k, false);
+  for (const a of d.areas || []) for (const r of ringRuns(a)) add(r, 'fence', true);
+  for (const g of d.green || []) if (g.k === 'allotments' || g.k === 'pitch') for (const r of ringRuns(g)) add(r, g.k === 'allotments' ? 'hedge' : 'fence', true);
+  return out;
 }
+function barrierH(k) { return k === "retaining_wall" ? 1.0 : k === "fence" || k === "hedge" ? 1.3 : 1.7; }
+let BUILD_TILE = null; // Kachel, an der runJob gerade baut
+function barrierDrop(t) { for (const seg of t.bar || []) { const [ax, az, bx, bz] = seg; for (let cx = Math.floor((Math.min(ax, bx) - 2) / CELL); cx <= Math.floor((Math.max(ax, bx) + 2) / CELL); cx++) for (let cz = Math.floor((Math.min(az, bz) - 2) / CELL); cz <= Math.floor((Math.max(az, bz) + 2) / CELL); cz++) gridDrop(barrierGrid, key(cx, cz), v => v === seg); } t.bar = []; }
+// Hindernis = genau die gezeichneten Stücke (t.bar, damit unregisterTile sie wieder aus dem Raster nehmen kann)
+function barrierRegister(t, segs) { barrierDrop(t); t.bar = segs.map(([ax, az, bx, bz, k]) => barrierAdd(ax, az, bx, bz, barrierH(k))); }
 // Kachelbild für Minikarte und große Karte
 function tileMap(t) {
   const c = document.createElement('canvas'); c.width = c.height = TS * MM_SCALE; const g = c.getContext('2d'); g.fillStyle = '#1b1d22'; g.fillRect(0, 0, c.width, c.height);
@@ -2108,7 +2122,7 @@ function registerTile(t) {
   for (const w of d.water || []) waterAdd(w);
   for (const s of d.signals || []) { const k = key(Math.floor(s[0] / CELL), Math.floor(s[1] / CELL)); if (!SIGGRID.has(k)) SIGGRID.set(k, []); SIGGRID.get(k).push(s); }
   for (const k of WKEYS) if (k !== 'buildings' && k !== 'roads' && k !== 'rails' && d[k]) for (const o of d[k]) WORLD[k].push(o);
-  t.bar = barrierRegister(d);
+  t.bar = []; /* Zäune kommen erst mit dem Bild (buildDetails): beim Laden fehlen oft noch Straßen und Häuser der Nachbarkacheln, dann stand das Hindernis mitten auf der Straße, das Bild aber nicht */
   if (typeof DEMO !== 'undefined' && DEMO && DEMO.addRoads) DEMO.addRoads(d.roads || []);
 }
 // Kacheldaten außerhalb R_DATA+2 wieder freigeben (LRU): Raster-Einträge entfernen, Plätze in WORLD.buildings/roads werden null (Indizes der anderen bleiben gültig),
@@ -2129,7 +2143,7 @@ function unregisterTile(t) {
   for (const w of d.water || []) if (w.x0 !== undefined) for (let cx = Math.floor(w.x0 / CELL); cx <= Math.floor(w.x1 / CELL); cx++) for (let cz = Math.floor(w.z0 / CELL); cz <= Math.floor(w.z1 / CELL); cz++) gridDrop(waterGrid, key(cx, cz), v => v === w);
   for (const s of d.signals || []) gridDrop(SIGGRID, key(Math.floor(s[0] / CELL), Math.floor(s[1] / CELL)), v => v === s);
   for (const k of WKEYS) { if (k === 'buildings' || !d[k] || !d[k].length) continue; /* Straßen, Gleise und alle Listen in Ort kompaktieren (CITY teilt die Arrays) */ const S = new Set(d[k]); const L = WORLD[k]; let w = 0; for (let i = 0; i < L.length; i++) if (!S.has(L[i])) L[w++] = L[i]; L.length = w; }
-  for (const seg of t.bar || []) { const [ax, az, bx, bz] = seg; for (let cx = Math.floor((Math.min(ax, bx) - 2) / CELL); cx <= Math.floor((Math.max(ax, bx) + 2) / CELL); cx++) for (let cz = Math.floor((Math.min(az, bz) - 2) / CELL); cz <= Math.floor((Math.max(az, bz) + 2) / CELL); cz++) gridDrop(barrierGrid, key(cx, cz), v => v === seg); }
+  barrierDrop(t);
   DEMT.delete(t.k); DEMN.delete(dkey(t.tx, t.tz)); thK = NaN; thH = null; t.mm = null; t.data = null; t.rd = []; t.rp = []; t.bi = t.bar = null; TILES.delete(t.k);
 }
 const loadingTiles = new Set();
@@ -2179,7 +2193,7 @@ function makeUpgrade(t) { return { t, steps: ['det', 'det2', 'park'], gen: null,
 function runJob(j, budget) {
   const t0 = performance.now(); const d = j.t.data; const any = !!(d.buildings || d.roads || d.green);
   while (j.steps.length) { const st = j.steps[0]; if (!j.gen) j.gen = (st === 'ground' || any) ? STEP_FN[st](j.t) : null; let done = !j.gen; const a = performance.now();
-    while (!done) { const res = withBuildSet(d, () => { done = j.gen.next().done; }, j.grp); res.owned.forEach((o, i) => { if (o.length) j.owned[i].push(...o); }); if (performance.now() - t0 > budget) break; }
+    while (!done) { BUILD_TILE = j.t; const res = withBuildSet(d, () => { try { done = j.gen.next().done; } finally { BUILD_TILE = null; } }, j.grp); res.owned.forEach((o, i) => { if (o.length) j.owned[i].push(...o); }); if (performance.now() - t0 > budget) break; }
     j.t.prof[st] = (j.t.prof[st] || 0) + Math.round(performance.now() - a); if (done) { j.steps.shift(); j.gen = null; } if (performance.now() - t0 > budget) break; }
   if (j.steps.length) return false; if (j.upgrade) { j.t.lod = 'near'; j.t.ms = Object.values(j.t.prof).reduce((a, b) => a + b, 0); return true; } finishTile(j.t, j.grp, j.owned); return true;
 }
@@ -2188,7 +2202,7 @@ let job = null; // Kachel, die gerade schrittweise gebaut wird
 let BUILD_BUDGET = 9;
 function stepJob() { if (runJob(job, opts.potato ? 4 : BUILD_BUDGET)) { job = null; refreshActive(); } }
 function cancelJob() { if (!job) return; const t = { built: true, grp: job.grp, owned: job.owned }; scene.add(job.grp); unbuildTile(t); job = null; }
-function unbuildTile(t) {
+function unbuildTile(t) { barrierDrop(t);
   if (!t.built) return; scene.remove(t.grp); const L = OWN_LISTS();
   L.forEach((l, i) => { const own = t.owned[i]; if (!own.length) return; const s = new Set(own); let w = 0; for (let r = 0; r < l.length; r++) if (!s.has(l[r])) l[w++] = l[r]; l.length = w; });
   t.grp.traverse(o => { if (o.geometry && !o.geometry.userData.shared) o.geometry.dispose(); if (o.isInstancedMesh) o.dispose(); const ms = Array.isArray(o.material) ? o.material : o.material ? [o.material] : []; for (const m of ms) if (!m.userData.shared) { if (m.userData.ownTex && m.map) m.map.dispose(); m.dispose(); } });

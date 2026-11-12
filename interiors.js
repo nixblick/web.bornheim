@@ -172,13 +172,21 @@ export function initInteriors(X, W, D, SH) {
     for (const [w, d, x, z] of [[0.06, 4, -1.25, 0], [0.06, 4, 1.25, 0], [2.5, 0.06, 0, 2.0]]) { const r = new THREE.Mesh(new THREE.BoxGeometry(w, 1.0, d), metal); r.position.set(x, 0.55, z); g.add(r); }
     const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 3.6, 6), metal); pole.position.set(1.5, 1.8, 2.2); g.add(pole); /* größeres Schild auf höherem Mast: von der Straße aus erkennbar */
     const sg = new THREE.Mesh(new THREE.BoxGeometry(1.0, 1.0, 0.08), [metal, metal, metal, metal, new THREE.MeshBasicMaterial({ map: uTex() }), new THREE.MeshBasicMaterial({ map: uTex() })]); sg.position.set(1.5, 3.9, 2.2); g.add(sg);
+    // Stationsname unter dem U, Leuchtstele (MeshBasic: leuchtet auch nachts) und Fahrkartenautomat: Eingänge sollen von weitem auffallen
+    const nameTex = signTex(st.name, '#0a3d8f', '#ffffff', 512, 96); const np = new THREE.Mesh(new THREE.BoxGeometry(1.9, 0.36, 0.06), [metal, metal, metal, metal, new THREE.MeshBasicMaterial({ map: nameTex }), new THREE.MeshBasicMaterial({ map: nameTex })]); np.position.set(1.5, 3.2, 2.2); g.add(np);
+    const stele = new THREE.Mesh(new THREE.BoxGeometry(0.5, 2.6, 0.5), [0, 1, 2, 3, 4, 5].map(i => i === 2 || i === 3 ? metal : new THREE.MeshBasicMaterial({ map: uTex() }))); stele.position.set(-1.9, 1.3, -2.4); g.add(stele);
+    const tm = new THREE.Group(); const body = new THREE.Mesh(new THREE.BoxGeometry(0.75, 1.75, 0.45), M(0x2b2f36, 0.4)); body.position.y = 0.875; tm.add(body);
+    const scr = new THREE.Mesh(new THREE.PlaneGeometry(0.42, 0.3), new THREE.MeshBasicMaterial({ color: 0x6fb6ff })); scr.position.set(0, 1.3, 0.231); tm.add(scr);
+    const lt = signTex('Fahrkarten', '#e8590c', '#ffffff', 256, 64); const lab = new THREE.Mesh(new THREE.PlaneGeometry(0.7, 0.17), new THREE.MeshBasicMaterial({ map: lt })); lab.position.set(0, 1.62, 0.231); tm.add(lab);
+    const slot = new THREE.Mesh(new THREE.PlaneGeometry(0.3, 0.06), new THREE.MeshBasicMaterial({ color: 0x111111 })); slot.position.set(0, 0.85, 0.231); tm.add(slot);
+    tm.position.set(-1.9, 0, 2.4); g.add(tm);
     const ne = nearestEdge(p[0], p[1], 20); if (ne) { const e = edgeNormal(ne.b.p, ne.e); g.rotation.y = Math.atan2(e.dx, e.dz); }
     g.position.set(p[0], y, p[1]); scene.add(g); return g;
   }
   function updateEntrances(dt) {
     scanT -= dt; if (scanT > 0) return; scanT = 1;
     const want = new Set(); for (const s of metro.stations) for (let i = 0; i < s.entr.length; i++) { const p = s.entr[i]; if ((p[0] - player.pos.x) ** 2 + (p[1] - player.pos.z) ** 2 < 300 * 300) { const k = s.id + '#' + i; want.add(k); if (!entrGroups.has(k)) entrGroups.set(k, entranceMesh(p, s)); } }
-    for (const [k, g] of entrGroups) if (!want.has(k)) { scene.remove(g); g.traverse(o => { if (o.geometry) o.geometry.dispose(); }); entrGroups.delete(k); }
+    for (const [k, g] of entrGroups) if (!want.has(k)) { scene.remove(g); g.traverse(o => { if (o.geometry) o.geometry.dispose(); for (const m of [].concat(o.material || [])) if (m.map) m.map.dispose(); }); entrGroups.delete(k); }
   }
   function nearMetro() {
     let best = null, bd = 9; for (const s of metro.stations) { for (const p of s.entr) { const d = (p[0] - player.pos.x) ** 2 + (p[1] - player.pos.z) ** 2; if (d < bd) { bd = d; best = { s, p, under: true }; } } if (!s.entr.length) { const d = (s.p[0] - player.pos.x) ** 2 + (s.p[1] - player.pos.z) ** 2; if (d < 18 * 18 && d < bd * 40) { bd = d / 40; best = { s, p: s.p, under: false }; } } }

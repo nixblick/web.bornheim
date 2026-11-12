@@ -1,7 +1,7 @@
 // Feedback: öffnet ein vorausgefülltes GitHub-Issue (oder eine E-Mail) mit Beschreibung und Spielzustand.
 // Keine Daten gehen ohne Klick des Spielers raus; das Issue legt der Spieler selbst auf GitHub an.
 const REPO = 'https://github.com/nixblick/web.bornheim';
-const MAIL = 'mail@andrehinz.de';
+const MAIL = 'service@creavisions.de';
 // Fehler überleben einen Absturz: im localStorage, beim nächsten Start als „vorige Sitzung“ im Bericht
 const LS = 'bornheim_fehler';
 let prevErrors = []; try { prevErrors = JSON.parse(localStorage.getItem(LS) || '[]').slice(-5); localStorage.removeItem(LS); } catch (e) {}

@@ -2,6 +2,10 @@
 
 ## 2026-11-12
 
+- Unsichtbare Wände an Zäunen behoben: Bild und Kollision kommen aus einer Quelle (`barrierSegs`), Hindernisse werden erst beim Bau der Kachel eingetragen und mit ihr wieder entfernt. Zäune in Stücken bis 4 m auf dem Gelände statt langer Kästen über Kuppen, erfundene Zäune (Schulen, Kitas, Bolzplätze, Kleingärten) mit 3 m Lücke an jedem kreuzenden Weg, Spielplätze ohne Zaun. Zaun-Selbsttest war vor dem Absturz grün, der Rest ist ungetestet (Test im Nachtfenster)
+- U-Bahn-Eingänge: Stationsname unter dem U, leuchtende Stele und Fahrkartenautomat; Texturen werden beim Entfernen freigegeben. Ungetestet (Test im Nachtfenster)
+- Fehlerbericht per Mail geht an service@creavisions.de
+
 - Regel `CLAUDE.md`: Spieltests im Browser nur von 22 bis 6 Uhr, immer nur einer zur selben Zeit (Notebook-Absturz durch Testlast neben anderen Sitzungen)
 - Fehler melden ohne GitHub: Bildschirmfoto des Spiels (Vorschau, abwählbar); „Teilen“ öffnet am Handy das Teilen-Menü (WhatsApp, Signal, Mail) mit Text und Bild, „Per E-Mail schicken“ lädt das Bild herunter und öffnet die Mail mit Anhang-Hinweis; GitHub nur noch als Link für Leute mit Konto, das Bild liegt dann in der Zwischenablage
 - Getestet (Headless-Chrome): `forceContextLoss` zeigt den Hinweis und speichert beide Fehler; nach Neuladen stehen sie im Bericht unter „Vorige Sitzung“, das Bildschirmfoto ist nicht schwarz
