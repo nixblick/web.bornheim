@@ -2,6 +2,8 @@
 
 ## 2026-11-12
 
+- **Alle 866 Bushalte benannt:** die 95 ohne Namen in den Kacheln per Overpass (nächster OSM-Halt im Umkreis 120 m) nachbenannt
+- U6/U7 geprüft: Daten stimmen mit traffiQ überein (U6 Hausen–Ostbahnhof, U7 Heerstraße–Enkheim), keine Änderung
 - **Friedhöfe (#57):** Grabfelder auf allen Friedhofsflächen, ausgerichtet an der längsten Kante: Grabeinfassungen mit Bepflanzung, stehende Steine, Holzkreuze und Liegeplatten, Wege alle fünf Reihen und neun Spalten, Abstand zu Rand, Häusern und Wegen; höchstens 2400 Gräber je Kachel. Ungetestet im Spiel, Test im Nachtfenster
 - **U-Bahn vollständig begehbar:** alle 46 oberirdischen Stationen ohne Treppenabgang (Hausen bis Hohemark, Enkheim, Preungesheim, Riedberg …) haben jetzt einen Bahnsteig mit Mast, U-Würfel, Namensschild und Infokasten; mit F fährt man ab
 - **U-Bahn-Netz auf der großen Karte (M):** alle neun Linien in ihren Farben mit Stationsnamen
