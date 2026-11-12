@@ -83,7 +83,7 @@ export function initInteriors(X, W, D, SH) {
   function shop(s, door) {
     const [W2, D2, H] = SIZE[s.k] || SIZE.food; const R = room('shop', W2, D2, H, { floorTex: tileTex('#d9d4c8', '#c4bdae'), wallCol: s.k === 'pharmacy' ? 0xe8f4ea : 0xf2efe6 });
     const g = R.g; const shelfM = M(0xd8d8d8, 0.3), counter = M(0x6b4a33, 0.3);
-    if (W2 >= 5) { // Regalreihen mit Waren
+    if (W2 >= 5 && s.k !== 'pharmacy') { // Regalreihen mit Waren (Apotheke hat Vitrinen)
       const items = []; for (let x = -W2 + 2.5; x < W2 - 3.5; x += 3) { box(g, 0.6, 1.9, D2 * 2 - 4.5, x, 0.95, 0.6, shelfM); R.walls.push([x - 0.4, -D2 + 2.6, x + 0.4, D2 - 1.4]);
         for (let z = -D2 + 2.7; z < D2 - 1.6; z += 0.45) for (const y of [0.45, 0.95, 1.45]) for (const sd of [-0.36, 0.36]) items.push([x + sd, y, z]); }
       const pm = new THREE.InstancedMesh(new THREE.BoxGeometry(0.22, 0.32, 0.36), new THREE.MeshLambertMaterial({ color: 0xffffff, emissive: 0x333333 }), items.length); const o = new THREE.Object3D(); const c = new THREE.Color();
@@ -93,6 +93,16 @@ export function initInteriors(X, W, D, SH) {
     const kx = -W2 + 1.6, kz = -D2 + 1.4; box(g, 1.6, 1.0, 0.7, kx, 0.5, kz + 0.6, counter); R.walls.push([kx - 0.9, kz + 0.2, kx + 0.9, kz + 1.0]);
     const cash = makeHuman(Math.random() < 0.5, { top: 0xc0392b }); cash.position.set(PX + kx, 0, PZ + kz + 1.4); cash.rotation.y = Math.PI; g.add(cash); try { playAnim(cash, 'idle'); } catch (e) {} R.npc = [cash];
     panel(g, signTex(s.name, '#1d6a3a'), Math.min(W2 * 1.6, 7), 0.9, 0, H - 0.6, D2 - 0.02, Math.PI);
+    if (s.k === 'pharmacy') { // Foto Sonnen-Apotheke: Holz-Vitrinen mit Glasböden und bunten Packungen, Schubladenschrank, Tresen mit Glasschutz, Kasse, Glas-Hängelampe
+      const holz = M(0x9a6232, 0.3), dunkel = M(0x5a3420, 0.3); const pk = []; const o = new THREE.Object3D(); const c = new THREE.Color();
+      for (const x of [-W2 + 1.6, 0, W2 - 1.6]) { box(g, 2.2, 2.0, 0.35, x, 1.9, D2 - 0.2, holz); box(g, 2.0, 1.8, 0.02, x, 1.9, D2 - 0.39, new THREE.MeshLambertMaterial({ color: 0xffffff, transparent: true, opacity: 0.18 }));
+        for (let r = 0; r < 6; r++) { box(g, 1.95, 0.02, 0.28, x, 1.1 + r * 0.3, D2 - 0.22, new THREE.MeshLambertMaterial({ color: 0xdfeef0, transparent: true, opacity: 0.6 })); for (let k = 0; k < 9; k++) pk.push([x - 0.9 + k * 0.22, 1.2 + r * 0.3, D2 - 0.25]); } }
+      const im = new THREE.InstancedMesh(new THREE.BoxGeometry(0.17, 0.17, 0.12), new THREE.MeshLambertMaterial({ color: 0xffffff, emissive: 0x444444 }), pk.length);
+      pk.forEach(([x, y, z], i) => { o.position.set(PX + x, y, PZ + z); o.scale.set(1, 0.7 + Math.random() * 0.5, 1); o.updateMatrix(); im.setMatrixAt(i, o.matrix); im.setColorAt(i, c.setHex([0xffffff, 0x2f9a4a, 0xd8332b, 0x2a6fd1, 0xf2c94c, 0x7fc8e6, 0xe86fa0][(i * 7) % 7])); }); g.add(im);
+      box(g, W2 * 1.4, 0.8, 0.5, 0, 0.4, D2 - 0.4, dunkel); for (let k = 0; k < 6; k++) box(g, 0.25, 0.04, 0.02, -W2 * 0.5 + k * W2 * 0.2, 0.55, D2 - 0.66, M(0xe8e0c8, 0.5)); // Schubladen mit Schildern
+      box(g, W2 * 1.2, 1.0, 0.7, 0, 0.5, 0.6, holz); box(g, W2 * 1.2, 0.5, 0.02, 0, 1.25, 0.3, new THREE.MeshLambertMaterial({ color: 0xffffff, transparent: true, opacity: 0.2 })); R.walls.push([-W2 * 0.6, 0.2, W2 * 0.6, 1.0]);
+      box(g, 0.6, 0.4, 0.04, W2 * 0.35, 1.25, 0.75, new THREE.MeshBasicMaterial({ color: 0xbfe3ff })); box(g, 0.12, 0.2, 0.18, W2 * 0.15, 1.1, 0.6, M(0x222222, 0.2));
+      const lm = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 0.65, 0.06, 20), new THREE.MeshLambertMaterial({ color: 0xe8f4f4, emissive: 0xfff6e0, emissiveIntensity: 0.6, transparent: true, opacity: 0.8 })); lm.position.set(PX, H - 0.6, PZ - 0.5); g.add(lm); }
     if (/Sonnenblumen/.test(s.name)) { // Foto 12.11.2026: gelbe Wände, Getränkekühlschrank, Korbstühle, Lichterkette, Leuchtschild
       box(g, 0.9, 2.0, 0.7, W2 - 0.6, 1.0, D2 - 1.2, M(0x1d4fa8, 0.4)); box(g, 0.75, 1.7, 0.02, W2 - 0.6, 1.05, D2 - 1.56, new THREE.MeshBasicMaterial({ color: 0xcfe8ff }));
       for (const x of [-1.2, 0.2]) { box(g, 0.5, 0.45, 0.5, x, 0.23, 0.8, M(0xb08850, 0.3)); box(g, 0.5, 0.5, 0.06, x, 0.7, 1.03, M(0xb08850, 0.3)); }

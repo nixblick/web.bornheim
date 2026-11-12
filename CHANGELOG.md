@@ -2,6 +2,7 @@
 
 ## 2026-11-12
 
+- **Apotheken innen** (Foto Sonnen-Apotheke): Holzvitrinen mit Glasböden und bunten Packungen, Schubladenschrank mit Schildern, Holztresen mit Glasschutz, Kassenbildschirm, Glas-Hängelampe
 - **U-Würfel zurück** (Foto Am Röthenek): am Eingang zusätzlich der leuchtende grün-türkise U-Würfel auf dem Mast, neben dem Portal
 - **Infokasten** neben jedem U-Bahn-Eingang mit selbst gezeichnetem Liniennetz
 - **Sonnenblumen-Bäckerei innen:** blauer Getränkekühlschrank, Korbstühle, bunte Lichterkette, Leuchtschild „Coffee to go“
