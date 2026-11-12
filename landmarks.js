@@ -4,8 +4,8 @@
 // geladen), und wieder abgebaut, wenn er weit weg ist. Kosten: rund 1.500 Dreiecke, eine 256er-Textur.
 export function initLandmarks(X) {
   const { THREE, scene, player, TH, CITY, canvasTex, solidAt } = X;
-  const poi = { x: -229.14, z: 491.16, fest: false };
-  const NAH = 450, WEG = 600;
+  const poi = { x: -235.35, z: 455.38, fest: false };
+  const NAH = 800, WEG = 950;
   let grp = null, clockTex = null, lastMin = -1, scanT = 0;
 
   const L_ = (col, em = 0.15) => new THREE.MeshLambertMaterial({ color: col, emissive: col, emissiveIntensity: em });
@@ -53,22 +53,24 @@ export function initLandmarks(X) {
   }
   function drop() { scene.remove(grp); grp.traverse(o => { if (o.geometry) o.geometry.dispose(); if (o.material) { if (o.material.map) o.material.map.dispose(); o.material.dispose(); } }); grp = null; clockTex = null; }
 
-  // Standort (12.11.2026, nach Live-Befund): Das Uhrtürmchen ist in den OSM-Daten kein eigenes Objekt. Die Suche
-  // nach dem Namen traf vorher die „Buchhandlung Schutt am Uhrtürmchen“, deren Punkt IM Gebäude liegt (Turm unsichtbar),
-  // oder die gleichnamige Kneipe 1,6 km entfernt. Jetzt: vom Buchladen zur Berger Straße gehen, bis der Boden frei ist,
-  // dann noch 1,8 m auf den Gehweg. Erst rechnen, wenn die Kachel mit der Berger geladen ist.
+  // Standort (12.11.2026, Korrektur nach Prüfung gegen -1_0.json): Zwischen dem Buchladen-Anker (-229.14, 491.16)
+  // und dem Ende der Berger Straße (-236.24, 450.26) liegen zwei Häuserblöcke (#482 und #42); am Anker selbst ist
+  // solidAt === -1, sodass der frühere Vorwärtsschritt von 1,8 m direkt IN Gebäude #482 lief. Jetzt wird vom
+  // Straßenpunkt (bx, bz) aus 5,2 m auf den freien Platz am Uhrtürmchen (direkt neben dem lila Story-B) gegangen
+  // und per Umkreis-Prüfung sichergestellt, dass der gesamte Sockel (r = 1,8 m) frei von Gebäuden ist.
   const ANKER = { x: -229.14, z: 491.16 };
+  const frei = (x, z) => !solidAt || (solidAt(x, z) < 0 && solidAt(x + 1.8, z) < 0 && solidAt(x - 1.8, z) < 0 && solidAt(x, z + 1.8) < 0 && solidAt(x, z - 1.8) < 0);
   function standort() {
     const roads = ((X.WORLD && X.WORLD.roads) || []).filter(r => r && r.n === 'Berger Straße'); if (!roads.length) return null;
     let best = 1e18, bx = 0, bz = 0; for (const r of roads) for (let i = 0; i < r.p.length - 1; i++) { const [ax, az] = r.p[i], [cx, cz] = r.p[i + 1]; const dx = cx - ax, dz = cz - az, L2 = dx * dx + dz * dz || 1; const tt = Math.max(0, Math.min(1, ((ANKER.x - ax) * dx + (ANKER.z - az) * dz) / L2)); const px = ax + dx * tt, pz = az + dz * tt; const d = (px - ANKER.x) ** 2 + (pz - ANKER.z) ** 2; if (d < best) { best = d; bx = px; bz = pz; } }
     if (best > 60 * 60) return null;
-    const L = Math.sqrt(best) || 1, ux = (bx - ANKER.x) / L, uz = (bz - ANKER.z) / L; let s = 0;
-    while (s < L && solidAt && solidAt(ANKER.x + ux * s, ANKER.z + uz * s) >= 0) s += 0.5;
-    s = Math.min(L, s + 1.8); return { x: ANKER.x + ux * s, z: ANKER.z + uz * s };
+    const L = Math.sqrt(best) || 1, ux = (ANKER.x - bx) / L, uz = (ANKER.z - bz) / L;
+    for (const s of [5.2, 4.2, 6.2, 3.5]) { const x = bx + ux * s, z = bz + uz * s; if (frei(x, z)) return { x, z }; }
+    return { x: -235.35, z: 455.38 };
   }
   function update(dt) {
     scanT -= dt; if (scanT > 0) return; scanT = 1;
-    if (!poi.fest) { if ((player.pos.x - ANKER.x) ** 2 + (player.pos.z - ANKER.z) ** 2 > NAH * NAH) return; const s = standort(); if (!s) return; poi.x = s.x; poi.z = s.z; poi.fest = true; }
+    if (!poi.fest) { const s = standort(); if (s) { poi.x = s.x; poi.z = s.z; poi.fest = true; if (grp) grp.position.set(poi.x, TH(poi.x, poi.z), poi.z); } }
     const d2 = (player.pos.x - poi.x) ** 2 + (player.pos.z - poi.z) ** 2;
     if (!grp && d2 < NAH * NAH) grp = build();
     else if (grp && d2 > WEG * WEG) drop();
