@@ -2,6 +2,7 @@
 
 ## 2026-11-12
 
+- **Polizeihubschrauber (#63):** ab 4 Sternen kreist ein blau-silberner Hubschrauber über dem Spieler (bei 5 Sternen zwei), nachts mit Suchlicht; steht man bei 5 Sternen auf einem Dach, zielt der Scharfschütze (roter Laser) und schießt nach 8 s alle 2,5 s, Treffer 45 Leben, Trefferquote steigt; abschießbar (450 Treffpunkte), Abschuss = +1 Stern, Ersatz nach 30 s; aus bei Polizei aus, Kreativmodus, Innenräumen und 0–3 Sternen. Ungetestet im Spiel, Test im Nachtfenster
 - **Alle 866 Bushalte benannt:** die 95 ohne Namen in den Kacheln per Overpass (nächster OSM-Halt im Umkreis 120 m) nachbenannt
 - U6/U7 geprüft: Daten stimmen mit traffiQ überein (U6 Hausen–Ostbahnhof, U7 Heerstraße–Enkheim), keine Änderung
 - **Friedhöfe (#57):** Grabfelder auf allen Friedhofsflächen, ausgerichtet an der längsten Kante: Grabeinfassungen mit Bepflanzung, stehende Steine, Holzkreuze und Liegeplatten, Wege alle fünf Reihen und neun Spalten, Abstand zu Rand, Häusern und Wegen; höchstens 2400 Gräber je Kachel. Ungetestet im Spiel, Test im Nachtfenster
