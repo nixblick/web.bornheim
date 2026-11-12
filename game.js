@@ -443,6 +443,12 @@ function facadeStyle(style) {
       for (let y = 0; y < h; y += 24) { c.fillRect(0, y, (y / 24) % 2 ? 14 : 22, 18); c.fillRect(w - ((y / 24) % 2 ? 14 : 22), y, 22, 18); }
       for (let r = 0; r < 4; r++) for (let q = 0; q < 4; q++) fenster(q * cw + cw * 0.27, r * ch + ch * 0.2, cw * 0.46, ch * 0.55, '#9a4f3e', '#3a4250');
       return; }
+    if (style === 'altschule') { c.fillStyle = '#eeede8'; c.fillRect(0, 0, w, h); const sst = '#8e5546';
+      for (let r = 0; r < 4; r++) { const y = r * ch; c.fillStyle = sst; c.fillRect(0, y + ch - 7, w, 7); c.fillStyle = 'rgba(0,0,0,0.12)'; c.fillRect(0, y + ch, w, 3);
+        for (let q = 0; q < 4; q++) { const x = q * cw + cw * 0.3, ww = cw * 0.4, wy = y + ch * 0.24, wh = ch * 0.6;
+          c.fillStyle = sst; c.fillRect(x - 7, wy - 18, ww + 14, 10); c.fillRect(x - 10, wy - 22, ww + 20, 5); c.fillRect(x - 6, wy + wh, ww + 12, 7);
+          fenster(x, wy, ww, wh, sst, '#36404c'); c.fillStyle = '#f2f2ee'; c.fillRect(x, wy + wh * 0.32, ww, 3); } }
+      return; }
     if (style === 'school') { // weißes Band oben, Fensterband, Klinkersockel (IGS-Bauten)
       for (let r = 0; r < 4; r++) { const y = r * ch; c.fillStyle = '#f1f1ee'; c.fillRect(0, y, w, ch * 0.22); ziegel(0, y + ch * 0.22, w, ch * 0.78, () => pick(['#8c4535', '#9b4c3a', '#7d3d30'])); c.fillStyle = '#e9e9e6'; c.fillRect(0, y + ch * 0.3, w, ch * 0.5);
         for (let q = 0; q < 8; q++) fenster(q * w / 8 + 5, y + ch * 0.34, w / 8 - 10, ch * 0.42, null, '#34404e'); }
@@ -480,6 +486,8 @@ function groundTextures0(kind = 'res') {
     if (kind === 'wache') { for (let q = 0; q < 3; q++) { const x = (0.5 + q * 3.9) * M, dw = 3.3 * M, dh = 2.9 * M; if (emis) { ctx.fillStyle = '#3a2a20'; ctx.fillRect(x + 0.2 * M, h - dh + 0.2 * M, dw - 0.4 * M, 0.6 * M); continue; }
         ctx.fillStyle = '#9a4f3e'; ctx.fillRect(x - 0.15 * M, h - dh - 0.15 * M, dw + 0.3 * M, dh + 0.15 * M); ctx.fillStyle = '#b8473a'; ctx.fillRect(x, h - dh, dw, dh); ctx.fillStyle = 'rgba(0,0,0,0.3)'; for (let k = 1; k < 4; k++) ctx.fillRect(x + dw * k / 4 - 1, h - dh, 3, dh);
         ctx.fillStyle = '#3b4250'; for (let k = 0; k < 4; k++) ctx.fillRect(x + dw * k / 4 + 0.15 * M, h - dh + 0.2 * M, dw / 4 - 0.3 * M, 0.7 * M); ctx.fillStyle = '#f2f2f2'; ctx.fillRect(x + dw * 0.4, h - dh * 0.55, dw * 0.2, 0.35 * M); } return; }
+    if (kind === 'altschule') { if (!emis) { ctx.fillStyle = '#e8e6e0'; ctx.fillRect(0, 0, w, h); ctx.fillStyle = '#8e5546'; ctx.fillRect(4.4 * M, h - 3.2 * M, 3.2 * M, 3.2 * M); ctx.fillRect(4.1 * M, h - 3.3 * M, 3.8 * M, 0.35 * M); } door(4.8 * M, 2.4 * M, 2.7 * M, '#2f3a44', true);
+      for (const x of [1.0, 9.0]) { if (!emis) { ctx.fillStyle = '#8e5546'; ctx.fillRect((x - 0.12) * M, h - 2.95 * M, 2.24 * M, 2.3 * M); } win(x * M, h - 2.8 * M, 2.0 * M, 2.0 * M, Math.random() < 0.3); } return; }
     if (kind === 'school') { if (!emis) { ctx.fillStyle = '#8c4535'; ctx.fillRect(0, h - 3.0 * M, w, 3.0 * M); } for (let q = 0; q < 4; q++) { const x = (0.3 + q * 2.95) * M; if (emis) { if (Math.random() < 0.35) { ctx.fillStyle = '#dfe8f0'; ctx.fillRect(x, h - 2.7 * M, 2.6 * M, 2.4 * M); } continue; } ctx.fillStyle = '#e9e9e6'; ctx.fillRect(x - 0.08 * M, h - 2.78 * M, 2.76 * M, 2.5 * M); ctx.fillStyle = '#33404d'; ctx.fillRect(x, h - 2.7 * M, 2.6 * M, 2.4 * M); ctx.fillStyle = 'rgba(255,255,255,0.15)'; ctx.fillRect(x, h - 2.7 * M, 1.1 * M, 1.0 * M); } return; }
     if (kind === 'public') { door(4.6 * M, 2.4 * M, 2.5 * M, '#3b4a5a', true); win(0.8 * M, h - 2.6 * M, 2.4 * M, 1.6 * M, Math.random() < 0.5); win(8.5 * M, h - 2.6 * M, 2.4 * M, 1.6 * M, Math.random() < 0.5); return; }
     if (shop) { // Schaufenster + Markise + Tür
@@ -1093,8 +1101,9 @@ function* buildCity() {
     if (/Feuerwache|Rettungswache|Feuer- und Rettungs|Feuerwehr/i.test(n) && !/Training/i.test(n)) k = 'wache';
     else if (/schule|gymnasium|\bIGS\b/i.test(n)) k = 'school';
     else if ((k === 'res' || k === 'public' || k === 'small') && SCHULHOF.length) { const [cx, cz] = centroidOf(b.p); if (SCHULHOF.some(s => cx > s.x0 && cx < s.x1 && cz > s.z0 && cz < s.z1 && pointInPoly(cx, cz, s.p))) k = 'school'; }
+    if (k === 'school' && b.r && b.rh > 0) k = 'altschule'; // Steildach: Gründerzeitbau wie die Kirchnerschule (Foto 12.11.2026)
     return (b._kind = k); };
-  const facKind = (b, kind) => { if (kind === 'wache' || kind === 'school') return kind; if (kind !== 'res') return kind; const hsh = Math.abs((b.p[0][0] * 31 + b.p[0][1] * 17) | 0) % 12; return hsh < 6 ? 'res' : hsh < 8 ? 'nk' : hsh < 10 ? 'nb' : 'zi'; };
+  const facKind = (b, kind) => { if (kind === 'wache' || kind === 'school' || kind === 'altschule') return kind; if (kind !== 'res') return kind; const hsh = Math.abs((b.p[0][0] * 31 + b.p[0][1] * 17) | 0) % 12; return hsh < 6 ? 'res' : hsh < 8 ? 'nk' : hsh < 10 ? 'nb' : 'zi'; };
   for (const b of CITY.buildings) { if (++YC % 10 === 0) yield;
     const kind = kindOf(b);
     if (kind === 'wache') WACHEN.push(centroidOf(b.p));
@@ -1115,7 +1124,7 @@ function* buildCity() {
       if (Math.abs(ny) > 0.5) uv.setXY(i, x, z); else { const nx = nrm.getX(i), nz = nrm.getZ(i); uv.setXY(i, Math.abs(nx) > Math.abs(nz) ? z : x, y - tTop - GF_H); }
     }
     const fk = facKind(b, kind);
-    const c = fk !== kind || kind === 'wache' || kind === 'school' ? 0xf6f6f6 : kind === 'church' ? 0x9a8f86 : kind === 'hall' ? pick([0xbfc3c7, 0xd0d4d8, 0xb9b1a6]) : palette[Math.abs((b.p[0][0] * 7 + b.p[0][1] * 13) | 0) % palette.length];
+    const c = fk !== kind || kind === 'wache' || kind === 'school' || kind === 'altschule' ? 0xf6f6f6 : kind === 'church' ? 0x9a8f86 : kind === 'hall' ? pick([0xbfc3c7, 0xd0d4d8, 0xb9b1a6]) : palette[Math.abs((b.p[0][0] * 7 + b.p[0][1] * 13) | 0) % palette.length];
     const key = fk + '|' + c; if (!byKey.has(key)) byKey.set(key, []);
     for (const grp of g.groups) {
       const sub = new THREE.BufferGeometry();
@@ -1168,7 +1177,7 @@ function* buildCity() {
       }
     }
   }
-  const facByKind = FAC_CACHE || (FAC_CACHE = (() => { const f = {}; for (const k of ['res', 'house', 'public', 'hall', 'small', 'church']) f[k] = [facadeTextures(k), facadeTextures(k)]; for (const k of ['wache', 'school', 'nk', 'nb', 'zi']) { const s = facadeStyle(k); f[k] = [s, k === 'nk' || k === 'zi' ? facadeStyle(k) : s]; } return f; })());
+  const facByKind = FAC_CACHE || (FAC_CACHE = (() => { const f = {}; for (const k of ['res', 'house', 'public', 'hall', 'small', 'church']) f[k] = [facadeTextures(k), facadeTextures(k)]; for (const k of ['wache', 'school', 'altschule', 'nk', 'nb', 'zi']) { const s = facadeStyle(k); f[k] = [s, k === 'nk' || k === 'zi' ? facadeStyle(k) : s]; } return f; })());
   const counters = {};
   const groups = new Map(); const tmpC = new THREE.Color();
   for (const [key, geos] of byKey) {

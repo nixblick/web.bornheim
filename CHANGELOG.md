@@ -2,6 +2,7 @@
 
 ## 2026-11-12
 
+- **Alte Schulen wie die Kirchnerschule** (nach Foto): Schulgebäude mit Steildach bekommen weißen Putz, Fenster mit Sandsteinrahmen, Verdachung und Sohlbank, Gurtgesims je Geschoss und ein Sandsteinportal mit Glastür; flache Schulbauten behalten den IGS-Stil
 - **Kommandowagen der Feuerwehr** (nach Foto Amtsleiter Branddirektion): E-Auto in Leuchtrot mit weißer Flanke, rot-weißen Warnschrägen, Blaulichtbalken und Dachschild „FEUERWEHR“; parkt in der Nähe von Feuerwachen
 - **Feuerwachen** (nach Foto der alten Wache 3): heller Putz, Fenster und Ecksteine aus rotem Sandstein, im Erdgeschoss rote Falttore; erkannt am Gebäudenamen (Feuerwache, Rettungswache, Feuerwehr)
 - **Schulen** (nach den IGS-Luftbildern): weiße Bänder, Fensterbänder, Klinkersockel, Glasfront im Erdgeschoss; für Gebäude mit Schulnamen oder auf einem Schulgelände aus OSM
