@@ -2867,11 +2867,57 @@ $('o_hour').oninput = () => { world.hour = +$('o_hour').value; applyTime(); };
 const OPT_BIND = { o_mapnorth: 'mapNorth', o_potato: 'potato', o_dynres: 'dynres', o_lod: 'lod', o_ao: 'ao', o_dynlights: 'dynlights', o_scale: 'scale', o_view: 'view', o_bloom: 'bloom', o_fps: 'fps', o_fov: 'fov', o_camdist: 'camdist', o_invy: 'invy', o_shake: 'shake', o_gyro: 'gyro', o_vibrate: 'vibrate', o_peds: 'peds', o_police: 'police', o_god: 'god', o_ammo: 'ammo', o_fall: 'fall', o_grip: 'grip', o_minimap: 'minimap', o_hud: 'hud', o_tts: 'tts', o_demos: 'demos' };
 for (const [id, k] of Object.entries(OPT_BIND)) { const el = $(id); if (!el) continue; el.oninput = el.onchange = () => { opts[k] = el.type === 'checkbox' ? el.checked : +el.value; if (k === 'police' && !opts.police) player.wanted = 0; applyOpts(); updateOptLabels(); }; }
 function updateOptLabels() { for (const el of document.querySelectorAll('#menu input[type=range]')) { const out = el.parentElement.querySelector('output'); if (out) out.textContent = el.dataset.pct ? Math.round(el.value * 100) + ' %' : el.value; } }
-const SET_TABS = new Set(['grafik', 'kamera', 'welt', 'spiel', 'ton']); const subTabs = () => { const on = document.querySelector('#menu .tabs button.on'); const set = on && SET_TABS.has(on.dataset.tab); const sub = document.querySelector('#menu .tabs .sub'); if (sub) sub.style.display = set ? 'flex' : 'none'; const sb = document.querySelector('#menu .tabs button.set'); if (sb && set) sb.classList.add('on'); };
-for (const t of document.querySelectorAll('#menu .tabs button')) t.addEventListener('click', () => setTimeout(subTabs, 0));
-for (const t of document.querySelectorAll('#menu .tabs button')) t.onclick = () => { for (const b of document.querySelectorAll('#menu .tabs button')) b.classList.toggle('on', b === t); for (const p of document.querySelectorAll('#menu .pane')) p.style.display = p.dataset.tab === t.dataset.tab ? 'block' : 'none'; };
-/* F1: Menü direkt auf der Hilfe öffnen */ addEventListener('keydown', e => { if (e.code !== 'F1' || !started) return; e.preventDefault(); if (!menuOpen) openMenu(); for (const t of document.querySelectorAll('#menu .tabs button')) if (t.dataset.tab === 'hilfe') t.onclick(); });
-$('m_story').onclick = () => { for (const t of document.querySelectorAll('#menu .tabs button')) if (t.dataset.tab === 'story') t.onclick(); $('storypane').scrollIntoView({ behavior: 'smooth', block: 'start' }); };
+// Pausemenü (André 12.11.2026): oben Themen-Reiter, links Einstellungen untereinander; ein Umschalter für beide Leisten
+const MENU_TAB = tab => { for (const b of document.querySelectorAll('#menu [data-tab]')) if (b.tagName === 'BUTTON') b.classList.toggle('on', b.dataset.tab === tab); for (const p of document.querySelectorAll('#menu .pane')) p.style.display = p.dataset.tab === tab ? 'block' : 'none'; if (tab === 'schnell') quickSync(); if (tab === 'karte') { pmCenter(); drawPMap(); } };
+for (const t of document.querySelectorAll('#menu .tabs button, #menu .sidetabs button')) t.onclick = () => MENU_TAB(t.dataset.tab);
+// Schnell: Abbilder der häufig gebrauchten Regler; jede Änderung geht an das Original (dort hängt die Logik)
+const QUICK = [['Grafik', ['o_quality', 'o_view']], ['Welt', ['o_hour', 'o_time', 'o_weather', 'o_traffic', 'o_peds', 'o_police']], ['Spiel', ['o_ammo', 'o_god', 'o_vol']]];
+const quickPairs = [];
+{ const q = $('quick'); if (q) for (const [head, ids] of QUICK) { const h = document.createElement('div'); h.className = 'qh'; h.textContent = head; q.appendChild(h);
+  for (const id of ids) { const o = $(id); if (!o) continue; const lab = o.closest('label'); const name = lab ? [...lab.childNodes].filter(n => n.nodeType === 3).map(n => n.textContent).join('').trim() : id;
+    const c = o.cloneNode(true); c.id = 'q_' + id; const box = document.createElement('div'); box.className = 'qc'; const l = document.createElement('label'); l.append(name + ' ');
+    let out = null; if (c.type === 'range') { const s = document.createElement('span'); out = document.createElement('output'); s.append(c, out); l.append(s); } else l.append(c); box.appendChild(l); q.appendChild(box);
+    const show = () => { if (out) out.textContent = c.dataset.pct ? Math.round(c.value * 100) + ' %' : c.value; };
+    const push = () => { if (c.type === 'checkbox') o.checked = c.checked; else o.value = c.value; o.dispatchEvent(new Event('input', { bubbles: true })); o.dispatchEvent(new Event('change', { bubbles: true })); show(); };
+    c.addEventListener('input', push); c.addEventListener('change', push); quickPairs.push([o, c, show]); } } }
+function quickSync() { for (const [o, c, show] of quickPairs) { if (c.type === 'checkbox') c.checked = o.checked; else c.value = o.value; show(); } }
+MENU_HOOKS.push(() => setTimeout(() => { quickSync(); MENU_TAB('schnell'); }, 0));
+// Karte im Menü: springen, U-Bahn und Bus fahren
+let pmX = 0, pmZ = 0, pmSpan = 3000; const PM_OFF = new Set(); const pmHits = [];
+function pmCenter() { pmX = player.pos.x; pmZ = player.pos.z; }
+function pmStops() { const seen = new Map(); for (const l of BUSLINES) for (const [x, z] of l.s || []) { const k = Math.round(x / 25) + ',' + Math.round(z / 25); if (!seen.has(k)) seen.set(k, { x, z, lines: new Set() }); seen.get(k).lines.add(l.ref); } return [...seen.values()]; }
+let PM_STOPS = null;
+function drawPMap() {
+  const cv = $('pmap'); if (!cv || !cv.clientWidth) return; const W = cv.width = cv.clientWidth, H = cv.height = cv.clientHeight; const c2 = cv.getContext('2d'); const sc = W / pmSpan; const cx0 = pmX - pmSpan / 2, cz0 = pmZ - pmSpan * H / W / 2; const P = (x, z) => [(x - cx0) * sc, (z - cz0) * sc];
+  c2.fillStyle = '#111'; c2.fillRect(0, 0, W, H); pmHits.length = 0;
+  for (const [, t] of TILES) { if (!t.data) continue; const [x, y] = P(t.tx * TS, t.tz * TS); if (x > W || y > H || x + TS * sc < 0 || y + TS * sc < 0) continue; c2.drawImage(t.mm || (t.mm = tileMap(t)), x, y, TS * sc, TS * sc); }
+  const M = INTERIORS && INTERIORS.metro;
+  if (M && $('pm_u').checked) { const ST = INTERIORS.ST; c2.lineWidth = 3;
+    for (const l of M.lines) { if (PM_OFF.has(l.ref)) continue; c2.strokeStyle = l.color || '#888'; c2.beginPath(); let first = true; for (const id of l.stops) { const s = ST.get(id); if (!s) continue; const [x, y] = P(s.p[0], s.p[1]); if (first) c2.moveTo(x, y); else c2.lineTo(x, y); first = false; } c2.stroke(); }
+    c2.font = 'bold 12px system-ui'; for (const s of M.stations) { if (s.lines.every(r => PM_OFF.has(r))) continue; const [x, y] = P(s.p[0], s.p[1]); if (x < -10 || y < -10 || x > W + 10 || y > H + 10) continue; c2.fillStyle = '#fff'; c2.strokeStyle = '#1e5fb4'; c2.lineWidth = 3; c2.beginPath(); c2.arc(x, y, 6, 0, 7); c2.fill(); c2.stroke(); if (pmSpan < 9000) { c2.fillStyle = '#fff'; c2.fillText(s.name, x + 9, y + 4); } pmHits.push({ x, y, kind: 'u', s }); } }
+  if ($('pm_b').checked && pmSpan < 7000) { PM_STOPS = PM_STOPS || pmStops(); c2.font = '11px system-ui'; for (const s of PM_STOPS) { const [x, y] = P(s.x, s.z); if (x < 0 || y < 0 || x > W || y > H) continue; c2.fillStyle = '#2e9c3a'; c2.fillRect(x - 4, y - 4, 8, 8); if (pmSpan < 2500) { c2.fillStyle = '#bfe8c4'; c2.fillText([...s.lines].slice(0, 3).join(' '), x + 6, y + 4); } pmHits.push({ x, y, kind: 'b', s }); } }
+  const [px, py] = P(player.pos.x, player.pos.z); c2.fillStyle = '#ffd84a'; c2.beginPath(); c2.arc(px, py, 7, 0, 7); c2.fill(); c2.strokeStyle = '#000'; c2.lineWidth = 2; c2.stroke();
+  c2.fillStyle = '#fff'; c2.font = '13px system-ui'; c2.fillText((pmSpan / 1000).toFixed(1) + ' km Breite · ' + Math.floor(world.hour) + ':' + String(Math.floor(world.hour % 1 * 60)).padStart(2, '0') + ' Uhr · ' + (player.money || 0) + ' €', 12, 20);
+}
+{ const box = $('pm_lines'); const M = () => INTERIORS && INTERIORS.metro; const fill = () => { if (!box || box.childElementCount || !M()) return; for (const l of M().lines) { const lb = document.createElement('label'); const cb = document.createElement('input'); cb.type = 'checkbox'; cb.checked = true; cb.onchange = () => { if (cb.checked) PM_OFF.delete(l.ref); else PM_OFF.add(l.ref); drawPMap(); }; lb.append(cb, ' '); const sw = document.createElement('b'); sw.textContent = l.ref; sw.style.color = l.color || '#fff'; lb.append(sw); box.appendChild(lb); } };
+  MENU_HOOKS.push(fill); for (const id of ['pm_u', 'pm_b']) if ($(id)) $(id).onchange = drawPMap; }
+async function pmJump(x, z, why, cost, minutes) {
+  if (cost && (player.money || 0) < cost) { showMsg('ZU WENIG GELD (' + cost + ' €)', 1600); return; } if (cost) player.money -= cost; closeMenu(); if (player.car) exitCar();
+  const ov = document.createElement('div'); ov.style.cssText = 'position:fixed;inset:0;background:#05070acc;color:#fff;display:flex;align-items:center;justify-content:center;z-index:46;font:700 26px system-ui'; ov.textContent = why; document.body.appendChild(ov);
+  try { await streamInit(x, z); } catch (e) { /* Kacheln laden weiter im Hintergrund */ }
+  let fx = x, fz = z; for (let r = 0; r < 30 && solidAt(fx, fz) >= 0; r += 2) { fx = x + r; fz = z + r * 0.5; } player.pos.set(fx, surfAt(fx, fz, 1e4), fz); if (player.mesh) player.mesh.position.copy(player.pos); player.vy = 0;
+  if (minutes) world.hour = (world.hour + minutes / 60) % 24; ov.remove(); }
+{ const cv = $('pmap'); let drag = false, moved = 0, lx = 0, ly = 0;
+  if (cv) { cv.addEventListener('mousedown', e => { drag = true; moved = 0; lx = e.clientX; ly = e.clientY; });
+    addEventListener('mousemove', e => { if (!drag) return; const k = pmSpan / (cv.clientWidth || 600); pmX -= (e.clientX - lx) * k; pmZ -= (e.clientY - ly) * k; moved += Math.abs(e.clientX - lx) + Math.abs(e.clientY - ly); lx = e.clientX; ly = e.clientY; drawPMap(); });
+    addEventListener('mouseup', e => { if (!drag) return; drag = false; if (moved > 6 || e.target !== cv) return; const r = cv.getBoundingClientRect(); const mx = (e.clientX - r.left) * cv.width / r.width, my = (e.clientY - r.top) * cv.height / r.height;
+      let hit = null, hd = 12; for (const h of pmHits) { const d = Math.hypot(h.x - mx, h.y - my); if (d < hd) { hd = d; hit = h; } }
+      if (hit && hit.kind === 'u') { const M = INTERIORS.metro; let from = null, fd = 1e12; for (const s of M.stations) { const d = Math.hypot(s.p[0] - player.pos.x, s.p[1] - player.pos.z); if (d < fd && s.id !== hit.s.id) { fd = d; from = s; } } if (from) { closeMenu(); if (player.car) exitCar(); INTERIORS.ride(from, hit.s); } return; }
+      if (hit && hit.kind === 'b') { const km = Math.hypot(hit.s.x - player.pos.x, hit.s.z - player.pos.z) / 1000; pmJump(hit.s.x, hit.s.z, '🚌 Bus fährt … ' + Math.max(3, Math.round(km * 3)) + ' Minuten', 2.8, Math.max(3, km * 3)); return; }
+      const sc = pmSpan / cv.width; pmJump(pmX - pmSpan / 2 + mx * sc, pmZ - pmSpan * cv.height / cv.width / 2 + my * sc, '📍 Springe …', 0, 0); });
+    cv.addEventListener('wheel', e => { e.preventDefault(); pmSpan = clamp(pmSpan * (e.deltaY > 0 ? 1.2 : 1 / 1.2), 300, 30000); drawPMap(); }, { passive: false });
+    cv.addEventListener('dblclick', () => { pmCenter(); drawPMap(); }); } }
+/* F1: Menü direkt auf der Hilfe öffnen */ addEventListener('keydown', e => { if (e.code !== 'F1' || !started) return; e.preventDefault(); if (!menuOpen) openMenu(); MENU_TAB('hilfe'); });
 if ($('m_creative')) $('m_creative').onclick = () => { closeMenu(); if (started) toggleCreative(); };
 $('o_quality').onchange = () => { const before = opts.quality; opts.quality = $('o_quality').value; applyOpts(); if ((before === 'niedrig') !== (opts.quality === 'niedrig')) showMsg('Texturdetails nach Neustart', 1800); };
 $('o_weather').onchange = () => { opts.weather = $('o_weather').value; if (opts.weather !== 'auto') weather.kind = opts.weather; applyOpts(); };
