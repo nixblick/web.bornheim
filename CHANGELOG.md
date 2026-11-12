@@ -2,6 +2,10 @@
 
 ## 2026-11-12
 
+- **Kein Ertrinken mehr am Ufer (#84):** Kai, Uferwege und Inseln, die in der OSM-Wasserfläche liegen, aber über dem Wasserspiegel, zählen als Boden. Vorher schwamm man bis 0,65 m über dem Spiegel und sank 1,2 m unter den sichtbaren Boden (Deutschherrnufer: Kai 3,53 m, Spiegel 3,43 m). Im Main liegt das Gelände jetzt 3 m unter dem Spiegel, Schwimmer stecken nicht mehr im Boden
+- **Brücken über Wasser in richtiger Höhe (#84):** Widerlager nehmen das Gelände 4–8 m hinter dem Brückenende, die Spannweite hängt nicht mehr unter die Gerade zwischen den Widerlagern (tools/bridges.py, in build_tiles.py, für die fertigen Kacheln tools/fix_bridges.py). Flößerbrücke Süd 5,07 → 8,01 m, Alte Brücke Mitte 5,23 → 11,6–12,5 m, Ignatz-Bubis-Brücke Süd 7,61 → 11,44 m, Leunabrücke ohne Knick auf 0,4 m; 44 Kacheln, nur Brücken über Wasser. Mit Pfeilern statt Damm bis zum Grund
+- **Luft-Leiste erklärt:** „🫧 Luft“ über der Leiste, beim ersten Erscheinen „Luft: Taucht man zu lange, ertrinkt man“; bei voller Luft an der Oberfläche ausgeblendet. Kachel-Cache v3
+- Nachttest 12.11. 23:45 (lokal, Bildschirmfotos): Deutschherrnufer-Kai steht (swim false), Main-Mitte schwimmt, Tauchen zeigt Luft-Leiste mit Hinweis, Flößerbrücke Deck 9,56 m über Wasser 3,49 m mit Pfeilern, U-Bahn Südbahnhof innen ohne Bodenplatte (farPlane aus), keine Konsolenfehler
 - **S-Bahn S1–S9** (OSM-Routen, Farben aus dem OSM-Tag, echter Streckenverlauf; tools/build_sbahn.py) im selben Netz wie die U-Bahn: Umsteigen an gemeinsamen Halten (Hauptwache, Konstablerwache, Hauptbahnhof, Südbahnhof …), Fahrt über Karte oder F an der Haltestelle; S-Bahn-Halte mit grünem S am Mast und Namensschild, ohne Bahnsteig
 - **Netz auf das Spielgebiet zugeschnitten:** 18 Linien, 105 Stationen; Halte ohne Kachel (Hohemark, Oberursel, Bad Homburg, Wiesbaden …) fallen weg, damit keine Fahrt im Leeren endet
 - Oberirdische Haltestellen werden vom Fahrbahnrand auf den Gehweg geschoben
