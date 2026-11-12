@@ -2,6 +2,7 @@
 
 ## 2026-11-12
 
+- **Wahrzeichen nach Wikipedia (#73):** Alte Oper (Mittelrisalit mit Inschrift, Pegasus, Goethe und Mozart, Kupferdächer), Römer (drei Stufengiebel, Balkon, Uhr), Kaiserdom (Westturm 95 m mit Kuppelhelm), Paulskirche (Oval, Turm im Süden, flaches Kupferdach), Commerzbank Tower, Main Tower, Westend Tower, Eurotower und Trianon als eigene Modelle (wahrzeichen.js) statt OSM-Klotz; nur in Spielernähe gebaut, nachts angestrahlt. Ungetestet (Test im Nachtfenster)
 - **Alle 866 Bushalte benannt:** die 95 ohne Namen in den Kacheln per Overpass (nächster OSM-Halt im Umkreis 120 m) nachbenannt
 - U6/U7 geprüft: Daten stimmen mit traffiQ überein (U6 Hausen–Ostbahnhof, U7 Heerstraße–Enkheim), keine Änderung
 - **Friedhöfe (#57):** Grabfelder auf allen Friedhofsflächen, ausgerichtet an der längsten Kante: Grabeinfassungen mit Bepflanzung, stehende Steine, Holzkreuze und Liegeplatten, Wege alle fünf Reihen und neun Spalten, Abstand zu Rand, Häusern und Wegen; höchstens 2400 Gräber je Kachel. Ungetestet im Spiel, Test im Nachtfenster
