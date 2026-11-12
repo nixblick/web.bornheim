@@ -2,6 +2,7 @@
 
 ## 2026-11-12
 
+- Regel `CLAUDE.md`: Spieltests im Browser nur von 22 bis 6 Uhr, immer nur einer zur selben Zeit (Notebook-Absturz durch Testlast neben anderen Sitzungen)
 - Fehler melden ohne GitHub: Bildschirmfoto des Spiels (Vorschau, abwählbar); „Teilen“ öffnet am Handy das Teilen-Menü (WhatsApp, Signal, Mail) mit Text und Bild, „Per E-Mail schicken“ lädt das Bild herunter und öffnet die Mail mit Anhang-Hinweis; GitHub nur noch als Link für Leute mit Konto, das Bild liegt dann in der Zwischenablage
 - Getestet (Headless-Chrome): `forceContextLoss` zeigt den Hinweis und speichert beide Fehler; nach Neuladen stehen sie im Bericht unter „Vorige Sitzung“, das Bildschirmfoto ist nicht schwarz
 - Absturz-Spuren: Grafikverlust (`webglcontextlost`) zeigt einen Hinweis mit „Neu laden“ und „Fehler melden“ statt eines stehenden Bildes; die letzten 5 Fehlermeldungen (mit Uhrzeit) liegen im localStorage und erscheinen nach einem Neustart im Fehlerbericht als „Vorige Sitzung“
