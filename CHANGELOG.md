@@ -2,6 +2,8 @@
 
 ## 2026-11-12
 
+- **Fachwerk in Alt-Bornheim** (nach Foto Eulengasse): kleine Häuser mit Steildach rund um Eulengasse, Turmstraße und Rendeler Straße sind meist Fachwerk (weiße Gefache, dunkle Balken mit Streben, blaue Fensterläden), manche schieferverkleidet; außerhalb gelegentlich Schieferhäuser
+- **Skyline bei Nacht** (nach Nachtfotos vom Mainufer): ferne Hochhäuser haben nachts eine dunkle Fassade mit vielen hellen Fenstern in Warm- und Kaltweiß und eine angestrahlte Krone; tagsüber unverändert, weiter ein Draw-Call
 - **Wache 2 korrigiert:** Der Google-Maps-Punkt liegt im westlichen Gebäudeteil; die Wache sind die beiden Teile an der Heinrichstraße, der Nachbarbau (37 x 32 m) ist wieder normal
 - **Feuer- und Rettungswache 2 (Heinrichstraße 8, Gallus):** Hauptbau und Fahrzeughalle bekommen die Wachen-Fassade samt roten Toren; in OSM ohne Namen, Lage über die Adresse gefunden
 - **Alte Schulen wie die Kirchnerschule** (nach Foto): Schulgebäude mit Steildach bekommen weißen Putz, Fenster mit Sandsteinrahmen, Verdachung und Sohlbank, Gurtgesims je Geschoss und ein Sandsteinportal mit Glastür; flache Schulbauten behalten den IGS-Stil

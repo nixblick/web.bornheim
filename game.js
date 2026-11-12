@@ -443,6 +443,18 @@ function facadeStyle(style) {
       for (let y = 0; y < h; y += 24) { c.fillRect(0, y, (y / 24) % 2 ? 14 : 22, 18); c.fillRect(w - ((y / 24) % 2 ? 14 : 22), y, 22, 18); }
       for (let r = 0; r < 4; r++) for (let q = 0; q < 4; q++) fenster(q * cw + cw * 0.27, r * ch + ch * 0.2, cw * 0.46, ch * 0.55, '#9a4f3e', '#3a4250');
       return; }
+    if (style === 'fw') { // Fachwerk Alt-Bornheim (Foto Eulengasse): weiße Gefache, dunkle Balken mit Streben, blaue Läden, Bruchsteinsockel in der untersten Reihe
+      c.fillStyle = '#f1f2ef'; c.fillRect(0, 0, w, h); const bk = '#2b221c';
+      for (let r = 0; r < 4; r++) { const y = r * ch; c.fillStyle = bk; c.fillRect(0, y, w, 9); c.fillRect(0, y + ch * 0.5, w, 6);
+        for (let q = 0; q <= 8; q++) if (q !== 3 && q !== 5) c.fillRect(q * w / 8 - 4, y, 8, ch);
+        c.strokeStyle = bk; c.lineWidth = 7; for (const q of [0, 6]) { c.beginPath(); c.moveTo(q * w / 8, y + ch); c.lineTo((q + 1) * w / 8, y + ch * 0.5); c.stroke(); c.beginPath(); c.moveTo((q + 2) * w / 8, y + ch); c.lineTo((q + 1) * w / 8, y + ch * 0.5); c.stroke(); }
+        for (const q of [2.15, 4.15]) { const x = q * w / 8, ww = w / 8 * 0.7; fenster(x + ww * 0.3, y + ch * 0.18, ww * 1.0, ch * 0.62, '#f6f6f2', '#2e3742'); c.fillStyle = '#2f4f86'; c.fillRect(x - ww * 0.15, y + ch * 0.16, ww * 0.42, ch * 0.66); c.fillRect(x + ww * 1.33, y + ch * 0.16, ww * 0.42, ch * 0.66); c.fillStyle = 'rgba(0,0,0,0.25)'; for (let k = 0; k < 8; k++) { c.fillRect(x - ww * 0.15, y + ch * (0.2 + k * 0.077), ww * 0.42, 2); c.fillRect(x + ww * 1.33, y + ch * (0.2 + k * 0.077), ww * 0.42, 2); } } }
+      return; }
+    if (style === 'schiefer') { // Schieferverkleidung (Foto Eulengasse rechts): graue Schuppen, helle Fensterrahmen
+      c.fillStyle = '#5d636b'; c.fillRect(0, 0, w, h);
+      for (let y = 0; y < h; y += 9) for (let x = -((y / 9) % 2) * 7; x < w; x += 14) { c.fillStyle = pick(['#555b63', '#626870', '#4d535b', '#6a7078']); c.beginPath(); c.moveTo(x, y); c.lineTo(x + 13, y); c.lineTo(x + 13, y + 6); c.arc(x + 6.5, y + 6, 6.5, 0, Math.PI); c.fill(); }
+      for (let r = 0; r < 4; r++) for (const q of [0.6, 2.4]) fenster(q * cw + cw * 0.1, r * ch + ch * 0.22, cw * 0.5, ch * 0.55, '#e4e2dc', '#2b333d');
+      return; }
     if (style === 'altschule') { c.fillStyle = '#eeede8'; c.fillRect(0, 0, w, h); const sst = '#8e5546';
       for (let r = 0; r < 4; r++) { const y = r * ch; c.fillStyle = sst; c.fillRect(0, y + ch - 7, w, 7); c.fillStyle = 'rgba(0,0,0,0.12)'; c.fillRect(0, y + ch, w, 3);
         for (let q = 0; q < 4; q++) { const x = q * cw + cw * 0.3, ww = cw * 0.4, wy = y + ch * 0.24, wh = ch * 0.6;
@@ -738,8 +750,14 @@ function buildSky() {
       ctx.fillRect(x, y, 5, 3.5);
     }
   });
+  // Nachtbild (12.11.2026, nach Nachtfotos vom Mainufer): dunkle Fassade, viele helle Fenster in Warm- und Kaltweiß, angestrahlte Krone oben
+  const twTexN = canvasTex(64, 128, (ctx, w, h) => { let s = 9; const r = () => (s = (s * 16807) % 2147483647) / 2147483647;
+    ctx.fillStyle = '#141b27'; ctx.fillRect(0, 0, w, h);
+    for (let y = 10; y < h - 4; y += 6) for (let x = 4; x < w - 4; x += 8) { const q = r(); ctx.fillStyle = q < 0.55 ? pick(['#fff1cf', '#e9f0ff', '#ffe0a0', '#f6f6ee']) : q < 0.7 ? '#8a7a5a' : '#263040'; ctx.fillRect(x, y, 5, 3.5); }
+    const g = ctx.createLinearGradient(0, 0, 0, 10); g.addColorStop(0, '#fff6c8'); g.addColorStop(1, 'rgba(255,240,180,0.2)'); ctx.fillStyle = g; ctx.fillRect(0, 0, w, 10); });
   const twGeo = new THREE.BoxGeometry(1, 1, 1); twGeo.userData.shared = true;
   const twMat = new THREE.MeshBasicMaterial({ map: twTex, fog: false, transparent: true, opacity: 0.92 }); twMat.userData.shared = true;
+  twMat.userData.day = twTex; twMat.userData.night = twTexN;
   skylineMesh = new THREE.InstancedMesh(twGeo, twMat, SKYLINE_TOWERS.length);
   skylineMesh.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(SKYLINE_TOWERS.length * 3), 3);
   skylineMesh.userData.noChunk = true; skylineMesh.frustumCulled = false; scene.add(skylineMesh);
@@ -760,7 +778,8 @@ function updateSky(dt) {
     skylineBeacons.visible = showSkyline && !!world.night;
     if (showSkyline) {
       const cx = camera.position.x, cy = camera.position.y, cz = camera.position.z;
-      const baseCol = _skyC1.setHex(world.night ? 0x687b96 : 0x7b8ea6).multiplyScalar(0.38 + 0.62 * world.day);
+      const sm = skylineMesh.material, wantMap = world.night ? sm.userData.night : sm.userData.day; if (wantMap && sm.map !== wantMap) { sm.map = wantMap; sm.needsUpdate = true; }
+      const baseCol = world.night ? _skyC1.setHex(0xd8dce6) : _skyC1.setHex(0x7b8ea6).multiplyScalar(0.38 + 0.62 * world.day); // nachts leuchten die Fenster selbst
       const blink = Math.floor(performance.now() / 700) % 2 === 0;
       for (let i = 0; i < SKYLINE_TOWERS.length; i++) {
         const [tx0, tz0, w, d, h, ang, ktx, ktz] = SKYLINE_TOWERS[i];
@@ -1106,7 +1125,8 @@ function* buildCity() {
     else if ((k === 'res' || k === 'public' || k === 'small') && SCHULHOF.length) { const [cx, cz] = centroidOf(b.p); if (SCHULHOF.some(s => cx > s.x0 && cx < s.x1 && cz > s.z0 && cz < s.z1 && pointInPoly(cx, cz, s.p))) k = 'school'; }
     if (k === 'school' && b.r && b.rh > 0) k = 'altschule'; // Steildach: Gründerzeitbau wie die Kirchnerschule (Foto 12.11.2026)
     return (b._kind = k); };
-  const facKind = (b, kind) => { if (kind === 'wache' || kind === 'school' || kind === 'altschule') return kind; if (kind !== 'res') return kind; const hsh = Math.abs((b.p[0][0] * 31 + b.p[0][1] * 17) | 0) % 12; return hsh < 6 ? 'res' : hsh < 8 ? 'nk' : hsh < 10 ? 'nb' : 'zi'; };
+  const facKind = (b, kind) => { if (kind === 'wache' || kind === 'school' || kind === 'altschule') return kind; if (kind !== 'res') return kind; const hsh = Math.abs((b.p[0][0] * 31 + b.p[0][1] * 17) | 0) % 12;
+    if (b.r && b.rh > 0 && b.h <= 11.5) { const [cx, cz] = centroidOf(b.p); const alt = cx > -80 && cx < 460 && cz > -400 && cz < 220; /* Alt-Bornheim: Eulengasse, Turmstraße, Rendeler Straße */ if (alt && hsh < 7) return 'fw'; if (alt && hsh < 9) return 'schiefer'; if (!alt && hsh === 0) return 'schiefer'; } return hsh < 6 ? 'res' : hsh < 8 ? 'nk' : hsh < 10 ? 'nb' : 'zi'; };
   for (const b of CITY.buildings) { if (++YC % 10 === 0) yield;
     const kind = kindOf(b);
     if (kind === 'wache') WACHEN.push(centroidOf(b.p));
@@ -1180,7 +1200,7 @@ function* buildCity() {
       }
     }
   }
-  const facByKind = FAC_CACHE || (FAC_CACHE = (() => { const f = {}; for (const k of ['res', 'house', 'public', 'hall', 'small', 'church']) f[k] = [facadeTextures(k), facadeTextures(k)]; for (const k of ['wache', 'school', 'altschule', 'nk', 'nb', 'zi']) { const s = facadeStyle(k); f[k] = [s, k === 'nk' || k === 'zi' ? facadeStyle(k) : s]; } return f; })());
+  const facByKind = FAC_CACHE || (FAC_CACHE = (() => { const f = {}; for (const k of ['res', 'house', 'public', 'hall', 'small', 'church']) f[k] = [facadeTextures(k), facadeTextures(k)]; for (const k of ['wache', 'school', 'altschule', 'nk', 'nb', 'zi', 'fw', 'schiefer']) { const s = facadeStyle(k); f[k] = [s, k === 'nk' || k === 'zi' ? facadeStyle(k) : s]; } return f; })());
   const counters = {};
   const groups = new Map(); const tmpC = new THREE.Color();
   for (const [key, geos] of byKey) {
