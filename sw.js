@@ -17,6 +17,8 @@ const CORE_ASSETS = [
   './progress.js',
   './fire.js',
   './heli.js',
+  './eulen.js',
+  './vokabaum.js',
   './touch.js',
   './feedback.js',
   './vendor/three/build/three.module.js',

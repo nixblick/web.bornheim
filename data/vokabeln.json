@@ -1,0 +1,808 @@
+{
+ "quelle": "Vokabaum (vokabaum.hinjas.de), wortgleich aus nixblick/web.bornheim#82 (Englisch) und #83 (Französisch); je Satz Feld quelle = Ort in Vokabaum",
+ "von": "https://vokabaum.hinjas.de/?von=bornheim",
+ "en": [
+  {
+   "satz": "Excuse me, where is the school?",
+   "richtig": "Entschuldigung, wo ist die Schule?",
+   "falsch": [
+    "Was machst du am Wochenende?",
+    "Kann ich einen Apfel haben, bitte?",
+    "Hallo, was ist heute das Problem?"
+   ],
+   "quelle": "Gesprächsszene „Wo ist die Schule?“, Klasse 3 (db/seed/scenarios_klasse_01_to_03.sql)"
+  },
+  {
+   "satz": "What is your name?",
+   "richtig": "Wie heißt du?",
+   "falsch": [
+    "Danke. Was empfehlen Sie?",
+    "Entschuldigung, wo ist die Schule?",
+    "Wohin sollen wir diesen Sommer reisen?"
+   ],
+   "quelle": "Gesprächsszene „Hallo sagen“, Klasse 1 (db/seed/scenarios_klasse_01_to_03.sql)"
+  },
+  {
+   "satz": "Hello, what would you like?",
+   "richtig": "Hallo, was möchtest du?",
+   "falsch": [
+    "Kannst du das bitte wiederholen?",
+    "Kann ich am Samstag mitkommen?",
+    "Hast du versucht, ihn neu zu starten?"
+   ],
+   "quelle": "Gesprächsszene „Im Café“, Klasse 2 (db/seed/scenarios_klasse_01_to_03.sql)"
+  },
+  {
+   "satz": "Where is the bread?",
+   "richtig": "Wo ist das Brot?",
+   "falsch": [
+    "Kann ich einen Apfel haben, bitte?",
+    "Wohin sollen wir diesen Sommer reisen?",
+    "Hallo, was möchtest du?"
+   ],
+   "quelle": "Gesprächsszene „Im Supermarkt“, Klasse 3 (db/seed/scenarios_klasse_01_to_03.sql)"
+  },
+  {
+   "satz": "Can I have an apple, please?",
+   "richtig": "Kann ich einen Apfel haben, bitte?",
+   "falsch": [
+    "Wo ist das Brot?",
+    "Wohin sollen wir diesen Sommer reisen?",
+    "Kann ich am Samstag mitkommen?"
+   ],
+   "quelle": "Gesprächsszene „Im Supermarkt“, Klasse 3 (db/seed/scenarios_klasse_01_to_03.sql)"
+  },
+  {
+   "satz": "What do you do at the weekend?",
+   "richtig": "Was machst du am Wochenende?",
+   "falsch": [
+    "Wie heißt du?",
+    "Hallo, was ist heute das Problem?",
+    "Wohin sollen wir diesen Sommer reisen?"
+   ],
+   "quelle": "Gesprächsszene „Hobby-Plan“, Klasse 4"
+  },
+  {
+   "satz": "Can I come with you on Saturday?",
+   "richtig": "Kann ich am Samstag mitkommen?",
+   "falsch": [
+    "Entschuldigung, wo ist die Schule?",
+    "Danke. Was empfehlen Sie?",
+    "Was machst du am Wochenende?"
+   ],
+   "quelle": "Gesprächsszene „Hobby-Plan“, Klasse 4"
+  },
+  {
+   "satz": "Thank you. What do you recommend?",
+   "richtig": "Danke. Was empfehlen Sie?",
+   "falsch": [
+    "Was machst du am Wochenende?",
+    "Hallo, was ist heute das Problem?",
+    "Hast du versucht, ihn neu zu starten?"
+   ],
+   "quelle": "Gesprächsszene „Im Restaurant“, Klasse 5"
+  },
+  {
+   "satz": "Hello, what is the problem today?",
+   "richtig": "Hallo, was ist heute das Problem?",
+   "falsch": [
+    "Wo ist das Brot?",
+    "Entschuldigung, wo ist die Schule?",
+    "Kann ich einen Apfel haben, bitte?"
+   ],
+   "quelle": "Gesprächsszene „Beim Arzt“, Klasse 8"
+  },
+  {
+   "satz": "Where should we travel this summer?",
+   "richtig": "Wohin sollen wir diesen Sommer reisen?",
+   "falsch": [
+    "Entschuldigung, wo ist die Schule?",
+    "Kann ich einen Apfel haben, bitte?",
+    "Hallo, was möchtest du?"
+   ],
+   "quelle": "Gesprächsszene „Reise-Planung“, Klasse 10"
+  },
+  {
+   "satz": "Have you tried to restart it?",
+   "richtig": "Hast du versucht, ihn neu zu starten?",
+   "falsch": [
+    "Kann ich am Samstag mitkommen?",
+    "Entschuldigung, wo ist die Schule?",
+    "Wo ist das Brot?"
+   ],
+   "quelle": "Gesprächsszene „Computer-Hilfe“, Klasse 7"
+  },
+  {
+   "satz": "Could you repeat that, please?",
+   "richtig": "Kannst du das bitte wiederholen?",
+   "falsch": [
+    "Was machst du am Wochenende?",
+    "Hallo, was ist heute das Problem?",
+    "Kann ich einen Apfel haben, bitte?"
+   ],
+   "quelle": "Bonus-Klasse 102, Rubrik classroom"
+  },
+  {
+   "satz": "Go straight ahead.",
+   "richtig": "Geh geradeaus.",
+   "falsch": [
+    "Wir brauchen Brot und Milch.",
+    "Dann gehe links.",
+    "Ich schaue heute Abend nach Tickets."
+   ],
+   "quelle": "Gesprächsszene „Wo ist die Schule?“, Klasse 3 (db/seed/scenarios_klasse_01_to_03.sql)"
+  },
+  {
+   "satz": "Then turn left.",
+   "richtig": "Dann gehe links.",
+   "falsch": [
+    "Ja, wir treffen uns um drei im Park.",
+    "Ein Glas Wasser, bitte.",
+    "Wir brauchen Brot und Milch."
+   ],
+   "quelle": "Gesprächsszene „Wo ist die Schule?“, Klasse 3 (db/seed/scenarios_klasse_01_to_03.sql)"
+  },
+  {
+   "satz": "The school is on the right.",
+   "richtig": "Die Schule ist auf der rechten Seite.",
+   "falsch": [
+    "Es ist da drüben.",
+    "Geh geradeaus.",
+    "Dann gehe links."
+   ],
+   "quelle": "Gesprächsszene „Wo ist die Schule?“, Klasse 3 (db/seed/scenarios_klasse_01_to_03.sql)"
+  },
+  {
+   "satz": "It is over there.",
+   "richtig": "Es ist da drüben.",
+   "falsch": [
+    "Ich schaue heute Abend nach Tickets.",
+    "Das Spiel beginnt in fünf Minuten.",
+    "Ich hätte gerne einen Kakao."
+   ],
+   "quelle": "Gesprächsszene „Im Supermarkt“, Klasse 3 (db/seed/scenarios_klasse_01_to_03.sql)"
+  },
+  {
+   "satz": "I would like a hot chocolate.",
+   "richtig": "Ich hätte gerne einen Kakao.",
+   "falsch": [
+    "Ja, wir treffen uns um drei im Park.",
+    "Ich habe Kopfschmerzen und Fieber.",
+    "Das Spiel beginnt in fünf Minuten."
+   ],
+   "quelle": "Gesprächsszene „Im Café“, Klasse 2 (db/seed/scenarios_klasse_01_to_03.sql)"
+  },
+  {
+   "satz": "A glass of water, please.",
+   "richtig": "Ein Glas Wasser, bitte.",
+   "falsch": [
+    "Wir brauchen Brot und Milch.",
+    "Dann gehe links.",
+    "Das Spiel beginnt in fünf Minuten."
+   ],
+   "quelle": "Gesprächsszene „Im Restaurant“, Klasse 5"
+  },
+  {
+   "satz": "That is six euros.",
+   "richtig": "Das macht sechs Euro.",
+   "falsch": [
+    "Es ist da drüben.",
+    "Das Spiel beginnt in fünf Minuten.",
+    "Wir brauchen Brot und Milch."
+   ],
+   "quelle": "Gesprächsszene „Im Café“, Klasse 2 (db/seed/scenarios_klasse_01_to_03.sql)"
+  },
+  {
+   "satz": "We need bread and milk.",
+   "richtig": "Wir brauchen Brot und Milch.",
+   "falsch": [
+    "Ein Glas Wasser, bitte.",
+    "Es ist da drüben.",
+    "Ich habe Kopfschmerzen und Fieber."
+   ],
+   "quelle": "Gesprächsszene „Im Supermarkt“, Klasse 3 (db/seed/scenarios_klasse_01_to_03.sql)"
+  },
+  {
+   "satz": "I have a headache and a fever.",
+   "richtig": "Ich habe Kopfschmerzen und Fieber.",
+   "falsch": [
+    "Ich hätte gerne einen Kakao.",
+    "Es ist da drüben.",
+    "Ein Glas Wasser, bitte."
+   ],
+   "quelle": "Gesprächsszene „Beim Arzt“, Klasse 8"
+  },
+  {
+   "satz": "Yes, we meet at the park at three.",
+   "richtig": "Ja, wir treffen uns um drei im Park.",
+   "falsch": [
+    "Ich habe Kopfschmerzen und Fieber.",
+    "Geh geradeaus.",
+    "Das macht sechs Euro."
+   ],
+   "quelle": "Gesprächsszene „Hobby-Plan“, Klasse 4"
+  },
+  {
+   "satz": "I will look for tickets tonight.",
+   "richtig": "Ich schaue heute Abend nach Tickets.",
+   "falsch": [
+    "Die Schule ist auf der rechten Seite.",
+    "Ich habe Kopfschmerzen und Fieber.",
+    "Das Spiel beginnt in fünf Minuten."
+   ],
+   "quelle": "Gesprächsszene „Reise-Planung“, Klasse 10"
+  },
+  {
+   "satz": "The match starts in five minutes.",
+   "richtig": "Das Spiel beginnt in fünf Minuten.",
+   "falsch": [
+    "Die Schule ist auf der rechten Seite.",
+    "Dann gehe links.",
+    "Ich schaue heute Abend nach Tickets."
+   ],
+   "quelle": "Gesprächsszene „Beim Fußballspiel“, Klasse 6"
+  },
+  {
+   "satz": "Nice to meet you!",
+   "richtig": "Schön dich zu treffen!",
+   "falsch": [
+    "Bis morgen!",
+    "Pass auf dich auf.",
+    "Vielen Dank!"
+   ],
+   "quelle": "Gesprächsszene „Hallo sagen“, Klasse 1 (db/seed/scenarios_klasse_01_to_03.sql)"
+  },
+  {
+   "satz": "Thank you very much!",
+   "richtig": "Vielen Dank!",
+   "falsch": [
+    "Pass auf dich auf.",
+    "Bis morgen!",
+    "Gern geschehen."
+   ],
+   "quelle": "Gesprächsszene „Wo ist die Schule?“, Klasse 3 (db/seed/scenarios_klasse_01_to_03.sql)"
+  },
+  {
+   "satz": "You are welcome.",
+   "richtig": "Gern geschehen.",
+   "falsch": [
+    "Viel Glück!",
+    "Ich verstehe es nicht.",
+    "Schön dich zu treffen!"
+   ],
+   "quelle": "Gesprächsszene „Wo ist die Schule?“, Klasse 3 (db/seed/scenarios_klasse_01_to_03.sql)"
+  },
+  {
+   "satz": "Long time no see.",
+   "richtig": "Lange nicht gesehen.",
+   "falsch": [
+    "Pass auf dich auf.",
+    "Viel Glück!",
+    "Schön dich zu treffen!"
+   ],
+   "quelle": "Bonus-Klasse 100, Rubrik formulas_en"
+  },
+  {
+   "satz": "Take care.",
+   "richtig": "Pass auf dich auf.",
+   "falsch": [
+    "Gern geschehen.",
+    "Bis morgen!",
+    "Vielen Dank!"
+   ],
+   "quelle": "Bonus-Klasse 100, Rubrik formulas_en"
+  },
+  {
+   "satz": "Good luck!",
+   "richtig": "Viel Glück!",
+   "falsch": [
+    "Gern geschehen.",
+    "Schön dich zu treffen!",
+    "Vielen Dank!"
+   ],
+   "quelle": "Bonus-Klasse 104, Rubrik fairplay"
+  },
+  {
+   "satz": "See you tomorrow!",
+   "richtig": "Bis morgen!",
+   "falsch": [
+    "Gern geschehen.",
+    "Schön dich zu treffen!",
+    "Pass auf dich auf."
+   ],
+   "quelle": "Bonus-Klasse 102, Rubrik afterschool"
+  },
+  {
+   "satz": "I don't get it.",
+   "richtig": "Ich verstehe es nicht.",
+   "falsch": [
+    "Pass auf dich auf.",
+    "Bis morgen!",
+    "Lange nicht gesehen."
+   ],
+   "quelle": "Bonus-Klasse 102, Rubrik classroom"
+  },
+  {
+   "satz": "It's raining cats and dogs.",
+   "richtig": "Es regnet wie aus Eimern.",
+   "falsch": [
+    "Der frühe Vogel fängt den Wurm.",
+    "Leichter gesagt als getan.",
+    "Wo ein Wille ist, ist auch ein Weg."
+   ],
+   "quelle": "Bonus-Klasse 100, Rubrik idioms_en"
+  },
+  {
+   "satz": "Piece of cake.",
+   "richtig": "Kinderleicht.",
+   "falsch": [
+    "Besser spät als nie.",
+    "Leichter gesagt als getan.",
+    "Übung macht den Meister."
+   ],
+   "quelle": "Bonus-Klasse 100, Rubrik idioms_en"
+  },
+  {
+   "satz": "Better late than never.",
+   "richtig": "Besser spät als nie.",
+   "falsch": [
+    "Übung macht den Meister.",
+    "Leichter gesagt als getan.",
+    "Es regnet wie aus Eimern."
+   ],
+   "quelle": "Bonus-Klasse 100, Rubrik proverbs_en"
+  },
+  {
+   "satz": "Practice makes perfect.",
+   "richtig": "Übung macht den Meister.",
+   "falsch": [
+    "Der frühe Vogel fängt den Wurm.",
+    "Besser spät als nie.",
+    "Wo ein Wille ist, ist auch ein Weg."
+   ],
+   "quelle": "Bonus-Klasse 100, Rubrik proverbs_en"
+  },
+  {
+   "satz": "The early bird catches the worm.",
+   "richtig": "Der frühe Vogel fängt den Wurm.",
+   "falsch": [
+    "Kinderleicht.",
+    "Leichter gesagt als getan.",
+    "Wo ein Wille ist, ist auch ein Weg."
+   ],
+   "quelle": "Bonus-Klasse 100, Rubrik proverbs_en"
+  },
+  {
+   "satz": "Time is money.",
+   "richtig": "Zeit ist Geld.",
+   "falsch": [
+    "Besser spät als nie.",
+    "Wo ein Wille ist, ist auch ein Weg.",
+    "Der frühe Vogel fängt den Wurm."
+   ],
+   "quelle": "Bonus-Klasse 100, Rubrik proverbs_en"
+  },
+  {
+   "satz": "Easier said than done.",
+   "richtig": "Leichter gesagt als getan.",
+   "falsch": [
+    "Zeit ist Geld.",
+    "Wo ein Wille ist, ist auch ein Weg.",
+    "Übung macht den Meister."
+   ],
+   "quelle": "Bonus-Klasse 100, Rubrik proverbs_en"
+  },
+  {
+   "satz": "Where there's a will, there's a way.",
+   "richtig": "Wo ein Wille ist, ist auch ein Weg.",
+   "falsch": [
+    "Der frühe Vogel fängt den Wurm.",
+    "Besser spät als nie.",
+    "Zeit ist Geld."
+   ],
+   "quelle": "Bonus-Klasse 100, Rubrik proverbs_en"
+  }
+ ],
+ "fr": [
+  {
+   "satz": "Bonjour! Comment tu t'appelles?",
+   "richtig": "Hallo! Wie heißt du?",
+   "falsch": [
+    "Mit Milch oder ohne?",
+    "Guten Tag! Was darf ich Ihnen heute bringen?",
+    "Hi! Was machst du heute?"
+   ],
+   "quelle": "Gesprächsszene „Bonjour à l'école“, Klasse 21"
+  },
+  {
+   "satz": "Bonjour, vous désirez?",
+   "richtig": "Hallo, was möchten Sie?",
+   "falsch": [
+    "Hallo! Wie geht es dir?",
+    "Was wirst du morgen machen?",
+    "Willst du mit mir in den Park gehen?"
+   ],
+   "quelle": "Gesprächsszene „À la boulangerie“, Klasse 21"
+  },
+  {
+   "satz": "Salut! Tu vas où?",
+   "richtig": "Hi! Wo fährst du hin?",
+   "falsch": [
+    "Willst du mit mir in den Park gehen?",
+    "Spielen wir morgen Fußball?",
+    "Hi! Was machst du heute?"
+   ],
+   "quelle": "Gesprächsszene „Dans le bus“, Klasse 23"
+  },
+  {
+   "satz": "Tu veux aller au parc avec moi?",
+   "richtig": "Willst du mit mir in den Park gehen?",
+   "falsch": [
+    "Mit Milch oder ohne?",
+    "Hallo, was möchten Sie?",
+    "Hi! Wo fährst du hin?"
+   ],
+   "quelle": "Gesprächsszene „Qu'est-ce que tu fais?“, Klasse 23"
+  },
+  {
+   "satz": "Oui! On prend le bus ou le vélo?",
+   "richtig": "Ja! Nehmen wir den Bus oder das Fahrrad?",
+   "falsch": [
+    "Hallo! Wie heißt du?",
+    "Spielen wir morgen Fußball?",
+    "Kannst du das bitte wiederholen?"
+   ],
+   "quelle": "Gesprächsszene „Qu'est-ce que tu fais?“, Klasse 23"
+  },
+  {
+   "satz": "Avec du lait ou sans?",
+   "richtig": "Mit Milch oder ohne?",
+   "falsch": [
+    "Willst du mit mir in den Park gehen?",
+    "Hallo, was möchten Sie?",
+    "Was wirst du morgen machen?"
+   ],
+   "quelle": "Gesprächsszene „Au café“, Klasse 26"
+  },
+  {
+   "satz": "Salut! Qu'est-ce que tu fais aujourd'hui?",
+   "richtig": "Hi! Was machst du heute?",
+   "falsch": [
+    "Hallo! Wie heißt du?",
+    "Hi! Wo fährst du hin?",
+    "Spielen wir morgen Fußball?"
+   ],
+   "quelle": "Gesprächsszene „Qu'est-ce que tu fais?“, Klasse 23"
+  },
+  {
+   "satz": "Demain, on joue au foot?",
+   "richtig": "Spielen wir morgen Fußball?",
+   "falsch": [
+    "Hi! Wo fährst du hin?",
+    "Was wirst du morgen machen?",
+    "Kannst du das bitte wiederholen?"
+   ],
+   "quelle": "Gesprächsszene „Quel temps fait-il?“, Klasse 22"
+  },
+  {
+   "satz": "Bonjour! Qu'est-ce que je vous sers aujourd'hui?",
+   "richtig": "Guten Tag! Was darf ich Ihnen heute bringen?",
+   "falsch": [
+    "Hallo, was möchten Sie?",
+    "Kannst du das bitte wiederholen?",
+    "Ja! Nehmen wir den Bus oder das Fahrrad?"
+   ],
+   "quelle": "Gesprächsszene „Au café parisien“, Klasse 29"
+  },
+  {
+   "satz": "Tu peux répéter, s'il te plaît ?",
+   "richtig": "Kannst du das bitte wiederholen?",
+   "falsch": [
+    "Was wirst du morgen machen?",
+    "Hallo, was möchten Sie?",
+    "Ja! Nehmen wir den Bus oder das Fahrrad?"
+   ],
+   "quelle": "Bonus-Klasse 103, Rubrik classroom"
+  },
+  {
+   "satz": "Qu'est-ce que tu vas faire demain?",
+   "richtig": "Was wirst du morgen machen?",
+   "falsch": [
+    "Mit Milch oder ohne?",
+    "Guten Tag! Was darf ich Ihnen heute bringen?",
+    "Hallo! Wie geht es dir?"
+   ],
+   "quelle": "Gesprächsszene „Demain“, Klasse 25"
+  },
+  {
+   "satz": "Bonjour! Comment ça va?",
+   "richtig": "Hallo! Wie geht es dir?",
+   "falsch": [
+    "Hi! Was machst du heute?",
+    "Willst du mit mir in den Park gehen?",
+    "Hi! Wo fährst du hin?"
+   ],
+   "quelle": "Gesprächsszene „Chez le médecin“, Klasse 23"
+  },
+  {
+   "satz": "Je voudrais un café, s'il vous plaît.",
+   "richtig": "Ich hätte gerne einen Kaffee, bitte.",
+   "falsch": [
+    "Ich gehe mit meinem Bruder ins Kino.",
+    "Ah ja, gute Idee! Die Bäckerei nebenan ist geschlossen.",
+    "Der Bus ist heute langsam."
+   ],
+   "quelle": "Gesprächsszene „Au café“, Klasse 26"
+  },
+  {
+   "satz": "Bonjour, un pain s'il te plaît.",
+   "richtig": "Hallo, ein Brot bitte.",
+   "falsch": [
+    "Danach werde ich das Museum besuchen.",
+    "Der Bus ist heute langsam.",
+    "Bitte schön, sechs Euro."
+   ],
+   "quelle": "Gesprächsszene „À la boulangerie“, Klasse 21"
+  },
+  {
+   "satz": "Voilà, six euros.",
+   "richtig": "Bitte schön, sechs Euro.",
+   "falsch": [
+    "Ich hätte gerne einen Kaffee, bitte.",
+    "Ah ja, gute Idee! Die Bäckerei nebenan ist geschlossen.",
+    "Zuerst haben wir den Zug genommen."
+   ],
+   "quelle": "Gesprächsszene „À la boulangerie“, Klasse 21"
+  },
+  {
+   "satz": "Je vais au cinéma avec mon frère.",
+   "richtig": "Ich gehe mit meinem Bruder ins Kino.",
+   "falsch": [
+    "Ah ja, gute Idee! Die Bäckerei nebenan ist geschlossen.",
+    "Ich hätte gerne einen Kaffee, bitte.",
+    "Zuerst haben wir den Zug genommen."
+   ],
+   "quelle": "Gesprächsszene „Dans le bus“, Klasse 23"
+  },
+  {
+   "satz": "Le bus est lent aujourd'hui.",
+   "richtig": "Der Bus ist heute langsam.",
+   "falsch": [
+    "Zuerst haben wir den Zug genommen.",
+    "Ich habe Kopfschmerzen.",
+    "Hallo, ein Brot bitte."
+   ],
+   "quelle": "Gesprächsszene „Dans le bus“, Klasse 23"
+  },
+  {
+   "satz": "Oui, mais il arrive bientôt.",
+   "richtig": "Ja, aber er kommt bald an.",
+   "falsch": [
+    "Hallo, ein Brot bitte.",
+    "Ja, die Sonne scheint.",
+    "Ah ja, gute Idee! Die Bäckerei nebenan ist geschlossen."
+   ],
+   "quelle": "Gesprächsszene „Dans le bus“, Klasse 23"
+  },
+  {
+   "satz": "J'ai mal à la tête.",
+   "richtig": "Ich habe Kopfschmerzen.",
+   "falsch": [
+    "Hallo! Ich hätte gerne ein Croissant und eine heiße Schokolade.",
+    "Ja, die Sonne scheint.",
+    "Ich hätte gerne einen Kaffee, bitte."
+   ],
+   "quelle": "Gesprächsszene „Chez le médecin“, Klasse 23"
+  },
+  {
+   "satz": "Oui, le soleil brille.",
+   "richtig": "Ja, die Sonne scheint.",
+   "falsch": [
+    "Bitte schön, sechs Euro.",
+    "Ich gehe mit meinem Bruder ins Kino.",
+    "Ja, aber er kommt bald an."
+   ],
+   "quelle": "Gesprächsszene „Quel temps fait-il?“, Klasse 22"
+  },
+  {
+   "satz": "Ah oui, bonne idée! La boulangerie d'à côté est fermée.",
+   "richtig": "Ah ja, gute Idee! Die Bäckerei nebenan ist geschlossen.",
+   "falsch": [
+    "Danach werde ich das Museum besuchen.",
+    "Zuerst haben wir den Zug genommen.",
+    "Ja, die Sonne scheint."
+   ],
+   "quelle": "Gesprächsszene „Au café parisien“, Klasse 29"
+  },
+  {
+   "satz": "Bonjour! Je voudrais un croissant et un chocolat chaud.",
+   "richtig": "Hallo! Ich hätte gerne ein Croissant und eine heiße Schokolade.",
+   "falsch": [
+    "Der Bus ist heute langsam.",
+    "Ja, die Sonne scheint.",
+    "Ich gehe mit meinem Bruder ins Kino."
+   ],
+   "quelle": "Gesprächsszene „Au café parisien“, Klasse 29"
+  },
+  {
+   "satz": "D'abord, on a pris le train.",
+   "richtig": "Zuerst haben wir den Zug genommen.",
+   "falsch": [
+    "Der Bus ist heute langsam.",
+    "Hallo! Ich hätte gerne ein Croissant und eine heiße Schokolade.",
+    "Ich gehe mit meinem Bruder ins Kino."
+   ],
+   "quelle": "Gesprächsszene „Mes vacances d'été“, Klasse 25"
+  },
+  {
+   "satz": "Ensuite, je vais visiter le musée.",
+   "richtig": "Danach werde ich das Museum besuchen.",
+   "falsch": [
+    "Zuerst haben wir den Zug genommen.",
+    "Ah ja, gute Idee! Die Bäckerei nebenan ist geschlossen.",
+    "Hallo, ein Brot bitte."
+   ],
+   "quelle": "Gesprächsszene „Demain“, Klasse 25"
+  },
+  {
+   "satz": "Merci, au revoir!",
+   "richtig": "Danke, auf Wiedersehen!",
+   "falsch": [
+    "Okay, bis bald!",
+    "Das war super!",
+    "Viel Glück!"
+   ],
+   "quelle": "Gesprächsszene „À la boulangerie“, Klasse 21"
+  },
+  {
+   "satz": "D'accord, à bientôt!",
+   "richtig": "Okay, bis bald!",
+   "falsch": [
+    "Bis morgen dann!",
+    "Das war super!",
+    "Sehr gut, willkommen!"
+   ],
+   "quelle": "Gesprächsszene „Qu'est-ce que tu fais?“, Klasse 23"
+  },
+  {
+   "satz": "À demain alors!",
+   "richtig": "Bis morgen dann!",
+   "falsch": [
+    "Hoppla, Entschuldigung!",
+    "Okay, bis bald!",
+    "Ich habe es nicht verstanden."
+   ],
+   "quelle": "Gesprächsszene „Quel temps fait-il?“, Klasse 22"
+  },
+  {
+   "satz": "Bonne chance!",
+   "richtig": "Viel Glück!",
+   "falsch": [
+    "Hoppla, Entschuldigung!",
+    "Ich habe es nicht verstanden.",
+    "Sehr gut, willkommen!"
+   ],
+   "quelle": "Bonus-Klasse 101, Rubrik formulas_fr"
+  },
+  {
+   "satz": "Je n'ai pas compris.",
+   "richtig": "Ich habe es nicht verstanden.",
+   "falsch": [
+    "Danke, auf Wiedersehen!",
+    "Viel Glück!",
+    "Hoppla, Entschuldigung!"
+   ],
+   "quelle": "Bonus-Klasse 103, Rubrik classroom"
+  },
+  {
+   "satz": "Très bien, bienvenue!",
+   "richtig": "Sehr gut, willkommen!",
+   "falsch": [
+    "Danke, auf Wiedersehen!",
+    "Viel Glück!",
+    "Hoppla, Entschuldigung!"
+   ],
+   "quelle": "Gesprächsszene „Bonjour à l'école“, Klasse 21"
+  },
+  {
+   "satz": "Oups, pardon !",
+   "richtig": "Hoppla, Entschuldigung!",
+   "falsch": [
+    "Bis morgen dann!",
+    "Okay, bis bald!",
+    "Danke, auf Wiedersehen!"
+   ],
+   "quelle": "Bonus-Klasse 103, Rubrik schoolyard"
+  },
+  {
+   "satz": "C'était trop bien !",
+   "richtig": "Das war super!",
+   "falsch": [
+    "Danke, auf Wiedersehen!",
+    "Bis morgen dann!",
+    "Viel Glück!"
+   ],
+   "quelle": "Bonus-Klasse 103, Rubrik afterschool"
+  },
+  {
+   "satz": "C'est du gâteau.",
+   "richtig": "Das ist ein Kinderspiel.",
+   "falsch": [
+    "Wo ein Wille ist, ist auch ein Weg.",
+    "Wer zuletzt lacht, lacht am besten.",
+    "Einigkeit macht stark."
+   ],
+   "quelle": "Bonus-Klasse 101, Rubrik idioms_fr"
+  },
+  {
+   "satz": "Mieux vaut tard que jamais.",
+   "richtig": "Besser spät als nie.",
+   "falsch": [
+    "Wo ein Wille ist, ist auch ein Weg.",
+    "Das ist ein Kinderspiel.",
+    "Zwei Fliegen mit einer Klappe schlagen."
+   ],
+   "quelle": "Bonus-Klasse 101, Rubrik proverbs_fr"
+  },
+  {
+   "satz": "L'union fait la force.",
+   "richtig": "Einigkeit macht stark.",
+   "falsch": [
+    "Aus den Augen, aus dem Sinn.",
+    "Zwei Fliegen mit einer Klappe schlagen.",
+    "Geld macht nicht glücklich."
+   ],
+   "quelle": "Bonus-Klasse 101, Rubrik proverbs_fr"
+  },
+  {
+   "satz": "L'argent ne fait pas le bonheur.",
+   "richtig": "Geld macht nicht glücklich.",
+   "falsch": [
+    "Einigkeit macht stark.",
+    "Wo ein Wille ist, ist auch ein Weg.",
+    "Das ist ein Kinderspiel."
+   ],
+   "quelle": "Bonus-Klasse 101, Rubrik proverbs_fr"
+  },
+  {
+   "satz": "Vouloir, c'est pouvoir.",
+   "richtig": "Wo ein Wille ist, ist auch ein Weg.",
+   "falsch": [
+    "Geld macht nicht glücklich.",
+    "Aus den Augen, aus dem Sinn.",
+    "Einigkeit macht stark."
+   ],
+   "quelle": "Bonus-Klasse 101, Rubrik proverbs_fr"
+  },
+  {
+   "satz": "Loin des yeux, loin du cœur.",
+   "richtig": "Aus den Augen, aus dem Sinn.",
+   "falsch": [
+    "Geld macht nicht glücklich.",
+    "Wer zuletzt lacht, lacht am besten.",
+    "Wo ein Wille ist, ist auch ein Weg."
+   ],
+   "quelle": "Bonus-Klasse 101, Rubrik proverbs_fr"
+  },
+  {
+   "satz": "Faire d'une pierre deux coups.",
+   "richtig": "Zwei Fliegen mit einer Klappe schlagen.",
+   "falsch": [
+    "Besser spät als nie.",
+    "Wo ein Wille ist, ist auch ein Weg.",
+    "Aus den Augen, aus dem Sinn."
+   ],
+   "quelle": "Bonus-Klasse 101, Rubrik idioms_fr"
+  },
+  {
+   "satz": "Rira bien qui rira le dernier.",
+   "richtig": "Wer zuletzt lacht, lacht am besten.",
+   "falsch": [
+    "Einigkeit macht stark.",
+    "Zwei Fliegen mit einer Klappe schlagen.",
+    "Besser spät als nie."
+   ],
+   "quelle": "Bonus-Klasse 101, Rubrik proverbs_fr"
+  }
+ ]
+}
