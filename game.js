@@ -704,7 +704,7 @@ function* buildDetails() {
   addMerged(poles, shLambert(0x444444), false); addMerged(signsB, shBasic(0x2e9c3a)); addMerged(signsT, shBasic(0x1e5fb4));
   addMerged(shelterRoof, shLambert(0x9aa0a8)); if (shelterG.length) { if (!SHELTER_GLASS_MAT) { SHELTER_GLASS_MAT = new THREE.MeshLambertMaterial({ color: 0x9fc4e8, transparent: true, opacity: 0.45 }); SHELTER_GLASS_MAT.userData.shared = true; } const m = new THREE.Mesh(mergeGeometries(shelterG), SHELTER_GLASS_MAT); scene.add(m); }
   // --- Möbel ---
-  const benchW = [], bins = [], bikes = [], vend = [], recyc = [], post = [], fount = [], fountW = [];
+  const benchW = [], bins = [], bikes = [], vend = [], recyc = [], kleid = [], post = [], fount = [], fountW = [];
   for (const f of CITY.furniture) { if (++YC % 10 === 0) yield; if (solidAt(f.x, f.z) >= 0) continue; const ty = TH(f.x, f.z); const ne = nearestRoadDir(f.x, f.z); const ang = ne ? ne.ang : Math.random() * 6;
     const bx = (w, h, d, y, arr, ox = 0, oz = 0) => { const g = new THREE.BoxGeometry(w, h, d); g.rotateY(ang); g.translate(f.x + ox, ty + y, f.z + oz); arr.push(g); };
     if (f.k === 'bench') { bx(1.6, 0.06, 0.45, 0.45, benchW); bx(1.6, 0.42, 0.05, 0.72, benchW, -Math.cos(ang) * 0.2, Math.sin(ang) * 0.2); bx(0.08, 0.45, 0.4, 0.22, benchW, Math.sin(ang) * 0.7, Math.cos(ang) * 0.7); bx(0.08, 0.45, 0.4, 0.22, benchW, -Math.sin(ang) * 0.7, -Math.cos(ang) * 0.7); }
@@ -713,7 +713,7 @@ function* buildDetails() {
       // abgestellte Räder (Kulisse, gemergt): zwei Reifen und ein Rahmen quer zum Bügel
       for (const o of [-0.5, 0.5]) if (Math.random() < 0.55) { const ox = Math.sin(ang) * o, oz = Math.cos(ang) * o; for (const a of [0.55, -0.55]) { const g = new THREE.TorusGeometry(BIKE_R, 0.035, 5, 12); g.rotateY(ang); g.translate(f.x + ox + Math.cos(ang) * a, ty + BIKE_R, f.z + oz - Math.sin(ang) * a); bikes.push(g); } bx(1.0, 0.03, 0.03, 0.62, bikes, ox, oz); bx(0.03, 0.6, 0.03, 0.6, bikes, ox - Math.cos(ang) * 0.2, oz + Math.sin(ang) * 0.2); bx(0.03, 0.55, 0.03, 0.62, bikes, ox + Math.cos(ang) * 0.3, oz - Math.sin(ang) * 0.3); } }
     else if (f.k === 'vending_machine') { if (Math.random() < 0.3) bx(0.8, 1.8, 0.6, 0.9, vend); }
-    else if (f.k === 'recycling') { bx(1.2, 1.3, 1.0, 0.65, recyc); bx(1.2, 1.3, 1.0, 0.65, recyc, Math.sin(ang) * 1.4, Math.cos(ang) * 1.4); }
+    else if (f.k === 'recycling') { bx(2.4, 1.4, 1.0, 0.7, recyc); bx(1.9, 1.9, 1.3, 0.95, kleid, Math.sin(ang) * 2.5, Math.cos(ang) * 2.5); } /* Glascontainer blau, Altkleider rot (Foto) */
     else if (f.k === 'post_box') { bx(0.5, 1.1, 0.4, 0.55, post); }
     else if (f.k === 'fountain') { /* Becken mit Rand, Wasser, Säule, Schale und Wasserfontäne (12.11.2026) */ const L2 = (p, s) => new THREE.LatheGeometry(p.map(([r, h]) => new THREE.Vector2(r, h)), s);
       const b = L2([[2.0, 0], [2.3, 0], [2.3, 0.5], [2.45, 0.56], [2.45, 0.64], [2.1, 0.64], [2.1, 0.5], [2.0, 0.42]], 20); b.translate(f.x, ty, f.z); fount.push(b);
@@ -721,7 +721,7 @@ function* buildDetails() {
       const w = new THREE.CircleGeometry(2.05, 20); w.rotateX(-Math.PI / 2); w.translate(f.x, ty + 0.4, f.z); fountW.push(w); const w2 = new THREE.CircleGeometry(0.72, 12); w2.rotateX(-Math.PI / 2); w2.translate(f.x, ty + 1.47, f.z); fountW.push(w2);
       const jet = L2([[0, 2.05], [0.06, 2.05], [0.05, 2.75], [0.22, 2.95], [0.38, 2.55], [0.44, 1.5], [0.38, 1.5], [0.32, 2.45], [0.16, 2.8], [0, 2.98]], 10); jet.translate(f.x, ty, f.z); fountW.push(jet); }
   }
-  addMerged(benchW, shLambert(0x8b5a2b)); addMerged(bins, shLambert(0x2f3a2f), false); addMerged(bikes, shLambert(0x777777), false); addMerged(vend, shLambert(0xc0392b)); addMerged(recyc, shLambert(0x2f7d4a)); addMerged(post, shLambert(0xffcc00)); addMerged(fount, shLambert(0xb5aa96)); addMerged(fountW, new THREE.MeshLambertMaterial({ color: 0x3f7fa8, emissive: 0x1d4a66, emissiveIntensity: 0.5 }), false);
+  addMerged(benchW, shLambert(0x8b5a2b)); addMerged(bins, shLambert(0x2f3a2f), false); addMerged(bikes, shLambert(0x777777), false); addMerged(vend, shLambert(0xc0392b)); addMerged(recyc, shLambert(0x1f3a7a)); addMerged(kleid, shLambert(0xc8201e)); addMerged(post, shLambert(0xffcc00)); addMerged(fount, shLambert(0xb5aa96)); addMerged(fountW, new THREE.MeshLambertMaterial({ color: 0x3f7fa8, emissive: 0x1d4a66, emissiveIntensity: 0.5 }), false);
   // --- Zebrastreifen ---
   const zebra = [];
   for (const c of CITY.crossings) { let x = c.x, z = c.z; if (c.p) { const m = c.p[Math.floor(c.p.length / 2)]; x = m[0]; z = m[1]; } if (x === undefined) continue; const nr = nearestRoadDir(x, z, 7); if (!nr || nr.w < 5) continue; const ang = nr.ang; for (let k = -2.5; k <= 2.5; k++) { const sx = nr.x + Math.sin(ang) * k * 1.0, sz = nr.z + Math.cos(ang) * k * 1.0; const g = new THREE.PlaneGeometry(nr.w - 0.6, 0.5); g.rotateX(-Math.PI / 2); g.rotateY(ang + Math.PI / 2); g.translate(sx, TH(sx, sz) + 0.055, sz); zebra.push(g); } }
@@ -737,6 +737,11 @@ function* buildDetails() {
       const u0 = col / COLS, u1 = (col + 1) / COLS, v1 = 1 - row / ROWS, v0 = 1 - (row + 1) / ROWS; const w = 0.62;
       for (const s of [1, -1]) { const A = [sx - ux * w * s, y + 2.55, sz - uz * w * s], B = [sx + ux * w * s, y + 2.55, sz + uz * w * s], C = [B[0], y + 2.8, B[2]], D = [A[0], y + 2.8, A[2]]; sv.push(...A, ...B, ...C, ...A, ...C, ...D); suv.push(u0, v0, u1, v0, u1, v1, u0, v0, u1, v1, u0, v1); }
       for (let k = -1; k <= 1; k++) { const px = sx + ux * k * 1.3 + uz * 0.5, pz = sz + uz * k * 1.3 - ux * 0.5; if (solidAt(px, pz) >= 0) continue; const b = new THREE.CylinderGeometry(0.07, 0.08, 0.9, 6); b.translate(px, TH(px, pz) + 0.45, pz); bol.push(b); barrierAdd(px - 0.08, pz, px + 0.08, pz, 0.9); } });
+    { const pa = [], pb = [], ws = []; list.forEach((e, i) => { const [ax, az] = e.r.p[0], [bx2, bz2] = e.r.p[1] || e.r.p[0]; const l = Math.hypot(bx2 - ax, bz2 - az) || 1; const ux = (bx2 - ax) / l, uz = (bz2 - az) / l;
+        if (i % 3 === 1 && l > 25) { const x = e.x + ux * 14 + uz * (e.r.w / 2 + 0.9), z = e.z + uz * 14 - ux * (e.r.w / 2 + 0.9); if (solidAt(x, z) < 0) { const y = TH(x, z); const g = new THREE.BoxGeometry(0.4, 1.6, 0.3); g.translate(x, y + 0.8, z); pa.push(g); const b = new THREE.BoxGeometry(0.3, 0.55, 0.02); b.rotateY(Math.atan2(uz, -ux)); b.translate(x - uz * 0.16, y + 1.15, z + ux * 0.16); pb.push(b); barrierAdd(x - 0.2, z, x + 0.2, z, 1.6); } } // Parkscheinautomat (Foto)
+        if (i % 5 === 2) { const sx = e.x - uz * (e.r.w / 2 + 2.6), sz = e.z + ux * (e.r.w / 2 + 2.6); if (solidAt(sx, sz) >= 0) return; const y = TH(sx, sz); const p = new THREE.CylinderGeometry(0.04, 0.04, 3.2, 5); p.translate(sx, y + 1.6, sz); poles.push(p);
+          for (let k = 0; k < 3; k++) { const a = Math.atan2(ux, uz) + k * 2.1; const g = new THREE.BoxGeometry(1.0, 0.24, 0.03); g.translate(0.55, 0, 0); g.rotateY(a); g.translate(sx, y + 2.9 - k * 0.3, sz); ws.push(g); } } }); // Radwegweiser weiß (Foto Berger Straße)
+      if (pa.length) addMerged(pa, shLambert(0xe4e6e8), false); if (pb.length) addMerged(pb, shLambert(0x2f7fd0), false); if (ws.length) addMerged(ws, shLambert(0xf2f4f0), false); }
     if (poles.length) addMerged(poles, shLambert(0x6a6e72), false); if (bol.length) addMerged(bol, shLambert(0x2c2e30), false);
     if (sv.length) { const tex = new THREE.CanvasTexture(at); tex.colorSpace = THREE.SRGBColorSpace; const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(sv, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(suv, 2)); g.computeVertexNormals(); scene.add(new THREE.Mesh(g, new THREE.MeshLambertMaterial({ map: tex, side: THREE.DoubleSide }))); } }
   // --- Außentische mit Stühlen vor Bäckereien, Cafés und Imbissen (Fotos Eifler, Döneria) ---
