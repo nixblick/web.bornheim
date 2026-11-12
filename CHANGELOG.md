@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-11-12
+
+- Absturz-Spuren: Grafikverlust (`webglcontextlost`) zeigt einen Hinweis mit „Neu laden“ und „Fehler melden“ statt eines stehenden Bildes; die letzten 5 Fehlermeldungen (mit Uhrzeit) liegen im localStorage und erscheinen nach einem Neustart im Fehlerbericht als „Vorige Sitzung“
+
 ## 2026-11-10
 
 - Teststrecke Fußgänger `T.laufen()` (`tools/laufen.js`): Fall aus 2,5 m ohne Schaden, Fall aus 14 m mit Fallschaden (19,6 m/s, −60 hp) und ohne Einsinken, Landen auf einem Flachdach, gegen eine Hauswand laufen (bleibt davor), Sprung (0,92 m); 5/5. Treppen und Ragdoll noch ohne Prüfung
