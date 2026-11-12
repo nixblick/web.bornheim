@@ -2,6 +2,7 @@
 
 ## 2026-11-12
 
+- **Verkehrsspiegel** mit rot-weißem Rahmen an engen Einmündungen, **E-Roller** am Gehweg, **Friseur-Schilder** hell mit dunkler Schrift (Foto Moni's Frisierstubb)
 - **Glascontainer** blau und **Altkleidercontainer** rot an den Wertstoffplätzen aus den Kartendaten (vorher grüne Kästen)
 - **Parkscheinautomaten** weiß mit blauem Feld am Fahrbahnrand, fest
 - **Radwegweiser** weiß mit drei Fingern an jeder fünften Einmündung, neben dem Straßennamenschild
