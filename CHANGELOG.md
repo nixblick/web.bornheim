@@ -2,6 +2,7 @@
 
 ## 2026-11-12
 
+- Garagentore flackern nicht mehr (lagen gleich weit vor der Wand wie das Erdgeschossband). Graffiti wie auf den Fotos: SGE und „Stadt für alle“ in vier Varianten. Ungetestet (Test im Nachtfenster)
 - Hausnummern, Türen und Schaufenster im Erdgeschoss von außen nicht mehr spiegelverkehrt: Die Eckreihenfolge folgt jetzt der Umrissrichtung (betraf rund zwei Drittel der Häuser). Ungetestet (Test im Nachtfenster)
 - Bushaltestellen nicht mehr auf der Fahrbahn (Reichsburgstraße): Mast an den Rand geschoben, Wartehäuschen auf der straßenabgewandten Seite. Ungetestet (Test im Nachtfenster)
 - U-Bahn-Eingänge nicht mehr auf der Fahrbahn (#55): doppelt eingetragene OSM-Punkte unter 6 m zusammengelegt, Portal mindestens 3,2 m vom Fahrbahnrand. OSM-Zäune bekommen an Fahrbahnen eine Lücke in Straßenbreite (1297 von 9552 lagen mit einem Punkt auf der Straße). Ungetestet (Test im Nachtfenster)
