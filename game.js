@@ -2363,7 +2363,7 @@ addEventListener('blur', () => { for (const k in keys) keys[k] = false; WPN && W
 let locked = false;
 document.addEventListener('pointerlockerror', () => {});
 document.addEventListener('pointerlockchange', () => { locked = document.pointerLockElement === renderer.domElement; if (!locked && started && !menuOpen && !window.__noAutoMenu && !document.hidden && !mapOpen) setTimeout(() => { if (!locked && !menuOpen) openMenu(); }, 50); });
-addEventListener('mousemove', e => { if (!locked) return; camYaw.lastMove = performance.now(); camYaw.v -= e.movementX * 0.0022 * opts.sens; camPitch.v = clamp(camPitch.v + e.movementY * 0.0018 * opts.sens * (opts.invy ? -1 : 1), -0.5, 1.1); });
+addEventListener('mousemove', e => { if (!locked) return; camYaw.lastMove = performance.now(); camYaw.v -= e.movementX * 0.0022 * opts.sens; camPitch.v = clamp(camPitch.v + e.movementY * 0.0018 * opts.sens * (opts.invy ? -1 : 1), player.car ? -0.5 : -1.25, 1.1); /* zu Fuß steil nach oben zielen (Hubschrauber, Dächer; André 12.11.2026) */ });
 addEventListener('mouseup', e => { if (!WPN) return; /* Klick während des Ladens */ if (e.button === 2) player.aimHold = false; if (e.button === 0) { WPN.press(false); DEMO.carTrigger(false); } });
 addEventListener('mousedown', e => { if (!WPN) return; if (!locked) { if (started && !menuOpen) lockMouse(); return; } if (e.button === 2 && !creativeSpawnerActive()) player.aimHold = true; if (e.button !== 0) return; if (creativeSpawnerActive()) creativePlace(); else if (player.car && player.car.userData.cannon) DEMO.carTrigger(true); else WPN.press(true); });
 addEventListener('contextmenu', e => e.preventDefault());
@@ -2492,7 +2492,7 @@ function dropPoliceHeli(h) { scene.remove(h); scene.remove(h.userData.laser); co
 function policeHeli(dt) {
   const off = opts.police === false || creative.on || POCKET || player.dead || player.wanted < 4 || !HELI.makeHeli;
   if (off) { while (PHELI.length) dropPoliceHeli(PHELI[0]); PHELI_WAIT = 0; return; }
-  const want = player.wanted >= 5 ? 2 : 1; PHELI_WAIT -= dt;
+  const want = 1; /* immer nur ein Hubschrauber (André 12.11.2026) */ PHELI_WAIT -= dt;
   if (PHELI.length < want && PHELI_WAIT <= 0) { const h = makePoliceHeli(); const a = Math.random() * 6.28; h.position.set(player.pos.x + Math.cos(a) * 260, player.pos.y + 70, player.pos.z + Math.sin(a) * 260); scene.add(h); shootables.push(h); PHELI.push(h); PHELI_WAIT = 4; showMsg('POLIZEIHUBSCHRAUBER IM ANFLUG', 1500); }
   const ground = TH(player.pos.x, player.pos.z); const high = player.pos.y > ground + 4; const night = world.hour < 6.5 || world.hour > 19;
   for (const h of [...PHELI]) { const u = h.userData;
@@ -3117,7 +3117,7 @@ function update(dt) {
   if (!camera.userData.init || want.distanceTo(camera.position) > 30) { camera.position.copy(want); camera.userData.init = true; } else if (t < 1 && Math.hypot(want.x - ax, want.z - az) < Math.hypot(camera.position.x - ax, camera.position.z - az)) camera.position.copy(want); else camera.position.lerp(want, player.car ? 1 - Math.pow(0.001, dt) : 1 - Math.pow(0.00001, dt));
   const fov0 = opts.fov || 65; const fovWant = player.car ? fov0 + Math.min(Math.abs(player.car.userData.speed) / 30, 1) * 12 : fov0; if (Math.abs(camera.fov - fovWant) > 0.1) { camera.fov += (fovWant - camera.fov) * Math.min(1, dt * 3); camera.updateProjectionMatrix(); }
   const look = player.car ? 0 : 6; // zu Fuß: Blick auf einen Punkt vor der Figur, damit Fadenkreuz und Waffe eine Linie bilden
-  camera.lookAt(ax + sy * look, camY0 + 1.5 + (player.car ? 0 : -Math.sin(camPitch.v) * look * 0.6), az + cy0 * look);
+  camera.lookAt(ax + sy * look, camY0 + 1.5 + (player.car ? 0 : -Math.sin(camPitch.v) * look * (camPitch.v < 0 ? 0.6 + 2.2 * Math.min(1, -camPitch.v / 1.25) : 0.6)), az + cy0 * look); /* nach oben: Zielpunkt stärker anheben, sonst endet der Blick bei ~35° */
   if (shakeT > 0 && opts.shake !== false) { shakeT = Math.max(0, shakeT - dt); const a = shakeT * 0.35; camera.position.x += rnd(-a, a); camera.position.y += rnd(-a, a); camera.position.z += rnd(-a, a); }
   { const sx = Math.round(player.pos.x / 8) * 8, sz = Math.round(player.pos.z / 8) * 8, sy = player.pos.y; const moved = sx !== shadowSnap.x || sz !== shadowSnap.z; shadowSnap.x = sx; shadowSnap.z = sz; shadowSnap.n++;
     sun.position.set(sx + world.sunDir.x, world.sunDir.y + sy, sz + world.sunDir.z); sun.target.position.set(sx, sy, sz);
