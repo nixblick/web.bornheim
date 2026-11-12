@@ -29,7 +29,7 @@ Dann http://127.0.0.1:8765/ öffnen. Jeder statische Webserver reicht (GitHub Pa
 
 ## Tests
 
-`tools/selftest.js` im Spiel laden: `await import('/tools/selftest.js'); await T.checks()` (Ablauf im Skill `.claude/skills/spieltest`). Teststrecke Fahrphysik getrennt auf frisch geladener Seite: `await T.fahren()`; Fußgänger: `await import('/tools/laufen.js'); await T.laufen()`.
+`tools/selftest.js` im Spiel laden: `await import('/tools/selftest.js'); await T.checks()` (nur 22–6 Uhr, siehe `CLAUDE.md`). Teststrecke Fahrphysik getrennt auf frisch geladener Seite: `await T.fahren()`; Fußgänger: `await import('/tools/laufen.js'); await T.laufen()`.
 
 ## Steuerung
 
@@ -73,7 +73,7 @@ Linksklick schießen, R nachladen, Enter nach dem Tod, C Kreativmodus, Strg im W
 - Physik: Dächer (flach und steil) und gebaute Blöcke begehbar, Fallen mit Fallschaden, Autos mit Schwung, Reifenhaftung (Regen rutschiger), Handbremsen-Drift mit Bremsspuren und Reifenquietschen, Karosserie neigt sich, angefahrene Passanten fliegen, Kamerawackeln
 - Einstellungen in Reitern: Grafik (Qualität, Auflösung, Sichtweite, Schatten, Leuchteffekt, Bildrate), Kamera (Sichtfeld, Abstand, Maus, Wackeln), Welt (Uhrzeit, Zeitlauf, Wetter, Verkehr, Passanten, Polizei), Spiel (Unverwundbar, Munition, Fallschaden, Reifenhaftung), Ton & HUD
 - Selbsttest: `tools/selftest.js` (siehe Skill)
-- Test-Skill für Claude: `.claude/skills/spieltest/SKILL.md`
+- Testregeln für Claude: `CLAUDE.md` (Spieltests nur 22–6 Uhr)
 - Story 2 „Freitag ist Pflicht“: Flyer verteilen am Schulhof (Blickfeld der Aufsicht), Schulstreik anführen, Sternmarsch dreier Schulen, Nacht mit Brandsatz und Feuerwehr, Selin aus dem Kessel holen, Großdemo mit drei Enden
 - Story 3 „Der Kanzler kommt“: Fragen am Kiosk sammeln, am Checkpoint abgenommen bekommen, beim Bürgerdialog hinter der Absperrung reinrufen, mit der Demo vor der Kolonne stehen: ruhig bleiben (Fenster geht runter), Hintereingang (Karten ans Fenster) oder Eskalation (Schlagzeile „Ausschreitungen“)
 - Stabilitätsrunde (2026-11-07): Fehler im Frame frieren das Spiel nicht mehr ein (try/catch in der Schleife), Spielstände aus Innenräumen speichern den Ausgang, Laden verlässt den Innenraum und prüft die Werte, Story-Aufräumen trifft keine neu gestartete Story, Kapitel starten erst nach dem Respawn neu, Tasten lösen bei Fensterwechsel, Partikel/Autos/Geschosse/Namensschilder geben GPU-Ressourcen frei, Waffen-HUD und Zieltext schreiben nur bei Änderung, Ampeln 4 Hz. Physik: Rechtsverkehr (Gegenverkehr fuhr auf derselben Spur), Dauerstaus außer Sicht lösen sich, Aussteigen auf Brücken, Tram-Schaden mit Abkühlzeit, Auto-Kollision und Figur-Drehung bildratenunabhängig, Bodenhaftung bergab, Geschosse fallen nicht durch Decks
