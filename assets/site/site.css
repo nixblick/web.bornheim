@@ -76,3 +76,13 @@ footer .right { margin-left: auto; }
   -webkit-mask-image: repeating-linear-gradient(115deg, #000 0 9px, #000c 9px 10px, #000 10px 18px); mask-image: repeating-linear-gradient(115deg, #000 0 9px, #000c 9px 10px, #000 10px 18px); }
 .beta small { display: block; font-size: clamp(11px, 1.4vw, 16px); letter-spacing: 2px; font-weight: 800; margin-top: 4px; }
 @media (max-width: 560px) { .beta { top: 64px; right: 12px; border-width: 4px; padding: 4px 12px 6px; } }
+
+/* Story-Karte von Bornheim (12.11.2026): statisches SVG, kein Script. Seitenfarben aus :root. */
+.bh-karte { --boden:#1a1f2a; --boden-l:#141820; --boden-r:#0f1218; --strasse:#2a2f3a; --gras:#1f3a2a; --gras-d:#18301f; --baum:#2f5a3a; --baum-d:#244a2e; --haus:#3a4150; --haus-l:#2c323e; --haus-r:#222731; --dach:#5a3a34; --fenster:#ffd27a; --fenster-aus:#2a3040; --lila:#9b5cf6; --blau:#3b82f6; --orange:#f97316; --kupfer:#5f8f7c; --stein:#b9a48a; --ubahn:#0a3d8f; --f:system-ui, "Segoe UI", Roboto, sans-serif; margin: 8px 0 28px; }
+.bh-karte svg { width: 100%; height: auto; display: block; }
+.bh-karte .bh-puls { animation: bh-puls 2.4s ease-out infinite; transform-box: fill-box; transform-origin: center; }
+@keyframes bh-puls { from { transform: scale(.6); opacity: .9; } to { transform: scale(2.2); opacity: 0; } }
+.bh-karte .bh-fl { animation: bh-fl 3s steps(2) infinite; } @keyframes bh-fl { 50% { opacity: .35; } }
+.bh-karte .bh-zug { offset-rotate: 0deg; offset-anchor: 0 0; animation: bh-zug 14s linear infinite; } @keyframes bh-zug { from { offset-distance: 0%; } to { offset-distance: 100%; } }
+.bh-karte .bh-blau { animation: bh-blau .9s steps(2) infinite; } @keyframes bh-blau { 50% { fill: #ef4444; } }
+@media (prefers-reduced-motion: reduce) { .bh-karte .bh-puls, .bh-karte .bh-fl, .bh-karte .bh-zug, .bh-karte .bh-blau { animation: none; } .bh-karte .bh-puls { opacity: 0; } }
