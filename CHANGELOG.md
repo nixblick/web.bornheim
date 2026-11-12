@@ -2,6 +2,8 @@
 
 ## 2026-11-12
 
+- **Ausbau 2026 (Gemini) gemergt:** Touch- und iPhone-Steuerung, Kreativmodus am Handy, Frankfurter Skyline am Horizont, Vertex-AO, dynamisches Scheinwerfer- und Blaulicht (Hoch/Ultra), Gyro-Lenkung, Vibration, Offline-Service-Worker
+- **Service Worker, Korrektur beim Mergen:** Bilder, CSS und Vendor-Dateien lagen dauerhaft unter einem festen Cache-Namen (`bornheim-static-v2`), geänderte Bilder oder CSS wären bei Spielern nie angekommen, und jede Version hätte den Cache vergrößert. Der Pages-Workflow benennt den Cache jetzt je Deploy (`bornheim-static-<sha>`), der alte wird beim Aktivieren gelöscht. Stadtkacheln bleiben im eigenen Cache
 - **Uhrtürmchen wieder an, jetzt am richtigen Ort:** Es ist in den OSM-Daten kein eigenes Objekt. Die Namenssuche traf die „Buchhandlung Schutt am Uhrtürmchen“, deren Punkt im Gebäude liegt (Turm unsichtbar im Haus), oder die gleichnamige Kneipe 1,6 km entfernt. Jetzt wird vom Buchladen zur Berger Straße gegangen, bis der Boden frei ist, und dann 1,8 m auf den Gehweg. Gerechnet wird erst, wenn die Kachel geladen ist. Saalbau-Eingang, Parktor und Zusatz-Laternen bleiben aus
 - **U-Bahn-Mast:** endet jetzt unter dem U-Würfel. Das Namensschild hängt mit einer Schelle vor und hinter dem Mast, statt dass der Mast durch Würfel und Schild schneidet
 - **Pickups als Frankfurter Symbole:** Leben ist ein Bembel (grauer Steinzeugkrug mit blauem Muster, Henkel, Tülle), Geld eine Goldmünze mit rotem Adler, Munition eine Kiste mit Adler-Schild; dazu ein farbiger Ring am Boden. Geometrie und Material werden einmal gebaut und geteilt (vorher je Pickup neu und beim Entfernen nie freigegeben)
