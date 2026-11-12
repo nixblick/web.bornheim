@@ -2,6 +2,7 @@
 
 ## 2026-11-12
 
+- **Wöllstädter Straße** (Nachtfoto): Putzbauten der 1920er in Beigegrau mit weißen Fensterrahmen, Kastenerker und Gitterbalkon; alle Häuser an der Straße und ein Teil in Bornheim-Nord
 - **Feuerwehr-Einsätze nach Foto:** Trupp in dunkelblauer Einsatzkleidung mit neongelben Reflexstreifen; zum Löschfahrzeug kommt der Kommandowagen mit Blaulicht dazu
 - **Spieltag im Waldstadion:** am Wochenende sind die Ränge voll, schwarz-weiße Schals überall; unter der Woche leere Sitze mit Vereinsnamen
 - **Messeturm gestuft:** Schaft bis 170 m, darüber die schmalere Krone, dann Glaszylinder und Pyramide
