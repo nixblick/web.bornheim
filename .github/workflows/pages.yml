@@ -24,6 +24,11 @@ jobs:
       url: ${{ steps.deploy.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
+      - name: Startcheck (benutzte, aber nirgends definierte Namen)
+        # Anlass 12.11.2026: „berger is not defined“ nach einem Commit, das Spiel startete nicht. Bricht das Ausrollen ab.
+        run: |
+          npm i --no-save --no-package-lock eslint@9.15.0 globals@15.12.0
+          npx eslint --config eslint.config.mjs *.js
       - name: Spieldateien zusammenstellen
         run: |
           mkdir _site
