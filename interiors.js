@@ -251,12 +251,14 @@ export function initInteriors(X, W, D, SH) {
       c.fillStyle = '#1f9aa8'; c.fillRect(16, 24, 70, 70); c.fillStyle = '#fff'; c.fillRect(30, 34, 12, 40); c.fillRect(60, 34, 12, 40); c.fillRect(30, 64, 42, 12); let x = 100; c.fillStyle = '#4a4e55'; fitFont(c, st.name, w - x - 16, 58, 18); c.textAlign = 'left'; c.textBaseline = 'middle'; c.fillText(st.name, x + 6, 60); }, 1, 1) }) }; nameMats.set(st.id, e); } e.n++; return e.m; };
   const dropName = id => { const e = nameMats.get(id); if (e && --e.n <= 0) { e.m.map.dispose(); e.m.dispose(); nameMats.delete(id); } };
   // Oberirdische Station (kein Treppenabgang in OSM): Bahnsteig mit Mast, U-Würfel und Namensschild, F fährt ab
+  let SCUBE = null; const sCube = () => SCUBE || (SCUBE = new THREE.MeshLambertMaterial({ map: X.canvasTex(128, 128, (c, w, h) => { c.fillStyle = '#3a9a4a'; c.fillRect(0, 0, w, h); c.beginPath(); c.arc(64, 64, 52, 0, 7); c.fillStyle = '#fff'; c.fill(); c.fillStyle = '#3a9a4a'; c.font = 'bold 84px sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('S', 64, 70); }, 1, 1), emissive: 0x224422, emissiveIntensity: 0.5 }));
   function surfaceStopMesh(st) {
-    const E = eg(); const g = new THREE.Group(); const p = st.p; const y = TH(p[0], p[1]); g.userData.st = st.id;
-    const pl = new THREE.Mesh(new THREE.BoxGeometry(3.0, 0.3, 40), E.stepM); pl.position.set(0, 0.15, 0); pl.receiveShadow = true; g.add(pl);
-    const pole = new THREE.Mesh(E.pole, E.metal); pole.position.set(1.1, 1.65, 0); g.add(pole); const cu = new THREE.Mesh(E.cubeG, E.cubeM); cu.position.set(1.1, 3.75, 0); g.add(cu);
-    const bx = new THREE.Mesh(E.boxG, E.metal); bx.position.set(0, 2.9, 8); g.add(bx); for (const x of [-1.38, 1.38]) { const ps = new THREE.Mesh(E.postG, E.metal); ps.position.set(x, 1.35, 8); g.add(ps); }
-    const nm = nameMat(st); for (const ry of [0, Math.PI]) { const n = new THREE.Mesh(E.boxNameG, nm); n.position.set(0, 2.9, 8 + (ry ? -0.115 : 0.115)); n.rotation.y = ry; g.add(n); }
+    const E = eg(); const g = new THREE.Group(); let p = st.p; if (X.pushOffRoads) { p = X.pushOffRoads(p[0], p[1], 1.5); } const y = TH(p[0], p[1]); g.userData.st = st.id;
+    const onlyS = !st.lines.some(r => r[0] === 'U'); // S-Bahn: grünes S am Mast, kein Bahnsteig (Innenstadt im Tunnel)
+    if (!onlyS) { const pl = new THREE.Mesh(new THREE.BoxGeometry(3.0, 0.3, 40), E.stepM); pl.position.set(0, 0.15, 0); pl.receiveShadow = true; g.add(pl); }
+    const pole = new THREE.Mesh(E.pole, E.metal); pole.position.set(1.1, 1.65, 0); g.add(pole); const cu = new THREE.Mesh(E.cubeG, onlyS ? sCube() : E.cubeM); cu.position.set(1.1, 3.75, 0); g.add(cu);
+    const zb = onlyS ? 2.2 : 8; const bx = new THREE.Mesh(E.boxG, E.metal); bx.position.set(0, 2.9, zb); g.add(bx); for (const x of [-1.38, 1.38]) { const ps = new THREE.Mesh(E.postG, E.metal); ps.position.set(x, 1.35, zb); g.add(ps); }
+    const nm = nameMat(st); for (const ry of [0, Math.PI]) { const n = new THREE.Mesh(E.boxNameG, nm); n.position.set(0, 2.9, zb + (ry ? -0.115 : 0.115)); n.rotation.y = ry; g.add(n); }
     { const ib = new THREE.Mesh(E.infoG, E.infoM); ib.position.set(-1.2, 1.25, -6); ib.rotation.y = Math.PI / 2; g.add(ib); }
     const ne = X.nearestRoadDir ? X.nearestRoadDir(p[0], p[1], 40) : null; if (ne) g.rotation.y = ne.ang;
     g.position.set(p[0], y, p[1]); scene.add(g); return g; }
