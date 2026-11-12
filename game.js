@@ -2030,7 +2030,13 @@ function makeVoi() { // Voi-E-Scooter (Fotos): lachsfarbenes Trittbrett und Lenk
   const c = makeBike(0xf26d5b); const fm = c.userData.bodyMats[0]; c.traverse(o => { if (o.isMesh && (o.material === fm || (o.geometry.parameters && (o.geometry.parameters.width === 0.12 || o.geometry.parameters.width === 0.3)))) o.visible = false; });
   const body = c.children[0], vm = new THREE.MeshLambertMaterial({ color: 0xf26d5b }); const deck = new THREE.Mesh(new THREE.BoxGeometry(0.17, 0.06, 1.0), vm); deck.position.set(0, 0.16, 0); body.add(deck); const st = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 1.0, 6), vm); st.position.set(0, 0.62, 0.42); st.rotation.x = -0.15; body.add(st);
   c.userData.voi = true; c.userData.type = 'voi'; return c; }
-function addHelmet(h, col) { const m = new THREE.Mesh(new THREE.SphereGeometry(0.15, 12, 10), new THREE.MeshLambertMaterial({ color: col ?? pick([0x111111, 0xeeeeee, 0xc0392b, 0x2d6fd8]) })); m.position.set(0, 1.68, 0.01); m.scale.set(1, 1.05, 1.1); h.add(m); h.userData.helmet = m; return m; }
+function addHelmet(h, col) { const m = new THREE.Mesh(new THREE.SphereGeometry(0.15, 12, 10), new THREE.MeshLambertMaterial({ color: col ?? pick([0x111111, 0xeeeeee, 0xc0392b, 0x2d6fd8]) })); m.scale.set(1, 1.05, 1.1);
+  /* Am Kopfknochen statt fest auf 1,68 m: Fahrer beugt sich auf dem Motorrad vor (poseBikeRider), der Helm blieb hinter dem Kopf (André 12.11.2026).
+     Knochen-Y zeigt nach oben aus dem Hals (aimB), Maßstab des Knochens herausrechnen */
+  const hb = h.userData.bones && h.userData.bones.Head;
+  if (hb) { h.updateMatrixWorld(true); const bs = new THREE.Vector3(), hs = new THREE.Vector3(); hb.getWorldScale(bs); h.getWorldScale(hs); const k = (hs.y || 1) / (bs.y || 1); m.scale.multiplyScalar(k); m.position.set(0, 0.1 * k, 0.01 * k); hb.add(m); }
+  else { m.position.set(0, 1.68, 0.01); h.add(m); }
+  h.userData.helmet = m; return m; }
 // Radler auf einem KI-Rad: eine Figur als Kind des Rads (nicht in peds), beim Klauen steigt sie ab und flieht
 function addRider(c) { const h = makeHuman(Math.random() < 0.5), m = !!c.userData.moto; h.position.set(0, m ? -0.02 : 0.05, m ? -0.22 : -0.24); c.add(h); c.userData.rider = h; poseBikeRider(h, m, Math.random() * 6); return h; }
 function dropRider(c, flee = true) { const u = c.userData; if (!u.rider) return null; c.remove(u.rider); u.rider = null; const d = spawnPedAt(c.position.x + Math.cos(u.heading) * 1.1, c.position.z - Math.sin(u.heading) * 1.1); if (d) { d.userData.state = flee ? 'flee' : 'stunned'; d.userData.fleeT = 8; if (!flee) WPN.stun(d, 'hit', 2.5); } return d; }

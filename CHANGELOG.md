@@ -2,6 +2,7 @@
 
 ## 2026-11-12
 
+- Motorradhelm sitzt am Kopfknochen und wandert mit, wenn der Fahrer sich vorbeugt. Ungetestet (Test im Nachtfenster)
 - Garagentore flackern nicht mehr (lagen gleich weit vor der Wand wie das Erdgeschossband). Graffiti wie auf den Fotos: SGE und „Stadt für alle“ in vier Varianten. Ungetestet (Test im Nachtfenster)
 - Hausnummern, Türen und Schaufenster im Erdgeschoss von außen nicht mehr spiegelverkehrt: Die Eckreihenfolge folgt jetzt der Umrissrichtung (betraf rund zwei Drittel der Häuser). Ungetestet (Test im Nachtfenster)
 - Bushaltestellen nicht mehr auf der Fahrbahn (Reichsburgstraße): Mast an den Rand geschoben, Wartehäuschen auf der straßenabgewandten Seite. Ungetestet (Test im Nachtfenster)
