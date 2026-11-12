@@ -2,6 +2,12 @@
 
 ## 2026-11-12
 
+- **Fix Straßenschilder auf der Fahrbahn:** Schilder, Radwegweiser, Parkscheinautomaten und Verkehrsspiegel stehen 8 m in der Straße statt mitten in der Kreuzung und nie auf einer Fahrbahn
+- **Fix Baustellen:** Seitenzäune laufen parallel zur Fahrbahn (standen quer)
+- **Fix Torbogen:** Öffnung als dunkle Durchfahrt mit Licht am anderen Ende statt durchsichtig vor der Hauswand
+- **Schaufenster mit Innenleben** (Fotos): Apotheken mit Holzvitrinen und Packungen, Döner-Imbisse mit Mint-Streifen, Menütafel, Spieß und Getränkekühlschrank, Bäckereien mit Brotregal und Theke; nachts hell
+- **Läden betreten:** Taste F wirkt schon in 4,5 m Abstand zur Ladentür (vorher 3,2 m)
+- Ungetestet im Spiel, Test im Nachtfenster
 - **Straßennamenschilder:** Schild sitzt neben dem Mast statt mittig auf ihm, Vorder- und Rückseite leicht versetzt, von beiden Seiten richtig lesbar
 - **Radwegweiser:** eigene Rückseite, von beiden Seiten lesbar, Pfeil zeigt auf beiden Seiten zur Spitze; Finger beginnen neben dem Mast
 - **Voi-E-Scooter** (Fotos): bis zu sechs abgestellt in der Nähe, mit E mieten: 1 € Entsperren, 2 € je Minute, bei leerem Guthaben endet die Fahrt; ersetzen die Deko-Roller

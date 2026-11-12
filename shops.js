@@ -79,7 +79,7 @@ export function initShops(X, W) {
   let near = null, scanT = 0;
   function update(dt) {
     scanT -= dt; if (scanT <= 0) { scanT = seenP < CITY.pois.length || seenB < CITY.buildings.length ? 0.1 : 1; scan(); }
-    near = null; if (player.car || player.dead) return null; let bd = 3.2 * 3.2;
+    near = null; if (player.car || player.dead) return null; let bd = 4.5 * 4.5; /* Ladentür großzügiger finden (André: „reingehen kann man nirgendwo“) */
     for (const s of shops) { let d = (s.x - player.pos.x) ** 2 + (s.z - player.pos.z) ** 2; if (d < 900 && !s.chk) { s.chk = 1; /* Nachprüfung, wenn die Nachbarkacheln sicher geladen sind */ if (!free(s.x, s.z) || !reach(s.x, s.z)) { const dp = door(s.ox ?? s.x, s.oz ?? s.z); if (dp) { [s.x, s.z] = dp; d = (s.x - player.pos.x) ** 2 + (s.z - player.pos.z) ** 2; } else s.dead = true; } } if (!s.dead && d < bd) { bd = d; near = s; } }
     return near ? `F · ${TYPES[near.k].ic} ${near.name} (${TYPES[near.k].n})` : null;
   }
