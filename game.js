@@ -563,7 +563,7 @@ function groundTextures0(kind = 'res') {
       ctx.fillStyle = '#9a9894'; ctx.fillRect(1.73 * M, h - 1.35 * M, 0.04 * M, 0.4 * M); ctx.fillStyle = '#1e1e22'; ctx.fillRect(3.0 * M, h - 1.9 * M, 0.35 * M, 0.45 * M); ctx.fillStyle = '#7fb8e8'; ctx.fillRect(3.04 * M, h - 1.86 * M, 0.27 * M, 0.37 * M); }
     else { ctx.fillStyle = '#d8d4c8'; ctx.fillRect(1.75 * M, h - 2.35 * M, 0.85 * M, 2.25 * M); }
     for (let q = 0; q < 3; q++) win((3.6 + q * 2.8) * M, h - 2.5 * M, 1.3 * M, 1.4 * M, Math.random() < 0.3);
-    { const hn = String(2 + Math.floor(Math.random() * 60)); if (!emis) { ctx.fillStyle = '#f4f2ea'; ctx.fillRect(1.35 * M, h - 2.95 * M, 0.9 * M, 0.3 * M); ctx.fillStyle = '#3a2a22'; ctx.font = `bold ${0.24 * M}px sans-serif`; ctx.textAlign = 'center'; ctx.fillText(hn, 1.8 * M, h - 2.72 * M); ctx.textAlign = 'left'; } else { ctx.fillStyle = '#fff2c8'; ctx.fillRect(1.35 * M, h - 2.95 * M, 0.9 * M, 0.3 * M); } } // Leuchte mit Hausnummer
+    /* Keine Hausnummer in der geteilten Erdgeschoss-Textur: die Textur hängt an Hunderten Häusern, überall stand dieselbe Zahl (32 auf der Berger Straße, André 12.11.2026) */
   };
   return { map: canvasTex(512, 141, draw(false), 1 / GF_W, 1 / GF_H), emissiveMap: canvasTex(512, 141, draw(true), 1 / GF_W, 1 / GF_H) };
 }
