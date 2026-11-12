@@ -46,9 +46,13 @@ function obox(p) {
   return best;
 }
 
+// Nachttest 12.11.2026: Bei Dom, Paulskirche und den Hochhäusern ist das Modell deutlich kleiner als der OSM-Grundriss,
+// die Kollision (ganzer Grundriss, volle Höhe) stand bis 22 m vor der sichtbaren Wand (unsichtbare Wände, Kanten auf Dächern).
+// Bis die Kollision dem Modell folgt (#73), bleiben sie der OSM-Klotz wie zuvor.
+const OFF = new Set(['dom', 'pauls', 'coba', 'main', 'westend', 'euro', 'trianon']);
 export function markLandmark(b) {
   if (!b || !b.n || !b.p) return;
-  for (const e of LIST) if (e.n === b.n) { const [x, z] = centroid(b.p); if (Math.hypot(x - e.c[0], z - e.c[1]) > 80) continue; b.lm = e.id; b.h = e.h; e.b = b; return; }
+  for (const e of LIST) if (e.n === b.n && !OFF.has(e.id)) { const [x, z] = centroid(b.p); if (Math.hypot(x - e.c[0], z - e.c[1]) > 80) continue; b.lm = e.id; b.h = e.h; e.b = b; return; }
 }
 
 export function initWahrzeichen(X) {

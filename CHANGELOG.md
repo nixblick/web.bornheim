@@ -2,7 +2,7 @@
 
 ## 2026-11-12
 
-- **Wahrzeichen nach Wikipedia (#73):** Alte Oper (Mittelrisalit mit Inschrift, Pegasus, Goethe und Mozart, Kupferdächer), Römer (drei Stufengiebel, Balkon, Uhr), Kaiserdom (Westturm 95 m mit Kuppelhelm), Paulskirche (Oval, Turm im Süden, flaches Kupferdach), Commerzbank Tower, Main Tower, Westend Tower, Eurotower und Trianon als eigene Modelle (wahrzeichen.js) statt OSM-Klotz; nur in Spielernähe gebaut, nachts angestrahlt. Ungetestet (Test im Nachtfenster)
+- **Wahrzeichen nach Wikipedia (#73):** Alte Oper (Mittelrisalit mit Inschrift, Pegasus, Goethe und Mozart, Kupferdächer), Römer (drei Stufengiebel, Balkon, Uhr), Kaiserdom (Westturm 95 m mit Kuppelhelm), Paulskirche (Oval, Turm im Süden, flaches Kupferdach), Commerzbank Tower, Main Tower, Westend Tower, Eurotower und Trianon als eigene Modelle (wahrzeichen.js) statt OSM-Klotz; nur in Spielernähe gebaut, nachts angestrahlt. Im Nachttest 12.11. eingeschränkt: Nur Alte Oper und Römer sind aktiv. Dom, Paulskirche und Hochhäuser bleiben der OSM-Klotz, weil ihre Kollision (ganzer OSM-Grundriss) bis 22 m vor der sichtbaren Wand stand. Getestet (Nachttest 12.11.)
 - **S-Bahn S1–S9** (OSM-Routen, Farben aus dem OSM-Tag, echter Streckenverlauf; tools/build_sbahn.py) im selben Netz wie die U-Bahn: Umsteigen an gemeinsamen Halten (Hauptwache, Konstablerwache, Hauptbahnhof, Südbahnhof …), Fahrt über Karte oder F an der Haltestelle; S-Bahn-Halte mit grünem S am Mast und Namensschild, ohne Bahnsteig
 - **Netz auf das Spielgebiet zugeschnitten:** 18 Linien, 105 Stationen; Halte ohne Kachel (Hohemark, Oberursel, Bad Homburg, Wiesbaden …) fallen weg, damit keine Fahrt im Leeren endet
 - Oberirdische Haltestellen werden vom Fahrbahnrand auf den Gehweg geschoben
