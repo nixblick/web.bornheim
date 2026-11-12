@@ -2,6 +2,11 @@
 
 ## 2026-11-12
 
+- **Feuerwehr-Einsätze nach Foto:** Trupp in dunkelblauer Einsatzkleidung mit neongelben Reflexstreifen; zum Löschfahrzeug kommt der Kommandowagen mit Blaulicht dazu
+- **Spieltag im Waldstadion:** am Wochenende sind die Ränge voll, schwarz-weiße Schals überall; unter der Woche leere Sitze mit Vereinsnamen
+- **Messeturm gestuft:** Schaft bis 170 m, darüber die schmalere Krone, dann Glaszylinder und Pyramide
+- **Gründerzeit wie an der Berger Straße** (Foto): heller Putz, Fenster mit Sandsteinrahmen, Ohren und Verdachung; ein Drittel der hohen Wohnhäuser in Bornheim
+- **Zappbar** (Fotos): schwarzes Nasenschild „zappbar“ an der Hauswand zur Straße, am OSM-Punkt der Kneipe
 - **Waldstadion nach Fotos:** Ränge aus schwarzen Schalensitzen, in denen weiße Sitze „EINTRACHT FRANKFURT“ bilden, helle Treppen; Fassade aus grauen Lamellen statt Glas; Membrandach mit Bögen; schlanke graue Türme mit offenen Geschossen. Das FSV-Stadion bekommt schlichte schwarze Sitze ohne Schrift
 - **Messeturm nach Fotos:** Schaft bis 190 m, darauf der dunkle Glaszylinder und die Pyramide
 - **Messeturm** (Foto Messe): rotbrauner Granit mit engem Fensterraster und dunklen Glasecken, oben die 36 m hohe Pyramide; in der fernen Skyline tagsüber rotbraun, die Glastürme um 155 m blau
