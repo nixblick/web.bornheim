@@ -9,8 +9,13 @@ export function initInteriors(X, W, D, SH) {
   let metro = { lines: [], stations: [] }; const ST = new Map();
   /* U-Bahn-Eingänge auf der Minikarte: blaues „U“ im Umkreis der Karte, damit man die Stationen findet (09.11.2026) */
   if (X.mmHooks) X.mmHooks.push((ctx, P, R) => { const done = new Set(); for (const s of metro.stations) { if (s.entr.length === 0) continue; const e = s.entr[0]; const [x, y] = P(e[0], e[1]); if (x * x + y * y > R * R || done.has(s.id)) continue; done.add(s.id);
-    ctx.fillStyle = '#0a3d8f'; ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5; ctx.fillRect(x - 6, y - 6, 12, 12); ctx.strokeRect(x - 6, y - 6, 12, 12); ctx.fillStyle = '#fff'; ctx.font = 'bold 10px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('U', x, y + 0.5); } });
-  fetch('data/metro.json').then(r => r.ok ? r.json() : null).then(m => { if (!m) return; metro = m; for (const s of m.stations) { ST.set(s.id, s); s.entr = mergeEntr(s.entr); } }).catch(() => {});
+    ctx.fillStyle = s.sOnly ? '#3a9a4a' : '#0a3d8f'; ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5; ctx.fillRect(x - 6, y - 6, 12, 12); ctx.strokeRect(x - 6, y - 6, 12, 12); ctx.fillStyle = '#fff'; ctx.font = 'bold 10px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(s.sOnly ? 'S' : 'U', x, y + 0.5); } });
+  /* Tunnelstationen der S-Bahn (City-Tunnel Frankfurt, Quelle de.wikipedia „City-Tunnel Frankfurt“ und Artikel der Stationen, 12.11.2026).
+     Schlachthof liegt auch im Tunnel, fehlt aber in data/metro.json. Reine S-Halte haben in OSM keinen subway_entrance:
+     dort steht ein Treppenabgang am Stationspunkt, vom Fahrbahnrand weg auf den Gehweg geschoben. */
+  const STUN = new Set(['hauptbahnhof', 'taunusanlage', 'hauptwache', 'konstablerwache', 'ostendstraße', 'lokalbahnhof', 'mühlberg']);
+  const hasU = s => s.lines.some(l => l[0] === 'U'), hasS = s => s.lines.some(l => l[0] === 'S');
+  fetch('data/metro.json').then(r => r.ok ? r.json() : null).then(m => { if (!m) return; metro = m; for (const s of m.stations) { ST.set(s.id, s); s.entr = mergeEntr(s.entr); if (STUN.has(s.id) && hasS(s)) { s.sTun = true; if (!s.entr.length && !hasU(s)) { s.sOnly = true; s.entr = [[s.p[0], s.p[1]]]; } } } }).catch(() => {});
 
   // OSM trägt eine Treppe oft mehrfach ein (Konstablerwache: 16 Punkte); Punkte unter 6 m zusammenlegen,
   // sonst stehen mehrere Portale ineinander und ragen bis auf die Fahrbahn (12.11.2026)
@@ -40,7 +45,7 @@ export function initInteriors(X, W, D, SH) {
     const mm = $('minimap'); if (mm) mm.style.visibility = 'hidden'; sfx('click', 0.4);
   }
   function leaveSilent() { if (!inside) return; scene.remove(inside.g); for (const n of inside.npc || []) inside.g.remove(n); /* Figurenmodelle teilen Geometrie, nicht freigeben */ inside.g.traverse(o => { if (o.geometry) o.geometry.dispose(); if (o.material) { if (o.material.map && o.material.map.isCanvasTexture) o.material.map.dispose(); o.material.dispose(); } }); inside = null; X.setPocket(null); const mm = $('minimap'); if (mm) mm.style.visibility = ''; }
-  function leave() { if (!inside) return; const e = inside.exit; leaveSilent(); const y = e.y ?? TH(e.x, e.z); player.pos.set(e.x, y, e.z); player.vy = 0; if (player.mesh) player.mesh.position.copy(player.pos); camYaw.v = e.yaw ?? camYaw.v; sfx('click', 0.4); }
+  function leave() { if (!inside) return; const e = inside.exit; if (e.fix) e.fix(); leaveSilent(); const y = e.y ?? TH(e.x, e.z); player.pos.set(e.x, y, e.z); player.vy = 0; if (player.mesh) player.mesh.position.copy(player.pos); camYaw.v = e.yaw ?? camYaw.v; sfx('click', 0.4); }
   const trig = (R, x, z, r, label, act) => R.triggers.push({ x, z, r, label, act });
 
   // ---------- Treppenhaus mit Aufzug aufs Dach ----------
@@ -128,9 +133,12 @@ export function initInteriors(X, W, D, SH) {
   const badge = (c, ref, x, y, h) => { c.font = `bold ${Math.round(h * 0.62)}px Arial, sans-serif`; const w = Math.max(h * 1.5, c.measureText(ref).width + h * 0.5); c.fillStyle = LCOL(ref); rr(c, x, y, w, h, h * 0.22); c.fill();
     c.fillStyle = '#ffffff'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(ref, x + w / 2, y + h * 0.54); return w; };
   const fitFont = (c, txt, max, fs, min = 20) => { c.font = `bold ${fs}px Arial, sans-serif`; while (c.measureText(txt).width > max && fs > min) { fs -= 2; c.font = `bold ${fs}px Arial, sans-serif`; } return fs; };
-  // Stationsschild an der Wand: blaues Band, U-Logo, Name, Linien
-  const stationTex = st => canvasTex(1024, 160, (c, w, h) => { c.fillStyle = '#0a3d8f'; c.fillRect(0, 0, w, h); c.fillStyle = '#ffffff'; c.fillRect(0, 8, w, 4); c.fillRect(0, h - 12, w, 4);
-    uLogo(c, 22, 24, 112); let bx = w - 24; for (const l of st.lines.slice().reverse()) { c.font = 'bold 50px Arial'; const bw = Math.max(84, c.measureText(l).width + 40); bx -= bw + 10; badge(c, l, bx, 50, 70); }
+  // S-Bahn-Zeichen: weißes S im grünen Kreis (wie am Mast oberirdischer Halte)
+  const sLogo = (c, x, y, s) => { c.fillStyle = '#ffffff'; c.beginPath(); c.arc(x + s / 2, y + s / 2, s / 2, 0, 7); c.fill(); c.fillStyle = '#3a9a4a'; c.beginPath(); c.arc(x + s / 2, y + s / 2, s * 0.44, 0, 7); c.fill();
+    c.fillStyle = '#ffffff'; c.font = `bold ${Math.round(s * 0.66)}px Arial, sans-serif`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('S', x + s / 2, y + s * 0.54); };
+  // Stationsschild an der Wand: blaues Band, U-Logo, Name, Linien (S-Bahn: grünes Band, S-Logo)
+  const stationTex = st => canvasTex(1024, 160, (c, w, h) => { c.fillStyle = st.sLevel ? '#2f7d3c' : '#0a3d8f'; c.fillRect(0, 0, w, h); c.fillStyle = '#ffffff'; c.fillRect(0, 8, w, 4); c.fillRect(0, h - 12, w, 4);
+    if (st.sLevel) sLogo(c, 22, 24, 112); else uLogo(c, 22, 24, 112); let bx = w - 24; for (const l of st.lines.slice().reverse()) { c.font = 'bold 50px Arial'; const bw = Math.max(84, c.measureText(l).width + 40); bx -= bw + 10; badge(c, l, bx, 50, 70); }
     c.fillStyle = '#ffffff'; fitFont(c, st.name, bx - 170, 84); c.textAlign = 'left'; c.textBaseline = 'middle'; c.fillText(st.name, 156, h / 2 + 4); }, 1, 1);
   // Endstation einer Linie als Fahrtziel
   const terminus = (ref, dir) => { const l = metro.lines.find(x => x.ref === ref); if (!l || !l.stops.length) return 'Sonderfahrt'; const id = dir > 0 ? l.stops[l.stops.length - 1] : l.stops[0]; const s = ST.get(id); return s ? s.name : id.replace(/(^|[\s\-/])\S/g, m => m.toUpperCase()); };
@@ -158,8 +166,11 @@ export function initInteriors(X, W, D, SH) {
     const tray = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.06, 0.16), M(0x2b3138, 0.2)); tray.position.set(0, 0.62, 0.3); grp.add(tray);
     grp.position.set(PX + x, 0, PZ + z); grp.rotation.y = ry; g.add(grp); return grp; }
   const LCOL = r => (metro.lines.find(l => l.ref === r) || {}).color || '#0a3d8f';
-  function station(st, exit, onTrain) {
-    const L = 46, H = 7; const R = room('metro', L, 13, H, { floorTex: tileTex('#c9c6bf', '#b2aea6'), wallTex: tileTex('#f3f1ea', '#d8d4c8', LCOL(st.lines[0])), ceilCol: 0xd5d8dc });
+  // level 'S': S-Bahn-Bahnsteig im City-Tunnel; bei U+S-Stationen (Hauptwache, Konstablerwache, Hbf) eine Ebene unter der U-Bahn
+  function station(full, exit, onTrain, level) {
+    const sL = level === 'S' || (!level && !!full.sOnly), both = full.sTun && hasU(full);
+    const st = Object.assign({}, full, { lines: full.lines.filter(l => (l[0] === 'S') === sL), sLevel: sL }); if (!st.lines.length) st.lines = full.lines.slice();
+    const L = 46, H = 7; const R = room('metro', L, 13, H, { floorTex: tileTex('#c9c6bf', '#b2aea6'), wallTex: tileTex('#f3f1ea', '#d8d4c8', sL ? '#3a9a4a' : LCOL(st.lines[0])), ceilCol: 0xd5d8dc });
     const g = R.g; R.H = H; const stTex = stationTex(st);
     // Gleisbetten links und rechts vom Mittelbahnsteig (Bahnsteig z -4..4)
     for (const sd of [-1, 1]) { const bed = new THREE.Mesh(new THREE.PlaneGeometry(L * 2, 5), M(0x3a3632, 0.15)); bed.rotation.x = -Math.PI / 2; bed.position.set(PX, -1.2, PZ + sd * 6.5); g.add(bed);
@@ -167,31 +178,58 @@ export function initInteriors(X, W, D, SH) {
       for (const o of [-0.72, 0.72]) box(g, L * 2, 0.12, 0.08, 0, -1.1, sd * 6.5 + o, M(0x8a8a8a, 0.4));
       for (let x = -L + 4; x < L; x += 15) panel(g, stTex, 6.4, 1.0, x, 3.2, sd * 12.95, sd > 0 ? Math.PI : 0); }
     R.walls.push([-L, -13, L, -4], [-L, 4, L, 13]); // nur der Bahnsteig ist begehbar
-    for (let x = -L + 6; x < L - 4; x += 10) { box(g, 0.6, H, 0.6, x, H / 2, 0, M(LCOL(st.lines[0]), 0.35)); R.walls.push([x - 0.4, -0.4, x + 0.4, 0.4]); }
+    for (let x = -L + 6; x < L - 4; x += 10) { box(g, 0.6, H, 0.6, x, H / 2, 0, M(sL ? '#9aa1a8' : LCOL(st.lines[0]), 0.35)); R.walls.push([x - 0.4, -0.4, x + 0.4, 0.4]); }
     for (let x = -L + 11; x < L - 6; x += 20) { box(g, 1.8, 0.45, 0.5, x, 0.45, 2.6, M(0x5d6d7e, 0.3)); }
     // Linienschild über dem Bahnsteig
     panel(g, stTex, 7.2, 1.12, 0, H - 1.2, 0.36, 0); panel(g, stTex, 7.2, 1.12, 0, H - 1.2, -0.36, Math.PI);
     // Zugzielanzeiger an beiden Enden des Bahnsteigs, an Stangen von der Decke
     { const bt = boardTex(st); for (const bx of [-18, 18]) { box(g, 3.3, 0.85, 0.16, bx, H - 2.3, 0, M(0x22272e, 0.2)); panel(g, bt, 3.1, 0.97 * 0.7, bx, H - 2.3, 0.085, 0); panel(g, bt, 3.1, 0.97 * 0.7, bx, H - 2.3, -0.085, Math.PI); for (const o of [-1.2, 1.2]) box(g, 0.05, 1.9, 0.05, bx + o, H - 0.95, 0, M(0x5a6068, 0.3)); } }
     // Treppe nach oben am Ende
-    for (let i = 0; i < 12; i++) box(g, 0.42, 0.25 * (i + 1), 3.2, -L + 6.4 - i * 0.4, 0.125 * (i + 1), 0, M(0x9a958c, 0.3)); box(g, 0.08, 1, 4.6, -L + 4, 3.3, 1.7, M(0x5a6068, 0.3)); box(g, 0.08, 1, 4.6, -L + 4, 3.3, -1.7, M(0x5a6068, 0.3)); panel(g, signTex('Ausgang ↑', '#0a3d8f'), 3, 0.6, -L + 3, 4.6, 0, Math.PI / 2);
+    for (let i = 0; i < 12; i++) box(g, 0.42, 0.25 * (i + 1), 3.2, -L + 6.4 - i * 0.4, 0.125 * (i + 1), 0, M(0x9a958c, 0.3)); box(g, 0.08, 1, 4.6, -L + 4, 3.3, 1.7, M(0x5a6068, 0.3)); box(g, 0.08, 1, 4.6, -L + 4, 3.3, -1.7, M(0x5a6068, 0.3)); panel(g, signTex(sL && both ? 'Ausgang · U-Bahn ↑' : 'Ausgang ↑', sL ? '#2f7d3c' : '#0a3d8f'), 3, 0.6, -L + 3, 4.6, 0, Math.PI / 2);
     R.walls.push([-L, -1.7, -L + 6.6, 1.7]);
     // Fahrkartenautomat
     automat(g, -L + 11.5, -3.45, 0, st); automat(g, -L + 12.7, -3.45, 0, st); R.walls.push([-L + 10.9, -3.8, -L + 13.3, -3.0]);
-    trig(R, -L + 8, 0, 2.2, 'F · Treppe rauf zum Ausgang', leave);
+    if (sL && both) trig(R, -L + 8, 0, 2.2, 'F · Treppe rauf zur U-Bahn', () => station(full, exit, 0, 'U'));
+    else trig(R, -L + 8, 0, 2.2, 'F · Treppe rauf zum Ausgang', leave);
+    if (!sL && full.sTun) { // Abgang zur S-Bahn am anderen Bahnsteigende
+      for (let i = 0; i < 10; i++) box(g, 0.42, 0.04, 3.0, L - 6.4 + i * 0.4, 0.02 - i * 0.002, 0, M(0x6f6a62, 0.3)); box(g, 3.6, 0.5, 3.4, L - 4.4, -0.24, 0, M(0x1a1c20, 0.1));
+      for (const zz of [-1.7, 1.7]) box(g, 4.6, 1, 0.08, L - 4.6, 0.5, zz, M(0x5a6068, 0.3));
+      panel(g, signTex('S  S-Bahn eine Ebene tiefer ↓', '#2f7d3c'), 4.2, 0.62, L - 3, 4.6, 0, -Math.PI / 2); panel(g, signTex('S-Bahn ↓', '#2f7d3c', '#fff', 512, 160), 2.2, 0.68, L - 8.5, H - 1.4, 0.36, 0);
+      R.walls.push([L - 2.2, -1.7, L, 1.7]); trig(R, L - 7, 0, 2.2, 'F · Treppe runter zur S-Bahn', () => station(full, exit, 0, 'S')); }
     trig(R, -L + 12, -2.6, 1.4, 'F · Fahrkartenautomat: Ziel wählen (3 €)', () => travelMenu(st));
     // Züge auf beiden Gleisen
-    R.trains = [-1, 1].map((sd, i) => { const t = trainModel(LCOL(st.lines[i % st.lines.length] || st.lines[0])); g.add(t); return { m: t, sd, x: 140 * (i ? -1 : 1), state: 'away', t: i * 14 + 6, dir: i ? 1 : -1 }; });
+    R.trains = [-1, 1].map((sd, i) => { const t = sL ? sTrainModel(sd) : trainModel(LCOL(st.lines[i % st.lines.length] || st.lines[0])); g.add(t); return { m: t, sd, x: 140 * (i ? -1 : 1), state: 'away', t: i * 14 + 6, dir: i ? 1 : -1 }; });
     if (onTrain) { const tr = R.trains[0]; tr.state = 'dwell'; tr.x = 0; tr.t = 7; }
     R.update = dt => { for (const tr of R.trains) { tr.t -= dt;
       if (tr.state === 'away' && tr.t <= 0) { tr.state = 'in'; tr.x = -tr.dir * 140; }
       else if (tr.state === 'in') { const d = -tr.x; const v = Math.min(18, Math.max(1.2, Math.abs(d) * 0.45)); tr.x += Math.sign(d) * v * dt; if (Math.abs(d) < 0.3) { tr.x = 0; tr.state = 'dwell'; tr.t = 14; sfx('bell', 0.25); } }
       else if (tr.state === 'dwell' && tr.t <= 0) { tr.state = 'out'; tr.v = 0; }
       else if (tr.state === 'out') { tr.v = Math.min(18, (tr.v || 0) + 3 * dt); tr.x += tr.dir * tr.v * dt; if (Math.abs(tr.x) > 140) { tr.state = 'away'; tr.t = 18 + Math.random() * 20; } }
-      tr.m.position.set(PX + tr.x, 0, PZ + tr.sd * 6.5); tr.m.visible = tr.state !== 'away'; } };
+      tr.m.position.set(PX + tr.x, 0, PZ + tr.sd * 6.5); tr.m.visible = tr.state !== 'away';
+      if (tr.m.userData.doors) { const op = tr.state === 'dwell' ? Math.min(1, (14 - tr.t) / 1.2, tr.t / 1.2) : 0; for (const d of tr.m.userData.doors) d.position.x = d.userData.x0 + d.userData.s * 0.62 * Math.max(0, op); } } };
     R.trainNear = () => R.trains.find(tr => tr.state === 'dwell' && Math.sign(player.pos.z - PZ) === tr.sd && Math.abs(player.pos.z - PZ) > 2.6);
     R.station = st;
-    enter(R, onTrain ? [4, onTrain === 1 ? 2.4 : -2.4] : [-L + 9, 0], onTrain ? Math.PI / 2 : -Math.PI / 2, exit, `U-Bahn ${st.name}`, st.p);
+    R.station = full;
+    const fromBelow = !sL && level === 'U' && full.sTun; // von der S-Bahn heraufgekommen: am Abgang stehen
+    enter(R, onTrain ? [4, onTrain === 1 ? 2.4 : -2.4] : fromBelow ? [L - 9, 0] : [-L + 9, 0], onTrain ? Math.PI / 2 : fromBelow ? Math.PI / 2 : -Math.PI / 2, exit, `${sL ? 'S-Bahn' : 'U-Bahn'} ${st.name}`, st.p);
+  }
+  // S-Bahn Rhein-Main, Baureihe 423/430: vier Wagen, 67,4 m, drei Türen je Wagenseite (de.wikipedia „DB-Baureihe 423“);
+  // hellgrauer Wagenkasten, rote Front und Türen, dunkles Fensterband, kein Logo. Türen gleiten beim Halt auf.
+  function sTrainModel(sd) {
+    const g = new THREE.Group(); const body = M(0xe4e6e8, 0.35), grey = M(0x6e757c, 0.3), win = M(0x26303a, 0.5), red = M(0xc8102e, 0.45); const doors = [];
+    const CL = 16.6, n = 4, x0 = -(CL + 0.25) * 1.5; const side = -sd; // Türseite zum Bahnsteig
+    for (let k = 0; k < n; k++) { const cx = x0 + k * (CL + 0.25);
+      const b = new THREE.Mesh(new THREE.BoxGeometry(CL, 3.1, 2.9), body); b.position.set(cx, 0.55, 0); g.add(b);
+      const sk = new THREE.Mesh(new THREE.BoxGeometry(CL, 0.5, 2.92), grey); sk.position.set(cx, -0.75, 0); g.add(sk);
+      const w = new THREE.Mesh(new THREE.BoxGeometry(CL - 0.6, 0.95, 2.94), win); w.position.set(cx, 1.05, 0); g.add(w);
+      const rf = new THREE.Mesh(new THREE.BoxGeometry(CL, 0.25, 2.6), grey); rf.position.set(cx, 2.2, 0); g.add(rf);
+      for (const dx of [-5.2, 0, 5.2]) { for (const s of [-1, 1]) { const d = new THREE.Mesh(new THREE.BoxGeometry(0.66, 2.3, 0.06), red); d.position.set(cx + dx + s * 0.34, 0.3, side * 1.47); d.userData = { x0: d.position.x, s }; doors.push(d); g.add(d); }
+        const back = new THREE.Mesh(new THREE.BoxGeometry(1.3, 2.3, 0.06), M(0x1a1d22, 0.1)); back.position.set(cx + dx, 0.3, side * 1.44); g.add(back);
+        for (const s of [-1, 1]) { const d = new THREE.Mesh(new THREE.BoxGeometry(1.3, 2.3, 0.06), red); d.position.set(cx + dx, 0.3, -side * 1.47); g.add(d); } } }
+    for (const e of [-1, 1]) { const ex = e * (2 * (CL + 0.25)); const nose = new THREE.Mesh(new THREE.BoxGeometry(1.1, 2.9, 2.8), red); nose.position.set(ex + e * 0.5, 0.45, 0); g.add(nose);
+      const ws = new THREE.Mesh(new THREE.BoxGeometry(0.06, 1.0, 2.3), win); ws.position.set(ex + e * 1.07, 1.2, 0); g.add(ws);
+      for (const z of [-0.95, 0.95]) { const l = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.16, 0.3), new THREE.MeshBasicMaterial({ color: 0xfff6dc })); l.position.set(ex + e * 1.07, -0.35, z); g.add(l); } }
+    g.userData.doors = doors; return g;
   }
   function trainModel(col) {
     const g = new THREE.Group(); const body = M(0xd8dde2, 0.35), win = M(0x8fa6bb, 0.75), stripe = M(new THREE.Color(col).getHex(), 0.5);
@@ -233,8 +271,8 @@ export function initInteriors(X, W, D, SH) {
     const loading = X.streamInit(exitPt[0], exitPt[1]); let done = false; loading.then(() => done = true, () => done = true);
     await new Promise(res => { const tick = () => { const k = Math.min(1, (performance.now() - t0) / 3500); const bar = ov.querySelector('#rbar'); if (bar) bar.style.width = (k * 100) + '%'; const i = Math.min(names.length - 1, 1 + Math.floor(k * (names.length - 1))); const nx = ov.querySelector('#rnext'); if (nx) nx.textContent = names[i]; if (k >= 1 && done) res(); else setTimeout(tick, 60); }; tick(); });
     world.hour = (world.hour + p.min / 60) % 24;
-    const [ex, ez] = exitPt; const [fx, fz] = outside(ex + 2, ez + 2); const exit = { x: fx, z: fz, yaw: camYaw.v };
-    if (to.entr && to.entr.length) station(to, exit, 1); else { leaveSilent(); player.pos.set(fx, TH(fx, fz), fz); if (player.mesh) player.mesh.position.copy(player.pos); }
+    const [ex, ez] = exitPt; const [fx, fz] = exitNear(ex + 2, ez + 2); const exit = { x: fx, z: fz, yaw: camYaw.v, fix: () => { if (to.sOnly) placeEntr(exitPt, to); [exit.x, exit.z] = exitNear(exitPt[0] + 2, exitPt[1] + 2); } }; /* erst beim Aussteigen festlegen: dann sind die Straßen da */
+    if (to.entr && to.entr.length) station(to, exit, 1, to.sTun && (!(p.line || '').startsWith('U')) && hasS(to) ? 'S' : 'U'); else { leaveSilent(); player.pos.set(fx, TH(fx, fz), fz); if (player.mesh) player.mesh.position.copy(player.pos); }
     ov.style.opacity = '0'; setTimeout(() => ov.remove(), 450); riding = false;
     if (fine) { player.money = Math.max(0, player.money - 60); showMsg('FAHRKARTENKONTROLLE: 60 € ERHÖHTES BEFÖRDERUNGSENTGELT', 2600); } else showMsg(to.name.toUpperCase(), 1400);
     if (X.emit) X.emit('metro', player.pos, { to: to.id });
@@ -251,7 +289,7 @@ export function initInteriors(X, W, D, SH) {
     sign: new THREE.BoxGeometry(1.1, 1.1, 0.1), uM: new THREE.MeshBasicMaterial({ map: canvasTex(128, 128, (c) => { c.fillStyle = '#0a3d8f'; c.fillRect(0, 0, 128, 128); uLogo(c, 0, 0, 128); }, 1, 1) }),
     nameG: new THREE.PlaneGeometry(2.0, 0.46), clamp: new THREE.BoxGeometry(0.12, 0.5, 0.2) });
   const nameMat = st => { let e = nameMats.get(st.id); if (!e) { e = { n: 0, m: new THREE.MeshBasicMaterial({ map: canvasTex(512, 118, (c, w, h) => { c.fillStyle = '#fbfbf8'; c.fillRect(0, 0, w, h); /* Foto Seckbacher Landstraße: weißes Leuchtschild, türkises U, grauer Name */
-      c.fillStyle = '#1f9aa8'; c.fillRect(16, 24, 70, 70); c.fillStyle = '#fff'; c.fillRect(30, 34, 12, 40); c.fillRect(60, 34, 12, 40); c.fillRect(30, 64, 42, 12); let x = 100; c.fillStyle = '#4a4e55'; fitFont(c, st.name, w - x - 16, 58, 18); c.textAlign = 'left'; c.textBaseline = 'middle'; c.fillText(st.name, x + 6, 60); }, 1, 1) }) }; nameMats.set(st.id, e); } e.n++; return e.m; };
+      if (st.sOnly) sLogo(c, 16, 24, 70); else { c.fillStyle = '#1f9aa8'; c.fillRect(16, 24, 70, 70); c.fillStyle = '#fff'; c.fillRect(30, 34, 12, 40); c.fillRect(60, 34, 12, 40); c.fillRect(30, 64, 42, 12); } let x = 100; c.fillStyle = '#4a4e55'; fitFont(c, st.name, w - x - 16, 58, 18); c.textAlign = 'left'; c.textBaseline = 'middle'; c.fillText(st.name, x + 6, 60); }, 1, 1) }) }; nameMats.set(st.id, e); } e.n++; return e.m; };
   const dropName = id => { const e = nameMats.get(id); if (e && --e.n <= 0) { e.m.map.dispose(); e.m.dispose(); nameMats.delete(id); } };
   // Oberirdische Station (kein Treppenabgang in OSM): Bahnsteig mit Mast, U-Würfel und Namensschild, F fährt ab
   let SCUBE = null; const sCube = () => SCUBE || (SCUBE = new THREE.MeshLambertMaterial({ map: X.canvasTex(128, 128, (c, w, h) => { c.fillStyle = '#3a9a4a'; c.fillRect(0, 0, w, h); c.beginPath(); c.arc(64, 64, 52, 0, 7); c.fillStyle = '#fff'; c.fill(); c.fillStyle = '#3a9a4a'; c.font = 'bold 84px sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('S', 64, 70); }, 1, 1), emissive: 0x224422, emissiveIntensity: 0.5 }));
@@ -265,10 +303,17 @@ export function initInteriors(X, W, D, SH) {
     { const ib = new THREE.Mesh(E.infoG, E.infoM); ib.position.set(-1.2, 1.25, -6); ib.rotation.y = Math.PI / 2; g.add(ib); }
     const ne = X.nearestRoadDir ? X.nearestRoadDir(p[0], p[1], 40) : null; if (ne) g.rotation.y = ne.ang;
     g.position.set(p[0], y, p[1]); scene.add(g); return g; }
+  function placeEntr(p, st) {
+    if (st.sOnly) { p[0] = st.p[0]; p[1] = st.p[1]; p.off = false; } /* S-Halt: jedes Mal neu, die Straßen der Kachel kommen evtl. erst nach der Ankunft */
+    if (X.pushOffRoads && !p.off) { if (st.sOnly && solidAt(p[0], p[1]) >= 0) { const [ox, oz] = outside(p[0], p[1]); p[0] = ox; p[1] = oz; } /* S-Halt: Stationspunkt liegt über dem Tunnel, oft unter Haus oder Straße */
+      const [qx, qz] = X.pushOffRoads(p[0], p[1], 3.2); if (!Number.isNaN(qx) && Math.hypot(qx - p[0], qz - p[1]) < (st.sOnly ? 60 : 8)) { p[0] = qx; p[1] = qz; } p.off = true; } }
+  // Austrittspunkt neben dem Abgang: frei und nicht auf der Fahrbahn
+  function exitNear(x, z) { let [fx, fz] = outside(x, z); if (X.pushOffRoads) { const [qx, qz] = X.pushOffRoads(fx, fz, 1.2); if (!Number.isNaN(qx) && Math.hypot(qx - fx, qz - fz) < 15 && solidAt(qx, qz) < 0) { fx = qx; fz = qz; } } return [fx, fz]; }
   function entranceMesh(p, st) {
     // Portal ist gut 5 m breit: Mitte mindestens 3,2 m vom Fahrbahnrand, sonst steht es halb auf der Straße (Konstablerwache)
-    if (X.pushOffRoads && !p.off) { const [qx, qz] = X.pushOffRoads(p[0], p[1], 3.2); if (!Number.isNaN(qx) && Math.hypot(qx - p[0], qz - p[1]) < 8) { p[0] = qx; p[1] = qz; } p.off = true; }
+    placeEntr(p, st);
     const E = eg(); const g = new THREE.Group(); const y = TH(p[0], p[1]); g.userData.st = st.id;
+
     const hole = new THREE.Mesh(E.hole, E.holeM); hole.rotation.x = -Math.PI / 2; hole.position.set(0, 0.04, 0); g.add(hole);
     for (let i = 0; i < 7; i++) { const s = new THREE.Mesh(E.step, E.stepM); s.position.set(0, 0.05, -1.8 + i * 0.55); g.add(s); }
     for (const [geo, x, z] of [[E.railS, -1.25, 0], [E.railS, 1.25, 0], [E.railB, 0, 2.0]]) { const r = new THREE.Mesh(geo, E.metal); r.position.set(x, 0.3, z); r.scale.y = 0.5; g.add(r); }
@@ -278,7 +323,7 @@ export function initInteriors(X, W, D, SH) {
     // Portal wie am Foto: zwei dunkle Stützen über dem Treppenkopf, darauf der Leuchtkasten mit Namen (beidseitig)
     for (const x of [-1.38, 1.38]) { const ps = new THREE.Mesh(E.postG, E.metal); ps.position.set(x, 1.35, -1.9); g.add(ps); }
     const bx = new THREE.Mesh(E.boxG, E.metal); bx.position.set(0, 2.9, -1.9); g.add(bx);
-    { const pole = new THREE.Mesh(E.pole, E.metal); pole.position.set(2.1, 1.65, 1.6); g.add(pole); const cu = new THREE.Mesh(E.cubeG, E.cubeM); cu.position.set(2.1, 3.75, 1.6); g.add(cu); } // leuchtender U-Würfel am Mast (Foto Am Röthenek)
+    { const pole = new THREE.Mesh(E.pole, E.metal); pole.position.set(2.1, 1.65, 1.6); g.add(pole); const cu = new THREE.Mesh(E.cubeG, st.sOnly ? sCube() : E.cubeM); cu.position.set(2.1, 3.75, 1.6); g.add(cu); } // leuchtender U-Würfel am Mast (Foto Am Röthenek)
     { const ib = new THREE.Mesh(E.infoG, E.infoM); ib.position.set(-2.0, 0.95, 1.2); ib.rotation.y = Math.PI / 2; g.add(ib); } // Infokasten mit gezeichnetem Liniennetz
     const nm = nameMat(st); for (const ry of [0, Math.PI]) { const n = new THREE.Mesh(E.boxNameG, nm); n.position.set(0, 2.9, -1.9 + (ry ? -0.115 : 0.115)); n.rotation.y = ry; g.add(n); }
     const ne = nearestEdge(p[0], p[1], 20); if (ne) { const e = edgeNormal(ne.b.p, ne.e); g.rotation.y = Math.atan2(e.dx, e.dz); }
@@ -313,7 +358,7 @@ export function initInteriors(X, W, D, SH) {
       return curT ? curT.label : null; }
     if (player.car || player.dead) return null;
     for (const fh of X.fHooks || []) { const r = fh(); if (r) { curT = r; return r.label; } } /* weitere F-Aktionen (Klinik-Aufzug) */
-    const m = nearMetro(); if (m) { curT = { label: `F · ${m.under ? 'U-Bahn' : 'Bahn'} ${m.s.name} (${m.s.lines.join(', ')})`, act: () => { if (m.under) { const [fx, fz] = outside(m.p[0] + 2.2, m.p[1] + 2.2); station(m.s, { x: fx, z: fz, yaw: camYaw.v + Math.PI }); } else travelMenu(m.s); } }; return curT.label; }
+    const m = nearMetro(); if (m) { curT = { label: `F · ${m.s.sOnly ? 'S-Bahn' : m.under ? 'U-Bahn' : 'Bahn'} ${m.s.name} (${m.s.lines.join(', ')})`, act: () => { if (m.under) { const [fx, fz] = exitNear(m.p[0] + 2.2, m.p[1] + 2.2); station(m.s, { x: fx, z: fz, yaw: camYaw.v + Math.PI }); } else travelMenu(m.s); } }; return curT.label; }
     if (SH.near) { const s = SH.near; curT = { label: `F · ${s.name} betreten`, act: () => { if (player.wanted > 0) { showMsg('POLIZEI SUCHT DICH – KEIN EINKAUF', 1200); return; } shop(s, { x: player.pos.x, z: player.pos.z, yaw: camYaw.v + Math.PI }); } }; return curT.label; }
     const r = onRoof(); if (r) { curT = { label: 'F · Treppenhaus (runter)', act: () => { const ne = nearestEdge(player.pos.x, player.pos.z, 60); let ex = player.pos.x, ez = player.pos.z; if (ne) { const e = edgeNormal(ne.b.p, ne.e); const mx = e.ax + e.dx / 2, mz = e.az + e.dz / 2; const cx = r.p.reduce((a, p) => a + p[0], 0) / r.p.length, cz = r.p.reduce((a, p) => a + p[1], 0) / r.p.length; const sg = (mx - cx) * e.nx + (mz - cz) * e.nz > 0 ? 1 : -1; [ex, ez] = D.freeSpot(mx + e.nx * sg * 1.5, mz + e.nz * sg * 1.5, 1.5); } stairwell(r, { x: ex, z: ez, yaw: camYaw.v }); } }; return curT.label; }
     if (Math.hypot(player.pos.x - ZAPP_P[0], player.pos.z - ZAPP_P[1]) < 7) { curT = { label: 'F · Zappbar betreten', act: () => kneipe({ x: player.pos.x, z: player.pos.z, yaw: camYaw.v + Math.PI }) }; return curT.label; }

@@ -6,6 +6,7 @@ Aufruf: python -I tools/build_tiles.py [--add]"""
 import array, glob, gzip, json, math, os, struct, sys, time
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from build_city import convert, xy
+from bridges import lift, water_test
 
 TS = 500; DEM_N = 126; DEM_STEP = 4; BASE = 89.02
 RAW = "data/raw"; OUT = "data/tiles"; os.makedirs(OUT, exist_ok=True)
@@ -87,6 +88,7 @@ def process_block(BX, BZ, fn):
         for p in r["p"]:
             k = (p[0], p[1]); H[k] = max(H.get(k, -1e9), TH(*p), need.get(k, -1e9))
     log("Rampen:", len(chain), "Straßen in Ketten,", len(need), "Kreuzungspunkte")
+    log("Brücken über Wasser angehoben:", len(lift(roads, H, TH, water_test(ALL["water"]))), "Knoten")  # #84: Widerlager und Spannweite, tools/bridges.py
     for ps in range(80):
         ch = False
         for r in chain:
