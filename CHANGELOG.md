@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-11-13
+
+- **S-Bahn im City-Tunnel:** Hauptbahnhof, Taunusanlage, Hauptwache, Konstablerwache, Ostendstraße, Lokalbahnhof und Mühlberg haben einen unterirdischen S-Bahn-Bahnsteig (grünes Band, S-Zeichen, Zugzielanzeiger nur mit S-Linien, Ausgang nach oben). Liste nach de.wikipedia „City-Tunnel Frankfurt“ und den Stationsartikeln; Schlachthof liegt auch im Tunnel, fehlt aber in data/metro.json
+- **Bei U und S (Hauptwache, Konstablerwache, Hbf):** im U-Bahnhof ein Abgang „S-Bahn eine Ebene tiefer“, unten „Treppe rauf zur U-Bahn“. Fahrten mit einer S-Linie kommen auf dem S-Bahnsteig an
+- **S-Bahn-Zug wie Baureihe 423/430:** vier Wagen, 67 m, drei Türen je Wagenseite, hellgrau mit roter Front und roten Türen, ohne Logo; Türen gleiten beim Halt auf, „F · Einsteigen“ wie bei der U-Bahn
+- **Abgang an der Oberfläche:** reine S-Halte im Tunnel bekommen den Treppenabgang mit grünem S am Mast und S im Namensschild, auf der Minikarte ein grünes S. OSM hat dort keinen Eingang: Stationspunkt, aus Häusern und vom Fahrbahnrand weg auf den Gehweg geschoben. Austrittspunkt wird erst beim Aussteigen festgelegt (vorher standen Ankömmlinge an der Taunusanlage auf der Fahrbahn, weil die Straßen der Kachel noch fehlten). Oberirdische S-Halte unverändert
+- Nachttest 13.11. 00:20 (lokal, Bildschirmfotos): Fahrt nach Taunusanlage, Ostendstraße, Hauptwache (S-Ebene, rauf zur U-Ebene), Zug mit offenen Türen, Umsehen, Aussteigen jeweils auf dem Gehweg (nicht auf der Fahrbahn, kein Schwimmen), keine Konsolenfehler
+
 ## 2026-11-12
 
 - **Kein Ertrinken mehr am Ufer (#84):** Kai, Uferwege und Inseln, die in der OSM-Wasserfläche liegen, aber über dem Wasserspiegel, zählen als Boden. Vorher schwamm man bis 0,65 m über dem Spiegel und sank 1,2 m unter den sichtbaren Boden (Deutschherrnufer: Kai 3,53 m, Spiegel 3,43 m). Im Main liegt das Gelände jetzt 3 m unter dem Spiegel, Schwimmer stecken nicht mehr im Boden
