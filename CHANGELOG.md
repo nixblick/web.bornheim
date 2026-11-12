@@ -2,6 +2,10 @@
 
 ## 2026-11-12
 
+- **Stahl-Bogenbrücken** (Wunsch André, Foto Brücke an der EZB): über jeder Brücke ab 60 m zwei Stahlbögen mit Hängern; oben begehbar und befahrbar (zu Fuß, Rad, Motorrad, E-Scooter, nicht mit dem Auto); zweimal geduldet, beim dritten Mal kommt die Polizei
+- **Kita-Frankfurt-Stelen nur an städtischen Kitas** („Kita 110“, „KiZ 126“, Kinderzentrum), freie Träger wie Zwergenplanet ohne Stele; Stele von beiden Seiten lesbar
+- **Straßenbahn** türkis wie in Frankfurt, grüne Linienanzeige vorn und hinten (Foto Linie 12)
+- Ungetestet im Spiel, Test im Nachtfenster
 - **Fix Straßenschilder auf der Fahrbahn:** Schilder, Radwegweiser, Parkscheinautomaten und Verkehrsspiegel stehen 8 m in der Straße statt mitten in der Kreuzung und nie auf einer Fahrbahn
 - **Fix Baustellen:** Seitenzäune laufen parallel zur Fahrbahn (standen quer)
 - **Fix Torbogen:** Öffnung als dunkle Durchfahrt mit Licht am anderen Ende statt durchsichtig vor der Hauswand
