@@ -2,6 +2,8 @@
 
 ## 2026-11-12
 
+- **Granitplatten** statt Asphalt in Fußgängerzonen und auf breiten Fußwegen (Fotos Innenstadt, TG Bornheim)
+- **Nasenschilder** Döneria (mint, pinke Schrift) und Moni's Frisierstubb (altes gelbes Schild)
 - **Sozialrathaus Ost** (Foto, Lage nach André: rechts neben der Kita Eulengasse): Name am Gebäude, dunkles Vordach über die ganze Front mit „SOZIALRATHAUS OST / DIENSTORT BORNHEIM“, Stützen, hell erleuchtetes verglastes Erdgeschoss
 - **Obststand** mit rot-weißem Dach vor Supermärkten (Foto Nahkauf)
 - **Markise** über Apotheken-Schaufenstern (Foto Sonnen-Apotheke)
