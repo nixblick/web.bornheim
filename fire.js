@@ -67,7 +67,7 @@ export function initFire(X, W, D) {
     for (let i = 0; i < n; i++) { const [ax, az] = pts[i], [bx, bz] = pts[(i + 1) % n]; if (solidAt((ax + bx) / 2, (az + bz) / 2) >= 0) continue; const L = Math.hypot(bx - ax, bz - az); const m = new THREE.Mesh(new THREE.PlaneGeometry(L, 0.08), mat); m.position.set((ax + bx) / 2, (TH(ax, az) + TH(bx, bz)) / 2 + 0.92, (az + bz) / 2); m.rotation.y = Math.atan2(-(bz - az), bx - ax); g.add(m); }
     scene.add(g); return g; }
   function dispatch(f) {
-    const p = fireAt(f); let best = null; for (let k = 0; k < 40; k++) { const q = X.randomRoadPoint(pick(X.roadsDrivable)); const dd = Math.hypot(q.x - p.x, q.z - p.z); if (dd > 110 && dd < 220) { best = q; break; } } if (!best) return null;
+    const p = fireAt(f); let best = null; { let wd = 1500, w0 = null; for (const w of X.wachen || []) { const d = Math.hypot(w[0] - p.x, w[1] - p.z); if (d < wd) { wd = d; w0 = w; } } if (w0) { const q = X.nearestRoadDir(w0[0], w0[1], 60); if (q) best = { x: q.x, z: q.z, heading: q.ang }; } } /* aus der nächsten Wache ausrücken (André 12.11.2026, FRW 2) */ for (let k = 0; k < 40 && !best; k++) { const q = X.randomRoadPoint(pick(X.roadsDrivable)); const dd = Math.hypot(q.x - p.x, q.z - p.z); if (dd > 110 && dd < 220) { best = q; break; } } if (!best) return null;
     const c = D.spawnCannon(best.x, best.z, best.heading, 'fireAI', 'fire'); const b = { truck: c, fire: f, crew: [], state: 'drive', t: 0, retreatT: 0, attacks: 0 }; c.userData.brigade = b; f.brig = b; brigades.push(b);
     D.post('feuerwehr', `Einsatz: Brand ${X.streetAt(p.x, p.z) ? 'in der ' + X.streetAt(p.x, p.z) : 'in Bornheim'}. Bitte Rettungswege freihalten.`, Math.round(rnd(80, 400))); emit('brigadeDispatched', p, { brigade: b }); return b;
   }

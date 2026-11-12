@@ -2,6 +2,11 @@
 
 ## 2026-11-12
 
+- **Fix Poller:** die drei Poller an jedem Straßenschild sind entfernt; sie standen teils auf Fahrbahnen und blockierten Straßen wie die Mainzer Landstraße
+- **Container nie auf der Fahrbahn:** liegt der Kartenpunkt auf einer Straße, rücken sie auf Gehweg oder Grünstreifen, sonst entfallen sie; Glascontainer als drei dunkelblaue Glocken mit weißem, braunem und grünem Einwurfring, Altkleidercontainer rot mit Klappe und weißem Feld „DANKE! ALTKLEIDER SCHUHE“
+- **Kommandowagen:** Schriftzug FEUERWEHR nur auf den Schauseiten (war auf die Kanten gestreckt), zusätzlich an beiden Flanken
+- **Feuerwehr rückt aus der Wache aus:** liegt eine Feuerwache im Umkreis von 1,5 km, startet das Löschfahrzeug dort (z. B. FRW 2)
+- Ungetestet im Spiel, Test im Nachtfenster
 - **EZB** (Fotos): Glasfassade statt Stein, silbergraue Stahlsprossen, Geschossdecken nur als feine Linien, nachts viele kühl-weiß erleuchtete Scheiben in Bändern. Ungetestet im Spiel, Test im Nachtfenster
 - **Stahl-Bogenbrücken** (Wunsch André, Foto Brücke an der EZB): über jeder Brücke ab 60 m zwei Stahlbögen mit Hängern; oben begehbar und befahrbar (zu Fuß, Rad, Motorrad, E-Scooter, nicht mit dem Auto); zweimal geduldet, beim dritten Mal kommt die Polizei
 - **Kita-Frankfurt-Stelen nur an städtischen Kitas** („Kita 110“, „KiZ 126“, Kinderzentrum), freie Träger wie Zwergenplanet ohne Stele; Stele von beiden Seiten lesbar
