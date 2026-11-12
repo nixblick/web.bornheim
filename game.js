@@ -413,6 +413,55 @@ function facadeTextures(kind = 'res') {
   };
   return { map: canvasTex(512, 512, draw(false), 1 / FAC_W, 1 / FAC_H), emissiveMap: canvasTex(512, 512, draw(true), 1 / FAC_W, 1 / FAC_H) };
 }
+// Hilfen für Gebäudearten (12.11.2026)
+function centroidOf(p) { let x = 0, z = 0; for (const q of p) { x += q[0]; z += q[1]; } return [x / p.length, z / p.length]; }
+function CITY_SCHOOLS() { const out = []; for (const a of CITY.areas || []) { if (a.k !== 'school') continue; let x0 = 1e9, x1 = -1e9, z0 = 1e9, z1 = -1e9; for (const [x, z] of a.p) { x0 = Math.min(x0, x); x1 = Math.max(x1, x); z0 = Math.min(z0, z); z1 = Math.max(z1, z); } out.push({ p: a.p, x0, x1, z0, z1 }); } return out; }
+// Waldstadion, frei nachgebaut ohne Namen und Werbung: Glasfassade, rotes Leuchtband, Membrandach, Ränge, Rasen, zwei Türme
+let STAD_MATS = null;
+function waldstadion(cx, cz, rx, rz, s = 1) { // s = Höhe (FSV-Stadion 0,55, ohne Türme)
+  const g = new THREE.Group(); const y0 = TH(cx, cz);
+  if (!STAD_MATS) { STAD_MATS = { glas: new THREE.MeshLambertMaterial({ color: 0x8fa3b4, emissive: 0xffd9a0, emissiveIntensity: 0.18, side: THREE.DoubleSide }), band: new THREE.MeshLambertMaterial({ color: 0xd8261c, emissive: 0xff2a1a, emissiveIntensity: 0.7, side: THREE.DoubleSide }),
+    dach: new THREE.MeshLambertMaterial({ color: 0xe9ecef, side: THREE.DoubleSide }), rang: new THREE.MeshLambertMaterial({ color: 0x7c8590, side: THREE.DoubleSide }), rasen: new THREE.MeshLambertMaterial({ color: 0x3f7d36 }), beton: new THREE.MeshLambertMaterial({ color: 0xb8b6b0 }) };
+    for (const m of Object.values(STAD_MATS)) m.userData.shared = true; }
+  const M = STAD_MATS; const ring = (r0, h, mat, y, open = true) => { const m = new THREE.Mesh(new THREE.CylinderGeometry(r0, r0, h, 48, 1, open), mat); m.scale.set(rx, 1, rz); m.position.y = y; return m; };
+  g.add(ring(1, 20, M.glas, 10)); g.add(ring(1.01, 2.4, M.band, 21.5)); g.add(ring(1.0, 3, M.beton, 24));
+  const rg = new THREE.Mesh(new THREE.CylinderGeometry(0.78, 0.98, 18, 48, 1, true), M.rang); rg.scale.set(rx, 1, rz); rg.position.y = 11; g.add(rg);
+  const dg = new THREE.RingGeometry(0.62, 1.03, 48, 1); dg.rotateX(-Math.PI / 2); const d = new THREE.Mesh(dg, M.dach); d.scale.set(rx, 1, rz); d.position.y = 27; d.castShadow = true; g.add(d);
+  const pg = new THREE.PlaneGeometry(rx * 1.1, rz * 0.8); pg.rotateX(-Math.PI / 2); const p = new THREE.Mesh(pg, M.rasen); p.position.y = 0.3; p.receiveShadow = true; g.add(p);
+  for (const s of [-1, 1]) { const tw = new THREE.Mesh(new THREE.BoxGeometry(5, 62, 5), M.beton); tw.position.set(s * (rx + 45), 31, s * rz * 0.3); tw.castShadow = true; g.add(tw); const k = new THREE.Mesh(new THREE.BoxGeometry(8, 6, 8), M.beton); k.position.set(s * (rx + 45), 64, s * rz * 0.3); g.add(k); }
+  g.position.set(cx, y0, cz); if (s !== 1) { g.scale.y = s; g.children.slice(-4).forEach(o => { if (o.geometry.type === 'BoxGeometry') o.visible = false; }); } return g;
+}
+// Fassaden nach Fotos aus Frankfurt (12.11.2026). Eine Kachel = 12 x 12,8 m (vier Geschosse), Farben stecken im Bild, Vertexfarbe bleibt hell.
+function facadeStyle(style) {
+  const draw = (emis) => (c, w, h) => { const cw = w / 4, ch = h / 4; const R = () => Math.random();
+    const fenster = (x, y, ww, wh, rahmen, glas = '#2c3442') => { if (emis) { if (R() < 0.3) { c.fillStyle = pick(['#e8b25e', '#f0c98a', '#dfe8f0']); c.fillRect(x, y, ww, wh); } return; }
+      if (rahmen) { c.fillStyle = rahmen; c.fillRect(x - 5, y - 5, ww + 10, wh + 10); } c.fillStyle = glas; c.fillRect(x, y, ww, wh); c.fillStyle = 'rgba(255,255,255,0.16)'; c.fillRect(x, y, ww * 0.45, wh * 0.4); c.fillStyle = '#e6e2da'; c.fillRect(x + ww / 2 - 1.5, y, 3, wh); };
+    const ziegel = (x, y, ww, hh, tone) => { if (emis) return; for (let yy = y; yy < y + hh; yy += 8) for (let xx = x - ((yy / 8) % 2) * 8; xx < x + ww; xx += 16) { const k = tone(); c.fillStyle = k; c.fillRect(Math.max(x, xx), yy, Math.min(15, x + ww - xx), 7); } };
+    c.fillStyle = '#000'; c.fillRect(0, 0, w, h); if (emis) { for (let r = 0; r < 4; r++) for (let q = 0; q < 4; q++) fenster(q * cw + cw * 0.28, r * ch + ch * 0.25, cw * 0.44, ch * 0.45); return; }
+    if (style === 'wache') { // hell verputzt, Fensterrahmen und Ecksteine aus rotem Sandstein, Gesimsband
+      c.fillStyle = '#efe3d6'; c.fillRect(0, 0, w, h); c.fillStyle = '#9a4f3e'; c.fillRect(0, h - ch * 0.08 - 4, w, 6);
+      for (let y = 0; y < h; y += 24) { c.fillRect(0, y, (y / 24) % 2 ? 14 : 22, 18); c.fillRect(w - ((y / 24) % 2 ? 14 : 22), y, 22, 18); }
+      for (let r = 0; r < 4; r++) for (let q = 0; q < 4; q++) fenster(q * cw + cw * 0.27, r * ch + ch * 0.2, cw * 0.46, ch * 0.55, '#9a4f3e', '#3a4250');
+      return; }
+    if (style === 'school') { // weißes Band oben, Fensterband, Klinkersockel (IGS-Bauten)
+      for (let r = 0; r < 4; r++) { const y = r * ch; c.fillStyle = '#f1f1ee'; c.fillRect(0, y, w, ch * 0.22); ziegel(0, y + ch * 0.22, w, ch * 0.78, () => pick(['#8c4535', '#9b4c3a', '#7d3d30'])); c.fillStyle = '#e9e9e6'; c.fillRect(0, y + ch * 0.3, w, ch * 0.5);
+        for (let q = 0; q < 8; q++) fenster(q * w / 8 + 5, y + ch * 0.34, w / 8 - 10, ch * 0.42, null, '#34404e'); }
+      return; }
+    if (style === 'nk') { // Nachkriegsblock: Putz hellgrün oder beige, Fensterpaare, Balkonsäule in der Mitte
+      c.fillStyle = pick(['#dfe6cf', '#e9e0c8', '#e4e7d6']); c.fillRect(0, 0, w, h);
+      for (let r = 0; r < 4; r++) { for (const q of [0, 3]) fenster(q * cw + cw * 0.3, r * ch + ch * 0.28, cw * 0.4, ch * 0.42, '#f4f2ec'); c.fillStyle = '#b9b6ad'; c.fillRect(cw * 1.15, r * ch + ch * 0.18, cw * 1.7, ch * 0.62); fenster(cw * 1.3, r * ch + ch * 0.22, cw * 1.4, ch * 0.32, null, '#3a3f48'); c.fillStyle = '#f4f2ec'; c.fillRect(cw * 1.1, r * ch + ch * 0.55, cw * 1.8, ch * 0.3); c.fillStyle = 'rgba(0,0,0,0.18)'; c.fillRect(cw * 1.1, r * ch + ch * 0.85, cw * 1.8, 4); }
+      return; }
+    if (style === 'nb') { // Neubau: weiße Geschossbänder, grauer Klinker, Holzfenster
+      for (let r = 0; r < 4; r++) { const y = r * ch; c.fillStyle = '#f3f3f1'; c.fillRect(0, y, w, ch * 0.24); ziegel(0, y + ch * 0.24, w, ch * 0.76, () => pick(['#9a9b98', '#b4b3ae', '#8a8c8c', '#c3c1ba']));
+        for (let q = 0; q < 4; q++) fenster(q * cw + cw * 0.22, y + ch * 0.32, cw * (q % 2 ? 0.56 : 0.36), ch * 0.58, '#9a6b3e', '#2e3640'); }
+      return; }
+    if (style === 'zi') { // Mainufer: roter oder dunkelbrauner Klinker, Balkonreihen
+      const ton = pick([['#a8473a', '#b5523f', '#963f34'], ['#5c4a42', '#6a564c', '#4f4039']]); ziegel(0, 0, w, h, () => pick(ton));
+      for (let r = 0; r < 4; r++) { for (let q = 0; q < 4; q++) fenster(q * cw + cw * 0.2, r * ch + ch * 0.2, cw * 0.6, ch * 0.55, '#d8d4cc', '#2c333d'); c.fillStyle = '#d9d6cf'; c.fillRect(0, r * ch + ch * 0.74, w, ch * 0.07); c.fillStyle = 'rgba(60,60,60,0.55)'; for (let x = 0; x < w; x += 9) c.fillRect(x, r * ch + ch * 0.6, 2, ch * 0.14); }
+      return; }
+  };
+  return { map: canvasTex(512, 512, draw(false), 1 / FAC_W, 1 / FAC_H), emissiveMap: canvasTex(512, 512, draw(true), 1 / FAC_W, 1 / FAC_H) };
+}
 // Erdgeschoss: 12 m breit, 3.3 m hoch. Tür, Fenster, Läden, Tore
 const GF_W = 12, GF_H = 3.3;
 const GT_CACHE = new Map();
@@ -428,6 +477,10 @@ function groundTextures0(kind = 'res') {
     if (kind === 'hall') { if (!emis) { ctx.fillStyle = '#7f8388'; ctx.fillRect(1.0 * M, h - 3.0 * M, 4.2 * M, 3.0 * M); ctx.fillStyle = 'rgba(0,0,0,0.25)'; for (let y = h - 3.0 * M; y < h; y += 0.3 * M) ctx.fillRect(1.0 * M, y, 4.2 * M, 2); } door(7.0 * M, 1.0 * M, 2.2 * M, '#555a60', false); win(9.2 * M, h - 2.6 * M, 1.6 * M, 1.0 * M, Math.random() < 0.4); return; }
     if (kind === 'small') { if (!emis) { ctx.fillStyle = '#8a8580'; ctx.fillRect(0.6 * M, h - 2.3 * M, 2.6 * M, 2.3 * M); ctx.fillStyle = 'rgba(0,0,0,0.2)'; for (let y = h - 2.3 * M; y < h; y += 0.35 * M) ctx.fillRect(0.6 * M, y, 2.6 * M, 2); } door(6.5 * M, 0.9 * M, 2.0 * M, '#5a4634', false); return; }
     if (kind === 'church') { if (!emis) { const x = 4.5 * M, dw = 3.0 * M, dh = 3.1 * M; ctx.fillStyle = '#5a4634'; ctx.beginPath(); ctx.moveTo(x, h); ctx.lineTo(x, h - dh + dw / 2); ctx.arc(x + dw / 2, h - dh + dw / 2, dw / 2, Math.PI, 0); ctx.lineTo(x + dw, h); ctx.fill(); ctx.strokeStyle = '#a89c8a'; ctx.lineWidth = 6; ctx.stroke(); } return; }
+    if (kind === 'wache') { for (let q = 0; q < 3; q++) { const x = (0.5 + q * 3.9) * M, dw = 3.3 * M, dh = 2.9 * M; if (emis) { ctx.fillStyle = '#3a2a20'; ctx.fillRect(x + 0.2 * M, h - dh + 0.2 * M, dw - 0.4 * M, 0.6 * M); continue; }
+        ctx.fillStyle = '#9a4f3e'; ctx.fillRect(x - 0.15 * M, h - dh - 0.15 * M, dw + 0.3 * M, dh + 0.15 * M); ctx.fillStyle = '#b8473a'; ctx.fillRect(x, h - dh, dw, dh); ctx.fillStyle = 'rgba(0,0,0,0.3)'; for (let k = 1; k < 4; k++) ctx.fillRect(x + dw * k / 4 - 1, h - dh, 3, dh);
+        ctx.fillStyle = '#3b4250'; for (let k = 0; k < 4; k++) ctx.fillRect(x + dw * k / 4 + 0.15 * M, h - dh + 0.2 * M, dw / 4 - 0.3 * M, 0.7 * M); ctx.fillStyle = '#f2f2f2'; ctx.fillRect(x + dw * 0.4, h - dh * 0.55, dw * 0.2, 0.35 * M); } return; }
+    if (kind === 'school') { if (!emis) { ctx.fillStyle = '#8c4535'; ctx.fillRect(0, h - 3.0 * M, w, 3.0 * M); } for (let q = 0; q < 4; q++) { const x = (0.3 + q * 2.95) * M; if (emis) { if (Math.random() < 0.35) { ctx.fillStyle = '#dfe8f0'; ctx.fillRect(x, h - 2.7 * M, 2.6 * M, 2.4 * M); } continue; } ctx.fillStyle = '#e9e9e6'; ctx.fillRect(x - 0.08 * M, h - 2.78 * M, 2.76 * M, 2.5 * M); ctx.fillStyle = '#33404d'; ctx.fillRect(x, h - 2.7 * M, 2.6 * M, 2.4 * M); ctx.fillStyle = 'rgba(255,255,255,0.15)'; ctx.fillRect(x, h - 2.7 * M, 1.1 * M, 1.0 * M); } return; }
     if (kind === 'public') { door(4.6 * M, 2.4 * M, 2.5 * M, '#3b4a5a', true); win(0.8 * M, h - 2.6 * M, 2.4 * M, 1.6 * M, Math.random() < 0.5); win(8.5 * M, h - 2.6 * M, 2.4 * M, 1.6 * M, Math.random() < 0.5); return; }
     if (shop) { // Schaufenster + Markise + Tür
       if (!emis) { ctx.fillStyle = '#ddd4c4'; ctx.fillRect(0.6 * M, h - 2.8 * M, 7.0 * M, 2.4 * M); ctx.fillStyle = '#20283a'; ctx.fillRect(0.75 * M, h - 2.65 * M, 6.7 * M, 2.1 * M); ctx.fillStyle = 'rgba(255,255,255,0.12)'; ctx.fillRect(0.75 * M, h - 2.65 * M, 3 * M, 1 * M); ctx.fillStyle = pick(['#b03a3a', '#2f6b3a', '#2b3a67', '#c98a2a']); for (let x = 0.4 * M; x < 7.4 * M; x += 0.6 * M) ctx.fillRect(x, h - 3.1 * M, 0.3 * M, 0.35 * M); ctx.fillRect(0.4 * M, h - 3.1 * M, 7.0 * M, 0.12 * M); }
@@ -774,6 +827,7 @@ function* buildDetails2() {
 const staticParked = []; let parkedMesh = null; let roadMeshRef = null; const roadChunks = [];
 const instRefs = [];
 let PARK_TG = null, PARK_LOW = null;
+const WACHEN = []; // Mittelpunkte der Feuerwachen (aus dem Gebäudebau), dort parkt der Kommandowagen
 function buildParked() {
   const local = [];
   for (const r of CITY.roads) { if (r.ped || r.mw || r.ry || r.w < 5 || r.w > 9.5) continue;
@@ -781,7 +835,7 @@ function buildParked() {
       for (const sd of [-1, 1]) { if (Math.random() < 0.06) continue; for (let d = 4; d < l - 4; d += 5.4) { if (Math.random() < 0.14) continue; const off = r.w / 2 + 0.55; const x = ax + (bx2 - ax) * d / l + nx * off * sd, z = az + (bz - az) * d / l + nz * off * sd;
         const fx = Math.sin(hd) * 2.2, fz = Math.cos(hd) * 2.2; if (solidAt(x, z) >= 0 || solidAt(x + fx, z + fz) >= 0 || solidAt(x - fx, z - fz) >= 0 || solidAt(x + nx * sd, z + nz * sd) >= 0) continue;
         if (onOtherRoad(x + fx, z + fz, r, 1.5) || onOtherRoad(x - fx, z - fz, r, 1.5) || nearPoint(x, z, CITY.signals, 10) || nearPoint(x, z, CITY.stops, 12) || nearPoint(x, z, CITY.crossings, 7)) continue;
-        const type = CAR_PICK.length ? pick(CAR_PICK) : null; local.push({ x, z, h: hd + (sd > 0 ? Math.PI : 0), type, col: carBodyColor(type), active: true, refs: [] }); } } } }
+        const type = CAR_TPL.evkdow && WACHEN.some(w => Math.hypot(w[0] - x, w[1] - z) < 45) && Math.random() < 0.5 ? 'evkdow' : CAR_PICK.length ? pick(CAR_PICK) : null; local.push({ x, z, h: hd + (sd > 0 ? Math.PI : 0), type, col: carBodyColor(type), active: true, refs: [] }); } } } }
   local.sort(() => Math.random() - 0.5); local.length = Math.min(local.length, 180); staticParked.push(...local);
   // Geometrie je Typ vorbereiten: Lack (Instanzfarbe) + Rest (Vertexfarben oder Atlas-Textur)
   const toNI = g => { const gg = g.index ? g.toNonIndexed() : g; for (const k of Object.keys(gg.attributes)) if (!['position', 'normal', 'uv'].includes(k)) gg.deleteAttribute(k); if (!gg.attributes.uv) gg.setAttribute('uv', new THREE.Float32BufferAttribute(new Float32Array(gg.attributes.position.count * 2), 2)); return gg; };
@@ -1034,9 +1088,20 @@ function* buildCity() {
   const roofMat = ROOF_MAT || (ROOF_MAT = Object.assign(new THREE.MeshLambertMaterial({ map: roofTex }), { userData: { shared: true } })); const roofGeos = [], tileGeos = [], gableGeos = []; const dW = [], dR = [], dG = []; // Gauben: Wände, Dach, Glas
   const gfByKind = new Map(); // Erdgeschoss je Art
   const gateGeos = []; // Durchfahrt-Tore (dunkle Öffnung) und Stützen unter aufgeständerten Bauten
-  const kindOf = b => b.k || 'res';
+  const SCHULHOF = CITY_SCHOOLS(); // Schulgelände (OSM-Flächen) mit Rahmen, für Gebäude ohne Namen
+  const kindOf = b => { if (b._kind) return b._kind; const n = b.n || ''; let k = b.k || 'res';
+    if (/Feuerwache|Rettungswache|Feuer- und Rettungs|Feuerwehr/i.test(n) && !/Training/i.test(n)) k = 'wache';
+    else if (/schule|gymnasium|\bIGS\b/i.test(n)) k = 'school';
+    else if ((k === 'res' || k === 'public' || k === 'small') && SCHULHOF.length) { const [cx, cz] = centroidOf(b.p); if (SCHULHOF.some(s => cx > s.x0 && cx < s.x1 && cz > s.z0 && cz < s.z1 && pointInPoly(cx, cz, s.p))) k = 'school'; }
+    return (b._kind = k); };
+  const facKind = (b, kind) => { if (kind === 'wache' || kind === 'school') return kind; if (kind !== 'res') return kind; const hsh = Math.abs((b.p[0][0] * 31 + b.p[0][1] * 17) | 0) % 12; return hsh < 6 ? 'res' : hsh < 8 ? 'nk' : hsh < 10 ? 'nb' : 'zi'; };
   for (const b of CITY.buildings) { if (++YC % 10 === 0) yield;
     const kind = kindOf(b);
+    if (kind === 'wache') WACHEN.push(centroidOf(b.p));
+    if (!b._stad && b.h >= 8 && b.p.length > 3) { let x0 = 1e9, x1 = -1e9, z0 = 1e9, z1 = -1e9; for (const [x, z] of b.p) { x0 = Math.min(x0, x); x1 = Math.max(x1, x); z0 = Math.min(z0, z); z1 = Math.max(z1, z); }
+      const mx = (x0 + x1) / 2, mz = (z0 + z1) / 2; // Waldstadion (Niederrad) und FSV-Stadion am Bornheimer Hang
+      if (x1 - x0 > 200 && z1 - z0 > 200 && Math.hypot(mx + 4583, mz - 6771) < 80) { b._stad = 1; b.h = 3; scene.add(waldstadion(mx, mz, (x1 - x0) / 2, (z1 - z0) / 2, 1)); }
+      else if (x1 - x0 > 120 && z1 - z0 > 140 && Math.hypot(mx - 948, mz - 174) < 50) { b._stad = 1; b.h = 2; scene.add(waldstadion(mx, mz, (x1 - x0) / 2, (z1 - z0) / 2, 0.55)); } }
     const shape = new THREE.Shape(b.p.map(([x, z]) => new THREE.Vector2(x, -z)));
     const ths = b.p.map(([x, z]) => TH(x, z)); const tBase = Math.min(...ths), tTop = Math.max(...ths); b.base = tTop; // Erdgeschoss auf dem höchsten Punkt
     const lift = b.mh >= 2.2 ? b.mh + (tTop - tBase) + 0.6 : 0; // aufgeständert: Körper erst ab der Unterkante
@@ -1049,8 +1114,9 @@ function* buildCity() {
       const x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i), ny = nrm.getY(i);
       if (Math.abs(ny) > 0.5) uv.setXY(i, x, z); else { const nx = nrm.getX(i), nz = nrm.getZ(i); uv.setXY(i, Math.abs(nx) > Math.abs(nz) ? z : x, y - tTop - GF_H); }
     }
-    const c = kind === 'church' ? 0x9a8f86 : kind === 'hall' ? pick([0xbfc3c7, 0xd0d4d8, 0xb9b1a6]) : palette[Math.abs((b.p[0][0] * 7 + b.p[0][1] * 13) | 0) % palette.length];
-    const key = kind + '|' + c; if (!byKey.has(key)) byKey.set(key, []);
+    const fk = facKind(b, kind);
+    const c = fk !== kind || kind === 'wache' || kind === 'school' ? 0xf6f6f6 : kind === 'church' ? 0x9a8f86 : kind === 'hall' ? pick([0xbfc3c7, 0xd0d4d8, 0xb9b1a6]) : palette[Math.abs((b.p[0][0] * 7 + b.p[0][1] * 13) | 0) % palette.length];
+    const key = fk + '|' + c; if (!byKey.has(key)) byKey.set(key, []);
     for (const grp of g.groups) {
       const sub = new THREE.BufferGeometry();
       for (const name of ['position', 'normal', 'uv']) { const a = g.attributes[name]; sub.setAttribute(name, new THREE.BufferAttribute(a.array.slice(grp.start * a.itemSize, (grp.start + grp.count) * a.itemSize), a.itemSize)); }
@@ -1102,7 +1168,7 @@ function* buildCity() {
       }
     }
   }
-  const facByKind = FAC_CACHE || (FAC_CACHE = (() => { const f = {}; for (const k of ['res', 'house', 'public', 'hall', 'small', 'church']) f[k] = [facadeTextures(k), facadeTextures(k)]; return f; })());
+  const facByKind = FAC_CACHE || (FAC_CACHE = (() => { const f = {}; for (const k of ['res', 'house', 'public', 'hall', 'small', 'church']) f[k] = [facadeTextures(k), facadeTextures(k)]; for (const k of ['wache', 'school', 'nk', 'nb', 'zi']) { const s = facadeStyle(k); f[k] = [s, k === 'nk' || k === 'zi' ? facadeStyle(k) : s]; } return f; })());
   const counters = {};
   const groups = new Map(); const tmpC = new THREE.Color();
   for (const [key, geos] of byKey) {
@@ -1551,9 +1617,22 @@ if (CAR_TPL.ev) { // 12.11.2026: E-Auto auch als Frankfurter Taxi (hellelfenbein
   { const y = new THREE.Mesh(new THREE.BoxGeometry(1.7, 0.3, 0.03), gelb); y.position.set(0, 0.6, -2.55); streifen.push(y); } /* Heckklappe neongelb */
   { const hb = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.12, 0.03), blau); hb.position.set(0, 0.86, 2.4); streifen.push(hb); }
   CAR_TPL.evpolice = ab(streifen);
+  // Kommandowagen der Feuerwehr (12.11.2026, nach Andrés Foto): Lack rot, weiße Flanke, Warnschrägen vorn/hinten, Blaulichtbalken mit Dachschild
+  const weiss = new THREE.MeshLambertMaterial({ color: 0xf2f2f0 }); weiss.name = 'KdowWhite';
+  const schraeg = canvasTex(128, 64, (c, w, h) => { c.fillStyle = '#e8281e'; c.fillRect(0, 0, w, h); c.fillStyle = '#e9ecef'; for (let x = -h; x < w + h; x += 32) { c.beginPath(); c.moveTo(x, h); c.lineTo(x + 14, h); c.lineTo(x + 14 + h, 0); c.lineTo(x + h, 0); c.fill(); } }, 1, 1);
+  const schraegM = new THREE.MeshLambertMaterial({ map: schraeg }); schraegM.name = 'KdowChevron';
+  const schildTex = canvasTex(256, 48, (c, w, h) => { c.fillStyle = '#f4f4f2'; c.fillRect(0, 0, w, h); c.fillStyle = '#111'; c.font = 'bold 26px sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('FEUERWEHR', w / 2, h / 2 + 1); }, 1, 1);
+  const schildM = new THREE.MeshLambertMaterial({ map: schildTex }); schildM.name = 'KdowSign';
+  const blauL = new THREE.MeshLambertMaterial({ color: 0x2a5cff, emissive: 0x2a5cff, emissiveIntensity: 0.6 }); blauL.name = 'KdowBlue';
+  const kd = [];
+  for (const sx of [-1, 1]) { const fl = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.34, 1.5), weiss); fl.position.set(sx * 1.05, 0.68, -0.1); kd.push(fl);
+    const sv = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.2, 0.9), schraegM); sv.position.set(sx * 1.05, 0.5, 1.9); kd.push(sv); }
+  for (const z of [2.54, -2.54]) { const s = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.18, 0.03), schraegM); s.position.set(0, 0.5, z); kd.push(s); }
+  { const bb = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.1, 0.3), blauL); bb.position.set(0, D0.h + 0.05, 0.1); kd.push(bb); const sg = new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.16, 0.05), schildM); sg.position.set(0, D0.h + 0.17, 0.25); kd.push(sg); }
+  CAR_TPL.evkdow = ab(kd);
 }
 const CAR_PICK = ['ev', 'ev', 'ev', 'evtaxi', 'sedan', 'sedan', 'small', 'small', 'suv', 'hatchback', 'hatchback', 'wagon', 'wagon', 'taxi'].filter(n => CAR_TPL[n]); /* eigenes E-Auto am häufigsten (12.11.2026) */
-function carBodyColor(name) { return name === 'taxi' || name === 'evtaxi' ? 0xf0e3b8 : name === 'evpolice' ? 0xf3f5f7 : name === 'police' ? 0xd5dbe2 : pick(CARCOL); }
+function carBodyColor(name) { return name === 'taxi' || name === 'evtaxi' ? 0xf0e3b8 : name === 'evpolice' ? 0xf3f5f7 : name === 'evkdow' ? 0xe8281e : name === 'police' ? 0xd5dbe2 : pick(CARCOL); }
 function setCarColor(c, col) { c.userData.col = col; for (const m of c.userData.bodyMats || []) m.color.setHex(col).convertSRGBToLinear(); if (!c.userData.bodyMats) c.traverse(o => { if (o.isMesh && o.material?.color && o === c.children[0]) o.material.color.setHex(col); }); }
 const CONE_MAT = new THREE.MeshBasicMaterial({ map: coneTex, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide }); CONE_MAT.userData.shared = true;
 const POLICE_BAR_G = new THREE.BoxGeometry(1.0, 0.14, 0.28); POLICE_BAR_G.userData.shared = true;
