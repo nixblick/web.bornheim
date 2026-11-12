@@ -2,6 +2,9 @@
 
 ## 2026-11-12
 
+- **Glascontainer** blau und **Altkleidercontainer** rot an den Wertstoffplätzen aus den Kartendaten (vorher grüne Kästen)
+- **Parkscheinautomaten** weiß mit blauem Feld am Fahrbahnrand, fest
+- **Radwegweiser** weiß mit drei Fingern an jeder fünften Einmündung, neben dem Straßennamenschild
 - **ABG-Wohnhäuser** (Foto, sozialer Wohnungsbau): hellblaugrauer Putz, weiße Fensterfaschen, graues Erdgeschoss mit dunklen Klappläden; in Bornheim und Nordend an etwa jedem fünften mittelhohen Wohnhaus
 - **Kita-Stelen „kita frankfurt“** (Foto Eulengasse): weiße Stele mit Tangram-Zeichen und dem Namen der jeweiligen Kita, an allen Kitas aus den Kartendaten
 - **Einkaufswagen** in Reihe mit roten Griffen vor Supermärkten
