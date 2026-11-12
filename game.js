@@ -351,7 +351,7 @@ function moveWithCollision(pos, dx, dz, r, y, extra) {
 const _allCanvasTex = [];
 const _lamCache = new Map(), _basCache = new Map(), WALL_MATS = new Map(), GF_MATS = new Map(), sharedEmissiveMats = [];
 let ROOF_MAT = null, TILE_ROOF_MAT = null, WALK_MAT = null, PATH_MAT = null, SIG_LENS_MAT = null, SPOT_GLOW_MAT = null, PTS_GLOW_MAT = null, SHELTER_GLASS_MAT = null, DORMER_GLASS_MAT = null;
-let WALL_WASH_MAT = null; let TRUNK_G = null, CROWN_LOW_G = null, CROWN_HI_G = null, LAMP_G = null, LAMP_HEAD_G = null, LAMP_SPOT_G = null, SIG_LENS_G = null, SIG_POLE_G = null, SIG_BOX_G = null, BUSH_LOW_G = null, BUSH_HI_G = null;
+let WALL_WASH_MAT = null, BAUZAUN_MAT = null, BAU_LAMP_MAT = null; let TRUNK_G = null, CROWN_LOW_G = null, CROWN_HI_G = null, LAMP_G = null, LAMP_HEAD_G = null, LAMP_SPOT_G = null, SIG_LENS_G = null, SIG_POLE_G = null, SIG_BOX_G = null, BUSH_LOW_G = null, BUSH_HI_G = null;
 function shLambert(col, side = THREE.FrontSide) {
   const k = col * 4 + side; let m = _lamCache.get(k);
   if (!m) { m = new THREE.MeshLambertMaterial({ color: col, side }); m.userData.shared = true; _lamCache.set(k, m); }
@@ -543,9 +543,13 @@ function groundTextures0(kind = 'res') {
       else { ctx.fillStyle = '#ffe6b0'; ctx.fillRect(0.75 * M, h - 2.65 * M, 6.7 * M, 2.1 * M); }
       door(8.4 * M, 1.1 * M, 2.3 * M, '#4a3a2a', false); win(10.2 * M, h - 2.5 * M, 1.2 * M, 1.3 * M, Math.random() < 0.4); return;
     }
-    door(1.2 * M, 1.1 * M, 2.3 * M, pick(['#5a4634', '#2f3a4a', '#6b2b2b', '#3a5a3a', '#2a2a2a']), false);
+    if (!emis) { ctx.fillStyle = '#3a3330'; ctx.fillRect(0.75 * M, h - 2.6 * M, 2.1 * M, 2.6 * M); for (let i = 0; i < 160; i++) { ctx.fillStyle = Math.random() < 0.5 ? '#6a5a50' : '#1e1a18'; ctx.fillRect((0.75 + Math.random() * 2.1) * M, h - Math.random() * 2.6 * M, 2, 2); } // Granitrahmen (Foto Hauseingang)
+      ctx.fillStyle = '#7d7a76'; ctx.fillRect(0.9 * M, h - 2.45 * M, 1.8 * M, 2.45 * M); ctx.fillStyle = '#ecebe6'; ctx.fillRect(1.75 * M, h - 2.35 * M, 0.85 * M, 1.05 * M); ctx.fillRect(1.75 * M, h - 1.2 * M, 0.85 * M, 1.1 * M); ctx.fillRect(1.0 * M, h - 2.35 * M, 0.65 * M, 0.55 * M);
+      ctx.fillStyle = '#3a2e28'; ctx.fillRect(1.0 * M, h - 1.7 * M, 0.65 * M, 1.6 * M); ctx.fillStyle = '#5a4a40'; for (let y = 0; y < 8; y++) for (let x = 0; x < 2; x++) ctx.fillRect((1.03 + x * 0.32) * M, h - (1.66 - y * 0.19) * M, 0.28 * M, 0.15 * M);
+      ctx.fillStyle = '#9a9894'; ctx.fillRect(1.73 * M, h - 1.35 * M, 0.04 * M, 0.4 * M); ctx.fillStyle = '#1e1e22'; ctx.fillRect(3.0 * M, h - 1.9 * M, 0.35 * M, 0.45 * M); ctx.fillStyle = '#7fb8e8'; ctx.fillRect(3.04 * M, h - 1.86 * M, 0.27 * M, 0.37 * M); }
+    else { ctx.fillStyle = '#d8d4c8'; ctx.fillRect(1.75 * M, h - 2.35 * M, 0.85 * M, 2.25 * M); }
     for (let q = 0; q < 3; q++) win((3.6 + q * 2.8) * M, h - 2.5 * M, 1.3 * M, 1.4 * M, Math.random() < 0.3);
-    if (!emis) { ctx.fillStyle = '#ffe3a0'; ctx.fillRect(1.65 * M, h - 2.7 * M, 0.2 * M, 0.12 * M); } else { ctx.fillStyle = '#ffd27a'; ctx.fillRect(1.55 * M, h - 2.75 * M, 0.4 * M, 0.2 * M); }
+    { const hn = String(2 + Math.floor(Math.random() * 60)); if (!emis) { ctx.fillStyle = '#f4f2ea'; ctx.fillRect(1.35 * M, h - 2.95 * M, 0.9 * M, 0.3 * M); ctx.fillStyle = '#3a2a22'; ctx.font = `bold ${0.24 * M}px sans-serif`; ctx.textAlign = 'center'; ctx.fillText(hn, 1.8 * M, h - 2.72 * M); ctx.textAlign = 'left'; } else { ctx.fillStyle = '#fff2c8'; ctx.fillRect(1.35 * M, h - 2.95 * M, 0.9 * M, 0.3 * M); } } // Leuchte mit Hausnummer
   };
   return { map: canvasTex(512, 141, draw(false), 1 / GF_W, 1 / GF_H), emissiveMap: canvasTex(512, 141, draw(true), 1 / GF_W, 1 / GF_H) };
 }
@@ -716,6 +720,24 @@ function* buildDetails() {
   const zebra = [];
   for (const c of CITY.crossings) { let x = c.x, z = c.z; if (c.p) { const m = c.p[Math.floor(c.p.length / 2)]; x = m[0]; z = m[1]; } if (x === undefined) continue; const nr = nearestRoadDir(x, z, 7); if (!nr || nr.w < 5) continue; const ang = nr.ang; for (let k = -2.5; k <= 2.5; k++) { const sx = nr.x + Math.sin(ang) * k * 1.0, sz = nr.z + Math.cos(ang) * k * 1.0; const g = new THREE.PlaneGeometry(nr.w - 0.6, 0.5); g.rotateX(-Math.PI / 2); g.rotateY(ang + Math.PI / 2); g.translate(sx, TH(sx, sz) + 0.055, sz); zebra.push(g); } }
   addMerged(zebra, shLambert(0xe9e6dc), false);
+  // --- Straßenschilder an Einmündungen (Frankfurter Art: dunkelblau, weiße Schrift) und Poller an den Ecken (Fotos 12.11.2026) ---
+  { const ends = []; const seen = new Set();
+    for (const r of CITY.roads) { if (!r.n || r.ped || r.mw || r.w < 5) continue; for (const P of [r.p[0], r.p[r.p.length - 1]]) { const k = Math.round(P[0] / 25) + ',' + Math.round(P[1] / 25) + r.n; if (seen.has(k)) continue; seen.add(k); ends.push({ x: P[0], z: P[1], n: r.n, r }); } }
+    const list = ends.slice(0, 96); const COLS = 4, ROWS = Math.max(1, Math.ceil(list.length / COLS)), CW = 256, CH = 48; const at = document.createElement('canvas'); at.width = COLS * CW; at.height = ROWS * CH; const ac = at.getContext('2d');
+    const poles = [], sv = [], suv = [], bol = [];
+    list.forEach((e, i) => { const col = i % COLS, row = Math.floor(i / COLS); ac.fillStyle = '#16233f'; ac.fillRect(col * CW, row * CH, CW, CH); ac.strokeStyle = '#e8e8e8'; ac.lineWidth = 3; ac.strokeRect(col * CW + 4, row * CH + 4, CW - 8, CH - 8); ac.fillStyle = '#f2f2f2'; let fs = 26; ac.font = `bold ${fs}px Arial`; while (ac.measureText(e.n).width > CW - 20 && fs > 10) { fs--; ac.font = `bold ${fs}px Arial`; } ac.textAlign = 'center'; ac.textBaseline = 'middle'; ac.fillText(e.n, col * CW + CW / 2, row * CH + CH / 2 + 1);
+      const [ax, az] = e.r.p[0], [bx, bz] = e.r.p[1] || e.r.p[0]; const l = Math.hypot(bx - ax, bz - az) || 1; const ux = (bx - ax) / l, uz = (bz - az) / l; const sx = e.x - uz * (e.r.w / 2 + 1.4), sz = e.z + ux * (e.r.w / 2 + 1.4); if (solidAt(sx, sz) >= 0) return; const y = TH(sx, sz);
+      const pg = new THREE.CylinderGeometry(0.04, 0.04, 2.9, 5); pg.translate(sx, y + 1.45, sz); poles.push(pg);
+      const u0 = col / COLS, u1 = (col + 1) / COLS, v1 = 1 - row / ROWS, v0 = 1 - (row + 1) / ROWS; const w = 0.62;
+      for (const s of [1, -1]) { const A = [sx - ux * w * s, y + 2.55, sz - uz * w * s], B = [sx + ux * w * s, y + 2.55, sz + uz * w * s], C = [B[0], y + 2.8, B[2]], D = [A[0], y + 2.8, A[2]]; sv.push(...A, ...B, ...C, ...A, ...C, ...D); suv.push(u0, v0, u1, v0, u1, v1, u0, v0, u1, v1, u0, v1); }
+      for (let k = -1; k <= 1; k++) { const px = sx + ux * k * 1.3 + uz * 0.5, pz = sz + uz * k * 1.3 - ux * 0.5; if (solidAt(px, pz) >= 0) continue; const b = new THREE.CylinderGeometry(0.07, 0.08, 0.9, 6); b.translate(px, TH(px, pz) + 0.45, pz); bol.push(b); } });
+    if (poles.length) addMerged(poles, shLambert(0x6a6e72), false); if (bol.length) addMerged(bol, shLambert(0x2c2e30), false);
+    if (sv.length) { const tex = new THREE.CanvasTexture(at); tex.colorSpace = THREE.SRGBColorSpace; const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(sv, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(suv, 2)); g.computeVertexNormals(); scene.add(new THREE.Mesh(g, new THREE.MeshLambertMaterial({ map: tex, side: THREE.DoubleSide }))); } }
+  // --- Baustellen: rot-weiße Bauzäune mit gelben Warnleuchten, ein bis zwei je Kachel ---
+  { const bz = [], lamps = []; const rs = CITY.roads.filter(r => !r.ped && !r.mw && r.w >= 6 && r.w <= 12); for (let n = 0; n < Math.min(2, rs.length); n++) { if (Math.random() < 0.4) continue; const r = pick(rs); const i = Math.floor(Math.random() * (r.p.length - 1)); const [ax, az] = r.p[i], [bx, bz2] = r.p[i + 1]; const l = Math.hypot(bx - ax, bz2 - az); if (l < 12) continue; const ux = (bx - ax) / l, uz = (bz2 - az) / l, nx = -uz, nz = ux; const cx = ax + ux * l / 2 + nx * r.w / 4, cz = az + uz * l / 2 + nz * r.w / 4; const ang = Math.atan2(ux, uz);
+      for (const [du, dn, rot] of [[-3, 1.2, 0], [-1, 1.2, 0], [1, 1.2, 0], [3, 1.2, 0], [-3, -1.2, 0], [-1, -1.2, 0], [1, -1.2, 0], [3, -1.2, 0], [-4, 0, 1], [4, 0, 1]]) { const x = cx + ux * du + nx * dn, z = cz + uz * du + nz * dn; const g = new THREE.BoxGeometry(0.06, 1.0, 2.0); g.rotateY(ang + (rot ? Math.PI / 2 : 0) + Math.PI / 2); g.translate(x, TH(x, z) + 0.6, z); bz.push(g); if (Math.abs(du) === 3 || rot) { const s = new THREE.SphereGeometry(0.12, 8, 6); s.translate(x, TH(x, z) + 1.25, z); lamps.push(s); } } }
+    if (bz.length) { if (!BAUZAUN_MAT) BAUZAUN_MAT = Object.assign(new THREE.MeshLambertMaterial({ map: canvasTex(128, 64, (c, w, h) => { c.fillStyle = '#f2f2ee'; c.fillRect(0, 0, w, h); c.fillStyle = '#d42a22'; for (let x = -h; x < w; x += 32) { c.beginPath(); c.moveTo(x, h); c.lineTo(x + 16, h); c.lineTo(x + 16 + h * 0.5, h * 0.5); c.lineTo(x + h * 0.5, h * 0.5); c.fill(); } c.fillStyle = '#ffffff'; c.fillRect(0, 0, w, h * 0.45); c.strokeStyle = '#999'; c.lineWidth = 2; for (let x = 4; x < w; x += 8) { c.beginPath(); c.moveTo(x, 0); c.lineTo(x, h * 0.45); c.stroke(); } }, 1, 1) }), { userData: { shared: true } }); addMerged(bz, BAUZAUN_MAT, false); }
+    if (lamps.length) { const m = new THREE.Mesh(mergeGeometries(lamps), BAU_LAMP_MAT || (BAU_LAMP_MAT = Object.assign(new THREE.MeshBasicMaterial({ color: 0xffc21a }), { userData: { shared: true } }))); scene.add(m); } }
 }
 function onMotorway(x, z) { const c = getRoadGrid().get(key(Math.floor(x / CELL), Math.floor(z / CELL))); if (!c) return false; for (const [r, i] of c) { if (!r.mw) continue; const [ax, az] = r.p[i], [bx, bz] = r.p[i + 1]; if (distSegSq(x, z, ax, az, bx, bz) < (r.w / 2 + 2) ** 2) return true; } return false; }
 function nearestRoadDir(x, z, maxD = 15) { let best = maxD * maxD, res = null; const g = getRoadGrid(); const cx = Math.floor(x / CELL), cz = Math.floor(z / CELL); const R = Math.ceil(maxD / CELL);

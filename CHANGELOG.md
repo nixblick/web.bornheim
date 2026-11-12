@@ -2,6 +2,9 @@
 
 ## 2026-11-12
 
+- **Straßennamenschilder** an Einmündungen, Frankfurter Art: dunkelblau mit weißem Rand und weißer Schrift, beidseitig, dazu drei Poller an der Ecke (ein Atlas, wenige Meshes je Kachel)
+- **Hauseingänge nach Foto:** Granitrahmen, Milchglastür mit Briefkastenfeld, Klingeltableau, Leuchte mit Hausnummer (nachts hell)
+- **Baustellen:** ein bis zwei je Kachel, rot-weiße Bauzäune mit gelben Warnleuchten; beleuchtete Schaufenster gab es schon, Läden bleiben nachts hell
 - **Apotheken innen** (Foto Sonnen-Apotheke): Holzvitrinen mit Glasböden und bunten Packungen, Schubladenschrank mit Schildern, Holztresen mit Glasschutz, Kassenbildschirm, Glas-Hängelampe
 - **U-Würfel zurück** (Foto Am Röthenek): am Eingang zusätzlich der leuchtende grün-türkise U-Würfel auf dem Mast, neben dem Portal
 - **Infokasten** neben jedem U-Bahn-Eingang mit selbst gezeichnetem Liniennetz
