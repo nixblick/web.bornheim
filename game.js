@@ -1353,7 +1353,10 @@ function* buildCity() {
       for (let i = 0; i < b.p.length; i++) {
         const [ax, az] = b.p[i], [bx, bz] = b.p[(i + 1) % b.p.length]; const dx = bx - ax, dz = bz - az, l = Math.hypot(dx, dz); if (l < 1.5) { along += l; continue; }
         const nx = dz / l * sgn, nz = -dx / l * sgn; const ox = nx * 0.04, oz = nz * 0.04; const ya = TH(ax, az) - 0.4, yb = TH(bx, bz) - 0.4, yt = b.base + H;
-        const A = [ax + ox, ya, az + oz], B = [bx + ox, yb, bz + oz], C = [bx + ox, yt, bz + oz], D = [ax + ox, yt, az + oz];
+        /* Dreiecke immer gegen den Uhrzeigersinn von außen: bei umgekehrt gespeichertem Umriss (sgn > 0) Ecken tauschen, sonst
+           zeigt die Vorderseite nach innen und Tür/Hausnummer stehen von außen spiegelverkehrt (Rödelheim, André 12.11.2026) */
+        const [pa, pb, ka, kb] = sgn > 0 ? [[bx, bz], [ax, az], yb, ya] : [[ax, az], [bx, bz], ya, yb];
+        const A = [pa[0] + ox, ka, pa[1] + oz], B = [pb[0] + ox, kb, pb[1] + oz], C = [pb[0] + ox, yt, pb[1] + oz], D = [pa[0] + ox, yt, pa[1] + oz];
         const tri = (P, Q, R, uP, uQ, uR, cP, cQ, cR) => { v.push(...P, ...Q, ...R); uvs.push(...uP, ...uQ, ...uR); nn.push(nx, 0, nz, nx, 0, nz, nx, 0, nz); cc.push(cP, cP, cP, cQ, cQ, cQ, cR, cR, cR); };
         tri(A, B, C, [along, 0], [along + l, 0], [along + l, H], 0.78, 0.78, 0.96); tri(A, C, D, [along, 0], [along + l, H], [along, H], 0.78, 0.96, 0.96);
         along += l;
