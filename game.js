@@ -454,6 +454,12 @@ function facadeStyle(style) {
       for (let y = 0; y < h; y += 24) { c.fillRect(0, y, (y / 24) % 2 ? 14 : 22, 18); c.fillRect(w - ((y / 24) % 2 ? 14 : 22), y, 22, 18); }
       for (let r = 0; r < 4; r++) for (let q = 0; q < 4; q++) fenster(q * cw + cw * 0.27, r * ch + ch * 0.2, cw * 0.46, ch * 0.55, '#9a4f3e', '#3a4250');
       return; }
+    if (style === 'abg') { // ABG-Wohnhaus (Foto 12.11.2026): hellblaugrauer Putz, weiße Fensterfaschen mit Sohlbank, Erdgeschoss grau mit dunklen Klappläden, Gurtgesims
+      c.fillStyle = '#c9d0d8'; c.fillRect(0, 0, w, h); c.fillStyle = 'rgba(0,0,0,0.16)'; c.fillRect(cw * 2.95, 0, 4, h);
+      for (let r = 0; r < 4; r++) { const y = r * ch; const eg = r === 3; if (eg) { c.fillStyle = '#a9adb0'; c.fillRect(0, y, w, ch); } c.fillStyle = '#e9e6dc'; c.fillRect(0, y, w, 6);
+        for (let q = 0; q < 4; q++) { const ww = cw * 0.4, x = q * cw + (cw - ww) / 2, wy = y + ch * 0.24, wh = ch * 0.52; c.fillStyle = '#ece8de'; c.fillRect(x - 9, wy - 9, ww + 18, wh + 14); c.fillRect(x - 13, wy + wh + 3, ww + 26, 8); fenster(x, wy, ww, wh, '#f6f6f2', '#2c333c');
+          if (eg) { c.fillStyle = '#3f4549'; c.fillRect(x - 9 - ww * 0.5, wy, ww * 0.45, wh); c.fillRect(x + ww + 9, wy, ww * 0.45, wh); c.fillStyle = 'rgba(255,255,255,0.12)'; for (let s = wy + 4; s < wy + wh; s += 7) { c.fillRect(x - 9 - ww * 0.5, s, ww * 0.45, 2); c.fillRect(x + ww + 9, s, ww * 0.45, 2); } } } }
+      return; }
     if (style === 'zwanziger') { // Wöllstädter Straße (Nachtfoto): glatter beigegrauer Putz, weiße Fensterrahmen, Kastenerker mit Gitterbalkon, Sockel dunkler
       c.fillStyle = '#d6cdbf'; c.fillRect(0, 0, w, h); c.fillStyle = '#e4ddd1'; c.fillRect(cw * 1.05, 0, cw * 1.25, h); c.fillStyle = 'rgba(0,0,0,0.18)'; c.fillRect(cw * 2.3, 0, 6, h);
       for (let r = 0; r < 4; r++) { const y = r * ch; for (const q of [0.25, 1.35, 2.7, 3.35]) { const ww = cw * 0.42, x = q * cw, wy = y + ch * 0.26, wh = ch * 0.5; fenster(x, wy, ww, wh, '#f4f4f2', '#2b313a'); c.fillStyle = '#f4f4f2'; c.fillRect(x - 6, wy + wh + 4, ww + 12, 6); }
@@ -1215,7 +1221,7 @@ function* buildCity() {
   const facKind = (b, kind) => { if (['wache', 'school', 'altschule', 'messeturm', 'barock'].includes(kind)) return kind;
     { const [cx, cz] = centroidOf(b.p); if ((kind === 'res' || kind === 'public') && b.h >= 14 && cx > -3000 && cx < -1500 && cz > 1200 && cz < 2600 && Math.abs((b.p[0][0] * 13 + b.p[0][1] * 7) | 0) % 10 < 3) return 'sandstein'; } /* Innenstadt: rote Sandsteinbauten wie das Metropolis */
     if (kind !== 'res') return kind; const hsh = Math.abs((b.p[0][0] * 31 + b.p[0][1] * 17) | 0) % 12;
-    { const [cx, cz] = centroidOf(b.p); if (b.h >= 10 && WOELL.some((p, i) => i && distSegSq(cx, cz, WOELL[i - 1][0], WOELL[i - 1][1], p[0], p[1]) < 625)) return 'zwanziger'; if (b.h >= 10 && hsh >= 6 && hsh < 8 && cz < -300 && cz > -900 && cx > -700 && cx < 900) return 'zwanziger'; } // Wöllstädter Straße und Bornheim-Nord
+    { const [cx, cz] = centroidOf(b.p); if (b.h >= 10 && WOELL.some((p, i) => i && distSegSq(cx, cz, WOELL[i - 1][0], WOELL[i - 1][1], p[0], p[1]) < 625)) return 'zwanziger'; if (b.h >= 10 && hsh >= 6 && hsh < 8 && cz < -300 && cz > -900 && cx > -700 && cx < 900) return 'zwanziger'; if (b.h >= 11 && b.h <= 19 && hsh >= 8 && hsh < 10 && cz < 300 && cz > -1600 && cx > -1600 && cx < 1600) return 'abg'; } // Wöllstädter Straße und Bornheim-Nord; ABG-Häuser
     if (b.h >= 12 && hsh >= 2 && hsh < 6) { const [cx, cz] = centroidOf(b.p); if (cx > -800 && cx < 900 && cz > -900 && cz < 900) return 'gruender'; } // Bornheim: Gründerzeit wie an der Berger Straße
     if (b.r && b.rh > 0 && b.h <= 11.5) { const [cx, cz] = centroidOf(b.p); const alt = cx > -80 && cx < 460 && cz > -400 && cz < 220; /* Alt-Bornheim: Eulengasse, Turmstraße, Rendeler Straße */ if (alt && hsh < 7) return 'fw'; if (alt && hsh < 9) return 'schiefer'; if (!alt && hsh === 0) return 'schiefer'; } return hsh < 6 ? 'res' : hsh < 8 ? 'nk' : hsh < 10 ? 'nb' : 'zi'; };
   for (const b of CITY.buildings) { if (++YC % 10 === 0) yield;
@@ -1305,7 +1311,7 @@ function* buildCity() {
       }
     }
   }
-  const facByKind = FAC_CACHE || (FAC_CACHE = (() => { const f = {}; for (const k of ['res', 'house', 'public', 'hall', 'small', 'church']) f[k] = [facadeTextures(k), facadeTextures(k)]; for (const k of ['wache', 'school', 'altschule', 'nk', 'nb', 'zi', 'fw', 'schiefer', 'messeturm', 'barock', 'sandstein', 'gruender', 'zwanziger']) { const s = facadeStyle(k); f[k] = [s, k === 'nk' || k === 'zi' ? facadeStyle(k) : s]; } return f; })());
+  const facByKind = FAC_CACHE || (FAC_CACHE = (() => { const f = {}; for (const k of ['res', 'house', 'public', 'hall', 'small', 'church']) f[k] = [facadeTextures(k), facadeTextures(k)]; for (const k of ['wache', 'school', 'altschule', 'nk', 'nb', 'zi', 'fw', 'schiefer', 'messeturm', 'barock', 'sandstein', 'gruender', 'zwanziger', 'abg']) { const s = facadeStyle(k); f[k] = [s, k === 'nk' || k === 'zi' ? facadeStyle(k) : s]; } return f; })());
   const counters = {};
   const groups = new Map(); const tmpC = new THREE.Color();
   for (const [key, geos] of byKey) {
