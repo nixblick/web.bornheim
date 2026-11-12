@@ -2,6 +2,7 @@
 
 ## 2026-11-12
 
+- Blinker sitzen an den echten Scheinwerfern und Rückleuchten statt neben dem Auto. Ungetestet (Test im Nachtfenster)
 - Stadtmöbel nie auf der Fahrbahn: Fahrradständer, Laternen, Mülleimer, Bänke und Automaten werden an den Rand geschoben (rund 4400 lagen auf der Straße). Roller nicht mehr auf Nachbarstraßen. Ungetestet (Test im Nachtfenster)
 - Frankfurter Sparkasse (auch 1822) immer rot statt blau. Ungetestet (Test im Nachtfenster)
 - Motorradhelm sitzt am Kopfknochen und wandert mit, wenn der Fahrer sich vorbeugt. Ungetestet (Test im Nachtfenster)
