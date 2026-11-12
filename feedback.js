@@ -35,9 +35,11 @@ el.innerHTML = `<div class="box"><h3>Fehler melden oder Idee schicken</h3>
 <select id="fb_kind"><option value="Fehler">Fehler – etwas funktioniert nicht</option><option value="Idee">Idee – das wäre cool</option></select>
 <input id="fb_title" maxlength="90" placeholder="Kurz: Was ist los? z. B. Granate zerstört keine Autos">
 <textarea id="fb_text" placeholder="Was hast du gemacht, was ist passiert, was hättest du erwartet?"></textarea>
-<label><input type="checkbox" id="fb_info" checked> Technische Infos anhängen (Browser, Grafik, Position im Spiel, letzte Fehlermeldungen)</label>
-<p>„Auf GitHub melden“ öffnet ein vorausgefülltes Issue, dafür brauchst du ein kostenloses GitHub-Konto. Ohne Konto geht es per E-Mail.</p>
-<div class="row"><button class="y" id="fb_gh">Auf GitHub melden</button><button id="fb_mail">Per E-Mail</button><button id="fb_close">Abbrechen</button></div></div>`;
+<div id="fb_shotrow" style="display:none;gap:10px;align-items:center;margin:2px 0 8px"><img id="fb_shot" alt="Bildschirmfoto" style="width:120px;border-radius:6px;border:1px solid #444"><label><input type="checkbox" id="fb_useshot" checked> Bildschirmfoto mitschicken</label></div>
+<label><input type="checkbox" id="fb_info" checked> Technische Infos anhängen (Browser, Grafik, Position, letzte Fehlermeldungen)</label>
+<div class="row"><button class="y" id="fb_share">Teilen (WhatsApp, Mail …)</button><button class="y" id="fb_mail">Per E-Mail schicken</button><button id="fb_close">Abbrechen</button></div>
+<p id="fb_hint"></p>
+<p style="margin-top:12px">Mit GitHub-Konto: <a href="#" id="fb_gh" style="color:#ffd84a">als Issue melden</a> (Bild liegt dann in der Zwischenablage, im Issue mit Strg+V einfügen).</p></div>`;
 document.body.appendChild(el);
 const $ = id => document.getElementById(id);
 function info() {
@@ -55,12 +57,43 @@ function compose() {
   const body = ($('fb_text').value.trim() || '(keine Beschreibung)') + ($('fb_info').checked ? '\n\n---\n' + info() : '');
   return { title: `[${kind}] ${title}`, body: body.slice(0, 5500), kind };
 }
-let wasLocked = false;
-export function openFeedback() { if (document.pointerLockElement) { wasLocked = true; document.exitPointerLock(); } el.style.display = 'flex'; setTimeout(() => $('fb_title').focus(), 50); }
+let wasLocked = false, shotBlob = null;
+// Bildschirmfoto: direkt nach einem eigenen render() lesen, sonst ist der WebGL-Puffer leer
+function takeShot() {
+  shotBlob = null; $('fb_shotrow').style.display = 'none';
+  try {
+    const G = window.G; if (!G || !G.renderer) return;
+    const r = G.composerRef?.(); if (r) r.render(); else G.renderer.render(G.scene, G.camera);
+    const src = G.renderer.domElement, k = Math.min(1, 1280 / src.width), c = document.createElement('canvas');
+    c.width = Math.round(src.width * k); c.height = Math.round(src.height * k); c.getContext('2d').drawImage(src, 0, 0, c.width, c.height);
+    c.toBlob(b => { if (!b) return; shotBlob = b; $('fb_shot').src = URL.createObjectURL(b); $('fb_shotrow').style.display = 'flex'; }, 'image/jpeg', 0.85);
+  } catch (e) {}
+}
+const shotFile = () => shotBlob && $('fb_useshot').checked ? new File([shotBlob], 'bornheim-bildschirmfoto.jpg', { type: 'image/jpeg' }) : null;
+const canShareFiles = () => { try { return !!navigator.canShare && navigator.canShare({ files: [new File([''], 'x.jpg', { type: 'image/jpeg' })] }); } catch (e) { return false; } };
+export function openFeedback() { if (document.pointerLockElement) { wasLocked = true; document.exitPointerLock(); } takeShot(); $('fb_hint').textContent = ''; $('fb_share').style.display = navigator.share ? '' : 'none'; $('fb_mail').className = navigator.share ? '' : 'y'; el.style.display = 'flex'; setTimeout(() => $('fb_title').focus(), 50); }
 function close() { el.style.display = 'none'; }
 $('fb_close').onclick = close; el.addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Escape') close(); }); el.addEventListener('keyup', e => e.stopPropagation());
-$('fb_gh').onclick = () => { const c = compose(); const url = `${REPO}/issues/new?title=${encodeURIComponent(c.title)}&body=${encodeURIComponent(c.body)}&labels=${encodeURIComponent(c.kind === 'Fehler' ? 'bug' : 'enhancement')}`; open(url, '_blank', 'noopener'); close(); };
-$('fb_mail').onclick = () => { const c = compose(); location.href = `mailto:${MAIL}?subject=${encodeURIComponent('Bornheim: ' + c.title)}&body=${encodeURIComponent(c.body.slice(0, 1800))}`; close(); };
+function download(f) { const a = document.createElement('a'); a.href = URL.createObjectURL(f); a.download = f.name; document.body.appendChild(a); a.click(); a.remove(); }
+$('fb_share').onclick = async () => {
+  const c = compose(), f = shotFile(), data = { title: 'Bornheim: ' + c.title, text: `Bornheim-Spiel: ${c.title}\n\n${c.body.slice(0, 3000)}\n\n(bitte an ${MAIL})` };
+  if (f && canShareFiles()) data.files = [f];
+  try { await navigator.share(data); close(); }
+  catch (e) { if (e.name !== 'AbortError') $('fb_hint').textContent = 'Teilen ging nicht – bitte „Per E-Mail schicken“ nehmen.'; }
+};
+$('fb_mail').onclick = () => {
+  const c = compose(), f = shotFile(); let body = c.body.slice(0, 1800);
+  if (f) { download(f); body = 'Das Bildschirmfoto ist gerade heruntergeladen worden (bornheim-bildschirmfoto.jpg) – bitte an diese Mail anhängen.\n\n' + body; }
+  location.href = `mailto:${MAIL}?subject=${encodeURIComponent('Bornheim: ' + c.title)}&body=${encodeURIComponent(body)}`;
+  $('fb_hint').textContent = f ? 'Dein Mailprogramm öffnet sich. Das Bild liegt in deinen Downloads – bitte anhängen.' : 'Dein Mailprogramm öffnet sich.';
+};
+$('fb_gh').onclick = async ev => {
+  ev.preventDefault(); const c = compose(), f = shotFile();
+  if (f) { try { await navigator.clipboard.write([new ClipboardItem({ 'image/png': toPng(f) })]); } catch (e) { download(f); } }
+  const url = `${REPO}/issues/new?title=${encodeURIComponent(c.title)}&body=${encodeURIComponent(c.body)}&labels=${encodeURIComponent(c.kind === 'Fehler' ? 'bug' : 'enhancement')}`; open(url, '_blank', 'noopener'); close();
+};
+// Zwischenablage nimmt nur PNG
+async function toPng(b) { const i = await createImageBitmap(b), c = document.createElement('canvas'); c.width = i.width; c.height = i.height; c.getContext('2d').drawImage(i, 0, 0); return new Promise(r => c.toBlob(r, 'image/png')); }
 for (const id of ['m_feedback', 's_feedback']) { const b = $(id); if (b) b.onclick = openFeedback; }
 window.openFeedback = openFeedback;
 
