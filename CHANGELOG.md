@@ -2,6 +2,10 @@
 
 ## 2026-11-12
 
+- **Kita-Stelen „kita frankfurt“** (Foto Eulengasse): weiße Stele mit Tangram-Zeichen und dem Namen der jeweiligen Kita, an allen Kitas aus den Kartendaten
+- **Einkaufswagen** in Reihe mit roten Griffen vor Supermärkten
+- **Trinkhallen-Schilder** weiß mit dunkler Schrift
+- **Verkehr hält vor Bauzäunen und Pollern** statt hindurchzufahren
 - **Feste Hindernisse:** Bauzäune, Poller, Feuerdorn-Hecken und Außentische blockieren die Spielfigur und das gefahrene Auto
 - **Busse halten an Bushaltestellen:** acht Sekunden an jeder Haltestelle aus den Kartendaten (echte Linienwege gibt es in den Daten nicht)
 - **Außentische** mit Stühlen vor Bäckereien, Cafés, Imbissen und Eisdielen
