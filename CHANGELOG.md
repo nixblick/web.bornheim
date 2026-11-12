@@ -2,6 +2,7 @@
 
 ## 2026-11-12
 
+- **TG Bornheim** (Foto): Leuchtkreise und Schriftzug „TG BORNHEIM“ an der Hallenwand
 - **Gauben** auf flach eingetragenen Wohnhäusern ab 12 m: Reihe aus Schiefergauben mit Fenster an der Straßenseite (Foto ABG-Haus)
 - **Garagentore** (dunkle Schwingtore) an kleinen Nebengebäuden bis 4 m Höhe (Foto Kita Eulengasse)
 - **Torbögen** an Hausdurchfahrten: heller Rundbogen um die Öffnung (Foto Seckbacher Landstraße)
