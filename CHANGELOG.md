@@ -2,6 +2,10 @@
 
 ## 2026-11-12
 
+- **S-Bahn S1–S9** (OSM-Routen, Farben aus dem OSM-Tag, echter Streckenverlauf; tools/build_sbahn.py) im selben Netz wie die U-Bahn: Umsteigen an gemeinsamen Halten (Hauptwache, Konstablerwache, Hauptbahnhof, Südbahnhof …), Fahrt über Karte oder F an der Haltestelle; S-Bahn-Halte mit grünem S am Mast und Namensschild, ohne Bahnsteig
+- **Netz auf das Spielgebiet zugeschnitten:** 18 Linien, 105 Stationen; Halte ohne Kachel (Hohemark, Oberursel, Bad Homburg, Wiesbaden …) fallen weg, damit keine Fahrt im Leeren endet
+- Oberirdische Haltestellen werden vom Fahrbahnrand auf den Gehweg geschoben
+- Nachttest 12.11. 23:05: Fahrten Schweizer Platz, Südbahnhof, Lokalbahnhof, Höchst samt Aussteigen ohne Fehler, kein Schwimmen, Höhe = Gelände
 - **Frischlufteulen im Spiel (#61, erster Kunde):** Strecken nur aus dem Endpunkt frischlufteulen.de/api/spiel/strecken.json, keine ausgedachten Strecken; solange dort nichts freigegeben ist, bleibt alles aus (Datenwunsch: frischlufteulen.de-Ticket). Eine Strecke mit „Marathon“ im Namen wird die Marathon-Mission
   - Litfaßsäulen mit gezeichnetem Eulen-Plakat an bis zu vier Bushalten in der Nähe; F startet den Eulen-Lauf
   - Eulen-Marathon: grüne Säule am Start der Strecke, Wegpunkt-Ringe, Zeit, nur zu Fuß (Auto, Rad, Bahn oder Sprung = disqualifiziert), alle fünf Wegpunkte Verpflegung mit Speichern und +30 Leben
