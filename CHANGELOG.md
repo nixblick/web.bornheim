@@ -2,6 +2,10 @@
 
 ## 2026-11-12
 
+- **Kita-Stelen an allen Kitas:** auch an benannten Kita-Gebäuden ohne Kartenpunkt, bis 64 je Kachel; ohne passende Hauswand steht die Stele am Kartenpunkt
+- **Liniennummern an Bushaltestellen:** weißes Schild unter dem H mit den Linien, die dort halten (aus den OSM-Linien)
+- **Fix:** `data/busroutes.json` wurde nicht ausgerollt, live fuhren keine Linienbusse
+- **Rundgang** `tools/rundgang.mjs`: läuft nach jedem Deploy auf GitHub (Spielstart, Fehler, Bild als Artefakt); Modus `orte` springt zu festen Orten bei Tag und Nacht, lokal nur im Nachtfenster. Ungetestet, Test im Nachtfenster
 - **Echte Buslinien** aus OpenStreetMap (48 Stadtbus-Linienwege, u. a. M32, M34, M36, M43, 38): Busse fahren ihre Linie ab, halten an den Haltestellen der Linie und zeigen vorn Liniennummer und Ziel (`data/busroutes.json`, Stand 12.11.2026)
 - **Radwegweiser mit echten Zielen:** jeder Finger zeigt in Richtung eines der drei nächsten Stadtteile, mit echter Entfernung in Kilometern
 - **TG Bornheim** (Foto): Leuchtkreise und Schriftzug „TG BORNHEIM“ an der Hallenwand
