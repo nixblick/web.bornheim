@@ -351,7 +351,7 @@ function moveWithCollision(pos, dx, dz, r, y, extra) {
 const _allCanvasTex = [];
 const _lamCache = new Map(), _basCache = new Map(), WALL_MATS = new Map(), GF_MATS = new Map(), sharedEmissiveMats = [];
 let ROOF_MAT = null, TILE_ROOF_MAT = null, WALK_MAT = null, PATH_MAT = null, SIG_LENS_MAT = null, SPOT_GLOW_MAT = null, PTS_GLOW_MAT = null, SHELTER_GLASS_MAT = null, DORMER_GLASS_MAT = null;
-let TRUNK_G = null, CROWN_LOW_G = null, CROWN_HI_G = null, LAMP_G = null, LAMP_HEAD_G = null, LAMP_SPOT_G = null, SIG_LENS_G = null, SIG_POLE_G = null, SIG_BOX_G = null, BUSH_LOW_G = null, BUSH_HI_G = null;
+let WALL_WASH_MAT = null; let TRUNK_G = null, CROWN_LOW_G = null, CROWN_HI_G = null, LAMP_G = null, LAMP_HEAD_G = null, LAMP_SPOT_G = null, SIG_LENS_G = null, SIG_POLE_G = null, SIG_BOX_G = null, BUSH_LOW_G = null, BUSH_HI_G = null;
 function shLambert(col, side = THREE.FrontSide) {
   const k = col * 4 + side; let m = _lamCache.get(k);
   if (!m) { m = new THREE.MeshLambertMaterial({ color: col, side }); m.userData.shared = true; _lamCache.set(k, m); }
@@ -538,6 +538,7 @@ function groundTextures0(kind = 'res') {
     if (kind === 'school') { if (!emis) { ctx.fillStyle = '#8c4535'; ctx.fillRect(0, h - 3.0 * M, w, 3.0 * M); } for (let q = 0; q < 4; q++) { const x = (0.3 + q * 2.95) * M; if (emis) { if (Math.random() < 0.35) { ctx.fillStyle = '#dfe8f0'; ctx.fillRect(x, h - 2.7 * M, 2.6 * M, 2.4 * M); } continue; } ctx.fillStyle = '#e9e9e6'; ctx.fillRect(x - 0.08 * M, h - 2.78 * M, 2.76 * M, 2.5 * M); ctx.fillStyle = '#33404d'; ctx.fillRect(x, h - 2.7 * M, 2.6 * M, 2.4 * M); ctx.fillStyle = 'rgba(255,255,255,0.15)'; ctx.fillRect(x, h - 2.7 * M, 1.1 * M, 1.0 * M); } return; }
     if (kind === 'public') { door(4.6 * M, 2.4 * M, 2.5 * M, '#3b4a5a', true); win(0.8 * M, h - 2.6 * M, 2.4 * M, 1.6 * M, Math.random() < 0.5); win(8.5 * M, h - 2.6 * M, 2.4 * M, 1.6 * M, Math.random() < 0.5); return; }
     if (shop) { // Schaufenster + Markise + Tür
+      if (!emis) { ctx.fillStyle = '#8c5145'; ctx.fillRect(0, 0, w, h); ctx.fillStyle = '#7a4439'; for (let y = h - 3.3 * M; y < h; y += 0.45 * M) ctx.fillRect(0, y, w, 3); ctx.fillStyle = '#e8e4dc'; ctx.fillRect(8.2 * M, h - 2.9 * M, 1.5 * M, 2.5 * M); ctx.fillStyle = 'rgba(0,0,0,0.12)'; for (let y = h - 2.9 * M; y < h - 0.4 * M; y += 0.12 * M) ctx.fillRect(8.2 * M, y, 1.5 * M, 2); }
       if (!emis) { ctx.fillStyle = '#ddd4c4'; ctx.fillRect(0.6 * M, h - 2.8 * M, 7.0 * M, 2.4 * M); ctx.fillStyle = '#20283a'; ctx.fillRect(0.75 * M, h - 2.65 * M, 6.7 * M, 2.1 * M); ctx.fillStyle = 'rgba(255,255,255,0.12)'; ctx.fillRect(0.75 * M, h - 2.65 * M, 3 * M, 1 * M); ctx.fillStyle = pick(['#b03a3a', '#2f6b3a', '#2b3a67', '#c98a2a']); for (let x = 0.4 * M; x < 7.4 * M; x += 0.6 * M) ctx.fillRect(x, h - 3.1 * M, 0.3 * M, 0.35 * M); ctx.fillRect(0.4 * M, h - 3.1 * M, 7.0 * M, 0.12 * M); }
       else { ctx.fillStyle = '#ffe6b0'; ctx.fillRect(0.75 * M, h - 2.65 * M, 6.7 * M, 2.1 * M); }
       door(8.4 * M, 1.1 * M, 2.3 * M, '#4a3a2a', false); win(10.2 * M, h - 2.5 * M, 1.2 * M, 1.3 * M, Math.random() < 0.4); return;
@@ -891,7 +892,8 @@ const instRefs = [];
 let PARK_TG = null, PARK_LOW = null;
 // Wachen ohne Namen in OSM, Lage aus der Adresse (Nominatim) und Gebäudegröße: Feuer- und Rettungswache 2, Heinrichstraße 8; Lage per Google-Maps-Punkt bestätigt (50.107023, 8.651487), beide Gebäudeteile
 const WOELL = [[406, -503], [356, -491], [301, -479], [245, -468], [186, -459], [136, -457]]; // Wöllstädter Straße (OSM)
-const ZAPP = { x: -1288, z: 239, done: 0 }; // OSM-Punkt der Zappbar
+const SCHILDER = [ // Nasenschilder nach Fotos (OSM-Punkte): [x, z, Text, Grund, Schrift]
+  { x: -1288, z: 239, t: 'zappbar', bg: '#0e0e10', fg: '#f2f2f2' }, { x: 248, z: -488, t: 'CARAVAN', bg: '#efe9dc', fg: '#e8501c' }, { x: 191, z: -449, t: 'BÄCKEREI', bg: '#f2c230', fg: '#5a2a10', brezel: 1 }];
 const WACHE_OHNE_NAMEN = [[-4153, 2492], [-4136, 2487]];
 const WACHEN = []; // Mittelpunkte der Feuerwachen (aus dem Gebäudebau), dort parkt der Kommandowagen
 function buildParked() {
@@ -1173,9 +1175,9 @@ function* buildCity() {
   for (const b of CITY.buildings) { if (++YC % 10 === 0) yield;
     const kind = kindOf(b);
     if (kind === 'wache') WACHEN.push(centroidOf(b.p));
-    if (!ZAPP.done && pointInPoly(ZAPP.x, ZAPP.z, b.p)) { ZAPP.done = 1; let best = null; for (let i = 0; i < b.p.length; i++) { const [ax, az] = b.p[i], [bx, bz] = b.p[(i + 1) % b.p.length]; const l = Math.hypot(bx - ax, bz - az); if (l < 2) continue; const t = Math.max(0, Math.min(1, ((ZAPP.x - ax) * (bx - ax) + (ZAPP.z - az) * (bz - az)) / (l * l))); const px = ax + (bx - ax) * t, pz = az + (bz - az) * t; const d = Math.hypot(px - ZAPP.x, pz - ZAPP.z); if (!best || d < best.d) best = { d, px, pz, ux: (bx - ax) / l, uz: (bz - az) / l }; }
-      if (best) { const tex = canvasTex(256, 96, (c, w, h) => { c.fillStyle = '#0e0e10'; c.fillRect(0, 0, w, h); c.fillStyle = '#f2f2f2'; c.font = 'bold 58px sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('zappbar', w / 2, h / 2 + 2); }, 1, 1);
-        const sg = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.5, 1.3), [shLambert(0x0e0e10), shLambert(0x0e0e10), shLambert(0x0e0e10), shLambert(0x0e0e10), new THREE.MeshBasicMaterial({ map: tex }), new THREE.MeshBasicMaterial({ map: tex })]);
+    for (const ZAPP of SCHILDER) if (!ZAPP.done && pointInPoly(ZAPP.x, ZAPP.z, b.p)) { ZAPP.done = 1; let best = null; for (let i = 0; i < b.p.length; i++) { const [ax, az] = b.p[i], [bx, bz] = b.p[(i + 1) % b.p.length]; const l = Math.hypot(bx - ax, bz - az); if (l < 2) continue; const t = Math.max(0, Math.min(1, ((ZAPP.x - ax) * (bx - ax) + (ZAPP.z - az) * (bz - az)) / (l * l))); const px = ax + (bx - ax) * t, pz = az + (bz - az) * t; const d = Math.hypot(px - ZAPP.x, pz - ZAPP.z); if (!best || d < best.d) best = { d, px, pz, ux: (bx - ax) / l, uz: (bz - az) / l }; }
+      if (best) { const tex = canvasTex(256, 96, (c, w, h) => { c.fillStyle = ZAPP.bg; c.fillRect(0, 0, w, h); if (ZAPP.brezel) { c.strokeStyle = '#7a3a12'; c.lineWidth = 9; c.beginPath(); c.arc(w / 2 - 22, h / 2, 26, 0, 6.3); c.arc(w / 2 + 22, h / 2, 26, 3.14, 9.4); c.stroke(); } else { c.fillStyle = ZAPP.fg; c.font = 'bold 52px sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(ZAPP.t, w / 2, h / 2 + 2); } }, 1, 1);
+        const rand = shLambert(0x2a2a2a); const sg = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.5, 1.3), [rand, rand, rand, rand, new THREE.MeshBasicMaterial({ map: tex }), new THREE.MeshBasicMaterial({ map: tex })]);
         let nx = -best.uz, nz = best.ux; const [cx0, cz0] = centroidOf(b.p); if ((best.px - cx0) * nx + (best.pz - cz0) * nz < 0) { nx = -nx; nz = -nz; }
         sg.position.set(best.px + nx * 0.75, TH(best.px, best.pz) + 3.4, best.pz + nz * 0.75); sg.rotation.y = Math.atan2(nx, nz) + Math.PI / 2; scene.add(sg); } } // Zappbar, Frankfurter Kneipe (Fotos 12.11.2026)
     if (kind === 'messeturm' && !b._pyr) { b._pyr = 1; b.h = 170; const [mx, mz] = centroidOf(b.p); let rr = 0; for (const [x, z] of b.p) rr = Math.max(rr, Math.hypot(x - mx, z - mz));
@@ -1430,7 +1432,8 @@ function* buildCity() {
   // Lichtschein als additive Sprites
   const glowTex = GLOW_TEX || (GLOW_TEX = canvasTex(64, 64, (ctx, w, h) => { const gr = ctx.createRadialGradient(32, 32, 2, 32, 32, 32); gr.addColorStop(0, 'rgba(255,220,150,0.55)'); gr.addColorStop(1, 'rgba(255,220,150,0)'); ctx.fillStyle = gr; ctx.fillRect(0, 0, w, h); }));
   const ptsMat = PTS_GLOW_MAT || (PTS_GLOW_MAT = Object.assign(new THREE.PointsMaterial({ map: glowTex, size: 4.5, sizeAttenuation: true, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true }), { userData: { shared: true } }));
-  let pts = null; { const gp = new Float32Array(lamps.length * 3); lamps.forEach(([x, z], i) => { gp[i * 3] = x; gp[i * 3 + 1] = 4.6 + TH(x, z); gp[i * 3 + 2] = z; }); const gg = new THREE.BufferGeometry(); gg.setAttribute('position', new THREE.BufferAttribute(gp, 3)); pts = new THREE.Points(gg, ptsMat); scene.add(pts); nightOnly.push(pts); }
+  let pts = null; { const gp = new Float32Array(lamps.length * 3); lamps.forEach(([x, z], i) => { gp[i * 3] = x; gp[i * 3 + 1] = 4.6 + TH(x, z); gp[i * 3 + 2] = z; }); const gg = new THREE.BufferGeometry(); gg.setAttribute('position', new THREE.BufferAttribute(gp, 3)); pts = new THREE.Points(gg, ptsMat); scene.add(pts); nightOnly.push(pts);
+    const wash = new THREE.Points(gg.clone(), WALL_WASH_MAT || (WALL_WASH_MAT = Object.assign(new THREE.PointsMaterial({ map: glowTex, size: 14, sizeAttenuation: true, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, opacity: 0.35, color: 0xffd9a0 }), { userData: { shared: true } }))); wash.position.y = -1.4; scene.add(wash); nightOnly.push(wash); } // warmer Schein an der Hauswand (Nachtfoto Wöllstädter Straße)
   // Lichtflecken auf dem Boden
   const spotG = LAMP_SPOT_G || (LAMP_SPOT_G = (() => { const g = new THREE.CircleGeometry(6, 14); g.rotateX(-Math.PI / 2); g.userData.shared = true; return g; })());
   const spotMat = SPOT_GLOW_MAT || (SPOT_GLOW_MAT = Object.assign(new THREE.MeshBasicMaterial({ color: 0xffc77a, map: glowTex, transparent: true, opacity: 0.55, blending: THREE.AdditiveBlending, depthWrite: false }), { userData: { shared: true } }));

@@ -58,6 +58,25 @@ export function initInteriors(X, W, D, SH) {
   }
   function roofSpot(b) { const cx = b.p.reduce((a, p) => a + p[0], 0) / b.p.length, cz = b.p.reduce((a, p) => a + p[1], 0) / b.p.length; for (const t of [1, 0.7, 0.5, 0.3]) { const x = b.p[0][0] + (cx - b.p[0][0]) * t, z = b.p[0][1] + (cz - b.p[0][1]) * t; if (WORLD.buildings[solidAt(x, z)] === b) return [x, z, roofHeight(b, x, z) + 0.05]; } return null; }
 
+  // ---------- Zappbar von innen (Fotos 12.11.2026): langer Tresen, Barhocker, Hängelampen, Poster, Schachtisch ----------
+  const ZAPP_P = [-1288, 239];
+  function kneipe(door) {
+    const R = room('pub', 7, 3.5, 3.0, { floorTex: tileTex('#5a2e2a', '#4a2522'), wallCol: 0x6b3a2c, ceilCol: 0x8a5a3a }); const g = R.g; const holz = M(0x3a2216, 0.25), leder = M(0x5a1e1e, 0.3);
+    box(g, 9, 1.1, 0.7, 0.5, 0.55, 1.8, holz); R.walls.push([-4.1, 1.4, 5.1, 2.2]); box(g, 9, 0.06, 0.9, 0.5, 1.12, 1.8, M(0x2a1a10, 0.3)); // Tresen
+    for (let x = -3.5; x <= 4.5; x += 1.0) { box(g, 0.08, 0.75, 0.08, x, 0.38, 1.1, M(0x1a1a1a, 0.2)); box(g, 0.38, 0.06, 0.38, x, 0.78, 1.1, leder); }
+    for (let i = 0; i < 18; i++) box(g, 0.08, 0.3, 0.08, -3.8 + i * 0.5, 1.6, 3.35, M([0x2f6b2f, 0x7a3a12, 0xc8a050, 0x3a4a8a][i % 4], 0.5)); // Flaschenregal
+    const lampe = new THREE.MeshBasicMaterial({ color: 0xffb860 }); for (let x = -3; x <= 4; x += 1.75) { const l = new THREE.Mesh(new THREE.SphereGeometry(0.2, 10, 8), lampe); l.scale.y = 1.5; l.position.set(PX + x, 2.3, PZ + 1.5); g.add(l); }
+    const pc = ['#d8b070', '#3a3a3a', '#a03a2a', '#e8d8b8', '#2a4a6a']; for (let i = 0; i < 7; i++) panel(g, signTex(['ROCK', 'BLUES', 'zappbar', 'LIVE', 'VINYL', '1968', 'JAM'][i], pc[i % 5], '#111'), 1.2, 0.9, -6 + i * 1.9, 2.1, -3.48, 0);
+    panel(g, signTex('zappbar', '#0e0e10', '#f2f2f2'), 3.2, 0.7, -5, 2.5, 3.48, Math.PI);
+    box(g, 1.8, 0.75, 0.9, -4.5, 0.38, -2.2, holz); R.walls.push([-5.4, -2.7, -3.6, -1.7]); // Schachtisch
+    const brett = canvasTex(64, 64, (c, w) => { for (let y = 0; y < 8; y++) for (let x = 0; x < 8; x++) { c.fillStyle = (x + y) % 2 ? '#5a3a22' : '#ece4d0'; c.fillRect(x * 8, y * 8, 8, 8); } }, 1, 1);
+    for (const x of [-5.0, -4.0]) { const p = new THREE.Mesh(new THREE.PlaneGeometry(0.6, 0.6), new THREE.MeshLambertMaterial({ map: brett })); p.rotation.x = -Math.PI / 2; p.position.set(PX + x, 0.77, PZ - 2.2); g.add(p); }
+    box(g, 4, 0.5, 0.6, 3, 0.25, -3.1, leder); box(g, 4, 0.8, 0.12, 3, 0.7, -3.4, leder); // Sitzbank
+    const wirt = makeHuman(false, { top: 0x111111 }); wirt.position.set(PX + 1, 0, PZ + 2.6); wirt.rotation.y = Math.PI; g.add(wirt); try { playAnim(wirt, 'idle'); } catch (e) {} R.npc = [wirt];
+    trig(R, 1, 1.0, 1.4, 'F · Ein Bier bestellen (3 €)', () => { if (player.money >= 3) { player.money -= 3; if (player.hp !== undefined) player.hp = Math.min(100, player.hp + 5); sfx('click', 0.5); } });
+    trig(R, 0, -3.5 + 0.9, 1.2, 'F · Raus auf die Straße', leave);
+    enter(R, [0, -2.4], 0, door, 'Zappbar');
+  }
   // ---------- Laden von innen ----------
   const SIZE = { super: [12, 8, 3.6], kiosk: [3.5, 3, 3], food: [6, 4.5, 3.2], bakery: [4.5, 3.5, 3.1], pharmacy: [5, 4, 3.2], hardware: [11, 8, 4.2], sports: [7, 5, 3.4] };
   const PROD = [0xd94b3b, 0x3f8fd2, 0xf2c94c, 0x5cb85c, 0xe67e22, 0x9b59b6, 0xecf0f1, 0x1abc9c, 0x8e5a3c];
@@ -262,6 +281,7 @@ export function initInteriors(X, W, D, SH) {
     const m = nearMetro(); if (m) { curT = { label: `F · ${m.under ? 'U-Bahn' : 'Bahn'} ${m.s.name} (${m.s.lines.join(', ')})`, act: () => { if (m.under) { const [fx, fz] = outside(m.p[0] + 2.2, m.p[1] + 2.2); station(m.s, { x: fx, z: fz, yaw: camYaw.v + Math.PI }); } else travelMenu(m.s); } }; return curT.label; }
     if (SH.near) { const s = SH.near; curT = { label: `F · ${s.name} betreten`, act: () => { if (player.wanted > 0) { showMsg('POLIZEI SUCHT DICH – KEIN EINKAUF', 1200); return; } shop(s, { x: player.pos.x, z: player.pos.z, yaw: camYaw.v + Math.PI }); } }; return curT.label; }
     const r = onRoof(); if (r) { curT = { label: 'F · Treppenhaus (runter)', act: () => { const ne = nearestEdge(player.pos.x, player.pos.z, 60); let ex = player.pos.x, ez = player.pos.z; if (ne) { const e = edgeNormal(ne.b.p, ne.e); const mx = e.ax + e.dx / 2, mz = e.az + e.dz / 2; const cx = r.p.reduce((a, p) => a + p[0], 0) / r.p.length, cz = r.p.reduce((a, p) => a + p[1], 0) / r.p.length; const sg = (mx - cx) * e.nx + (mz - cz) * e.nz > 0 ? 1 : -1; [ex, ez] = D.freeSpot(mx + e.nx * sg * 1.5, mz + e.nz * sg * 1.5, 1.5); } stairwell(r, { x: ex, z: ez, yaw: camYaw.v }); } }; return curT.label; }
+    if (Math.hypot(player.pos.x - ZAPP_P[0], player.pos.z - ZAPP_P[1]) < 7) { curT = { label: 'F · Zappbar betreten', act: () => kneipe({ x: player.pos.x, z: player.pos.z, yaw: camYaw.v + Math.PI }) }; return curT.label; }
     const h = nearHouse(); if (h) { curT = { label: 'F · Hauseingang', act: () => stairwell(h, { x: player.pos.x, z: player.pos.z, yaw: camYaw.v + Math.PI }) }; return curT.label; }
     return null;
   }
