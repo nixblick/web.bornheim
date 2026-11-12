@@ -2,6 +2,9 @@
 
 ## 2026-11-12
 
+- **E-Auto als Taxi und Streifenwagen:** Taxi hellelfenbein mit gelbem Dachschild; Streifenwagen nach Foto vom Uhrtürmchen (Stadtpolizei): weiß, breites blaues Seitenband, neongelbes Heck; Polizei nimmt halb das E-Auto, Spielstände mit Polizeiwagen laden weiter
+- **Fahrbahn:** Mittelstreifen verblasst mit Abrieb statt grellem Weiß, runde Kanaldeckel in der Fahrspur, Straßenabläufe am Bordstein (je zwei Meshes für alles)
+- **Uhrtürmchen nach Foto neu:** schlanke dunkelgraue Vierkantsäule auf Granitsockel, kleiner Uhrkopf mit vier weißen Zifferblättern, flache Spitze statt Sandstein und Kupferdach
 - **Eigenes E-Auto als häufigstes Auto:** markenfrei im Code gezeichnet (kein Modell aus dem Netz, keine Lizenzfrage), rund 3.000 Dreiecke: Crossover mit Fastback, schwebendem Dach über dunklem Glashaus, durchgehenden LED-Leisten vorn (weiß) und hinten (rot), Diffusor, Dachspoiler, Aero-Felgen mit fünf Speichen. Läuft über dieselben Wege wie die anderen Autos (Wagenfarbe, Scheinwerfer, Bremslicht, Radumdrehung, geparkte Instanzen). Eine von Kia stammende ev6.glb (618.000 Dreiecke, Lizenz unbekannt) wurde bewusst nicht übernommen
 - **Fahrbahn gezeichnet:** Asphalt mit feinem Splitt, vergossenen Rissen, zwei Flickstellen und einem Ölfleck statt der einheitlichen Fototextur; ein Bild für 8 x 8 m, gleiche mittlere Helligkeit wie vorher (#5a5a55), Normal-Map bleibt
 - Ungetestet im Spiel; Auto und Fahrbahnbild einzeln angesehen

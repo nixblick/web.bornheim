@@ -15,9 +15,9 @@ export function initLandmarks(X) {
 
   function drawClock(c, w, h) {
     const d = new Date(), m = d.getMinutes(), hr = d.getHours() % 12 + m / 60;
-    c.fillStyle = '#1d2a22'; c.fillRect(0, 0, w, h);
+    c.fillStyle = '#3a3d42'; c.fillRect(0, 0, w, h);
     c.fillStyle = '#f4efe2'; c.beginPath(); c.arc(w / 2, h / 2, w * 0.44, 0, Math.PI * 2); c.fill();
-    c.strokeStyle = '#b08a3a'; c.lineWidth = 8; c.stroke();
+    c.strokeStyle = '#2a2c30'; c.lineWidth = 8; c.stroke();
     c.strokeStyle = '#1b1b1b';
     for (let i = 0; i < 60; i++) { const a = i / 60 * Math.PI * 2, r1 = w * (i % 5 ? 0.40 : 0.355), r2 = w * 0.42; c.lineWidth = i % 5 ? 2 : 7;
       c.beginPath(); c.moveTo(w / 2 + Math.sin(a) * r1, h / 2 - Math.cos(a) * r1); c.lineTo(w / 2 + Math.sin(a) * r2, h / 2 - Math.cos(a) * r2); c.stroke(); }
@@ -26,28 +26,23 @@ export function initLandmarks(X) {
     c.fillStyle = '#b08a3a'; c.beginPath(); c.arc(w / 2, h / 2, 9, 0, Math.PI * 2); c.fill();
   }
 
-  function build() {
+  function build() { // nach Andrés Foto vom 12.11.2026: schlanke, dunkelgraue Vierkantsäule auf Granitsockel, kleiner Uhrkopf, flache Spitze
     const g = new THREE.Group();
-    const stein = L(0xb9a48a, 0.12), eisen = L(0x2f4a3a, 0.12), dach = L(0x5f8f7c, 0.18), gold = L(0xc9a24a, 0.35);
-    // Sockel aus Sandstein, achteckig, mit Stufe
-    g.add(lathe([[0, 0], [1.5, 0], [1.5, 0.25], [1.3, 0.3], [1.15, 0.35], [1.15, 1.2], [1.3, 1.3], [1.3, 1.42], [0, 1.42]], 8, stein));
-    // Gusseiserne Säule mit Wulst und Kapitell
-    g.add(lathe([[0, 0], [0.42, 0], [0.42, 0.12], [0.3, 0.25], [0.24, 0.5], [0.22, 2.6], [0.3, 2.75], [0.24, 2.85], [0.24, 3.4], [0.5, 3.6], [0.55, 3.75], [0, 3.75]], 16, eisen, 1.42));
-    // Uhrgehäuse, vier Zifferblätter
+    const granit = L(0x8d8983, 0.1), grau = L(0x4b4f55, 0.12), dunkel = L(0x3a3d42, 0.12);
+    // Granitsockel, zweistufig, quadratisch
+    { const s1 = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.3, 1.5), granit); s1.position.y = 0.15; s1.castShadow = true; g.add(s1); const s2 = new THREE.Mesh(new THREE.BoxGeometry(1.15, 0.35, 1.15), granit); s2.position.y = 0.47; g.add(s2); }
+    // Vierkantsäule, nach oben leicht verjüngt, mit Fuß- und Kopfprofil (Drehkörper mit 4 Seiten = Vierkant)
+    { const p = lathe([[0, 0], [0.55, 0], [0.55, 0.18], [0.45, 0.3], [0.4, 0.4], [0.32, 3.2], [0.42, 3.3], [0.42, 3.42], [0, 3.42]], 4, grau, 0.65); p.rotation.y = Math.PI / 4; g.add(p); }
+    // Uhrkopf mit vier weißen Zifferblättern
     clockTex = canvasTex(256, 256, drawClock); clockTex.wrapS = clockTex.wrapT = THREE.ClampToEdgeWrapping; lastMin = new Date().getMinutes();
     const face = new THREE.MeshBasicMaterial({ map: clockTex });
-    const kasten = new THREE.Mesh(new THREE.BoxGeometry(1.25, 1.35, 1.25), eisen); kasten.position.y = 5.85; kasten.castShadow = true; g.add(kasten);
-    const fg = new THREE.PlaneGeometry(1.0, 1.0);
-    for (let i = 0; i < 4; i++) { const f = new THREE.Mesh(fg, face); const a = i * Math.PI / 2; f.position.set(Math.sin(a) * 0.63, 5.85, Math.cos(a) * 0.63); f.rotation.y = a; g.add(f); }
-    // Gesims, vierseitiges Spitzdach (Kupfer, grün), goldene Spitze
-    const ges = new THREE.Mesh(new THREE.BoxGeometry(1.45, 0.14, 1.45), eisen); ges.position.y = 6.58; g.add(ges);
-    const d = new THREE.Mesh(new THREE.ConeGeometry(1.05, 1.5, 4), dach); d.position.y = 7.4; d.rotation.y = Math.PI / 4; d.castShadow = true; g.add(d);
-    g.add(lathe([[0, 0], [0.07, 0], [0.07, 0.25], [0.14, 0.32], [0.07, 0.42], [0.03, 0.85], [0, 0.95]], 8, gold, 8.1));
-    // Laternenarme mit warmem Licht (unbeleuchtetes Material, leuchtet auch nachts ohne Lichtquelle)
-    const glas = new THREE.MeshBasicMaterial({ color: 0xffe2a0 });
-    for (let i = 0; i < 4; i++) { const a = i * Math.PI / 2 + Math.PI / 4;
-      const arm = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.06, 0.7), eisen); arm.position.set(Math.sin(a) * 0.45, 4.3, Math.cos(a) * 0.45); arm.rotation.y = a; g.add(arm);
-      const lamp = lathe([[0, 0], [0.12, 0.02], [0.14, 0.22], [0.08, 0.3], [0, 0.32]], 6, glas, 3.98); lamp.position.x = Math.sin(a) * 0.8; lamp.position.z = Math.cos(a) * 0.8; g.add(lamp); }
+    const kasten = new THREE.Mesh(new THREE.BoxGeometry(0.95, 0.95, 0.95), dunkel); kasten.position.y = 4.55; kasten.castShadow = true; g.add(kasten);
+    const fg = new THREE.PlaneGeometry(0.78, 0.78);
+    for (let i = 0; i < 4; i++) { const f = new THREE.Mesh(fg, face); const a = i * Math.PI / 2; f.position.set(Math.sin(a) * 0.48, 4.55, Math.cos(a) * 0.48); f.rotation.y = a; g.add(f); }
+    // Gesims und flache Pyramidenspitze mit kleinem Knauf
+    const ges = new THREE.Mesh(new THREE.BoxGeometry(1.12, 0.1, 1.12), dunkel); ges.position.y = 5.08; g.add(ges);
+    const d = new THREE.Mesh(new THREE.ConeGeometry(0.78, 0.7, 4), grau); d.position.y = 5.48; d.rotation.y = Math.PI / 4; d.castShadow = true; g.add(d);
+    const kn = new THREE.Mesh(new THREE.SphereGeometry(0.07, 8, 6), dunkel); kn.position.y = 5.87; g.add(kn);
     g.position.set(poi.x, TH(poi.x, poi.z), poi.z);
     scene.add(g); return g;
   }
