@@ -46,3 +46,10 @@
   #menu.mn .mn-board,#menu.mn .mn-cards{grid-template-columns:1fr}
   #menu.mn .mn-foot{display:none}
 }
+/* Runde 2: Abstände, Knöpfe einzeilig, Einstellungen als Zeilen, kurze Beschriftung schmal */
+#menu.mn .mn-cards{margin-bottom:18px}
+#menu.mn .mn-acts .row2{display:flex!important;grid-template-columns:none}
+#menu.mn .mn-acts button{white-space:nowrap;display:inline-flex;align-items:center;gap:6px}
+#menu.mn .pane:not(.mn-board):not([data-tab=karte]):not(.help) label{margin:0;padding:11px 4px;border-bottom:1px solid var(--mn-line)}
+#menu.mn .mn-nav .s{display:none}
+@container mn (max-width:900px){#menu.mn .mn-nav .l{display:none}#menu.mn .mn-nav .s{display:inline}}

@@ -16,6 +16,7 @@ export function initMenuNeu(X, S) {
 
   // Hauptpunkte: welche Seiten (data-tab) zu welchem Punkt gehören
   const SET = ['schnell', 'grafik', 'kamera', 'welt', 'spiel', 'ton', 'hilfe'];
+  /** @type {[string, string, string[]][]} */
   const MAIN = [['uebersicht', 'Übersicht', ['uebersicht']], ['karte', 'Karte', ['karte']], ['story', 'Missionen', ['story']], ['fortschritt', 'Statistik', ['fortschritt']], ['einst', 'Einstellungen', SET]];
   let lastSet = 'schnell';
 
@@ -23,7 +24,7 @@ export function initMenuNeu(X, S) {
   const top = el('header', 'mn-top');
   top.append(el('div', 'mn-title', '<span class="mn-eyebrow">Frankfurt · Bornheim</span><b>Pause</b>'));
   const nav = el('nav', 'mn-nav');
-  for (const [id, label] of MAIN) { const b = el('button', 'mn-main'); b.type = 'button'; b.dataset.main = id; b.textContent = label; b.onclick = () => X.menuTab && X.menuTab(id === 'einst' ? lastSet : id); nav.append(b); }
+  for (const [id, label] of MAIN) { const b = el('button', 'mn-main'); b.type = 'button'; b.dataset.main = id; const l = el('span', 'l'), sh = el('span', 's'); l.textContent = label; sh.textContent = id === 'einst' ? 'Optionen' : label; b.append(l, sh); b.onclick = () => X.menuTab && X.menuTab(id === 'einst' ? lastSet : id); nav.append(b); }
   top.append(nav);
   const resume = $('m_resume'); if (resume) { resume.classList.add('mn-resume'); top.append(resume); }
 
@@ -49,7 +50,7 @@ export function initMenuNeu(X, S) {
 
   // Hervorhebung: Hauptpunkt nach sichtbarer Seite, Reiterzeile nur unter Einstellungen
   function sync() {
-    const vis = [...opts.querySelectorAll('.pane')].find(p => p.style.display !== 'none');
+    const vis = /** @type {HTMLElement[]} */ ([...opts.querySelectorAll('.pane')]).find(p => p.style.display !== 'none');
     const tab = vis ? vis.dataset.tab : 'uebersicht';
     const main = (MAIN.find(m => m[2].includes(tab)) || MAIN[0])[0];
     if (main === 'einst') lastSet = tab;
