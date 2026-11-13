@@ -134,34 +134,37 @@
  {
   "n": "eschenheim_hoehe",
   "x": -2138,
-  "z": 1509,
+  "z": 1589,
   "tx": -2138,
   "tz": 1389,
-  "pitch": 0.2,
+  "pitch": 0.1,
   "wait": 6000,
   "js": "(async () => { window.__last = await (async () => { const G = window.G, T = G.THREE; await new Promise(r => setTimeout(r, 2500)); const g = G.scene.children.find(o => o.isGroup && o.userData.mats && Math.hypot(o.position.x - (-2138), o.position.z - (1389)) < 60); if (!g) return 'kein Modell'; const bb = new T.Box3().setFromObject(g); return JSON.stringify({ hoehe_m: +(bb.max.y - g.position.y).toFixed(1) }); })(); return window.__last; })()",
-  "expect": "(() => { try { const h = JSON.parse(window.__last).hoehe_m; return h >= 47 && h <= 49; } catch (e) { return false; } })()"
+  "expect": "(() => { try { const h = JSON.parse(window.__last).hoehe_m; return h >= 47 && h <= 49; } catch (e) { return false; } })()",
+  "y": 60
  },
  {
   "n": "dom_hoehe",
   "x": -1735,
-  "z": 2207,
+  "z": 2287,
   "tx": -1735,
   "tz": 2087,
-  "pitch": 0.2,
+  "pitch": 0.1,
   "wait": 6000,
   "js": "(async () => { window.__last = await (async () => { const G = window.G, T = G.THREE; await new Promise(r => setTimeout(r, 2500)); const g = G.scene.children.find(o => o.isGroup && o.userData.mats && Math.hypot(o.position.x - (-1735), o.position.z - (2087)) < 60); if (!g) return 'kein Modell'; const bb = new T.Box3().setFromObject(g); return JSON.stringify({ hoehe_m: +(bb.max.y - g.position.y).toFixed(1) }); })(); return window.__last; })()",
-  "expect": "(() => { try { const h = JSON.parse(window.__last).hoehe_m; return h >= 94 && h <= 96; } catch (e) { return false; } })()"
+  "expect": "(() => { try { const h = JSON.parse(window.__last).hoehe_m; return h >= 94 && h <= 96; } catch (e) { return false; } })()",
+  "y": 60
  },
  {
   "n": "pauls_hoehe",
   "x": -2066,
-  "z": 2151,
+  "z": 2231,
   "tx": -2066,
   "tz": 2031,
-  "pitch": 0.2,
+  "pitch": 0.1,
   "wait": 6000,
   "js": "(async () => { window.__last = await (async () => { const G = window.G, T = G.THREE; await new Promise(r => setTimeout(r, 2500)); const g = G.scene.children.find(o => o.isGroup && o.userData.mats && Math.hypot(o.position.x - (-2066), o.position.z - (2031)) < 60); if (!g) return 'kein Modell'; const bb = new T.Box3().setFromObject(g); return JSON.stringify({ hoehe_m: +(bb.max.y - g.position.y).toFixed(1) }); })(); return window.__last; })()",
-  "expect": "(() => { try { const h = JSON.parse(window.__last).hoehe_m; return h >= 50 && h <= 60; } catch (e) { return false; } })()"
+  "expect": "(() => { try { const h = JSON.parse(window.__last).hoehe_m; return h >= 50 && h <= 60; } catch (e) { return false; } })()",
+  "y": 60
  }
 ]
