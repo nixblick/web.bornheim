@@ -1,0 +1,165 @@
+[
+{
+"n": "selbsttest_start",
+"shot": false,
+"wait": 3000,
+"js": "(window.__st='läuft', import('/tools/selftest.js?'+Date.now()).then(()=>import('/tools/laufen.js?'+Date.now())).then(async()=>{const a=await T.checks(); const b=await T.laufen(); window.__st=[...a,...b]; T.clear();}).catch(e=>window.__st='EXC '+e), 'gestartet')"
+},
+{
+"n": "selbsttest_0",
+"shot": false,
+"wait": 45000,
+"js": "typeof window.__st==='string'?window.__st:(window.__st.length+' Punkte, rot: '+window.__st.filter(r=>!r.ok).map(r=>r.name+' ['+r.detail+']').join(' | '))"
+},
+{
+"n": "selbsttest_1",
+"shot": false,
+"wait": 45000,
+"js": "typeof window.__st==='string'?window.__st:(window.__st.length+' Punkte, rot: '+window.__st.filter(r=>!r.ok).map(r=>r.name+' ['+r.detail+']').join(' | '))"
+},
+{
+"n": "selbsttest_2",
+"shot": false,
+"wait": 45000,
+"js": "typeof window.__st==='string'?window.__st:(window.__st.length+' Punkte, rot: '+window.__st.filter(r=>!r.ok).map(r=>r.name+' ['+r.detail+']').join(' | '))"
+},
+{
+"n": "selbsttest_3",
+"shot": false,
+"wait": 45000,
+"js": "typeof window.__st==='string'?window.__st:(window.__st.length+' Punkte, rot: '+window.__st.filter(r=>!r.ok).map(r=>r.name+' ['+r.detail+']').join(' | '))"
+},
+{
+"n": "dom_mess",
+"x": -1706.7678763302483,
+"z": 2128.266780745484,
+"wait": 12000,
+"shot": false,
+"js": "(async()=>{ T.unsnap(); return JSON.stringify(await (await import('/tools/proben/wz.js?'+Date.now())).wz('dom')); })()"
+},
+{
+"n": "oper_400m",
+"x": -2482,
+"z": 1148,
+"wait": 10000,
+"js": "T.snap(-2482,window.G.player.pos.y+45,1148,-2688,window.G.TH(-2688,1491)+10,1491)"
+},
+{
+"n": "oper_400m_unsnap",
+"shot": false,
+"wait": 100,
+"js": "T.unsnap()"
+},
+{
+"n": "roemer_400m",
+"x": -1799,
+"z": 1766,
+"wait": 10000,
+"js": "T.snap(-1799,window.G.player.pos.y+45,1766,-2005,window.G.TH(-2005,2109)+6,2109)"
+},
+{
+"n": "roemer_400m_unsnap",
+"shot": false,
+"wait": 100,
+"js": "T.unsnap()"
+},
+{
+"n": "dom_400m",
+"x": -1529,
+"z": 1744,
+"wait": 10000,
+"js": "T.snap(-1529,window.G.player.pos.y+45,1744,-1735,window.G.TH(-1735,2087)+20,2087)"
+},
+{
+"n": "dom_400m_unsnap",
+"shot": false,
+"wait": 100,
+"js": "T.unsnap()"
+},
+{
+"n": "pauls_400m",
+"x": -1860,
+"z": 1688,
+"wait": 10000,
+"js": "T.snap(-1860,window.G.player.pos.y+45,1688,-2066,window.G.TH(-2066,2031)+15,2031)"
+},
+{
+"n": "pauls_400m_unsnap",
+"shot": false,
+"wait": 100,
+"js": "T.unsnap()"
+},
+{
+"n": "coba_400m",
+"x": -2312,
+"z": 1682,
+"wait": 10000,
+"js": "T.snap(-2312,window.G.player.pos.y+45,1682,-2518,window.G.TH(-2518,2025)+60,2025)"
+},
+{
+"n": "coba_400m_unsnap",
+"shot": false,
+"wait": 100,
+"js": "T.unsnap()"
+},
+{
+"n": "main_400m",
+"x": -2469,
+"z": 1537,
+"wait": 10000,
+"js": "T.snap(-2469,window.G.player.pos.y+45,1537,-2675,window.G.TH(-2675,1880)+50,1880)"
+},
+{
+"n": "main_400m_unsnap",
+"shot": false,
+"wait": 100,
+"js": "T.unsnap()"
+},
+{
+"n": "westend_400m",
+"x": -3168,
+"z": 1755,
+"wait": 10000,
+"js": "T.snap(-3168,window.G.player.pos.y+45,1755,-3374,window.G.TH(-3374,2098)+50,2098)"
+},
+{
+"n": "westend_400m_unsnap",
+"shot": false,
+"wait": 100,
+"js": "T.unsnap()"
+},
+{
+"n": "euro_400m",
+"x": -2344,
+"z": 1868,
+"wait": 10000,
+"js": "T.snap(-2344,window.G.player.pos.y+45,1868,-2550,window.G.TH(-2550,2211)+35,2211)"
+},
+{
+"n": "euro_400m_unsnap",
+"shot": false,
+"wait": 100,
+"js": "T.unsnap()"
+},
+{
+"n": "trianon_400m",
+"x": -2856,
+"z": 1515,
+"wait": 10000,
+"js": "T.snap(-2856,window.G.player.pos.y+45,1515,-3062,window.G.TH(-3062,1858)+45,1858)"
+},
+{
+"n": "trianon_400m_unsnap",
+"shot": false,
+"wait": 100,
+"js": "T.unsnap()"
+},
+{
+"n": "fsv_zaun",
+"x": 948,
+"z": 300,
+"wait": 20000,
+"shot": false,
+"js": "(()=>{ const G=window.G; const B=G.WORLD.buildings.find(b=>b&&b._stad&&b._stad.s<1); if(!B) return 'kein FSV'; const S=B._stad; const a=Math.PI/4, dx=Math.sin(a), dz=Math.cos(a), t=1/Math.hypot(dx/S.rx,dz/S.rz); const r=[]; for (let s=0; s<=5; s+=0.5) { const x=S.mx+dx*(t+s), z=S.mz+dz*(t+s); r.push(s+':'+G.solidAt(x,z)+(G.barrierHit(x,z,0.35,G.TH(x,z))?'Z':'')); } return r.join(' '); })()"
+}
+]

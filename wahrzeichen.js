@@ -69,8 +69,8 @@ function core(e, W, D) {
   if (e.id === 'oper') { const rw = W * 0.44, a = W / 2, f = rw / 2, z2 = D / 2 + 4.9; // Hauptkörper und Mittelrisalit
     return [[[-a, -D / 2], [a, -D / 2], [a, D / 2], [f, D / 2], [f, z2], [-f, z2], [-f, D / 2], [-a, D / 2]], 20]; }
   if (e.id === 'roemer') return [rect(W, D), 12];
-  if (e.id === 'dom') { const nw = Math.min(W * 0.42, 26), zq = -D * 0.05, a = nw / 2, b = W / 2, zt = D / 2 - 18, t = 9.5; // Langhaus, Querhaus 11 m, Westturm 19 m
-    return [[[-a, -D / 2], [a, -D / 2], [a, zq - 5.5], [b, zq - 5.5], [b, zq + 5.5], [a, zq + 5.5], [a, zt], [t, zt], [t, D / 2], [-t, D / 2], [-t, zt], [-a, zt], [-a, zq + 5.5], [-b, zq + 5.5], [-b, zq - 5.5], [-a, zq - 5.5]], 23]; }
+  if (e.id === 'dom') { const nw = Math.min(W * 0.42, 26), zq = -D * 0.05, a = nw / 2, b = W / 2, zt = D / 2 - 18, t = 9.5; // Langhaus, Querhaus 11 m, Westturm 19 × 19 m (Front bei D/2 + 0,5 wie mk)
+    return [[[-a, -D / 2], [a, -D / 2], [a, zq - 5.5], [b, zq - 5.5], [b, zq + 5.5], [a, zq + 5.5], [a, zt], [t, zt], [t, D / 2 + 0.5], [-t, D / 2 + 0.5], [-t, zt], [-a, zt], [-a, zq + 5.5], [-b, zq + 5.5], [-b, zq - 5.5], [-a, zq - 5.5]], 23]; }
   if (e.id === 'pauls') { const rx = Math.min(20, W / 2), rz = 15, z0 = -D / 2 + rz + 0.5, tz = Math.min(D / 2 - 5, z0 + rz + 3);
     const inside = (x, z) => ((x / rx) ** 2 + ((z - z0) / rz) ** 2 <= 1) || (Math.abs(x) <= 5.5 && Math.abs(z - tz) <= 5.5);
     return [star(inside, 0, Math.max(z0, tz - 5), 60), 28]; }
