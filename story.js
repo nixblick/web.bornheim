@@ -201,7 +201,7 @@ export function initStory(X, W, D, F) {
   function setMarkObj(o) { if (markObj !== o) { markObj = o; mark = [o.position.x, o.position.z]; gps = null; gpsT = 0; } else mark = [o.position.x, o.position.z]; }
   X.listeners.push((ev) => { if (ev === 'busted' && S.state === 'active' && chapActive) failChapter('Du wurdest festgenommen.');
         // Demo gebildet oder beigetreten: Story 1 nicht mehr ungefragt starten (das sperrte mitten im Spiel die Waffen), nur einmal hinweisen und den Weg zeigen
-    if ((ev === 'demoFormed' || ev === 'joinedDemo') && S.state !== 'active' && !S1.finishedAll && !S1.declined && !S1.done.length && !S1.hinted) { S1.hinted = true; persist(); X.card('STORY 1 · BORNHEIM BLEIBT', 'Esc › Story wählen – oder zum lila B am Uhrtürmchen (gelber Strahl)', 6); if (!intro) { intro = true; introT = 180; setMark(UHR); setObj('Zur <b>Story</b>: dem gelben Strahl zum lila <b>B</b> folgen · oder Esc › Story wählen'); } } });
+    if ((ev === 'demoFormed' || ev === 'joinedDemo') && S.state !== 'active' && !S1.finishedAll && !S1.declined && !S1.done.length && !S1.hinted) { S1.hinted = true; persist(); X.card('STORY 1 · BORNHEIM BLEIBT', 'Esc › Missionen – oder zum lila B am Uhrtürmchen (gelber Strahl)', 6); if (!intro) { intro = true; introT = 180; setMark(UHR); setObj('Zur <b>Story</b>: dem gelben Strahl zum lila <b>B</b> folgen · oder Esc › Missionen'); } } });
 
   // ---------- Menü ----------
   function renderMenu() { const el = $('storypane'); if (!el) return; const R = D.rep; const bar = (k, n) => `<div class="rep"><span>${n}</span><i><b style="width:${50 + R[k] / 2}%;background:${R[k] >= 0 ? '#62d26f' : '#e05050'}"></b></i><em>${R[k] > 0 ? '+' : ''}${Math.round(R[k])}</em></div>`;
@@ -222,10 +222,10 @@ export function initStory(X, W, D, F) {
   let intro = false, introT = 0;
   // @ts-ignore -- Baseline #119: DOM-/Zahl-String-Typen, kein X-Fehler
   function startIntro() { if (S.state === 'active') return; const none = Object.values(STORIES).every(st => st.S.state === 'new' && !st.S.done.length && !st.S.finishedAll); let seen = 0; try { seen = +localStorage.getItem('notgta.introSeen') || 0; } catch (e) {} if (!none || seen >= 3) return; try { localStorage.setItem('notgta.introSeen', seen + 1); } catch (e) {}
-    intro = true; introT = 240; setMark(UHR); setObj('Willkommen! Für die <b>Story</b> folge der gelben Linie zum lila <b>B</b> am Uhrtürmchen · oder Esc › Story wählen · H Handy · F1 Hilfe'); X.card('BORNHEIM', 'Freies Spiel – oder zur Story: dem gelben Strahl folgen', 5); }
+    intro = true; introT = 240; setMark(UHR); setObj('Willkommen! Für die <b>Story</b> folge der gelben Linie zum lila <b>B</b> am Uhrtürmchen · oder Esc › Missionen · H Handy · F1 Hilfe'); X.card('BORNHEIM', 'Freies Spiel – oder zur Story: dem gelben Strahl folgen', 5); }
   function endIntro() { if (!intro) return; intro = false; setMark(null); setObj(''); }
   // Wegweiser abgelaufen, keine Story begonnen: einmal je Browser kurz sagen, was es sonst gibt (kein Dauerhinweis)
-  function freeHint() { try { if (localStorage.getItem('notgta.freiTipp')) return; localStorage.setItem('notgta.freiTipp', '1'); } catch (e) {} X.card('FREI UNTERWEGS', 'H Handy: Nebenjobs, Laufrunden · F1 Hilfe · Esc Story wählen', 6); }
+  function freeHint() { try { if (localStorage.getItem('notgta.freiTipp')) return; localStorage.setItem('notgta.freiTipp', '1'); } catch (e) {} X.card('FREI UNTERWEGS', 'H Handy: Nebenjobs, Laufrunden · F1 Hilfe · Esc Missionen', 6); }
 
   return { update, start, stop, resume, skipLine, renderMenu, get S() { return S; }, get CH() { return CH; }, get sid() { return sid; }, useStory, STORIES, ST2, persist, get busy() { return S.state === 'active'; }, places: { UHR, GATE, SITE, EIS, PARKC, ...ST2.places, ...ST3.places }, beginChapter, get kim() { return kim; } };
 }
