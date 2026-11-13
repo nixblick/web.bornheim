@@ -9,13 +9,16 @@ const CACHE_TILES = 'bornheim-tiles-v4';
 // wenn sich assets/ oder vendor/ geändert haben (vorher lud jeder Deploy rund 25 MB neu).
 const CACHE_ASSETS = 'bornheim-assets-v1';
 
-// Nur Adressen, die sich je Deploy nicht ändern. game.js und die Module holt die Seite mit ?v=<Commit>,
-// die legt Zweig 3 beim ersten Laden unter der echten Adresse ab (eine Liste hier lud sie nur doppelt).
+// Nur Adressen, die sich je Deploy nicht ändern.
 const CORE_ASSETS = [
   './',
   './play.html',
   './data/tiles/index.json'
 ];
+// game.js und die Module holt die Seite mit ?v=<Commit>. Zweig 3 sieht sie beim ersten Laden nach einem Deploy nicht
+// (die Seite gehört da noch dem alten Worker, dessen Cache beim Aktivieren gelöscht wird): ohne diese Liste startete
+// das Spiel offline erst nach dem zweiten Laden. pages.yml setzt hier die echten Adressen ein; lokal bleibt sie leer.
+const CORE_MODULES = [/*MODULE*/];
 const CORE_VENDOR = [
   './vendor/three/build/three.module.js'
 ];
@@ -23,6 +26,8 @@ const CORE_VENDOR = [
 self.addEventListener('install', event => {
   event.waitUntil(Promise.all([
     caches.open(CACHE_STATIC).then(cache => cache.addAll(CORE_ASSETS)).catch(() => {}),
+    // eigener Aufruf: addAll ist alles-oder-nichts, ein fehlendes Modul soll play.html nicht mitreißen
+    caches.open(CACHE_STATIC).then(cache => cache.addAll(CORE_MODULES)).catch(() => {}),
     caches.open(CACHE_ASSETS).then(cache => cache.addAll(CORE_VENDOR)).catch(() => {})
   ]));
   self.skipWaiting();
