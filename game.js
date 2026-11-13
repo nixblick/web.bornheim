@@ -34,6 +34,7 @@ import { disposeHierarchy } from './dispose.js';
 import { initPhone } from './phone.js';
 import { initMenuNeu } from './menu-neu.js';
 import { initDebugOverlay } from './debugoverlay.js';
+import { initHud } from './hud.js';
 const GradeShader = { uniforms: { tDiffuse: { value: null }, vig: { value: 0.32 }, wet: { value: 0 }, night: { value: 0 } }, vertexShader: 'varying vec2 vUv; void main(){ vUv=uv; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0); }',
   fragmentShader: 'uniform sampler2D tDiffuse; uniform float vig, wet, night; varying vec2 vUv; void main(){ vec4 c=texture2D(tDiffuse,vUv); vec3 col=c.rgb; float l=dot(col,vec3(0.299,0.587,0.114)); col=mix(vec3(l),col,1.12-wet*0.25); col=(col-0.5)*1.06+0.5; col*=mix(vec3(1.0),vec3(0.92,0.97,1.06),wet*0.7+night*0.5); col=mix(col,col*vec3(1.04,1.0,0.94),0.6*(1.0-night)); vec2 d=vUv-0.5; col*=1.0-vig*dot(d,d)*2.2; gl_FragColor=vec4(clamp(col,0.0,1.0),c.a); }' };
 let aoPass = null, gradePass = null;
@@ -2449,30 +2450,14 @@ addEventListener('wheel', e => { if (creative.on && started && !menuOpen) { crea
 const $ = id => document.getElementById(id);
 let lastHp = 100;
 const cross = $('cross'), hint = $('hint'), streetEl = $('street'), ammoEl = $('ammo'), starsEl = $('stars'), healthBar = $('health').firstElementChild, msgEl = $('msg'), whoEl = $('who');
-// kind: '' (Alarm, rot und groß), 'ok' (grün, klein), 'info' (gelb, klein)
-function showMsg(t, ms = 2500, kind = '') { msgEl.textContent = t; msgEl.className = kind; msgEl.style.display = 'block'; clearTimeout(showMsg.t); showMsg.t = setTimeout(() => msgEl.style.display = 'none', ms); }
-// DOM nur schreiben, wenn sich der Wert ändert (spart Layout-Arbeit pro Bild)
-const setTxt = (el, v) => { if (el && el.__v !== v) { el.__v = v; el.textContent = v; } };
-const setSty = (el, k, v) => { if (!el) return; const s = el.__s || (el.__s = {}); if (s[k] !== v) { s[k] = v; el.style[k] = v; } };
 const moneyEl = $('money'), weaponEl = $('weapon');
 // Minimap: ganze Stadt einmal vorzeichnen
 const MM_SCALE = 0.5; // px pro Meter
 const ext = { x0: -1000, z0: -1200 }; // Bezugspunkt der Kartenkoordinaten
 const mm = $('minimap'), mmc = mm.getContext('2d'); const MM_HOOKS = [], MAP_HOOKS = []; // MAP_HOOKS: Zeichnen auf großer Karte und Pausenkarte (c2, P), z. B. Laufstrecken (wegweiser.js)
-function drawMinimap() {
-  const R = 110, zoom = 0.9; mmc.clearRect(0, 0, 220, 220); mmc.save(); mmc.beginPath(); mmc.arc(110, 110, R, 0, Math.PI * 2); mmc.clip();
-  // Blickrichtung oben: vorwärts ist (sin yaw, cos yaw) in Weltkoordinaten (x rechts, z nach unten auf der Karte); rotate(yaw + π) legt das auf „oben“. Mit opts.mapNorth bleibt Norden (−z) oben.
-  mmc.translate(110, 110); if (!opts.mapNorth) mmc.rotate(camYaw.v + Math.PI);
-  mmc.scale(zoom, zoom); const px = (player.pos.x - ext.x0) * MM_SCALE, pz = (player.pos.z - ext.z0) * MM_SCALE;
-  { const [ptx, ptz] = [Math.floor(player.pos.x / TS), Math.floor(player.pos.z / TS)]; for (let a = -1; a <= 1; a++) for (let b = -1; b <= 1; b++) { const t = TILES.get(tkey(ptx + a, ptz + b)); if (t && t.data) mmc.drawImage(t.mm || (t.mm = tileMap(t)), (t.tx * TS - ext.x0) * MM_SCALE - px, (t.tz * TS - ext.z0) * MM_SCALE - pz); } }
-  for (const c of cars) { const u = c.userData; mmc.fillStyle = u.police ? '#4f8bff' : '#bbbbbb'; mmc.beginPath(); mmc.arc((c.position.x - ext.x0) * MM_SCALE - px, (c.position.z - ext.z0) * MM_SCALE - pz, u.police ? 3 : 1.5, 0, 7); mmc.fill(); }
-  { const P = (x, z) => [(x - ext.x0) * MM_SCALE - px, (z - ext.z0) * MM_SCALE - pz]; for (const f of MM_HOOKS) f(mmc, P, (R - 8) / zoom); }
-  mmc.restore();
-  // Spielerpfeil: bei Norden-oben in Blickrichtung gedreht, sonst immer nach oben
-  mmc.save(); mmc.translate(110, 110); if (opts.mapNorth) mmc.rotate(Math.PI - camYaw.v); mmc.fillStyle = '#ffd84a'; mmc.beginPath(); mmc.moveTo(0, -8); mmc.lineTo(6, 4); mmc.lineTo(-6, 4); mmc.fill(); mmc.restore();
-  // Nordmarke am Rand: Norden ist −z; in der gedrehten Karte liegt er bei (−sin yaw, cos yaw)
-  { const nx = opts.mapNorth ? 0 : -Math.sin(camYaw.v), nz = opts.mapNorth ? -1 : Math.cos(camYaw.v); const x = 110 + nx * (R - 13), y = 110 + nz * (R - 13); mmc.fillStyle = '#0b0d12dd'; mmc.beginPath(); mmc.arc(x, y, 9, 0, 7); mmc.fill(); mmc.strokeStyle = '#ffd84a'; mmc.lineWidth = 1.5; mmc.stroke(); mmc.fillStyle = '#ffd84a'; mmc.font = 'bold 11px system-ui'; mmc.textAlign = 'center'; mmc.textBaseline = 'middle'; mmc.fillText('N', x, y + 0.5); mmc.textAlign = 'left'; mmc.textBaseline = 'alphabetic'; }
-}
+const HUD = initHud({ $, msgEl, mm, mmc, MM_HOOKS, ext, MM_SCALE, player, camYaw, opts, cars, TILES, TS, tkey, tileMap, interiors: () => INTERIORS });
+function showMsg(t, ms, kind) { HUD.showMsg(t, ms, kind); } const { setTxt, setSty } = HUD; // #118: Anzeige-Code in hud.js
+function drawMinimap() { HUD.drawMinimap(); }
 let streetTimer = 0, worldT = 0, sigTick = -1;
 function streetNameAt(x, z, maxD = 40) { let best = maxD * maxD, name = ''; const g = getRoadGrid(); const cx = Math.floor(x / CELL), cz = Math.floor(z / CELL);
   for (let a = -1; a <= 1; a++) for (let b = -1; b <= 1; b++) { const c = g.get(key(cx + a, cz + b)); if (!c) continue; for (const [r, i] of c) { if (!r.n) continue; const d = distSegSq(x, z, r.p[i][0], r.p[i][1], r.p[i + 1][0], r.p[i + 1][1]); if (d < best) { best = d; name = r.n; } } }
@@ -3063,15 +3048,7 @@ function quickSync() { for (const [o, c, show] of quickPairs) { if (c.type === '
 MENU_HOOKS.push(() => { MENU_TAB('schnell'); setTimeout(quickSync, 0); }); /* synchron: F1 und Handy-Karte schalten danach auf ihren Reiter */
 // Karte im Menü: springen, U-Bahn und Bus fahren
 let pmX = 0, pmZ = 0, pmSpan = 3000; const PM_OFF = new Set(); const pmHits = [];
-// Übersicht der ganzen Stadt (data/overview.json, tools/build_overview.py): Hintergrund für Gegenden ohne geladene Kachel
-let OVERVIEW = null; fetch('data/overview.json').then(r => r.ok ? r.json() : null).then(d => { OVERVIEW = d; }).catch(() => {});
-function drawOverview(c2, P, W, H, sc) { if (!OVERVIEW) return; const vis = p => { const [x, y] = P(p[0][0], p[0][1]); return x > -3000 && y > -3000 && x < W + 3000 && y < H + 3000; };
-  const poly = (arr, col) => { c2.fillStyle = col; for (const p of arr) { if (!vis(p)) continue; c2.beginPath(); p.forEach((q, i) => { const [x, y] = P(q[0], q[1]); if (i) c2.lineTo(x, y); else c2.moveTo(x, y); }); c2.fill(); } };
-  const line = (arr, col, w) => { c2.strokeStyle = col; c2.lineWidth = w; c2.beginPath(); for (const p of arr) { if (!vis(p)) continue; p.forEach((q, i) => { const [x, y] = P(q[0], q[1]); if (i) c2.lineTo(x, y); else c2.moveTo(x, y); }); } c2.stroke(); };
-  poly(OVERVIEW.wood, '#22351f'); poly(OVERVIEW.green, '#2c4a2a'); poly(OVERVIEW.water, '#1d3d5c');
-  if (sc > 0.08) line(OVERVIEW.r3, '#3a3d44', Math.max(1, 5 * sc)); line(OVERVIEW.r2, '#55595f', Math.max(1, 8 * sc)); line(OVERVIEW.r1, '#8a8478', Math.max(1.4, 12 * sc)); c2.setLineDash([4, 3]); line(OVERVIEW.rail, '#6c6c74', 1); c2.setLineDash([]); }
-// U-Bahn-Linie: echter Streckenverlauf (Feld g aus tools/metro_geometry.py), sonst Station zu Station
-function drawMetroLine(c2, P, l) { c2.strokeStyle = l.color || '#888'; c2.beginPath(); if (l.g && l.g.length) { for (const w of l.g) w.forEach((q, i) => { const [x, y] = P(q[0], q[1]); if (i) c2.lineTo(x, y); else c2.moveTo(x, y); }); } else { let f = true; for (const id of l.stops) { const s = INTERIORS.ST.get(id); if (!s) continue; const [x, y] = P(s.p[0], s.p[1]); if (f) c2.moveTo(x, y); else c2.lineTo(x, y); f = false; } } c2.stroke(); }
+function drawOverview(c2, P, W, H, sc) { HUD.drawOverview(c2, P, W, H, sc); } function drawMetroLine(c2, P, l) { HUD.drawMetroLine(c2, P, l); }
 function pmCenter() { pmX = player.pos.x; pmZ = player.pos.z; }
 function pmStops() { const seen = new Map(); for (const l of BUSLINES) (l.s || []).forEach(([x, z], i) => { const k = Math.round(x / 25) + ',' + Math.round(z / 25); if (!seen.has(k)) seen.set(k, { x, z, lines: new Set(), n: '' }); const s = seen.get(k); s.lines.add(l.ref); if (!s.n && l.sn) s.n = l.sn[i] || ''; }); return [...seen.values()]; }
 let PM_STOPS = null;
