@@ -17,6 +17,7 @@ import { initProgress } from './progress.js';
 import { initFire } from './fire.js';
 import { initHeli } from './heli.js';
 import { initEulen } from './eulen.js';
+import { initStrassen, asphaltRisse } from './strassen.js';
 import { applyLookTone, makeLookPass, makeFxaaPass, LOOK_PRESET } from './look.js';
 import { initLichtpfuetzen } from './lichtpfuetzen.js';
 import { autolack } from './autolack.js';
@@ -98,6 +99,7 @@ function updateWeather(dt) {
   // Regen um die Kamera (GPU-Vertex-Shader animiert die Fallbewegung ohne Buffer-Upload pro Frame)
   if (rainPts) { rainPts.visible = weather.rain > 0.05 && !POCKET; rainPts.material.opacity = 0.45 * weather.rain; if (rainPts.visible) { rainU.value = (rainU.value + 26 * dt) % 30; rainPts.position.set(camera.position.x, camera.position.y - 15, camera.position.z); } }
   weather.wet = (weather.wet || 0) + ((weather.rain > 0.1 ? 1 : 0) - (weather.wet || 0)) * dt * (weather.rain > 0.1 ? 0.05 : 0.008);
+  STR.update(dt);
   if (roadMatRef) { const w = weather.wet; roadMatRef.color.setScalar(0.6 - w * 0.25); if (roadMatRef.isMeshStandardMaterial) { roadMatRef.color.setScalar(0.4 - w * 0.15); /* PBR-Asphalt plus Umgebungslicht wirkte bei 0,6 ausgewaschen hellgrau (seit Mittel Standard ist) */ roadMatRef.roughness = 0.95 - w * 0.75; const pm = w > 0.12 ? roadMatRef.userData.pud : null; if (roadMatRef.roughnessMap !== pm) { roadMatRef.roughnessMap = pm; roadMatRef.needsUpdate = true; } roadMatRef.envMapIntensity = 0.2 + w * 2.4; } }
   updateStreaks(dt);
   if (gradePass) { gradePass.uniforms.wet.value = weather.wet || 0; gradePass.uniforms.night.value = (world.hour < 6.5 || world.hour > 20) ? 1 : 0; }
@@ -651,6 +653,7 @@ const fahrbahnTex = canvasTex(1024, 1024, (ctx, w, h) => {
   ctx.strokeStyle = 'rgba(28,28,26,0.75)'; ctx.lineCap = 'round';
   for (let i = 0; i < 4; i++) { let x = r() * w, y = r() * h, a = r() * 6.3; ctx.lineWidth = 3 + r() * 3; ctx.beginPath(); ctx.moveTo(x, y);
     for (let k = 0; k < 14; k++) { a += (r() - 0.5) * 0.9; x += Math.cos(a) * 18; y += Math.sin(a) * 18; ctx.lineTo(x, y); } ctx.stroke(); }
+  asphaltRisse(ctx, w, h, r); // Worley-Rissnetz (#153)
   // Ölfleck
   { const g = ctx.createRadialGradient(470, 820, 4, 470, 820, 70); g.addColorStop(0, 'rgba(10,10,12,0.35)'); g.addColorStop(1, 'rgba(10,10,12,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.ellipse(470, 820, 80, 55, 0.4, 0, Math.PI * 2); ctx.fill(); }
 }, 1 / 8, 1 / 8);
@@ -659,15 +662,8 @@ const markTex = canvasTex(32, 256, (ctx, w, h) => { let s = 5; const r = () => (
   ctx.clearRect(0, 0, w, h); ctx.fillStyle = 'rgba(236,230,210,0.82)'; ctx.fillRect(2, 4, w - 4, h - 8);
   ctx.globalCompositeOperation = 'destination-out'; for (let i = 0; i < 260; i++) { ctx.fillStyle = `rgba(0,0,0,${0.3 + r() * 0.7})`; const z = 1 + r() * 4; ctx.fillRect(r() * w, r() * h, z, z * (1 + r() * 2)); } ctx.globalCompositeOperation = 'source-over'; }, 1, 1);
 markTex.wrapS = markTex.wrapT = THREE.ClampToEdgeWrapping;
-const deckelTex = canvasTex(128, 128, (ctx, w, h) => { ctx.clearRect(0, 0, w, h); ctx.save(); ctx.beginPath(); ctx.arc(64, 64, 62, 0, Math.PI * 2); ctx.clip();
-  ctx.fillStyle = '#3a3a38'; ctx.fillRect(0, 0, w, h); ctx.strokeStyle = '#2a2a28'; ctx.lineWidth = 3;
-  for (let r = 14; r < 62; r += 12) { ctx.beginPath(); ctx.arc(64, 64, r, 0, Math.PI * 2); ctx.stroke(); }
-  for (let a = 0; a < 12; a++) { ctx.beginPath(); ctx.moveTo(64, 64); ctx.lineTo(64 + Math.cos(a / 12 * Math.PI * 2) * 62, 64 + Math.sin(a / 12 * Math.PI * 2) * 62); ctx.stroke(); }
-  ctx.fillStyle = 'rgba(160,150,135,0.35)'; ctx.beginPath(); ctx.arc(64, 64, 10, 0, Math.PI * 2); ctx.fill(); ctx.restore();
-  ctx.strokeStyle = '#6f6d66'; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(64, 64, 61, 0, Math.PI * 2); ctx.stroke(); }, 1, 1);
-deckelTex.wrapS = deckelTex.wrapT = THREE.ClampToEdgeWrapping;
-const gullyTex = canvasTex(128, 96, (ctx, w, h) => { ctx.fillStyle = '#5c5a55'; ctx.fillRect(0, 0, w, h); ctx.fillStyle = '#1c1c1b'; for (let x = 12; x < w - 8; x += 13) ctx.fillRect(x, 12, 6, h - 24); ctx.strokeStyle = '#7a776f'; ctx.lineWidth = 4; ctx.strokeRect(2, 2, w - 4, h - 4); }, 1, 1);
-gullyTex.wrapS = gullyTex.wrapT = THREE.ClampToEdgeWrapping;
+// Straßen-Optik (#153): Markierung, Belag, Kleinteile, Bordsteinecken, Nässe in strassen.js
+const STR = initStrassen({ THREE, TH: (x, z) => TH(x, z), onOtherRoad: (...a) => onOtherRoad(...a), nearestRoadDir: (...a) => nearestRoadDir(...a), get LOW() { return LOW_GFX; }, get opts() { return opts; }, get weather() { return weather; }, get camera() { return camera; } });
 const roofTex = canvasTex(128, 128, (ctx, w, h) => { ctx.fillStyle = '#7d6b62'; ctx.fillRect(0, 0, w, h); for (let i = 0; i < 2000; i++) { ctx.fillStyle = `rgba(0,0,0,${Math.random() * 0.12})`; ctx.fillRect(Math.random() * w, Math.random() * h, 2, 2); } }, 1 / 5, 1 / 5);
 
 
@@ -783,7 +779,7 @@ function* buildDetails() {
   addMerged(benchW, shLambert(0x8b5a2b)); addMerged(bins, shLambert(0x2f3a2f), false); addMerged(bikes, shLambert(0x777777), false); addMerged(vend, shLambert(0xc0392b)); addMerged(recyc, shLambert(0x22325e)); addMerged(kleid, shLambert(0xc8201e)); if (kleidF.length) addMerged(kleidF, KLEID_MAT || (KLEID_MAT = Object.assign(new THREE.MeshLambertMaterial({ map: canvasTex(128, 128, (c, w, h) => { c.fillStyle = '#f4f4f0'; c.fillRect(0, 0, w, h); c.fillStyle = '#c8201e'; c.font = 'bold 22px Arial'; c.textAlign = 'center'; c.fillText('DANKE!', w / 2, 30); c.font = 'bold 14px Arial'; c.fillText('ALTKLEIDER', w / 2, 52); c.fillText('SCHUHE', w / 2, 68); c.fillStyle = '#a0a0a0'; for (let y = 80; y < 122; y += 6) c.fillRect(12, y, w - 24, 2); }, 1, 1) }), { userData: { shared: true } })), false); addMerged(ringW, shLambert(0xf2f2ee), false); addMerged(ringB, shLambert(0x8a5a2a), false); addMerged(ringG, shLambert(0x3a9a4a), false); addMerged(post, shLambert(0xffcc00)); addMerged(fount, shLambert(0xb5aa96)); addMerged(fountW, new THREE.MeshLambertMaterial({ color: 0x3f7fa8, emissive: 0x1d4a66, emissiveIntensity: 0.5 }), false);
   // --- Zebrastreifen ---
   const zebra = [];
-  for (const c of CITY.crossings) { let x = c.x, z = c.z; if (c.p) { const m = c.p[Math.floor(c.p.length / 2)]; x = m[0]; z = m[1]; } if (x === undefined) continue; const nr = nearestRoadDir(x, z, 7); if (!nr || nr.w < 5) continue; const ang = nr.ang; for (let k = -2.5; k <= 2.5; k++) { const sx = nr.x + Math.sin(ang) * k * 1.0, sz = nr.z + Math.cos(ang) * k * 1.0; const g = new THREE.PlaneGeometry(nr.w - 0.6, 0.5); g.rotateX(-Math.PI / 2); g.rotateY(ang + Math.PI / 2); g.translate(sx, TH(sx, sz) + 0.055, sz); zebra.push(g); } }
+  for (const c of CITY.crossings) { let x = c.x, z = c.z; if (c.p) { const m = c.p[Math.floor(c.p.length / 2)]; x = m[0]; z = m[1]; } if (x === undefined || STR.anAmpel(x, z, CITY.signals)) continue; /* an Ampeln Fußgängerfurt statt Zebra (#153) */ const nr = nearestRoadDir(x, z, 7); if (!nr || nr.w < 5) continue; const ang = nr.ang; for (let k = -2.5; k <= 2.5; k++) { const sx = nr.x + Math.sin(ang) * k * 1.0, sz = nr.z + Math.cos(ang) * k * 1.0; const g = new THREE.PlaneGeometry(nr.w - 0.6, 0.5); g.rotateX(-Math.PI / 2); g.rotateY(ang + Math.PI / 2); g.translate(sx, TH(sx, sz) + 0.055, sz); zebra.push(g); } }
   addMerged(zebra, shLambert(0xe9e6dc), false);
   // --- Straßenschilder an Einmündungen (Frankfurter Art: dunkelblau, weiße Schrift) und Poller an den Ecken (Fotos 12.11.2026) ---
   { const ends = []; const seen = new Set();
@@ -1556,7 +1552,9 @@ function* buildCity() {
   const plazas = []; for (const r of CITY.roads) if (isPedArea(r)) { const sh = new THREE.Shape(r.p.map(([x, z]) => new THREE.Vector2(x, -z))); const pg = new THREE.ShapeGeometry(sh); pg.rotateX(-Math.PI / 2); plazas.push(drape(pg, 0.025, 2.5, 0.05, 10, true)); }
   if (plazas.length && WALK_MAT) flatMat(mergeGeometries(plazas), WALK_MAT);
   { const pedG = ribbon(CITY.roads.filter(r => r.ped && !isPedArea(r) && r.w >= 4), 0.042, r => r.w); if (pedG) flatMat(pedG, GRANIT_MAT || (GRANIT_MAT = Object.assign(new THREE.MeshLambertMaterial({ map: canvasTex(256, 256, (c, w, h) => { c.fillStyle = '#9c9a96'; c.fillRect(0, 0, w, h); for (let i = 0; i < 9000; i++) { c.fillStyle = pick(['#6e6c69', '#c4c2bd', '#888682', '#b0aea9']); c.fillRect(Math.random() * w, Math.random() * h, 1.5, 1.5); } c.strokeStyle = 'rgba(40,40,40,0.55)'; c.lineWidth = 1.5; for (let y = 0; y < h; y += 32) { c.beginPath(); c.moveTo(0, y); c.lineTo(w, y); c.stroke(); for (let x = (y / 32) % 2 ? 0 : 32; x < w; x += 64) { c.beginPath(); c.moveTo(x, y); c.lineTo(x, y + 32); c.stroke(); } } }, 1 / 4, 1 / 4) }), { userData: { shared: true } }))); } // Granitplatten in Fußgängerzonen (Foto TG Bornheim, Innenstadt)
-  const roadG = ribbon(CITY.roads.filter(r => !isPedArea(r) && !(r.ped && r.w >= 4)), 0.04, r => r.w); if (roadG) { const rm = new THREE.Mesh(roadG, roadMatRef || ((LOW_GFX || opts.potato) ? new THREE.MeshLambertMaterial({ map: fahrbahnTex, color: 0xb8b8b8 }) : new THREE.MeshStandardMaterial(Object.assign({ map: fahrbahnTex, normalMap: TEX.asphaltN, color: 0xb8b8b8 }, { roughness: 0.92, metalness: 0, roughnessMap: null })))); /* Sparmodus und „Sehr schwacher Rechner“: Lambert mit Map */ if (!rm.material.userData.pud) { rm.material.userData.pud = puddleTex(); rm.material.userData.shared = true; } rm.receiveShadow = true; scene.add(rm); roadMatRef = rm.material; }
+  const fahrRoads = CITY.roads.filter(r => !isPedArea(r) && !(r.ped && r.w >= 4)); const roadG = ribbon(fahrRoads.filter(r => !STR.sorte(r)), 0.04, r => r.w); /* Sorte 0: bisheriger Asphalt; 1–3 (neuer Asphalt, Pflaster) darunter, ab Mittel (#153) */ if (roadG) { const rm = new THREE.Mesh(roadG, roadMatRef || ((LOW_GFX || opts.potato) ? new THREE.MeshLambertMaterial({ map: fahrbahnTex, color: 0xb8b8b8 }) : new THREE.MeshStandardMaterial(Object.assign({ map: fahrbahnTex, normalMap: TEX.asphaltN, color: 0xb8b8b8 }, { roughness: 0.92, metalness: 0, roughnessMap: null })))); /* Sparmodus und „Sehr schwacher Rechner“: Lambert mit Map */ if (rm.material.userData.pud === undefined) { rm.material.userData.pud = rm.material.isMeshStandardMaterial ? null : puddleTex(); rm.material.userData.shared = true; STR.nass(rm.material); /* Pfützen jetzt im Shader (#153) */ } rm.receiveShadow = true; scene.add(rm); roadMatRef = rm.material; }
+  for (const so of [1, 2, 3]) { const g = ribbon(fahrRoads.filter(r => STR.sorte(r) === so), 0.04 + so * 0.002, r => r.w); if (g) flatMat(g, STR.belagMat(so, TEX.asphaltN)); }
+  STR.ecken(CITY.roads, m => scene.add(m)); // Bordsteinecken als Bogen (ab Mittel)
   // Fußwege: Stücke, die im Gehwegband einer Straße liegen (in OSM oft als eigene Linie direkt neben der Fahrbahn), weglassen;
   // sonst liegen zwei Beläge übereinander (12.11.2026, Ticket #11: braune Streifen auf dem Gehweg)
   const freiePfade = []; for (const pa of CITY.paths) { if (pa.ry) { freiePfade.push(pa); continue; } let run = [];
@@ -1597,21 +1595,8 @@ function* buildCity() {
     sigSpots.forEach((sp, i) => { const ty = TH(sp[0], sp[1]); o.position.set(sp[0], ty, sp[1]); o.rotation.set(0, sp.rot, 0); o.scale.setScalar(1); o.updateMatrix(); pm.setMatrixAt(i, o.matrix); bm.setMatrixAt(i, o.matrix); sp.pm = pm; sp.bm = bm; sp.lm = lm; sp.i = i; });
     pm.computeBoundingSphere(); bm.computeBoundingSphere(); scene.add(pm, bm);
     sigLight.forEach((l, i) => { o.position.set(l.x, l.y, l.z); o.rotation.set(0, l.rot, 0); o.updateMatrix(); lm.setMatrixAt(i, o.matrix); lm.setColorAt(i, new THREE.Color(0x222222)); }); lm.userData.lights = sigLight; lm.userData.noChunk = true; lm.computeBoundingSphere(); scene.add(lm); signalMeshes.push(lm); }
-  // Mittelstreifen
-  const dash = [];
-  for (const r of CITY.roads) if (r.w >= 8) for (let i = 0; i < r.p.length - 1; i++) {
-    const [ax, az] = r.p[i], [bx, bz] = r.p[i + 1]; const l = Math.hypot(bx - ax, bz - az); const n = Math.floor(l / 6);
-    for (let k = 0; k < n; k++) { const t = (k + 0.5) / n; const g = new THREE.PlaneGeometry(0.2, 3); g.rotateX(-Math.PI / 2); g.rotateY(-Math.atan2(bz - az, bx - ax) + Math.PI / 2); const dxx = ax + (bx - ax) * t, dzz = az + (bz - az) * t; g.translate(dxx, 0.06 + TH(dxx, dzz), dzz); dash.push(g); }
-  }
-  if (dash.length) { const mm = new THREE.MeshLambertMaterial({ map: markTex, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -2 }); scene.add(new THREE.Mesh(mergeGeometries(dash), mm)); } /* verblasste Farbe statt grellem unbeleuchtetem Weiß */
-  // Kanaldeckel in der Fahrspur und Straßenabläufe am Bordstein, je Kachel zwei Meshes
-  { const dk = [], gu = []; let sd = 17; const rr = () => (sd = (sd * 16807) % 2147483647) / 2147483647;
-    for (const r of CITY.roads) { if (r.ped || r.mw || r.ry || r.w < 6) continue; for (let i = 0; i < r.p.length - 1; i++) { const [ax, az] = r.p[i], [bx, bz] = r.p[i + 1]; const l = Math.hypot(bx - ax, bz - az); if (l < 8) continue; const ux = (bx - ax) / l, uz = (bz - az) / l, nx = -uz, nz = ux; const ang = Math.atan2(bx - ax, bz - az);
-      for (let s = 4 + rr() * 20; s < l - 3; s += 26 + rr() * 22) { const off = (rr() < 0.5 ? -1 : 1) * r.w / 4; const x = ax + ux * s + nx * off, z = az + uz * s + nz * off; if (onOtherRoad(x, z, r, -0.5)) continue; const g = new THREE.CircleGeometry(0.33, 14); g.rotateX(-Math.PI / 2); g.translate(x, TH(x, z) + 0.055, z); dk.push(g); }
-      for (let s = 6 + rr() * 15; s < l - 3; s += 22 + rr() * 18) for (const sg of [-1, 1]) { if (rr() < 0.4) continue; const o = sg * (r.w / 2 - 0.35); const x = ax + ux * s + nx * o, z = az + uz * s + nz * o; if (onOtherRoad(x, z, r, -0.5)) continue; const g = new THREE.PlaneGeometry(0.32, 0.5); g.rotateX(-Math.PI / 2); g.rotateY(ang); g.translate(x, TH(x, z) + 0.055, z); gu.push(g); } } }
-    const mat = map => new THREE.MeshLambertMaterial({ map, transparent: true, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -2 });
-    if (dk.length) { const m = new THREE.Mesh(mergeGeometries(dk), mat(deckelTex)); m.receiveShadow = true; scene.add(m); }
-    if (gu.length) { const m = new THREE.Mesh(mergeGeometries(gu), mat(gullyTex)); m.receiveShadow = true; scene.add(m); } }
+  // Markierung und Kleinteile (#153, strassen.js): ein Mesh je Kachel für die Striche, ein Atlas-Mesh je 125-m-Stück für Deckel, Abläufe, Flicken …
+  { const mk = STR.markierung(CITY.roads, CITY.signals, CITY.crossings, markTex); if (mk) scene.add(mk); STR.kleinteile(CITY.roads, CITY.signals, m => scene.add(m)); }
   // Bäume
   const trunk = TRUNK_G || (TRUNK_G = Object.assign(new THREE.CylinderGeometry(0.15, 0.2, 2.2, 5), { userData: { shared: true } }));
   const crown = opts.quality === 'niedrig' ? (CROWN_LOW_G || (CROWN_LOW_G = (() => { const g = new THREE.IcosahedronGeometry(1.9, 0); g.computeVertexNormals(); g.userData.shared = true; return g; })())) : (CROWN_HI_G || (CROWN_HI_G = (() => { const g = mergeGeometries([new THREE.IcosahedronGeometry(1.75, 0), new THREE.IcosahedronGeometry(1.3, 0).translate(0.95, 0.45, 0.35), new THREE.IcosahedronGeometry(1.2, 0).translate(-0.75, 0.6, -0.55), new THREE.IcosahedronGeometry(1.05, 0).translate(0.1, 1.2, -0.2)]); g.computeVertexNormals(); g.userData.shared = true; return g; })()));
@@ -3344,7 +3329,7 @@ let cardT = null; function card(title, sub, sec = 4) { const el = $('card'); el.
 let breathEl = null, breathHint = false;
 function respawn() { player.dead = false; player.hp = 100; player.breath = 1; player.drowning = false; player.wanted = 0; msgEl.style.display = 'none'; for (const c of cars) if (c.userData.police && c !== player.car) c.userData.mode = 'parked'; }
 
-window.G = { get PHONE() { return PHONE; }, barrierHit, HELI, get EULEN() { return EULEN; }, get VOKA() { return VOKA; }, get LAUF() { return LAUF; }, get RASEN() { return RASEN; }, makeMoto, makeAmbulance, updateBikeRacks, onMotorway, PROGRESS, INTERIORS, explode, makeBike, FX, puff, burst, smoke, LOW_GFX, WEAK_GPU, get canvasTexCount() { return _allCanvasTex.length; }, get ANISO() { return ANISO; }, get roadMat() { return roadMatRef; }, DEMN, DEMT, R_DATA, unregisterTile, SHOPS, TILES, WORLD, WIDX, streamUpdate, streamInit, buildTileNow, TS, WPN, DEMO, STORY, FIRE, X, card, hurtPlayer, composerRef: () => composer,  autoQuality, get QUALITY_AUTO() { return QUALITY_AUTO; }, groundH, footTH, FOOT_SINK, dentCar, deckAt, surfAt, signalPoles, treeSpots, lampSpots, pushOffRoads, onOtherRoad, floorAt, solidAtH, solidAt, roofHeight, camShake,  CHAR, CAR_TPL, playAnim, makeHuman, makeCar, makeGun, applyQuality,  staticParked, chunkStatic,  saveGame, loadGame, world, opts, pickups, weather, trams, scene, cars, peds, player, camera, camYaw, camPitch, keys, CITY, DEM, TH, renderer, sun, hemi, THREE, shoot, toggleCar, update, toggleCreative, creative, creativePlace, creativeSpawnerActive };
+window.G = { STR, get PHONE() { return PHONE; }, barrierHit, HELI, get EULEN() { return EULEN; }, get VOKA() { return VOKA; }, get LAUF() { return LAUF; }, get RASEN() { return RASEN; }, makeMoto, makeAmbulance, updateBikeRacks, onMotorway, PROGRESS, INTERIORS, explode, makeBike, FX, puff, burst, smoke, LOW_GFX, WEAK_GPU, get canvasTexCount() { return _allCanvasTex.length; }, get ANISO() { return ANISO; }, get roadMat() { return roadMatRef; }, DEMN, DEMT, R_DATA, unregisterTile, SHOPS, TILES, WORLD, WIDX, streamUpdate, streamInit, buildTileNow, TS, WPN, DEMO, STORY, FIRE, X, card, hurtPlayer, composerRef: () => composer,  autoQuality, get QUALITY_AUTO() { return QUALITY_AUTO; }, groundH, footTH, FOOT_SINK, dentCar, deckAt, surfAt, signalPoles, treeSpots, lampSpots, pushOffRoads, onOtherRoad, floorAt, solidAtH, solidAt, roofHeight, camShake,  CHAR, CAR_TPL, playAnim, makeHuman, makeCar, makeGun, applyQuality,  staticParked, chunkStatic,  saveGame, loadGame, world, opts, pickups, weather, trams, scene, cars, peds, player, camera, camYaw, camPitch, keys, CITY, DEM, TH, renderer, sun, hemi, THREE, shoot, toggleCar, update, toggleCreative, creative, creativePlace, creativeSpawnerActive };
 try { initDebugOverlay(window.G); } catch (e) { console.warn('Debug-Overlay aus', e); } // F3 und G.PERF (#162), muss vor setAnimationLoop stehen
 let fpsN = 0, fpsT = 0;
 renderer.setAnimationLoop(() => {
