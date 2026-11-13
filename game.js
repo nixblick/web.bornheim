@@ -2152,11 +2152,14 @@ function updateBikeRacks(dt) { if (POCKET || (rackT -= dt) > 0) return; rackT = 
 function voiSpawn() { const px = player.pos.x, pz = player.pos.z; let have = 0; for (const c of cars) if (c.userData.voi && c.userData.mode === 'parked' && (c.position.x - px) ** 2 + (c.position.z - pz) ** 2 < 180 * 180) have++; if (have >= 6) return;
   const rs = roadsNear(px, pz, 1, true); if (!rs.length) return; const p = randomRoadPoint(pick(rs)); const d = Math.hypot(p.x - px, p.z - pz); if (d < 30 || d > 160 || p.road.mw) return; const sd = Math.random() < 0.5 ? 1 : -1; const x = p.x + Math.cos(p.heading) * (p.road.w / 2 + 1.4) * sd, z = p.z - Math.sin(p.heading) * (p.road.w / 2 + 1.4) * sd; if (solidAt(x, z) >= 0 || onOtherRoad(x, z, null, 0.6)) return; /* Roller nicht auf die Nachbarstraße */
   const c = makeVoi(); c.position.set(x, surfAt(x, z, TH(x, z) + 2), z); c.userData.heading = p.heading; c.rotation.y = p.heading; c.userData.mode = 'parked'; scene.add(c); cars.push(c); shootables.push(c); }
+// Voi-Aufbau und Helme: je eine geteilte Geometrie und geteilte Materialien statt neuer je Fahrzeug (disposeCar gab sie nie frei). Räder bekommen weder Dellen noch Wrackfarbe, also bleibt Geteiltes unverändert
+const VOI_M = new THREE.MeshLambertMaterial({ color: 0xf26d5b }), VOI_DECK_G = new THREE.BoxGeometry(0.17, 0.06, 1.0), VOI_ST_G = new THREE.CylinderGeometry(0.025, 0.025, 1.0, 6);
+const HELMET_G = new THREE.SphereGeometry(0.15, 12, 10), HELMET_M = new Map();
 function makeVoi() { // Voi-E-Scooter (Fotos): lachsfarbenes Trittbrett und Lenkstange auf dem Rad-Fahrwerk
   const c = makeBike(0xf26d5b); const fm = c.userData.bodyMats[0]; c.traverse(o => { if (o.isMesh && (o.material === fm || (o.geometry.parameters && (o.geometry.parameters.width === 0.12 || o.geometry.parameters.width === 0.3)))) o.visible = false; });
-  const body = c.children[0], vm = new THREE.MeshLambertMaterial({ color: 0xf26d5b }); const deck = new THREE.Mesh(new THREE.BoxGeometry(0.17, 0.06, 1.0), vm); deck.position.set(0, 0.16, 0); body.add(deck); const st = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 1.0, 6), vm); st.position.set(0, 0.62, 0.42); st.rotation.x = -0.15; body.add(st);
+  const body = c.children[0], vm = VOI_M; const deck = new THREE.Mesh(VOI_DECK_G, vm); deck.position.set(0, 0.16, 0); body.add(deck); const st = new THREE.Mesh(VOI_ST_G, vm); st.position.set(0, 0.62, 0.42); st.rotation.x = -0.15; body.add(st);
   c.userData.voi = true; c.userData.type = 'voi'; return c; }
-function addHelmet(h, col) { const m = new THREE.Mesh(new THREE.SphereGeometry(0.15, 12, 10), new THREE.MeshLambertMaterial({ color: col ?? pick([0x111111, 0xeeeeee, 0xc0392b, 0x2d6fd8]) })); m.scale.set(1, 1.05, 1.1);
+function addHelmet(h, col) { const hc = col ?? pick([0x111111, 0xeeeeee, 0xc0392b, 0x2d6fd8]); let hm = HELMET_M.get(hc); if (!hm) { hm = new THREE.MeshLambertMaterial({ color: hc }); HELMET_M.set(hc, hm); } const m = new THREE.Mesh(HELMET_G, hm); m.scale.set(1, 1.05, 1.1);
   /* Am Kopfknochen statt fest auf 1,68 m: Fahrer beugt sich auf dem Motorrad vor (poseBikeRider), der Helm blieb hinter dem Kopf (André 12.11.2026).
      Knochen-Y zeigt nach oben aus dem Hals (aimB), Maßstab des Knochens herausrechnen */
   const hb = h.userData.bones && h.userData.bones.Head;
@@ -2165,7 +2168,7 @@ function addHelmet(h, col) { const m = new THREE.Mesh(new THREE.SphereGeometry(0
   h.userData.helmet = m; return m; }
 // Radler auf einem KI-Rad: eine Figur als Kind des Rads (nicht in peds), beim Klauen steigt sie ab und flieht
 function addRider(c) { const h = makeHuman(Math.random() < 0.5), m = !!c.userData.moto; h.position.set(0, m ? -0.02 : 0.05, m ? -0.22 : -0.24); c.add(h); c.userData.rider = h; poseBikeRider(h, m, Math.random() * 6); return h; }
-function dropRider(c, flee = true) { const u = c.userData; if (!u.rider) return null; c.remove(u.rider); u.rider = null; const d = spawnPedAt(c.position.x + Math.cos(u.heading) * 1.1, c.position.z - Math.sin(u.heading) * 1.1); if (d) { d.userData.state = flee ? 'flee' : 'stunned'; d.userData.fleeT = 8; if (!flee) WPN.stun(d, 'hit', 2.5); } return d; }
+function dropRider(c, flee = true) { const u = c.userData; if (!u.rider) return null; const r = u.rider; c.remove(r); u.rider = null; freeSkel(r); /* Figur wird verworfen: Knochen-Textur freigeben, disposeCar erreicht sie nicht mehr */ const d = spawnPedAt(c.position.x + Math.cos(u.heading) * 1.1, c.position.z - Math.sin(u.heading) * 1.1); if (d) { d.userData.state = flee ? 'flee' : 'stunned'; d.userData.fleeT = 8; if (!flee) WPN.stun(d, 'hit', 2.5); } return d; }
 // Umgekipptes Rad/Motorrad (nicht versunken) bleibt nutzbar: E stellt es wieder auf (André 13.11.2026, #101)
 const remountable = u => u.mode === 'wreck' && u.bike && !u.sunk;
 function tipBike(c, src) { const u = c.userData; if (c === player.car) { player.hp -= 15; camShake(0.3); showMsg('GESTÜRZT', 900); exitCar(); } const d = dropRider(c, false); u.hp = 0; u.speed = 0; u.mode = 'wreck'; u.wreckT = 0; c.rotation.z = Math.PI / 2 * 0.92; c.position.y += 0.1; sfx('crash', 0.35); return d; }
@@ -2521,7 +2524,8 @@ function damage(o, amt, dir, src = 'player') {
 }
 function explode(c, src = 'player') {
   const u = c.userData; if (u.bike) return tipBike(c, src); u.hp = 0; u.speed = 0; u.mode = 'wreck'; if (c.position.distanceTo(player.pos) < 40) camShake(0.6 * (1 - c.position.distanceTo(player.pos) / 40)); sfx('explosion', clamp(1 - c.position.distanceTo(player.pos) / 150, 0.1, 1));
-  c.traverse(m => { if (m.isSprite) m.visible = false; else if (m.isMesh && m.material?.color && m !== u.cone) { m.material = m.material.clone(); m.material.color.setHex(0x1a1a1a); if (m.material.emissive) m.material.emissive.setHex(0); } }); if (u.cone) u.cone.visible = false; u.heads = [];
+  const wm = new Map(); /* ein Wrack-Material je bisherigem Material statt je Mesh; eigene alte freigeben, Klone als eigen markieren (disposeCar) */
+  c.traverse(m => { if (m.isSprite) m.visible = false; else if (m.isMesh && m.material?.color && m !== u.cone) { const old = m.material; let k = wm.get(old); if (!k) { k = old.clone(); k.userData.own = true; k.color.setHex(0x1a1a1a); if (k.emissive) k.emissive.setHex(0); wm.set(old, k); if (old.userData.own) old.dispose(); } m.material = k; } }); if (u.cone) u.cone.visible = false; u.heads = [];
   burst(c.position.clone().setY(1), 0xff7a1a, 40, 6); burst(c.position.clone().setY(1.5), 0x222222, 20, 3);
   if (c === player.car) { player.hp -= 50; exitCar(); }
   if (player.pos.distanceTo(c.position) < 7 && !player.car) player.hp -= 40 * losFactor(c.position.x, c.position.y + 0.8, c.position.z, player.pos.x, player.pos.y + 1, player.pos.z);
