@@ -2588,17 +2588,17 @@ const shadowSnap = { x: 1e9, z: 1e9, n: 0 };
 function vibrate(ms) { if (opts.vibrate !== false && navigator.vibrate) try { navigator.vibrate(ms); } catch (e) {} }
 let shakeT = 0; function camShake(t) { shakeT = Math.max(shakeT, t); if (t >= 0.3) vibrate(Math.min(80, Math.round(t * 95))); }
 // Polizeihubschrauber (#63): ab 4 Sternen kreist er über dem Spieler, bei 5 Sternen und unerreichbarem Spieler (Dach) schießt der Scharfschütze
-const PHELI = []; let PHELI_WAIT = 0;
+const PHELI = []; let PHELI_WAIT = 0, PHELI_SPARE = null; // PHELI_SPARE: abgezogener Hubschrauber wartet auf den nächsten Einsatz (kein Neubau, nichts bleibt auf der GPU liegen)
 function makePoliceHeli() { const g = HELI.makeHeli(); const seen = new Map(); g.traverse(o => { if (!o.isMesh || !o.material || !o.material.color) return; const hx = o.material.color.getHex(); if (hx !== 0xc8102e && hx !== 0xf4f4f2) return; if (!seen.has(o.material)) { const m = o.material.clone(); m.color.setHex(hx === 0xc8102e ? 0x1d4f9e : 0xc4c9d0); seen.set(o.material, m); } o.material = seen.get(o.material); });
   const rotor = g.children.find(c => c.isGroup && Math.abs(c.position.y - 3.2) < 0.01); const laser = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.03, 1), new THREE.MeshBasicMaterial({ color: 0xff2020, transparent: true, opacity: 0.7 })); laser.visible = false; scene.add(laser);
   const lamp = new THREE.Mesh(new THREE.SphereGeometry(0.25, 8, 6), new THREE.MeshBasicMaterial({ color: 0xffffee })); lamp.position.set(0, 0.2, 2.2); g.add(lamp);
   g.userData = { pheli: true, hp: 450, ang: Math.random() * 6.28, aimT: 0, shotT: 2.5, rotor, laser, lamp, hitT: 0 }; return g; }
-function dropPoliceHeli(h) { scene.remove(h); scene.remove(h.userData.laser); const i = shootables.indexOf(h); if (i >= 0) shootables.splice(i, 1); PHELI.splice(PHELI.indexOf(h), 1); }
+function dropPoliceHeli(h) { scene.remove(h); h.userData.laser.visible = false; scene.remove(h.userData.laser); const i = shootables.indexOf(h); if (i >= 0) shootables.splice(i, 1); PHELI.splice(PHELI.indexOf(h), 1); PHELI_SPARE = h; }
 function policeHeli(dt) {
   const off = opts.police === false || creative.on || POCKET || player.dead || player.wanted < 4 || !HELI.makeHeli;
   if (off) { while (PHELI.length) dropPoliceHeli(PHELI[0]); PHELI_WAIT = 0; return; }
   const want = 1; /* immer nur ein Hubschrauber (André 12.11.2026) */ PHELI_WAIT -= dt;
-  if (PHELI.length < want && PHELI_WAIT <= 0) { const h = makePoliceHeli(); const a = Math.random() * 6.28; h.position.set(player.pos.x + Math.cos(a) * 260, player.pos.y + 70, player.pos.z + Math.sin(a) * 260); scene.add(h); shootables.push(h); PHELI.push(h); PHELI_WAIT = 4; showMsg('POLIZEIHUBSCHRAUBER IM ANFLUG', 1500); }
+  if (PHELI.length < want && PHELI_WAIT <= 0) { let h = PHELI_SPARE; if (h) { PHELI_SPARE = null; Object.assign(h.userData, { hp: 450, ang: Math.random() * 6.28, aimT: 0, shotT: 2.5, hitT: 0 }); scene.add(h.userData.laser); } else h = makePoliceHeli(); const a = Math.random() * 6.28; h.position.set(player.pos.x + Math.cos(a) * 260, player.pos.y + 70, player.pos.z + Math.sin(a) * 260); scene.add(h); shootables.push(h); PHELI.push(h); PHELI_WAIT = 4; showMsg('POLIZEIHUBSCHRAUBER IM ANFLUG', 1500); }
   const ground = TH(player.pos.x, player.pos.z); const high = player.pos.y > ground + 4; const night = world.hour < 6.5 || world.hour > 19;
   for (const h of [...PHELI]) { const u = h.userData;
     if (u.hp <= 0) { try { burst(h.position.clone(), 0xff8a30, 40); } catch (e) { /* nur Effekt */ } sfx('explosion', 1); dropPoliceHeli(h); PHELI_WAIT = 30; raiseWanted(1, 5); showMsg('HUBSCHRAUBER ABGESCHOSSEN', 1600); continue; }
