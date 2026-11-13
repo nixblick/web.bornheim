@@ -12,10 +12,11 @@ export function initProgress(X) {
   if (!X.emit) X.emit = (ev, pos, data) => { for (const f of X.listeners) f(ev, pos, data || {}); };
   const KEY = 'notgta.progress';
   let P = { xp: 0, lvl: 1, seen: {}, st: { drive: 0, walk: 0, time: 0, metro: 0, buy: 0, demo: 0, film: 0, crash: 0 } };
-  try { const o = JSON.parse(localStorage.getItem(KEY) || 'null'); if (o) { P = Object.assign(P, o); P.st = Object.assign({ drive: 0, walk: 0, time: 0, metro: 0, buy: 0, demo: 0, film: 0, crash: 0 }, o.st || {}); P.seen = o.seen || {}; } } catch (e) {}
+  P.karma = 0; P.fit = 0; P.medals = []; // Karma (Zivilcourage, #129), Fitness (Laufrunden, #128), Medaillen (Marathon/Megamarsch, #127), Basis 13.11.2026
+  try { const o = JSON.parse(localStorage.getItem(KEY) || 'null'); if (o) { P = Object.assign(P, o); P.st = Object.assign({ drive: 0, walk: 0, time: 0, metro: 0, buy: 0, demo: 0, film: 0, crash: 0 }, o.st || {}); P.seen = o.seen || {}; P.karma = +o.karma || 0; P.fit = +o.fit || 0; P.medals = Array.isArray(o.medals) ? o.medals : []; } } catch (e) {}
   const save = () => { try { localStorage.setItem(KEY, JSON.stringify(P)); } catch (e) {} };
   const need = l => Math.round(100 * Math.pow(l, 1.45)); // EP bis zur nächsten Stufe
-  function perks() { const l = P.lvl - 1; X.perks = { car: Math.max(0.55, 1 - 0.04 * l), shop: Math.max(0.7, 1 - 0.02 * l), run: Math.min(1.3, 1 + 0.02 * l) }; }
+  function perks() { const l = P.lvl - 1; X.perks = { car: Math.max(0.55, 1 - 0.04 * l), shop: Math.max(0.7, 1 - 0.02 * l), run: Math.min(1.3, 1 + 0.02 * l) * (1 + Math.min(0.2, (P.fit || 0) * 0.002)) }; } /* Fitness: bis +20 % Laufgeschwindigkeit bei 100 Punkten */
   perks();
   // ---------- Anzeige: EP-Meldungen und Gebiets-Banner ----------
   const st = document.createElement('style'); st.textContent = `#xpf{position:fixed;left:50%;bottom:150px;transform:translateX(-50%);z-index:7;pointer-events:none;font:700 15px system-ui;color:#c9a0ff;text-shadow:0 2px 6px #000;transition:opacity .4s;opacity:0}
@@ -38,6 +39,7 @@ export function initProgress(X) {
     while (P.xp >= need(P.lvl)) { P.xp -= need(P.lvl); P.lvl++; perks(); banner('STUFE ' + P.lvl, 'Aufgestiegen', `Auto ${Math.round((1 - X.perks.car) * 100)} % robuster · Läden ${Math.round((1 - X.perks.shop) * 100)} % billiger · ${Math.round((X.perks.run - 1) * 100)} % schneller rennen`); sfx('bell', 0.6); }
     drawLvl(); save();
   }
+  function fmtMs(ms) { const t = Math.round(ms / 1000); return Math.floor(t / 3600) + ':' + String(Math.floor(t / 60) % 60).padStart(2, '0') + ':' + String(t % 60).padStart(2, '0') + ' h'; }
   // @ts-ignore -- Baseline #119: DOM-/Zahl-String-Typen, kein X-Fehler
   function banner(big, small, sub) { ban.innerHTML = `<small>${small}</small><b>${big}</b>${sub ? '<i>' + sub + '</i>' : ''}`; ban.style.opacity = 1; banT = 4; }
   function drawLvl() { lvlEl.innerHTML = `Stufe ${P.lvl}<i><b style="width:${Math.round(P.xp / need(P.lvl) * 100)}%"></b></i>`; }
@@ -52,15 +54,20 @@ export function initProgress(X) {
   X.listeners.push((ev, pos, data) => {
     if (ev === 'joinedDemo') { P.st.demo++; gain(15, 'Demo'); } else if (ev === 'demoArrived') gain(25, 'Demo am Ziel');
     else if (ev === 'metro') { P.st.metro++; gain(8, 'U-Bahn'); } else if (ev === 'bought') { P.st.buy++; gain(2, 'Einkauf'); }
+    else if (ev === 'karma') { const n = +data.n || 0; P.karma = Math.max(-100, Math.min(100, P.karma + n)); showMsg((n >= 0 ? 'KARMA +' : 'KARMA ') + n + (data.why ? ' · ' + data.why : ''), 1400, n >= 0 ? 'ok' : undefined); if (n > 0) gain(n * 2, data.why || 'Zivilcourage'); save(); }
+    else if (ev === 'fitness') { const n = +data.n || 0; P.fit = Math.max(0, Math.min(100, P.fit + n)); perks(); showMsg('FITNESS +' + n, 1400, 'ok'); save(); }
+    else if (ev === 'medal') { const m = { id: String(data.id || 'medaille'), n: String(data.n || 'Medaille').slice(0, 60), ms: +data.ms || 0, at: Date.now() }; P.medals.push(m); banner('🏅 ' + m.n.toUpperCase(), 'MEDAILLE', m.ms ? fmtMs(m.ms) : ''); sfx('bell', 0.8); gain(200, 'Medaille'); save(); }
     else if (ev === 'filmed' || ev === 'film') { P.st.film++; gain(3, 'Video'); } else if (ev === 'fireOut' && data && data.by === 'player') gain(10, 'Feuer gelöscht');
   });
   // ---------- Tab: Statistik, Fortschritt, Befehle ----------
   const ov = document.createElement('div'); ov.id = 'tabov'; document.body.appendChild(ov);
+  const esc = t => String(t).replace(/[&<>"']/g, c => '&#' + c.charCodeAt(0) + ';');
+  const medalsHtml = () => P.medals.length ? P.medals.map(m => `🏅 ${esc(m.n)}${m.ms ? ' · ' + fmtMs(m.ms) : ''} <small style="color:#8a93a8">${new Date(m.at).toLocaleDateString('de-DE')}</small>`).join('<br>') : 'noch keine';
   const km = m => (m / 1000).toFixed(1) + ' km'; const hm = s => Math.floor(s / 3600) + ' h ' + Math.floor(s / 60 % 60) + ' min';
   function html(withKeys = true) {
     const nZ = D.length || 46, seen = Object.keys(P.seen).length;
     const stats = `<div><h3>FORTSCHRITT</h3><table><tr><td>Stufe</td><td><b style="color:#c9a0ff">${P.lvl}</b> · ${P.xp} / ${need(P.lvl)} EP</td></tr><tr><td>Vorteile</td><td>Auto ${Math.round((1 - X.perks.car) * 100)} % robuster<br>Läden ${Math.round((1 - X.perks.shop) * 100)} % billiger<br>${Math.round((X.perks.run - 1) * 100)} % schneller rennen</td></tr>
-      <tr><td>Stadtteile</td><td>${seen} von ${nZ} entdeckt</td></tr><tr><td>Geld</td><td>${player.money} €</td></tr><tr><td>Gefahren</td><td>${km(P.st.drive)}</td></tr><tr><td>Gelaufen</td><td>${km(P.st.walk)}</td></tr><tr><td>Spielzeit</td><td>${hm(P.st.time)}</td></tr><tr><td>U-Bahn-Fahrten</td><td>${P.st.metro}</td></tr><tr><td>Einkäufe</td><td>${P.st.buy}</td></tr><tr><td>Demos</td><td>${P.st.demo}</td></tr></table></div>`;
+      <tr><td>Karma</td><td>${P.karma > 0 ? '+' : ''}${P.karma}</td></tr><tr><td>Fitness</td><td>${P.fit} / 100</td></tr><tr><td>Medaillen</td><td>${medalsHtml()}</td></tr><tr><td>Stadtteile</td><td>${seen} von ${nZ} entdeckt</td></tr><tr><td>Geld</td><td>${player.money} €</td></tr><tr><td>Gefahren</td><td>${km(P.st.drive)}</td></tr><tr><td>Gelaufen</td><td>${km(P.st.walk)}</td></tr><tr><td>Spielzeit</td><td>${hm(P.st.time)}</td></tr><tr><td>U-Bahn-Fahrten</td><td>${P.st.metro}</td></tr><tr><td>Einkäufe</td><td>${P.st.buy}</td></tr><tr><td>Demos</td><td>${P.st.demo}</td></tr></table></div>`;
     const zones = `<div><h3>STADTTEILE ${seen}/${nZ}</h3><div class="zl">${(D.length ? D.map(d => d.n) : []).sort((a, b) => a.localeCompare(b, 'de')).map(n => `<span class="${P.seen[n] ? '' : 'no'}">${P.seen[n] ? '✓' : '·'} ${n}</span>`).join('')}</div></div>`;
     const keys = withKeys ? `<div><h3>BEFEHLE</h3><table>${KEYS_HELP.map(([k, t]) => `<tr><td><kbd>${k}</kbd></td><td>${t}</td></tr>`).join('')}</table></div>` : '';
     if (!withKeys) { // Menü: knapp – Stufe mit Balken, Rest zum Aufklappen
