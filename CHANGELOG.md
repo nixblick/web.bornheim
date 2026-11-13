@@ -2,6 +2,8 @@
 
 ## 2026-11-13
 
+- Gräber und Straßenbahn-Haltestellen nach Andrés Fotos (`graeber.js`): Mustergrabanlage mit fünf Grabtypen (Stele mit Baum-Relief, Stele mit Figur, Rundkopf mit Rosette, Kreuzstele, Liegestein), Bodendeckerbeete, Klinkerwege, Tannen, Bank; in jedem nahen Friedhof (OSM `landuse=cemetery`) bis zu drei Anlagen. Inschriften nur als unlesbare Rillen. Haltestelle mit Bahnsteig, Glas-Wartehalle mit Punktraster, neutraler Vitrine, grünem Kästchen, grünem H-Mast mit gelbem H-Schild, Anzeiger, Glasgeländer, Oberleitungsmast; an jedem nahen Tramhalt, z. B. „Wasserpark“ (Tram 18, OSM) neben dem Hauptfriedhof (OSM/Wikipedia). Probe `tools/proben/graeber.json` (Nahaufnahmen Haltestelle Wasserpark und Anlage am Hauptfriedhof, Spieltest auf GitHub grün).
+
 - **Marathon und Megamarsch als Wettbewerbe (#127):** Beide Strecken von frischlufteulen.de („Frankfurt Marathon 2026“, „Megamarsch 2026“, je der Abschnitt im Spielgebiet) laufen jetzt in **Etappen à ~10,5 km**: An jeder Etappengrenze wird gespeichert (Verpflegung, +30 Leben), jede Etappe hat ihre Zeit, Gesamtzeit = Summe, Fortsetzen startet an der Grenze, auch am nächsten Tag.
   - **Zu Fuß:** Gehen und Rennen zählen, Auto/Rad/Bahn/Sprung disqualifiziert. Belohnung Marathon 10.000 €, Megamarsch 15.000 €, volles Leben, Medaille.
   - **Zweiter Wettbewerb „Rad“:** gleiche Strecke, nur mit dem Fahrrad (orange Säule 4 m neben der Startsäule, das Rad steht bereit). Absteigen oder ein anderes Fahrzeug macht ungültig. Eigene Bestenliste, eigene Medaille, 2.500 €.
