@@ -255,7 +255,23 @@ const DEMN = new Map(); let thK = NaN, thH = null; const dkey = (tx, tz) => (tx 
 // Fuß von Stadtmöbeln am Hang (#165): tiefste Geländehöhe unter der Grundfläche (Mitte und vier Ecken im Abstand r);
 // die Modelle reichen FOOT_SINK tiefer, damit nichts über dem gröberen Gelände- oder flachen Gehwegstreifen schwebt
 const FOOT_SINK = 0.25;
-function footTH(x, z, r) { let m = TH(x, z); for (const [a, b] of [[r, r], [r, -r], [-r, r], [-r, -r]]) m = Math.min(m, TH(x + a, z + b)); return m; }
+// Seit 13.11.2026: nicht mehr TH, sondern die sichtbare Oberfläche je Punkt = höhere von Kachel-Geländenetz (gröberes Raster,
+// an Straßen und Ufern abgesenkt) und Gehweg-/Straßenband (flacher Querschnitt in Höhe der Mittellinie); Fuß = tiefster der fünf Punkte
+const _MGH = new Map();
+function meshGroundH(x, z) { // Höhe des Kachel-Geländenetzes wie buildTileGround (Dreiecke der PlaneGeometry, Diagonale b–d)
+  const mul = groundMul(), step = DEM.step * mul, drop = mul === 1 ? 0.03 : 0.06, tx = Math.floor(x / TS), tz = Math.floor(z / TS), x0 = tx * TS, z0 = tz * TS;
+  const fx = (x - x0) / step, fz = (z - z0) / step, ix = Math.floor(fx), iz = Math.floor(fz), u = fx - ix, v = fz - iz;
+  const h = (i, k) => { const gx = x0 + i * step, gz = z0 + k * step, kk = gx * 1e6 + gz + mul * 0.1; let y = _MGH.get(kk); if (y === undefined) { if (_MGH.size > 200000) _MGH.clear(); y = groundH(gx, gz, mul) - drop; _MGH.set(kk, y); } return y; }; // Gitterpunkte teilen sich viele Möbel
+  if (u + v <= 1) { const h00 = h(ix, iz); return h00 + u * (h(ix + 1, iz) - h00) + v * (h(ix, iz + 1) - h00); }
+  const h11 = h(ix + 1, iz + 1); return h11 + (1 - u) * (h(ix, iz + 1) - h11) + (1 - v) * (h(ix + 1, iz) - h11); }
+function bandH(x, z) { // oberstes Gehweg-/Straßen-/Wegband über (x,z) oder null; Höhe = TH der Mittellinie wie ribbon()
+  const c0 = key(Math.floor(x / CELL), Math.floor(z / CELL)); let best = null;
+  const seg = (r, i, lim, y) => { const [ax, az] = r.p[i], [bx, bz] = r.p[i + 1]; const dx = bx - ax, dz = bz - az, L2 = dx * dx + dz * dz || 1; const t = clamp(((x - ax) * dx + (z - az) * dz) / L2, 0, 1); const ex = x - ax - dx * t, ez = z - az - dz * t; if (ex * ex + ez * ez > lim * lim) return; const hh = TH(ax + dx * t, az + dz * t) + y; if (best === null || hh > best) best = hh; };
+  const c = getRoadGrid().get(c0); if (c) for (const [r, i] of c) { if (r.ry && (r.el[i] || r.el[i + 1])) continue; seg(r, i, r.w / 2 + (r.mw ? 0.8 : 2.5), 0.02); }
+  const pc = pathGrid.get(c0); if (pc) for (const [r, i] of pc) seg(r, i, 1, 0.03);
+  return best; }
+function surfH(x, z) { const g = meshGroundH(x, z), b = bandH(x, z); return b !== null && b > g ? b : g; }
+function footTH(x, z, r) { let m = surfH(x, z); for (const [a, b] of [[r, r], [r, -r], [-r, r], [-r, -r]]) m = Math.min(m, surfH(x + a, z + b)); return m; }
 function TH(x, z) {
   let tx = Math.floor(x / TS), tz = Math.floor(z / TS); const k = dkey(tx, tz); let H; if (k === thK) H = thH; else { H = DEMN.get(k); if (H) { thK = k; thH = H; } }
   if (!H) {
