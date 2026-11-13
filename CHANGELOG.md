@@ -2,6 +2,8 @@
 
 ## 2026-11-13
 
+- Grafik (#152, Zweig gfx-look): Nachbearbeitung nach Sunset-Vorbild in `look.js`. AgX-Tonemapping statt ACES in allen Stufen; ab Hoch eigener Look-Pass (AgX mit Kontrast/Sättigung, weiche Vignette) statt OutputPass, FXAA am Ende, Bloom-Voreinstellung je Stufe (Ultra etwas kräftiger). Niedrig/Mittel nur `renderer.toneMapping`, kein Extra-Pass. Spieltest 43419004866 grün (vorher 43419008547).
+
 - **Gräber und Haltestelle nachgebessert:** Mustergrabanlage dreht die Steinvorderseiten zum nächsten OSM-Weg (bis 60 m). Tramhalte mit neuem Haltestellenmodell (Gleis in 20 m) bekommen den alten blauen Halte-Mast nicht mehr. Glas der Wartehalle als Milchglas mit deutlichem weißen Punktraster (Foto Wasserpark). Spieltest per CI mit `graeber`.
 
 - **Doku privat:** `docs/vergleich-project-sunset.md` liegt nur noch lokal (gitignore), auf Andrés Wunsch. In der Git-Historie bleibt die frühere Fassung.
