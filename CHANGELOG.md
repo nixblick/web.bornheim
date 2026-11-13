@@ -2,7 +2,7 @@
 
 ## 2026-11-13
 
-- **Eschenheimer Turm als Wahrzeichen (#92):** Statt des 16-m-Klotzes aus OSM jetzt Rundturm (10,2 m Durchmesser) mit Wehrgang in 31 m, vier Scharwachttürmchen und Spitzhelm bis 48 m (Maße aus de.wikipedia). Dom (#93, Westturm 94,8 m laut Wikipedia, Modell 95 m) und Paulskirche (#95, Modell 56 m, Wikipedia nennt keine Turmhöhe) unverändert. Neue Proben in `tools/proben/wahrzeichen.json` (Rundum-Strahlen Eschenheimer Turm, Höhe je Modell, Blick aus 200 m und 60 m Höhe).
+- **Eschenheimer Turm als Wahrzeichen (#92):** Statt des 16-m-Klotzes aus OSM jetzt Rundturm (10,2 m Durchmesser) mit Wehrgang in 31 m, vier Scharwachttürmchen und Spitzhelm bis 48 m (Maße aus de.wikipedia). Dom (#93, Westturm 94,8 m laut Wikipedia, Modell 95 m) und Paulskirche (#95, Modell 56 m, Wikipedia nennt keine Turmhöhe) unverändert. Neue Proben in `tools/proben/wahrzeichen.json` (Rundum-Strahlen Eschenheimer Turm, Höhe je Modell, Blick aus 150–200 m und 60 m Höhe).
 - **Auto rollt erst ab 5 % von selbst los:** Gemessen über 12 m statt am Kippwinkel. Auf flach wirkender Wiese (2–4 %) bleibt das stehende Auto stehen, an echten Hängen rollt es an. Fahrprüfung „Hangabtrieb“ entsprechend: unter 6 % muss das Auto stehen bleiben, ab 6 % anrollen.
 - **Kein Zufallsruckeln mehr:** Die zufälligen „Unebenheiten“ in der Federung (auch auf ebener Fläche) sind entfernt; Federung reagiert nur noch auf Gelände, Bremsen und Kurven.
 - **Hänge sichtbar:** Wege und Straßen bekommen die echte Flächennormale statt „flach“, Gefälle zeigt sich im Licht.
