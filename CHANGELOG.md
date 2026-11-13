@@ -2,6 +2,7 @@
 
 ## 2026-11-13
 
+- **Umgehauenes Rad nutzbar (#101):** Nach einem Treffer auf Radler oder Motorradfahrer setzte `tipBike` das Rad auf `wreck`, und `toggleCar` sowie der Hinweistext übersprangen jedes Wrack. Umgekippte Räder und Motorräder (nicht versunkene) nimmt E jetzt wieder: aufstellen, Lebenspunkte zurück, losfahren. Ungetestet, Test im Nachtfenster.
 - **Rechtsverkehr (#99):** Autos, Räder und Polizei fuhren links. Die Straßennormale (-dz, dx) zeigt bei x = Ost, z = Süd nach rechts (belegt: Hauptwache liegt westlich der Konstablerwache und südlich von Bornheim), der Spurversatz war negativ. Vorzeichen an allen vier Stellen gedreht, Wandprüfung (sideGuard) mit. Ungetestet, Test im Nachtfenster.
 - **HUD oben links (#100):** „Stufe“ stand fest bei 84 px und überlagerte die Waffenzeile. Jetzt im selben Block unter der Waffe, auf Touch ebenso. Ungetestet, Test im Nachtfenster.
 - **Spieltest nimmt Proben immer von main:** Ältere Zweige ohne neue Probendatei lassen sich so trotzdem testen.
