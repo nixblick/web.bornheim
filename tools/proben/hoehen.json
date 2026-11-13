@@ -1,0 +1,10 @@
+[
+ {
+  "n": "hoehen_guenthersburgpark_fahren",
+  "x": -730,
+  "z": 160,
+  "wait": 15000,
+  "shot": true,
+  "js": "(async () => { await import('/tools/fahren.js?' + Date.now()); const r = await T.fahren(); return JSON.stringify(r); })()"
+ }
+]
