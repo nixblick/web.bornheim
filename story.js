@@ -43,7 +43,7 @@ export function initStory(X, W, D, F) {
     const m = markPos(); if (m) { let [x, y] = P(m[0], m[1]); const L = Math.hypot(x, y); if (L > R) { x *= R / L; y *= R / L; } ctx.fillStyle = '#ffd84a'; ctx.strokeStyle = '#000'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(x, y, 5, 0, 7); ctx.fill(); ctx.stroke(); }
     for (const st of Object.values(STORIES)) { if (!st.beacon || !st.beacon.visible) continue; let [x, y] = P(st.at[0], st.at[1]); const L = Math.hypot(x, y); if (L > R) { x *= R / L; y *= R / L; } ctx.fillStyle = st.color; ctx.font = 'bold 13px system-ui'; ctx.beginPath(); ctx.arc(x, y, 7, 0, 7); ctx.fill(); ctx.fillStyle = '#fff'; ctx.fillText(st.letter, x - 4.3, y + 4.5); } });
   function updateMarker(dt) {
-    if (intro) { introT -= dt; if (introT <= 0 || S.state === 'active') endIntro(); }
+    if (intro) { introT -= dt; if (S.state === 'active') endIntro(); else if (introT <= 0) { endIntro(); freeHint(); } }
     const m = markPos(); beam.visible = !!m && (S.state === 'active' || intro); if (beam.visible) { const y = markObj ? markObj.position.y : TH(m[0], m[1]); beam.position.set(m[0], y, m[1]); beam.userData.arrow.position.y = 3.2 + Math.sin(performance.now() / 300) * 0.25; beam.userData.arrow.rotation.y += dt * 2; const far = Math.hypot(m[0] - player.pos.x, m[1] - player.pos.z); beam.children[2].visible = far > 25; beam.children[0].visible = beam.children[3].visible = far > 14; }
     gpsT -= dt; if (m && gpsT <= 0) { gpsT = 2.5; const far = Math.hypot(m[0] - player.pos.x, m[1] - player.pos.z); gps = far > 40 ? D.route(player.pos.x, player.pos.z, m[0], m[1]) : null; }
     const anyOn = S.state === 'active'; for (const st of Object.values(STORIES)) { const b = st.beacon; if (!b) continue; b.visible = !anyOn && !st.S.finishedAll && !X.creative.on; if (!b.visible) continue; const d = Math.hypot(st.at[0] - player.pos.x, st.at[1] - player.pos.z); if (d < 2.2 && !player.car) { useStory(st.id); if (S.state === 'done') { S.state = 'new'; S.chap = 0; } start('beacon'); break; } }
@@ -222,8 +222,10 @@ export function initStory(X, W, D, F) {
   let intro = false, introT = 0;
   // @ts-ignore -- Baseline #119: DOM-/Zahl-String-Typen, kein X-Fehler
   function startIntro() { if (S.state === 'active') return; const none = Object.values(STORIES).every(st => st.S.state === 'new' && !st.S.done.length && !st.S.finishedAll); let seen = 0; try { seen = +localStorage.getItem('notgta.introSeen') || 0; } catch (e) {} if (!none || seen >= 3) return; try { localStorage.setItem('notgta.introSeen', seen + 1); } catch (e) {}
-    intro = true; introT = 240; setMark(UHR); setObj('Willkommen! Für die <b>Story</b> folge der gelben Linie zum lila <b>B</b> am Uhrtürmchen · oder Esc › Story wählen'); X.card('BORNHEIM', 'Freies Spiel – oder zur Story: dem gelben Strahl folgen', 5); }
+    intro = true; introT = 240; setMark(UHR); setObj('Willkommen! Für die <b>Story</b> folge der gelben Linie zum lila <b>B</b> am Uhrtürmchen · oder Esc › Story wählen · H Handy · F1 Hilfe'); X.card('BORNHEIM', 'Freies Spiel – oder zur Story: dem gelben Strahl folgen', 5); }
   function endIntro() { if (!intro) return; intro = false; setMark(null); setObj(''); }
+  // Wegweiser abgelaufen, keine Story begonnen: einmal je Spielstand kurz sagen, was es sonst gibt (kein Dauerhinweis)
+  function freeHint() { try { if (localStorage.getItem('notgta.freiTipp')) return; localStorage.setItem('notgta.freiTipp', '1'); } catch (e) {} X.card('FREI UNTERWEGS', 'H Handy: Nebenjobs, Laufrunden · F1 Hilfe · Esc Story wählen', 6); }
 
   return { update, start, stop, resume, skipLine, renderMenu, get S() { return S; }, get CH() { return CH; }, get sid() { return sid; }, useStory, STORIES, ST2, persist, get busy() { return S.state === 'active'; }, places: { UHR, GATE, SITE, EIS, PARKC, ...ST2.places, ...ST3.places }, beginChapter, get kim() { return kim; } };
 }
