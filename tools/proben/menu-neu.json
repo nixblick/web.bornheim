@@ -1,23 +1,17 @@
 [
  {
-  "n": "mn_1_uebersicht",
+  "n": "mn_1_karte_start",
   "x": -138,
   "z": 372,
   "wait": 9000,
-  "js": "(() => { const G = window.G; if (G.player.car) G.toggleCar(); G.PROGRESS.P.medals.push({ id: 'probe', n: 'Bornheim-Marathon', ms: 15123000, at: Date.now() }); localStorage.setItem('eulenBest', JSON.stringify({ 'lauf|Rund um den Günthersburgpark': [{ ms: 1534000, am: '2026-11-13' }], 'rad|Bornheim-Marathon': [{ ms: 4210000, am: '2026-11-12' }] })); dispatchEvent(new KeyboardEvent('keydown', { code: 'Escape', key: 'Escape' })); return document.querySelector('#menu .mn-board').textContent.slice(0, 200); })()",
-  "expect": "document.getElementById('menu').style.display === 'flex' && document.querySelector('#menu .pane[data-tab=uebersicht]').style.display === 'block' && document.querySelectorAll('#menu .mn-nav button').length === 5 && !!document.getElementById('m_save') && !!document.getElementById('m_creative') && !!document.getElementById('m_home') && document.querySelectorAll('#menu .mn-extra .mn-card').length === 3 && document.querySelectorAll('#menu .mn-medals li').length >= 1"
- },
- {
-  "n": "mn_2_karte",
-  "wait": 1500,
-  "js": "(() => { window.G.X.menuTab('karte'); return document.querySelector('#menu .mn-nav .on').textContent; })()",
-  "expect": "document.querySelector('#menu .pane[data-tab=karte]').style.display === 'block'"
+  "js": "(() => { const G = window.G; if (G.player.car) G.toggleCar(); G.PROGRESS.P.medals.push({ id: 'probe', n: 'Bornheim-Marathon', ms: 15123000, at: Date.now() }); dispatchEvent(new KeyboardEvent('keydown', { code: 'Escape', key: 'Escape' })); return new Promise(r => setTimeout(() => { const vis = e => !!(e.offsetWidth || e.offsetHeight); const karte = [...document.querySelectorAll('#menu *')].filter(e => vis(e) && !e.children.length && /karte/i.test(e.textContent)).map(e => e.tagName + ':' + e.textContent.trim()); r(JSON.stringify({ karte, nav: [...document.querySelectorAll('#menu .mn-nav button')].map(b => b.textContent), alt: document.querySelectorAll('#menu .tabs, #menu .sidetabs').length, pmap: document.getElementById('pmap').width, status: document.querySelector('#menu .mn-vals').textContent.replace(/\\s+/g, ' ').slice(0, 220) })); }, 400)); })()",
+  "expect": "document.getElementById('menu').style.display === 'flex' && document.querySelector('#menu .pane[data-tab=karte]').style.display === 'block' && document.getElementById('pmap').width > 300 && document.querySelectorAll('#menu .mn-nav button').length === 4 && [...document.querySelectorAll('#menu .mn-nav button')].every(b => b.children.length === 0) && document.querySelectorAll('#menu .tabs, #menu .sidetabs').length === 0 && document.querySelector('#menu .mn-status').offsetWidth > 200 && /\\d\\d:\\d\\d/.test(document.querySelector('#menu .mn-clock').textContent) && /Gesundheit/.test(document.querySelector('#menu .mn-vals').textContent) && document.querySelector('#menu .mn-stats') && !!document.getElementById('m_save') && !!document.getElementById('m_creative') && !!document.getElementById('m_home') && !!document.getElementById('m_feedback') && [...document.querySelectorAll('#menu *')].filter(e => (e.offsetWidth || e.offsetHeight) && !e.children.length && /^karte$/i.test(e.textContent.trim())).length === 1"
  },
  {
   "n": "mn_3_missionen",
   "wait": 1500,
   "js": "(() => { window.G.X.menuTab('story'); return document.querySelector('#menu .mn-nav .on').textContent; })()",
-  "expect": "document.querySelector('#menu .pane[data-tab=story]').style.display === 'block' && !!document.querySelector('#storypane .mn-mis') && document.querySelectorAll('#storypane .mn-misgrid button').length >= 2 && !!document.querySelector('#storypane .story')"
+  "expect": "document.querySelector('#menu .pane[data-tab=story]').style.display === 'block' && !!document.querySelector('#storypane .mn-mis') && document.querySelectorAll('#storypane .mn-misgrid button').length >= 2 && document.querySelector('#menu .mn-status').offsetWidth === 0"
  },
  {
   "n": "mn_4_statistik",
@@ -44,22 +38,27 @@
   "expect": "document.querySelector('#menu .pane[data-tab=hilfe]').style.display === 'block' && document.querySelector('#menu .mn-nav .on').dataset.main === 'einst'"
  },
  {
-  "n": "mn_8_handybreite",
+  "n": "mn_8_schmal",
   "wait": 1500,
-  "js": "(() => { window.G.X.menuTab('uebersicht'); const m = document.getElementById('menu'); m.style.right = 'auto'; m.style.width = '400px'; return 'ok'; })()",
-  "expect": "document.getElementById('menu').scrollWidth <= 400 && document.querySelector('#menu .mn-nav').scrollWidth <= document.querySelector('#menu .mn-nav').clientWidth + 1"
+  "js": "(() => { window.G.X.menuTab('karte'); const m = document.getElementById('menu'); m.style.right = 'auto'; m.style.width = '400px'; return 'ok'; })()",
+  "expect": "document.getElementById('menu').scrollWidth <= 400 && document.querySelector('#menu .mn-nav').scrollWidth <= document.querySelector('#menu .mn-nav').clientWidth + 1 && document.getElementById('pmap').width > 200 && [...document.querySelectorAll('#menu .mn-nav button')].every(b => b.scrollWidth <= b.clientWidth + 1)"
  },
  {
-  "n": "mn_9_zurueck",
-  "wait": 800,
-  "shot": false,
-  "js": "(() => { const m = document.getElementById('menu'); m.style.width = ''; m.style.right = ''; document.querySelector('#menu .mn-nav [data-main=karte]').click(); return 'ok'; })()",
-  "expect": "document.querySelector('#menu .pane[data-tab=karte]').style.display === 'block'"
+  "n": "mn_9_mittel",
+  "wait": 1500,
+  "js": "(() => { const m = document.getElementById('menu'); m.style.width = '1000px'; return 'ok'; })()",
+  "expect": "document.querySelector('#menu .mn-status').offsetWidth > 200 && document.getElementById('pmap').width > 400"
  },
  {
   "n": "mn_10_laufrunde_aus_menue",
   "wait": 1500,
-  "js": "(async () => { const G = window.G, w = ms => new Promise(r => setTimeout(r, ms)); let n = 0; for (; n < 12 && !G.LAUF.run; n++) { G.X.closeMenu(); await w(2500); G.X.openMenu(); G.X.menuTab('story'); await w(300); const b = [...document.querySelectorAll('#storypane .mn-misgrid button')].find(x => /Laufrunde/.test(x.textContent)); if (b) b.click(); await w(800); } return JSON.stringify({ run: !!G.LAUF.run, versuche: n, menu: document.getElementById('menu').style.display }); })()",
+  "js": "(async () => { const m = document.getElementById('menu'); m.style.width = ''; m.style.right = ''; const G = window.G, w = ms => new Promise(r => setTimeout(r, ms)); let n = 0; for (; n < 12 && !G.LAUF.run; n++) { G.X.closeMenu(); await w(2500); G.X.openMenu(); G.X.menuTab('story'); await w(300); const b = [...document.querySelectorAll('#storypane .mn-misgrid button')].find(x => /Laufrunde/.test(x.textContent)); if (b) b.click(); await w(800); } return JSON.stringify({ run: !!G.LAUF.run, versuche: n, menu: document.getElementById('menu').style.display }); })()",
   "expect": "!!window.G.LAUF.run && document.getElementById('menu').style.display === 'none'"
+ },
+ {
+  "n": "mn_11_karte_mit_mission",
+  "wait": 1500,
+  "js": "(() => { window.G.X.openMenu(); return document.querySelector('#menu .mn-goal').textContent; })()",
+  "expect": "/Laufrunde/.test(document.querySelector('#menu .mn-goal').textContent) && document.querySelector('#menu .pane[data-tab=karte]').style.display === 'block'"
  }
 ]
