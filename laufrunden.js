@@ -34,7 +34,7 @@ export function initLaufrunden(X) {
 
   function start() { if (!ped) return false; const p = plan(player.pos.x, player.pos.z); if (p.pts.length < 4) { showMsg('KEINE RUNDE GEFUNDEN', 1500); release(true); return false; }
     run = { ...p, i: 0, t0: performance.now(), buddy: ped }; mark.visible = false; WEG.route({ pts: p.pts, get i() { return run ? run.i : 0; }, from: [p.x0, p.z0], label: '🏃 Laufrunde' }); sfx('bell', 0.5);
-    card('LAUFRUNDE', `${(p.len / 1000).toFixed(1)} km · ${p.pts.length} Wegpunkte · zu Fuß (gehen oder rennen), grüne Ringe folgen`, 5); return true; }
+    card('LAUFRUNDE', `${(p.len / 1000).toFixed(1)} km · ${p.pts.length} Wegpunkte · zu Fuß (gehen oder rennen), dem grünen Strahl folgen`, 5); return true; }
   function abort(msg) { run = null; WEG.route(null); release(true); if (msg) showMsg(msg, 1600); }
   function finish() { const r = run; run = null; WEG.route(null); const s = Math.round((performance.now() - r.t0) / 1000); const km = r.len / 1000;
     const fit = Math.max(2, Math.min(10, Math.round(km * 3))); // 3 Fitness-Punkte je km, 2–10 je Runde: 100 Punkte nach etwa 10–15 Runden

@@ -11,7 +11,7 @@
   "n": "laufrunde_strahl",
   "wait": 2500,
   "shot": true,
-  "js": "(() => { const G = window.G, W = G.LAUF.weg, [x, z] = G.LAUF.run.pts[0]; G.player.pos.set(x + 25, G.TH(x + 25, z + 25), z + 25); G.camYaw.v = Math.atan2(x - G.player.pos.x, z - G.player.pos.z); return JSON.stringify({ strahl: W.beam.visible, hud: W.hud.textContent, mm: W.drawn.mm }); })()",
+  "js": "(() => { const G = window.G, W = G.LAUF.weg, R = G.LAUF.run, [x, z] = R.pts[0]; G.player.pos.set(R.x0, G.TH(R.x0, R.z0), R.z0); G.camYaw.v = Math.atan2(x - R.x0, z - R.z0); G.camPitch.v = 0.05; return JSON.stringify({ strahl: W.beam.visible, hud: W.hud.textContent, mm: W.drawn.mm }); })()",
   "expect": "window.G.LAUF.weg.beam.visible && window.G.LAUF.weg.hud.style.display === 'flex' && /Punkt 1\\//.test(window.G.LAUF.weg.hud.textContent) && window.G.LAUF.weg.drawn.mm > 0"
  },
  {
