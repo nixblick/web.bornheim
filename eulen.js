@@ -85,14 +85,14 @@ export function initEulen(X) {
     const i = go ? sv.i : 1; const stage = B.filter(b => b < i).length;
     if (go && mode === 'lauf' && !player.car) { const [x, z] = W[i - 1]; player.pos.set(x, TH(x, z), z); }
     if (mode === 'rad' && !(player.car && player.car.userData.bike && !player.car.userData.moto)) { const [x, z] = W[go ? i - 1 : 0]; if (!giveBike(x, z)) { showMsg('KEIN RAD VERFÜGBAR', 1500); return; } }
-    run = { r, W, B, mode, i, stage, times: go ? sv.times.slice() : [], st0: performance.now(), grace: 3, last: player.pos.clone(), test: !!opt.test };
+    run = { r, W, B, mode, i, stage, times: go ? sv.times.slice() : [], st0: performance.now(), grace: performance.now() + 3000, last: player.pos.clone(), test: !!opt.test };
     if (!ring) { ring = new THREE.Mesh(new THREE.TorusGeometry(3, 0.25, 8, 32), ringMat); scene.add(ring); } ring.visible = true; if (r.marathon) buildFinish(r.ziel);
     const et = B.length ? ` · Etappe ${stage + 1}/${B.length + 1}` : '';
     card((mode === 'rad' ? 'RAD-WETTBEWERB · ' : 'EULEN-') + kind(r).toUpperCase(), `${r.name} · ${r.info}${et} · ` + (mode === 'rad' ? 'nur mit dem Fahrrad, Absteigen macht ungültig' : 'zu Fuß, gehen oder rennen, ohne Auto, Rad oder Bahn') + (B.length ? ' · an jeder Etappengrenze wird gespeichert' : ''), 5); sfx('bell', 0.5); }
   function stop(msg) { run = null; if (ring) ring.visible = false; const o = document.getElementById('obj'); if (o) o.textContent = ''; if (msg) showMsg(msg, 2600); }
-  function runUpdate(dt) { const u = run; u.grace -= dt;
+  function runUpdate(dt) { const u = run;
     if (u.mode === 'lauf' && player.car) { stop('DISQUALIFIZIERT: NUR ZU FUSS'); return; }
-    if (u.mode === 'rad' && u.grace <= 0 && !(player.car && player.car.userData.bike && !player.car.userData.moto)) { stop('UNGÜLTIG: RAD-WETTBEWERB NUR AUF DEM FAHRRAD'); return; }
+    if (u.mode === 'rad' && performance.now() > u.grace && !(player.car && player.car.userData.bike && !player.car.userData.moto)) { stop('UNGÜLTIG: RAD-WETTBEWERB NUR AUF DEM FAHRRAD'); return; }
     const here = player.car ? player.car.position : player.pos; if (!u.test && here.distanceTo(u.last) > 60) { stop('DISQUALIFIZIERT: KEINE ABKÜRZUNG PER BAHN ODER SPRUNG'); return; } u.last.copy(here);
     if (Math.hypot(u.W[u.i][0] - here.x, u.W[u.i][1] - here.z) < 200) offRoad(u.W[u.i]); const [x, z] = u.W[u.i]; ring.position.set(x, TH(x, z) + 3, z); ring.rotation.y += 0.03; const d = Math.hypot(here.x - x, here.z - z); const ms = performance.now() - u.st0;
     const o = document.getElementById('obj'); if (o) o.textContent = `${u.mode === 'rad' ? '🚲' : '🦉'} ${u.r.name}${u.B.length ? ` · Etappe ${u.stage + 1}/${u.B.length + 1}` : ''}: Wegpunkt ${u.i}/${u.W.length - 1} · ${Math.round(d)} m · ${fmt(ms)}`;
