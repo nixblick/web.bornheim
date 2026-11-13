@@ -3,7 +3,7 @@
   "n": "dunst_hoch_setzen",
   "shot": false,
   "wait": 1000,
-  "js": "(async () => { try { const o = JSON.parse(localStorage.getItem('notgta.opts') || '{}'); if (o.quality === 'hoch') return 'schon hoch, LOW_GFX=' + window.G.LOW_GFX; o.quality = 'hoch'; localStorage.setItem('notgta.opts', JSON.stringify(o)); setTimeout(() => location.reload(), 200); return 'neu laden'; } catch (e) { return 'EXC ' + e; } })()"
+  "js": "(async () => { try { const o = JSON.parse(localStorage.getItem('notgta.opts') || '{}'); if (o.quality === 'hoch') return 'schon hoch, LOW_GFX=' + window.G.LOW_GFX; o.quality = 'hoch'; o.qualityManuell = true; localStorage.setItem('notgta.opts', JSON.stringify(o)); setTimeout(() => location.reload(), 200); return 'neu laden'; } catch (e) { return 'EXC ' + e; } })()"
  },
  {
   "n": "dunst_neu_geladen",
