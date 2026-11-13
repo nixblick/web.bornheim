@@ -49,7 +49,7 @@
   "n": "menu_esc",
   "wait": 1500,
   "js": "(() => { window.G.X.closeMenu(); dispatchEvent(new KeyboardEvent('keydown', { code: 'Escape', key: 'Escape' })); return document.getElementById('menu').style.display; })()",
-  "expect": "document.getElementById('menu').style.display === 'flex' && document.getElementById('menu').classList.contains('mn') && document.querySelector('#menu .pane[data-tab=uebersicht]').style.display === 'block' && /Laufrunde/.test(document.querySelector('#menu .mn-board').textContent)"
+  "expect": "document.getElementById('menu').style.display === 'flex' && document.getElementById('menu').classList.contains('mn') && document.querySelector('#menu .pane[data-tab=karte]').style.display === 'block' && /Laufrunde/.test(document.querySelector('#menu .mn-goal').textContent)"
  },
  {
   "n": "menu_grafik",
