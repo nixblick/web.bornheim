@@ -27,6 +27,7 @@
 #ammo,#weapon{pointer-events:auto!important}
 #hotbar{max-width:92vw!important;overflow-x:auto!important;flex-wrap:nowrap!important;justify-content:flex-start!important;bottom:8px!important;padding:4px 6px!important;touch-action:pan-x!important;-webkit-overflow-scrolling:touch}
 #hotbar .slot{flex:0 0 auto!important;min-width:48px!important}
+#wbar div.off{display:none}#wbar div{width:52px;height:50px}
 #mode{bottom:68px!important;font-size:10px!important;max-width:88vw!important;text-align:center}
 #card h2{font-size:28px!important}#card p{font-size:13px!important}
 #tcrot{position:fixed;inset:0;z-index:60;background:#0b0d12;color:#fff;display:none;align-items:center;justify-content:center;text-align:center;font:600 18px system-ui;padding:30px}`;
@@ -190,6 +191,9 @@
     const g = G();
     const on = started() && !document.querySelector('#menu[style*="flex"]');
     el.style.display = on ? 'block' : 'none';
+    // Handyknopf (phone.js legt ihn erst später an): nur zu Fuß im laufenden Spiel, bei offenem Handy bleibt er zum Schließen
+    const pb = document.getElementById('phonebtn');
+    if (pb) { const ph = document.getElementById('phone'), offen = !!ph && ph.style.display === 'block'; const v = on && g && g.player && (offen || (!g.player.car && !g.player.dead)) ? '' : 'none'; if (pb.style.display !== v) pb.style.display = v; }
     if (!on || !g || !g.player) {
       rot.style.display = innerHeight > innerWidth * 1.1 && on ? 'flex' : 'none';
       return;

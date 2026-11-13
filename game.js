@@ -55,7 +55,7 @@ document.body.appendChild(renderer.domElement);
 // Grafik-Kontext verloren (#184): Welt anhalten und einmal speichern (das Overlay aus feedback.js verspricht das); nach der Wiederherstellung läuft die Schleife weiter
 let glLost = false;
 renderer.domElement.addEventListener('webglcontextlost', () => { glLost = true; try { if (started && !player.dead) saveGame(true); } catch (e) {} });
-renderer.domElement.addEventListener('webglcontextrestored', () => { glLost = false; });
+renderer.domElement.addEventListener('webglcontextrestored', () => { glLost = false; try { bakeEnv(); } catch (e) { console.warn('Umgebungslicht nach Kontextverlust', e); } });
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x3a3550);
@@ -140,8 +140,9 @@ function disposeComposer() { if (!composer) return; for (const p of composer.pas
 function applyQuality() {
   const q = opts.quality || 'mittel';
   const ultra = q === 'ultra', post = (q === 'hoch' || ultra) && !composerBroken;
-  const sig = [q, opts.scale || 1, !!opts.ao, innerWidth, innerHeight, devicePixelRatio || 1].join('|'), same = sig === _qSig; _qSig = sig;
+  const sig = [q, opts.scale || 1, !!opts.ao, devicePixelRatio || 1].join('|'), same = sig === _qSig; _qSig = sig; // ohne Fenstergröße: die stellt der resize-Listener selbst nach
   if (!same) renderer.setPixelRatio((q === 'niedrig' ? 0.75 : ultra ? Math.min(1.5, Math.max(1, devicePixelRatio || 1)) : 1) * (opts.scale || 1)); if (!same) renderer.setSize(innerWidth, innerHeight);
+  if (same && innerWidth > 0 && innerHeight > 0) { const gs = renderer.getSize(new THREE.Vector2()); if (gs.x !== innerWidth || gs.y !== innerHeight) { renderer.setSize(innerWidth, innerHeight); if (composer) composer.setSize(innerWidth, innerHeight); } } // verpasster resize (Fenster war 0x0): nur Größe, Pixelverhältnis bleibt
   const sm = ultra ? 4096 : q === 'hoch' ? 2048 : 1024; sun.shadow.mapSize.set(sm, sm); { const e = ultra ? 95 : q === 'mittel' ? 50 : 70; /* Mittel: 1024er Karte auf 100 m statt 140 m, ~10 statt 14 cm je Texel: weniger Treppen an Bordsteinkanten */ sc.left = -e; sc.right = e; sc.top = e; sc.bottom = -e; sc.updateProjectionMatrix(); } sun.shadow.radius = ultra ? 2 : 1;
   if (HIMMEL) HIMMEL.setStufe(himmelStufe(), !post); WIN_U.value = q === 'niedrig' ? 0 : 1; applyTreeQuality(); rebuildAllTiles();
   if (same) { if (composer && bloomPass) { bloomPass.strength = LOOK_PRESET[ultra ? 'ultra' : 'hoch'].bloom.strength * (opts.bloom ?? 1); bloomPass.baseStrength = bloomPass.strength; } return false; }
@@ -214,7 +215,9 @@ try { const o = JSON.parse(localStorage.getItem('notgta.opts') || '{}'); if (o.q
 const LOW_GFX = WEAK_GPU || QUALITY === 'niedrig';
 installDunst(THREE, !LOW_GFX); // Höhendunst ab „Mittel“ (dunst.js, #152), vor dem ersten Kompilieren
 let ANISO = QUALITY === 'ultra' ? renderer.capabilities.getMaxAnisotropy() : QUALITY === 'niedrig' ? 2 : 4;
-if (LOW_GFX) scene.environment = null; else { const pm = new THREE.PMREMGenerator(renderer); scene.environment = pm.fromScene(new RoomEnvironment(), 0.04).texture; scene.environmentIntensity = 0.6; pm.dispose(); }
+let envRT = null; // PMREM-Ziel des Umgebungslichts: nach einem Kontextverlust ist sein Inhalt weg, dann neu backen
+function bakeEnv() { if (LOW_GFX) { scene.environment = null; return; } const alt = envRT, pm = new THREE.PMREMGenerator(renderer); envRT = pm.fromScene(new RoomEnvironment(), 0.04); scene.environment = envRT.texture; pm.dispose(); if (alt) { try { alt.dispose(); } catch (e) {} } }
+bakeEnv(); if (!LOW_GFX) scene.environmentIntensity = 0.6;
 // GLB-Materialien (Standard/Physical) einmalig nach Lambert wandeln: map, Farbe, Emissive, Transparenz bleiben; Skinning setzt three.js automatisch
 function toLambert(m, cache) { if (!m || m.isMeshLambertMaterial || m.isMeshBasicMaterial) return m; let l = cache.get(m); if (!l) { l = new THREE.MeshLambertMaterial({ name: m.name, color: m.color, map: m.map || null, emissive: m.emissive || 0x000000, emissiveMap: m.emissiveMap || null, emissiveIntensity: m.emissiveIntensity ?? 1, transparent: m.transparent, opacity: m.opacity, side: m.side, alphaTest: m.alphaTest, vertexColors: m.vertexColors }); l.userData = m.userData; cache.set(m, l); m.dispose(); } return l; }
 function lambertify(root) { const cache = new Map(); root.traverse(o => { if (!o.isMesh) return; o.material = Array.isArray(o.material) ? o.material.map(m => toLambert(m, cache)) : toLambert(o.material, cache); }); }
@@ -223,10 +226,13 @@ const loadingEl = document.getElementById('loading'), loadBar = document.getElem
 const setLoading = (t, p) => { if (loadingEl) loadingEl.textContent = t; if (p != null) { if (loadBar) loadBar.style.width = Math.round(p * 100) + '%'; if (goBtn) goBtn.textContent = p >= 1 ? 'Rein da' : 'Lädt … ' + Math.round(p * 100) + ' %'; } };
 setLoading('Lade Modelle und Texturen …', 0.04);
 const gltfLoader = new GLTFLoader(); const texLoader = new THREE.TextureLoader();
-const loadGLB = u => new Promise(res => gltfLoader.load(u, g => res(g), undefined, e => { console.warn('Modell fehlt', u, e); res(null); }));
-const loadTex = (u, rep, srgb) => new Promise(res => texLoader.load(u, t => { t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(rep, rep); if (srgb) t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = ANISO; res(t); }, undefined, () => res(null)));
+const loadGLB = u => new Promise(res => gltfLoader.load(u, g => res(ladTick(g)), undefined, e => { console.warn('Modell fehlt', u, e); res(ladTick(null)); }));
+const loadTex = (u, rep, srgb) => new Promise(res => texLoader.load(u, t => { t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(rep, rep); if (srgb) t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = ANISO; res(ladTick(t)); }, undefined, () => res(ladTick(null))));
 const PEOPLE_FILES = ['man', 'man_suit', 'woman_casual', 'woman_tanktop', 'woman_dress', 'woman_jacket', 'hero_man', 'hero_woman', 'business_man', 'swat'];
 const CAR_FILES = ['sedan', 'small', 'suv', 'taxi', 'police', 'hatchback', 'wagon'];
+// Ladebalken je fertiger Datei von 4 auf 30 % (vorher stand er beim größten Download still); 1 Waffe + 10 Texturen
+let ladN = 0; const LAD_ALL = PEOPLE_FILES.length + CAR_FILES.length + 1 + 10;
+function ladTick(v) { if (ladN < LAD_ALL) { ladN++; setLoading('Lade Modelle und Texturen … ' + ladN + ' / ' + LAD_ALL, 0.04 + 0.26 * ladN / LAD_ALL); } return v; }
 const [gPeople, gCars, gPistol, TEXA] = await Promise.all([
   Promise.all(PEOPLE_FILES.map(n => loadGLB(`assets/people/${n}.glb`))),
   Promise.all(CAR_FILES.map(n => loadGLB(`assets/cars/${n}.glb`))),
@@ -2474,7 +2480,7 @@ function drawBigMap() {
   cv.addEventListener('touchmove', e => { if (!mapOpen) return; e.preventDefault(); e.stopPropagation(); if (e.touches.length === 1 && drag) { const t = e.touches[0]; const sc = mapZoom / (cv.clientWidth || 600); mapPanX -= (t.clientX - lx) * sc; mapPanZ -= (t.clientY - ly) * sc; lx = t.clientX; ly = t.clientY; drawBigMap(); } else if (e.touches.length === 2 && pinchD > 10) { const d = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY); if (d > 10) { mapZoom = clamp(mapZoom * (pinchD / d), 600, 16000); pinchD = d; drawBigMap(); } } }, { passive: false });
   cv.addEventListener('touchend', () => { drag = false; pinchD = 0; });
 }
-addEventListener('keydown', e => { if (e.code === 'Escape') { if (started && !menuOpen) openMenu(); return; } if (menuOpen) return; keys[e.code] = true; if (e.code === 'KeyM') toggleMap(); if (e.code === 'KeyN' && started) { opts.mapNorth = !opts.mapNorth; saveOpts(); showMsg(opts.mapNorth ? 'MINIKARTE: NORDEN OBEN' : 'MINIKARTE: BLICKRICHTUNG OBEN', 1200, 'info'); } if (e.code === 'F5' && e.ctrlKey) return; if (e.code === 'F6') { e.preventDefault(); saveGame(); } if (e.code === 'F9') { e.preventDefault(); if (confirm('Letzten Spielstand laden? Nicht gespeicherter Fortschritt geht verloren.')) loadGame(); } if (e.code === 'KeyE') toggleCar(); if (e.code === 'KeyR') WPN.reload(); if (e.code === 'KeyT' && WPN && WPN.cycleFuse) WPN.cycleFuse(); if (e.code === 'KeyG') DEMO.rally(); if (e.code === 'KeyV') DEMO.film(); if (e.code === 'KeyX') STORY.skipLine(); if (e.code === 'KeyQ' && !creative.on) WPN.quick(); if (e.code === 'Space') e.preventDefault(); if (e.code === 'KeyC') toggleCreative(); if (e.code === 'KeyH' && player.car) { const u = player.car.userData; if (u.police || u.cannon || u.brigade || u.ambulance) { u.siren = !u.siren; showMsg(u.siren ? 'SONDERSIGNAL AN' : 'SONDERSIGNAL AUS', 900); sfx('click', 0.5); } else sfx(u.bike && !u.moto ? 'bell' : 'horn'); } if (e.code === 'KeyL' && player.car) { const u = player.car.userData; const now = u.lightsForce ?? world.night; u.lightsForce = !now; showMsg(u.lightsForce ? 'LICHT AN' : 'LICHT AUS', 700); sfx('click', 0.4); } if (creative.on && (e.code === 'Comma' || e.code === 'Period')) creativeSelect(creative.slot + (e.code === 'Period' ? 1 : -1)); if (creative.on && e.code === 'Minus') creativeSelect(20); if (e.code.startsWith('Digit')) { const n = (+e.code.slice(5) + 9) % 10; if (creative.on) creativeSelect(n + (e.shiftKey ? 10 : 0)); else if (!player.car || !player.car.userData.cannon) WPN.slotKey(+e.code.slice(5)); } });
+addEventListener('keydown', e => { if (e.code === 'Escape') { if (started && !menuOpen) openMenu(); return; } if (menuOpen) return; if (started && (X.shopOpen || (PHONE && PHONE.isOpen))) return; /* Laden, Fahrkartenmenü oder Handy offen: Spieltasten ruhen */ if (e.ctrlKey && started && (e.code === 'KeyS' || e.code === 'KeyD' || e.code === 'KeyA')) e.preventDefault(); /* Strg+S/D/A beim Tauchen: kein Speichern- oder Lesezeichen-Dialog */ keys[e.code] = true; if (e.repeat && !(creative.on && (e.code === 'Comma' || e.code === 'Period'))) { if (e.code === 'Space' || e.code === 'F6' || e.code === 'F9') e.preventDefault(); return; } /* Tastenwiederholung: Einmal-Aktionen (E, C, M, H, L ...) nur beim ersten Druck */ if (e.code === 'KeyM') toggleMap(); if (e.code === 'KeyN' && started) { opts.mapNorth = !opts.mapNorth; saveOpts(); showMsg(opts.mapNorth ? 'MINIKARTE: NORDEN OBEN' : 'MINIKARTE: BLICKRICHTUNG OBEN', 1200, 'info'); } if (e.code === 'F5' && e.ctrlKey) return; if (e.code === 'F6') { e.preventDefault(); saveGame(); } if (e.code === 'F9') { e.preventDefault(); if (confirm('Letzten Spielstand laden? Nicht gespeicherter Fortschritt geht verloren.')) loadGame(); } if (e.code === 'KeyE') toggleCar(true); if (e.code === 'KeyR') WPN.reload(); if (e.code === 'KeyT' && WPN && WPN.cycleFuse) WPN.cycleFuse(); if (e.code === 'KeyG') DEMO.rally(); if (e.code === 'KeyV') DEMO.film(); if (e.code === 'KeyX') STORY.skipLine(); if (e.code === 'KeyQ' && !creative.on) WPN.quick(); if (e.code === 'Space') e.preventDefault(); if (e.code === 'KeyC') toggleCreative(); if (e.code === 'KeyH' && player.car) { const u = player.car.userData; if (u.police || u.cannon || u.brigade || u.ambulance) { u.siren = !u.siren; showMsg(u.siren ? 'SONDERSIGNAL AN' : 'SONDERSIGNAL AUS', 900); sfx('click', 0.5); } else sfx(u.bike && !u.moto ? 'bell' : 'horn'); } if (e.code === 'KeyL' && player.car) { const u = player.car.userData; const now = u.lightsForce ?? world.night; u.lightsForce = !now; showMsg(u.lightsForce ? 'LICHT AN' : 'LICHT AUS', 700); sfx('click', 0.4); } if (creative.on && (e.code === 'Comma' || e.code === 'Period')) creativeSelect(creative.slot + (e.code === 'Period' ? 1 : -1)); if (creative.on && e.code === 'Minus') creativeSelect(20); if (e.code.startsWith('Digit')) { const n = (+e.code.slice(5) + 9) % 10; if (creative.on) creativeSelect(n + (e.shiftKey ? 10 : 0)); else if (!player.car || !player.car.userData.cannon) WPN.slotKey(+e.code.slice(5)); } });
 const CREATIVE_ITEMS = [
   { n: 'Schläger', w: 'bat' }, { n: 'Pistole', w: 'pistol' }, { n: 'MP', w: 'smg' }, { n: 'Schrotflinte', w: 'shotgun' }, { n: 'Gewehr', w: 'rifle' }, { n: 'Pfefferspray', w: 'spray' }, { n: 'Taser', w: 'taser' }, { n: 'Farbbeutel', w: 'paint' }, { n: 'Böller', w: 'banger' }, { n: 'Rauchtopf', w: 'smoke' },
   { n: 'Bengalo', w: 'flare' }, { n: 'Granate', w: 'grenade' }, { n: 'Zeitbombe', w: 'tnt' }, { n: 'Brandsatz', w: 'molotov' }, { n: 'Raketenwerfer', w: 'rocket' }, { n: 'Feuerwerk', s: 'firework', ic: '🎆' }, { n: 'Demo', s: 'demo', ic: '✊' }, { n: 'Polizei', s: 'police', ic: '🚓' }, { n: 'Wasserwerfer', s: 'cannon', ic: '💦' }, { n: 'Feuerwehr', s: 'firetruck', ic: '🚒' }, { n: 'Rettung', s: 'ambulance', ic: '🚑' }, { n: 'Auto', s: 'car', ic: '🚗' }, { n: 'Mensch', s: 'ped', ic: '🚶' },
@@ -2511,6 +2517,7 @@ function savePlaced() { try { localStorage.setItem('notgta.build', JSON.stringif
 function loadPlaced() { /* 12.11.2026: rief addPlaced auf, das es nie gab; der Fehler wurde verschluckt, Wiederherstellen lief nie. Gespeichert wird nur der Typ ohne Position, darum bewusst leer bis zu einem echten Speicherformat */ }
 addEventListener('keyup', e => { keys[e.code] = false; });
 addEventListener('blur', () => { for (const k in keys) keys[k] = false; WPN && WPN.press(false); }); // Alt+Tab bei gedrückter Taste: sonst läuft/fährt die Figur weiter
+addEventListener('beforeunload', e => { if (started && !player.dead && keys.ControlLeft && (player.swim || creative.on)) { e.preventDefault(); e.returnValue = ''; } }); // Strg+W beim Tauchen/Sinken: der Browser fragt nach, statt den Tab sofort zu schließen
 let locked = false;
 document.addEventListener('pointerlockerror', () => {});
 document.addEventListener('pointerlockchange', () => { locked = document.pointerLockElement === renderer.domElement; if (locked && menuOpen) { document.exitPointerLock(); locked = false; return; } /* #98: Sperre bei offenem Menü (alter Timer, Fremdaufruf) sofort lösen, sonst geht der Kartenklick als Schuss ins Spiel */ if (!locked && started && !menuOpen && !window.__noAutoMenu && !document.hidden && !mapOpen) setTimeout(() => { if (!locked && !menuOpen) openMenu(); }, 50); });
@@ -2671,9 +2678,16 @@ function raiseWanted(n, cap = 5) { if (opts.police === false) return; player.wan
   if (player.wanted >= cap) return; const add = Math.min(n, 1 - WANT_GAIN, cap - player.wanted); if (add <= 0) return; WANT_GAIN += add; player.wanted = clamp(player.wanted + add, 0, 5); }
 
 // ---------- Auto fahren ----------
-function toggleCar() {
+function toggleCar(key) {
   if (!started || player.dead) return;
-  if (player.car) { if (player.car.userData.heli && !player.car.userData.landed) { showMsg('ERST LANDEN', 900); return; } exitCar(); return; }
+  if (player.car) { const c = player.car, u = c.userData; if (u.heli) { if (!u.landed) { showMsg('ERST LANDEN', 900); return; } exitCar(); return; }
+    // Aussteigen bei Fahrt: das Fahrzeug rollt aus (u.shove) statt in einem Bild zu stehen. Sturz und Schaden nur per Taste (key), Werkzeuge über G.toggleCar() bleiben heil
+    const v = u.speed || 0, av = Math.abs(v);
+    if (key && u.bike && av > 4) { tipBike(c, 'player'); return; }
+    exitCar(); u.speed = 0; if (u.vel) u.vel.set(0, 0);
+    u.shove = av > 3 && !u.sunk ? new THREE.Vector2(Math.sin(u.heading) * v, Math.cos(u.heading) * v) : null; u.shoveSpin = 0;
+    if (key && !u.bike && av > 8 && !u.sunk) { hurtPlayer('boom', Math.min(30, (av - 8) * 1.5)); showMsg('ABSPRUNG BEI FAHRT', 900); }
+    return; }
   let best = null, bd = 4;
   for (const c of cars) { if (c.userData.mode === 'wreck' && !remountable(c.userData)) continue; const d = c.position.distanceTo(player.pos) - (c.userData.cannon ? 3 : c.userData.heli ? 4.5 : 0); if (d < bd) { bd = d; best = c; } }
   if (!best) { let sb = null, sd = 3.6; for (const sp of staticParked) { if (!sp.active) continue; const d = Math.hypot(sp.x - player.pos.x, sp.z - player.pos.z); if (d < sd) { sd = d; sb = sp; } } if (!sb) return; best = activateParked(sb); }
@@ -2693,8 +2707,11 @@ function vehName(c) { const u = c.userData; const n = u.heli ? 'Christoph 2' : u
 function exitCar() {
   const c = player.car; if (!c) return; const u = c.userData; sfx(u.bike ? 'click' : 'door'); u.mode = u.sunk ? 'wreck' : 'parked'; u.driver = null; if (player.mesh.userData.helmet) player.mesh.userData.helmet.visible = false;
   if (u.heli) { player.pos.set(c.position.x + Math.cos(u.heading) * 2.6, 0, c.position.z - Math.sin(u.heading) * 2.6); player.pos.y = floorAt(player.pos.x, player.pos.z, c.position.y + 1); player.vy = 0; player.car = null; player.mesh.visible = true; player.mesh.position.copy(player.pos); return; }
-  const cand = [[Math.cos(u.heading) * 2.2, -Math.sin(u.heading) * 2.2], [-Math.cos(u.heading) * 2.2, Math.sin(u.heading) * 2.2], [-Math.sin(u.heading) * 3.5, -Math.cos(u.heading) * 3.5]];
-  for (const [ox, oz] of cand) { player.pos.set(c.position.x + ox, 0, c.position.z + oz); if (solidAt(player.pos.x, player.pos.z) < 0) break; }
+  const hs = Math.sin(u.heading), hc = Math.cos(u.heading), cx = c.position.x, cz = c.position.z;
+  const cand = [[hc * 2.2, -hs * 2.2], [-hc * 2.2, hs * 2.2], [-hs * 3.5, -hc * 3.5], [hs * 3.5, hc * 3.5], [hc * 1.4, -hs * 1.4], [-hc * 1.4, hs * 1.4]];
+  // rechts, links, hinten, vorn, dann eng am Fahrzeug: erst ohne Zaun, dann nur hausfrei; ist alles zu, bleibt die Figur am Fahrzeug stehen statt im Haus
+  const spot = cand.find(([ox, oz]) => solidAt(cx + ox, cz + oz) < 0 && !barrierHit(cx + ox, cz + oz, 0.35)) || cand.find(([ox, oz]) => solidAt(cx + ox, cz + oz) < 0) || [0, 0];
+  player.pos.set(cx + spot[0], 0, cz + spot[1]);
   player.pos.y = surfAt(player.pos.x, player.pos.z, c.position.y + 0.5); player.vy = 0; // Brücken/Hochstraßen: auf dem Deck aussteigen, nicht darunter
   player.car = null; player.mesh.visible = true; player.mesh.position.copy(player.pos);
   if (player.mesh.userData.hand) player.mesh.userData.hand.rotation.set(0, Math.PI, 0);
@@ -3040,7 +3057,7 @@ function runJob(j, budget) {
   while (j.steps.length) { const st = j.steps[0]; if (!j.gen) j.gen = (st === 'ground' || any) ? STEP_FN[st](j.t) : null; let done = !j.gen; const a = performance.now();
     while (!done) { BUILD_TILE = j.t; const s0 = performance.now(); const res = withBuildSet(d, () => { try { done = j.gen.next().done; } finally { BUILD_TILE = null; } }, j.grp); res.owned.forEach((o, i) => { if (o.length) j.owned[i].push(...o); }); const sl = performance.now() - s0; if (sl > BUILD_STAT.max) { BUILD_STAT.max = sl; BUILD_STAT.step = st === 'city' ? 'city:' + CITY_PART : st === 'det' ? 'det:' + DET_PART : st; } if (performance.now() - t0 > budget) break; }
     j.t.prof[st] = (j.t.prof[st] || 0) + Math.round(performance.now() - a); if (done) { j.steps.shift(); j.gen = null; } if (performance.now() - t0 > budget) break; }
-  if (j.steps.length) return false; if (j.upgrade) { j.t.lod = 'near'; j.t.ms = Object.values(j.t.prof).reduce((a, b) => a + b, 0); return true; } finishTile(j.t, j.grp, j.owned); return true;
+  if (j.steps.length) return false; if (j.upgrade) { if (!j.t.built) return true; j.t.lod = 'near'; j.t.ms = Object.values(j.t.prof).reduce((a, b) => a + b, 0); return true; } finishTile(j.t, j.grp, j.owned); return true;
 }
 function buildTileNow(t) { runJob(makeJob(t), Infinity); }
 let job = null; // Kachel, die gerade schrittweise gebaut wird
@@ -3049,7 +3066,7 @@ const BUILD_STAT = { ms: 0, max: 0, step: '', sync: 0, syncN: 0 }; // Kachelbau 
 function stepJob() { const b = opts.potato ? 4 : (_smoothFt > 26 ? 4.5 : BUILD_BUDGET); const t0 = performance.now(); const done = runJob(job, b); if (done) { job = null; refreshActive(); } BUILD_STAT.ms += performance.now() - t0; }
 function cancelJob() { if (!job) return; const t = { built: true, grp: job.grp, owned: job.owned }; scene.add(job.grp); unbuildTile(t); if (!job.upgrade) { barrierDrop(job.t); barrierDrop(job.t, 'barH'); } /* halb gebaute Kachel: ihre Hindernisse (Zäune, Hecken) wieder aus dem Raster; beim Aufwerten gehören sie der stehenden Kachel */ job = null; }
 function unbuildTile(t) { barrierDrop(t); barrierDrop(t, 'barH');
-  if (!t.built) return; scene.remove(t.grp); const L = OWN_LISTS();
+  if (!t.built) return; if (job && job.upgrade && job.t === t) job = null; /* laufende Aufwertung dieser Kachel verwerfen: sie baute sonst in die entfernte Gruppe weiter (unsichtbare Parkautos) */ scene.remove(t.grp); const L = OWN_LISTS();
   L.forEach((l, i) => { const own = t.owned[i]; if (!own.length) return; const s = new Set(own); let w = 0; for (let r = 0; r < l.length; r++) if (!s.has(l[r])) l[w++] = l[r]; l.length = w; });
   disposeHierarchy(t.grp, { keep: x => x.isTexture && !(x.userData && x.userData.own) }); /* Kachel-Texturen kommen aus Caches (TEX, Fassaden, Gehweg), Speicherprobe #120: Zahl bleibt stabil; eigene markiert userData.own */
   t.grp = null; t.owned = null; t.built = false;
@@ -3257,10 +3274,10 @@ function update(dt) {
     const len = Math.hypot(mx, mz); const moving = len > 0;
     if (moving) { mx /= len; mz /= len; const s = Math.sin(camYaw.v), c = Math.cos(camYaw.v); const wx = -mx * c + mz * s, wz = mx * s + mz * c; const csp = creative.on ? (ctrl.run ? 24 : 12) : speed; moveWithCollision(player.pos, wx * csp * dt, wz * csp * dt, 0.35, swimming ? wy : player.pos.y); player.yaw = lerpAngle(player.yaw, Math.atan2(wx, wz), 1 - Math.exp(-13 * dt)); }
     const gy = floorAt(player.pos.x, player.pos.z, swimming ? wy + 0.5 : player.pos.y);
-    if (creative.on) { player.swim = false; const fly = (keys.Space ? 1 : 0) - (keys.ControlLeft ? 1 : 0) - (keys.ShiftLeft && !ctrl.fwd && !ctrl.back && !ctrl.left && !ctrl.right ? 1 : 0); player.pos.y = Math.max(gy, player.pos.y + fly * 9 * dt); player.vy = 0; player.airT = 0; }
+    if (creative.on) { player.swim = false; const fly = (keys.Space ? 1 : 0) - (keys.ControlLeft || keys.KeyB ? 1 : 0) - (keys.ShiftLeft && !ctrl.fwd && !ctrl.back && !ctrl.left && !ctrl.right ? 1 : 0); player.pos.y = Math.max(gy, player.pos.y + fly * 9 * dt); player.vy = 0; player.airT = 0; }
     else if (swimming) {
       if (!player.swim) { player.swim = true; sfx('splat', 0.6); burst(new THREE.Vector3(player.pos.x, wy + 0.1, player.pos.z), 0xd8eeff, 12, 3); }
-      const dive = !!keys.ControlLeft; player.breath = Math.max(0, (player.breath ?? 1) - dt / (dive ? 15 : 90)); /* Atemluft: tauchen 15 s, an der Oberfläche ermüdet man nach 90 s */
+      const dive = !!(keys.ControlLeft || keys.KeyB); /* B statt Strg: Strg+W schließt den Tab; Strg bleibt für Touch und Gewohnheit */ player.breath = Math.max(0, (player.breath ?? 1) - dt / (dive ? 15 : 90)); /* Atemluft: tauchen 15 s, an der Oberfläche ermüdet man nach 90 s */
       if (player.breath <= 0 && !opts.god) { player.drownT = (player.drownT || 0) + dt; if (player.drownT > 0.5) { player.drownT = 0; player.hp -= 8; player.drowning = true; sfx('hit', 0.3); } }
       const swimY = wy - (dive ? 2.4 : 1.18); player.vy = 0; player.pos.y += (swimY - player.pos.y) * Math.min(1, dt * 10);
       if (moving && Math.random() < dt * 10) burst(new THREE.Vector3(player.pos.x, wy + 0.05, player.pos.z), 0xd8eeff, 2, 1.2);
@@ -3361,7 +3378,11 @@ function update(dt) {
   FX.update(dt); // Partikel (ein Pool, ein Draw-Call)
   // Fahndung
   if (creative.on) player.wanted = 0;
-  if (player.wanted > 0) { player.wantedTimer -= dt; if (player.wantedTimer <= 0) player.wanted = Math.max(0, player.wanted - dt * 0.25); const want = Math.min(Math.floor(player.wanted) + 1, 5); let n = 0; for (const c of cars) if (c.userData.mode === 'police') n++; if (n < want && Math.random() < dt * 0.5) spawnCar(true, player.pos); }
+  if (player.wanted > 0) { let n = 0, nah = false; for (const c of cars) if (c.userData.mode === 'police') { n++; if (!nah && c.position.distanceToSquared(player.pos) < 1225) nah = true; }
+    // Kein Abklingen, solange Polizei dran ist (Streifenwagen < 35 m oder Beamter < 28 m); in Innenräumen und der U-Bahn läuft die Uhr weiter
+    if (!nah) for (const p of peds) if (p.userData.cop && p.userData.state !== 'dead' && p.position.distanceToSquared(player.pos) < 784) { nah = true; break; }
+    if (nah && !(INTERIORS && INTERIORS.inside) && !inPocket(player.pos.x, player.pos.z)) player.wantedTimer = Math.max(player.wantedTimer, 3);
+    player.wantedTimer -= dt; if (player.wantedTimer <= 0) player.wanted = Math.max(0, player.wanted - dt * 0.25); const want = Math.min(Math.floor(player.wanted) + 1, 5); if (n < want && Math.random() < dt * 0.5) spawnCar(true, player.pos); }
   else { for (let i = cars.length - 1; i >= 0; i--) { const c = cars[i]; if (c.userData.mode !== 'police') continue; if (c.position.distanceTo(player.pos) > 120) { disposeCar(c); scene.remove(c); cars.splice(i, 1); unshoot(c); } else { c.userData.mode = 'parked'; c.userData.speed = 0; c.userData.officer = null; c.userData.polRest = true; } } } // nahe Streifenwagen bleiben stehen statt weiter Beamte abzusetzen
   // Tod
   if (opts.god) player.hp = 100;
@@ -3396,9 +3417,12 @@ function freeSkel(h) { h.traverse(o => { if (o.isSkinnedMesh && o.skeleton && o.
 function despawnPed(h) { freeSkel(h); scene.remove(h); const i = peds.indexOf(h); if (i >= 0) peds.splice(i, 1); const j = shootables.indexOf(h); if (j >= 0) shootables.splice(j, 1); }
 function copCount() { let n = 0; for (const p of peds) if (p.userData.cop && p.userData.state !== 'dead') n++; return n; }
 function spawnOfficer(car) {
-  const h = makeHuman(false, { model: 'swat', keepColors: true, top: 0x1f3a6b, pants: 0x1a2e52, style: 'jacket', hair: 'cap' }); const u = car.userData; const x = car.position.x + Math.cos(u.heading) * 2.2, z = car.position.z - Math.sin(u.heading) * 2.2;
-  if (solidAt(x, z) >= 0) return null; h.position.set(x, TH(x, z), z); const gun = makeGun(); h.userData.hand.add(gun); h.userData.gun = gun; h.userData.aiming = true;
-  Object.assign(h.userData, { road: pick(CITY.roads), seg: 0, dir: 1, side: 1, speed: 2.6, hp: 100, state: 'cop', t: 0, cop: true, shotT: rnd(0.5, 1.5), car });
+  // erst die Wand prüfen, dann das Modell bauen (sonst alle paar Sekunden ein weggeworfener Klon); steht vorn eine Wand, steigt er hinten aus
+  const u = car.userData; let x = car.position.x + Math.cos(u.heading) * 2.2, z = car.position.z - Math.sin(u.heading) * 2.2;
+  if (solidAt(x, z) >= 0) { x = car.position.x - Math.cos(u.heading) * 2.2; z = car.position.z + Math.sin(u.heading) * 2.2; if (solidAt(x, z) >= 0) return null; }
+  const h = makeHuman(false, { model: 'swat', keepColors: true, top: 0x1f3a6b, pants: 0x1a2e52, style: 'jacket', hair: 'cap' });
+  h.position.set(x, TH(x, z), z); const gun = makeGun(); h.userData.hand.add(gun); h.userData.gun = gun; h.userData.aiming = true;
+  Object.assign(h.userData, { road: pick(CITY.roads), seg: 0, dir: 1, side: 1, speed: 2.6, hp: 100, state: 'cop', t: 0, cop: true, shotT: rnd(0.5, 1.5), car, grab: 0, hotT: 0, shots: 0 });
   scene.add(h); peds.push(h); shootables.push(h); u.officer = h; return h;
 }
 function copAI(h, dt) {
@@ -3406,10 +3430,20 @@ function copAI(h, dt) {
   // Fahndung vorbei: Beamter verschwindet (steigt ein). Vorher wurde er zum Passanten mit Pistole, das Auto bekam sofort den nächsten – hunderte „Polizisten“ in Sekunden (Issues #1, #2)
   if (player.wanted <= 0 || player.dead) { if (u.car) { u.car.userData.officer = null; u.car.userData.officerT = 6; } despawnPed(h); return; }
   const dirx = to.x / (d || 1), dirz = to.z / (d || 1); h.rotation.y = Math.atan2(dirx, dirz);
+  // Unter 2 Sternen wird festgenommen statt geschossen. Schusswaffe nur ab 2 Sternen oder wenn der Spieler selbst eine in der Hand hat (wirkt 6 s nach)
+  if (WPN.DEF[WPN.cur].kind === 'gun') u.hotT = 6; else if (u.hotT > 0) u.hotT -= dt;
+  const fire = player.wanted >= 2 || u.hotT > 0; u.aiming = fire;
+  if (!fire) { // Festnahme: hinlaufen (schneller als Streife, langsamer als ein rennender Spieler), Waffe unten, 1,4 s festhalten wie die Demo-Polizei
+    if (!u.warned) { u.warned = true; showMsg('POLIZEI · Stehen bleiben!', 2500); }
+    if (d > (player.car ? 4 : 1.1)) { moveWithCollision(h.position, dirx * 5 * dt, dirz * 5 * dt, 0.3); h.position.y = floorAt(h.position.x, h.position.z, h.position.y + 0.3); animateWalk(h, u.t, 5.5); }
+    else animateWalk(h, u.t, 0);
+    if (!player.car && !(player.bustedT > 0) && d < 1.35) { u.grab += dt; if (u.grab > 1.4) { u.grab = 0; DEMO.busted(); } } else u.grab = Math.max(0, u.grab - dt);
+    return;
+  }
   if (d > 9) { moveWithCollision(h.position, dirx * u.speed * dt, dirz * u.speed * dt, 0.3); h.position.y = floorAt(h.position.x, h.position.z, h.position.y + 0.3); animateWalk(h, u.t, 4); }
   else animateWalk(h, u.t, 0);
   u.armR.rotation.x = -Math.PI / 2; u.armL.rotation.x = -Math.PI / 2; u.armL.rotation.z = -0.35;
-  u.shotT -= dt; if (u.shotT <= 0 && d < 28) { u.shotT = rnd(0.9, 1.6); const from = _shotFrom; u.gun.userData.muzzle.getWorldPosition(from); const hit = Math.random() < (player.car ? 0.25 : 0.4); const target = _shotTo.copy(player.pos); target.y += 1.2; if (!hit) { target.x += rnd(-2, 2); target.y += rnd(-1, 1.5); target.z += rnd(-2, 2); }
+  u.shotT -= dt; if (u.shotT <= 0 && d < 28) { u.shotT = rnd(0.9, 1.6); u.shots++; const from = _shotFrom; u.gun.userData.muzzle.getWorldPosition(from); const hit = Math.random() < (player.car ? 0.25 : 0.4); const target = _shotTo.copy(player.pos); target.y += 1.2; if (!hit) { target.x += rnd(-2, 2); target.y += rnd(-1, 1.5); target.z += rnd(-2, 2); }
     tracer(from, target, 0.04, 90); sfx('shot', clamp(1 - d / 40, 0.2, 0.7));
     if (hit) { if (player.car) { player.car.userData.hp -= 6; if (player.car.userData.hp <= 0) explode(player.car); } else player.hp -= 9; } }
 }
@@ -3429,7 +3463,7 @@ function policeAI(c, dt) {
   if (Math.abs(u.speed) < 1 && d > 8) { u.stuck = (u.stuck || 0) + dt; if (u.stuck > 1.5) { ctrl.fwd = false; ctrl.back = true; ctrl.left = !ctrl.left; if (u.stuck > 3) u.stuck = 0; } } else u.stuck = 0;
   driveCar(c, dt, ctrl);
   if (!player.car && d < 2.6 && Math.abs(u.speed) > 4) player.hp -= 12 * dt;
-  u.officerT = Math.max(0, (u.officerT || 0) - dt); if (player.wanted > 0 && !player.car && d < 24 && Math.abs(u.speed) < 3 && !u.officer && u.officerT <= 0 && copCount() < 4) { spawnOfficer(c); u.officerT = 4; }
+  u.officerT = Math.max(0, (u.officerT || 0) - dt); if (player.wanted > 0 && !player.dead && !player.car && d < 24 && Math.abs(u.speed) < 3 && !u.officer && u.officerT <= 0 && copCount() < 4) { spawnOfficer(c); u.officerT = 4; }
 }
 // Dynamisches Scheinwerfer-SpotLight & Blaulicht-PointLight (gepoolt, nur auf Hoch/Ultra aktiv; bei visible=false 0 GPU-Kosten)
 let carSpot = null, sirenLight = null;
@@ -3465,9 +3499,11 @@ function hurtPlayer(kind, amt) { if (player.dead) return; if (!opts.god) player.
 function updateFx(dt) { for (const k of ['spray', 'water', 'paint']) { fxEl[k] = Math.max(0, fxEl[k] - dt); $('fx_' + k).style.opacity = Math.min(1, fxEl[k] / (k === 'water' ? 1 : 2)); } if (fxEl.spray > 0 && Math.random() < dt * 0.8) sfx('cough', 0.4); }
 let cardT = null; function card(title, sub, sec = 4) { const el = $('card'); el.innerHTML = `<h2>${title}</h2>${sub ? '<p>' + sub + '</p>' : ''}`; el.style.display = 'block'; el.style.opacity = 1; clearTimeout(cardT); cardT = setTimeout(() => { el.style.opacity = 0; cardT = setTimeout(() => el.style.display = 'none', 600); }, sec * 1000); }
 let breathEl = null, breathHint = false;
-function respawn() { player.dead = false; player.hp = 100; player.breath = 1; player.drowning = false; player.wanted = 0; msgEl.style.display = 'none'; for (const c of cars) if (c.userData.police && c !== player.car) c.userData.mode = 'parked'; }
+// Sterben darf nicht billiger sein als eine Festnahme: Behandlung kostet 10 %, mit Fahndung 15 % und die Waffen wie bei busted()
+function respawn() { const w = player.wanted; player.dead = false; player.hp = 100; player.breath = 1; player.drowning = false; player.wanted = 0; msgEl.style.display = 'none';
+  if (!opts.god && !creative.on) { player.money = Math.floor(player.money * (w > 0 ? 0.85 : 0.9)); if (w > 0) WPN.confiscate(); card('NOTAUFNAHME', w > 0 ? 'Behandlung bezahlt. Die Polizei hat Waffen und Pyro beschlagnahmt.' : 'Behandlung bezahlt.'); } for (const c of cars) if (c.userData.police && c !== player.car) c.userData.mode = 'parked'; }
 
-window.G = { STR, BUILD_STAT, LOAD_STAT, VERY_WEAK, CAR_INST_STAT, get CAR_INST() { return CAR_INST; }, IGPU, isIGPU, optsToSave, get PHONE() { return PHONE; }, barrierHit, HELI, get EULEN() { return EULEN; }, get VOKA() { return VOKA; }, get LAUF() { return LAUF; }, get NEBENJOBS() { return NEBENJOBS; }, get RASEN() { return RASEN; }, get ZIVIL() { return ZIVIL; }, makeMoto, makeAmbulance, updateBikeRacks, onMotorway, PROGRESS, INTERIORS, explode, makeBike, FX, puff, burst, smoke, LOW_GFX, WEAK_GPU, get canvasTexCount() { return _allCanvasTex.length; }, get ANISO() { return ANISO; }, get roadMat() { return roadMatRef; }, DEMN, DEMT, R_DATA, unregisterTile, SHOPS, TILES, WORLD, WIDX, streamUpdate, streamInit, buildTileNow, TS, WPN, DEMO, STORY, FIRE, X, card, hurtPlayer, composerRef: () => composer,  autoQuality, get QUALITY_AUTO() { return QUALITY_AUTO; }, groundH, footTH, thMin, FOOT_SINK, dentCar, deckAt, surfAt, signalPoles, treeSpots, lampSpots, pushOffRoads, onOtherRoad, floorAt, solidAtH, solidAt, roofHeight, camShake,  CHAR, CAR_TPL, playAnim, makeHuman, makeCar, makeGun, applyQuality,  staticParked, chunkStatic,  saveGame, loadGame, world, opts, pickups, weather, trams, scene, cars, peds, player, camera, camYaw, camPitch, keys, CITY, DEM, TH, renderer, sun, hemi, THREE, shoot, toggleCar, update, toggleCreative, creative, creativePlace, creativeSpawnerActive, get barrierCount() { let n = 0; for (const v of barrierGrid.values()) n += v.length; return n; } };
+window.G = { STR, BUILD_STAT, LOAD_STAT, VERY_WEAK, CAR_INST_STAT, get CAR_INST() { return CAR_INST; }, IGPU, isIGPU, optsToSave, get PHONE() { return PHONE; }, barrierHit, HELI, get EULEN() { return EULEN; }, get VOKA() { return VOKA; }, get LAUF() { return LAUF; }, get NEBENJOBS() { return NEBENJOBS; }, get RASEN() { return RASEN; }, get ZIVIL() { return ZIVIL; }, makeMoto, makeAmbulance, updateBikeRacks, onMotorway, PROGRESS, INTERIORS, explode, makeBike, FX, puff, burst, smoke, LOW_GFX, WEAK_GPU, get canvasTexCount() { return _allCanvasTex.length; }, get ANISO() { return ANISO; }, get roadMat() { return roadMatRef; }, DEMN, DEMT, R_DATA, unregisterTile, SHOPS, TILES, WORLD, WIDX, streamUpdate, streamInit, buildTileNow, TS, WPN, DEMO, STORY, FIRE, X, card, hurtPlayer, composerRef: () => composer,  autoQuality, get QUALITY_AUTO() { return QUALITY_AUTO; }, groundH, footTH, thMin, FOOT_SINK, dentCar, deckAt, surfAt, signalPoles, treeSpots, lampSpots, pushOffRoads, onOtherRoad, floorAt, solidAtH, solidAt, roofHeight, camShake,  CHAR, CAR_TPL, playAnim, makeHuman, makeCar, makeGun, applyQuality,  staticParked, chunkStatic,  saveGame, loadGame, world, opts, pickups, weather, trams, scene, cars, peds, player, camera, camYaw, camPitch, keys, CITY, DEM, TH, renderer, sun, hemi, THREE, shoot, toggleCar, update, toggleCreative, creative, creativePlace, creativeSpawnerActive, get barrierCount() { let n = 0; for (const v of barrierGrid.values()) n += v.length; return n; }, spawnOfficer };
 try { initDebugOverlay(window.G); } catch (e) { console.warn('Debug-Overlay aus', e); } // F3 und G.PERF (#162), muss vor setAnimationLoop stehen
 let fpsN = 0, fpsT = 0;
 renderer.setAnimationLoop(() => {

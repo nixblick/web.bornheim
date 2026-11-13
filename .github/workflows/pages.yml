@@ -46,6 +46,15 @@ jobs:
           # Service Worker: Cache fuer Programm, Bilder und CSS je Deploy neu benennen (alter wird beim Aktivieren geloescht),
           # sonst bekaemen Spieler geaenderte Bilder/CSS nie und der Cache wuechse mit jeder Version (12.11.2026)
           sed -i "s/bornheim-static-v2/bornheim-static-$V/" _site/sw.js
+          # Offline-Start nach einem Deploy: die Adressen, die die Seite wirklich lädt, in die Vorab-Liste des Service Workers.
+          # Importierte Module und game.js mit ?v=, direkt eingebundene Skripte (touch.js, feedback.js) ohne.
+          M="'./menu-neu.css?v=$V'"
+          for f in _site/*.js; do
+            n="${f##*/}"; [ "$n" = sw.js ] && continue
+            if [ "$n" = game.js ] || grep -qF "from './$n?v=$V'" _site/*.js; then M="$M, './$n?v=$V'"; else M="$M, './$n'"; fi
+          done
+          sed -i "s|/\*MODULE\*/|$M|" _site/sw.js
+          ! grep -qF "/*MODULE*/" _site/sw.js && grep -qF "'./game.js?v=$V'" _site/sw.js || { echo "Modul-Liste in sw.js nicht eingesetzt"; exit 1; }
           # Bilder, Modelle und three.js liegen in einem eigenen Cache. Sein Name hängt am Inhalt von assets/ und vendor/
           # (Baum-Hashes): reine Programm-Deploys lassen ihn stehen, geänderte Bilder benennen ihn um und kommen an.
           A="$(git rev-parse --short HEAD:assets)$(git rev-parse --short HEAD:vendor)"
