@@ -2513,6 +2513,8 @@ function nearestStreet() { if (POCKET) return POCKET.label || 'Frankfurt'; retur
 
 // ---------- Schießen ----------
 const tracerMat = new THREE.MeshBasicMaterial({ color: 0xfff0a0 });
+const TRACER_G = new THREE.BoxGeometry(1, 1, 1), _shotFrom = new THREE.Vector3(), _shotTo = new THREE.Vector3(); // eine Einheits-Geometrie für alle Leuchtspuren (Dicke und Länge über scale), Scratch-Vektoren für Polizeischüsse
+function tracer(from, target, dick, ms) { const tr = new THREE.Mesh(TRACER_G, tracerMat); tr.scale.set(dick, dick, from.distanceTo(target)); tr.position.copy(from).lerp(target, 0.5); tr.lookAt(target); scene.add(tr); setTimeout(() => scene.remove(tr), ms); }
 function shoot() { WPN.press(true); WPN.press(false); }
 function reload() { WPN.reload(); }
 function damage(o, amt, dir, src = 'player') {
@@ -2613,7 +2615,7 @@ function policeHeli(dt) {
     const snipe = player.wanted >= 5 && high; if (snipe) u.aimT += dt; else u.aimT = Math.max(0, u.aimT - dt);
     const lz = u.laser; lz.visible = snipe && u.aimT > 2; if (lz.visible) { const a = h.position.clone(); a.y -= 0.5; const b = player.pos.clone(); b.y += 1.3; const d = a.distanceTo(b); lz.scale.z = d; lz.position.copy(a).lerp(b, 0.5); lz.lookAt(b); }
     if (snipe && u.aimT > 8) { u.shotT -= dt; if (u.shotT <= 0) { u.shotT = 2.5; const from = h.position.clone(); from.y -= 0.5; const target = player.pos.clone(); target.y += 1.3; const hit = Math.random() < Math.min(0.9, 0.35 + (u.aimT - 8) * 0.05); if (!hit) { target.x += rnd(-2, 2); target.z += rnd(-2, 2); }
-        const len = from.distanceTo(target); const tr = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.05, len), tracerMat); tr.position.copy(from).lerp(target, 0.5); tr.lookAt(target); scene.add(tr); setTimeout(() => { scene.remove(tr); tr.geometry.dispose(); }, 120); sfx('shot', 0.8);
+        tracer(from, target, 0.05, 120); sfx('shot', 0.8);
         if (hit && !opts.god) { player.hp -= 45; camShake(0.4); showMsg('SCHARFSCHÜTZE!', 900); } } } } }
 function archCheck() { const o = player.car || null; if (o && !o.userData.bike) return; const p = o ? o.position : player.pos; const c = deckGrid.get(Math.floor(p.x / DCELL) + ',' + Math.floor(p.z / DCELL)); if (!c) return;
   for (const s of c) { if (!s.arch || !s.apex) continue; const dx = s.bx - s.ax, dz = s.bz - s.az, L2 = dx * dx + dz * dz || 1; const tt = clamp(((p.x - s.ax) * dx + (p.z - s.az) * dz) / L2, 0, 1); if ((p.x - s.ax - dx * tt) ** 2 + (p.z - s.az - dz * tt) ** 2 > 1.2 || Math.abs(p.y - (s.ya + (s.yb - s.ya) * tt)) > 2) continue;
@@ -3264,12 +3266,12 @@ function update(dt) {
       // Hindernis voraus? (Spieler, Passanten, andere Autos innerhalb 9 m im Fahrkegel)
       const fx = Math.sin(u.heading), fz = Math.cos(u.heading); let block = false;
       const pc = player.car; const yieldS = !!(pc && pc.userData.siren && c !== pc && d < 50 && ((c.position.x - pc.position.x) * Math.sin(pc.userData.heading) + (c.position.z - pc.position.z) * Math.cos(pc.userData.heading)) > 0); // Einsatzfahrzeug hinter mir: rechts ran
-      const ahead = (px, pz, r) => { const rx = px - c.position.x, rz = pz - c.position.z; const along = rx * fx + rz * fz; const sidew = Math.abs(rx * fz - rz * fx); return along > 0 && along < 9 + u.speed * 0.4 && sidew < r; };
-      if (!player.car && ahead(player.pos.x, player.pos.z, 1.6)) block = true;
+      const aReach = 9 + u.speed * 0.4; // u.speed ändert sich erst nach den Hindernisprüfungen
+      if (!player.car && aheadOf(c, fx, fz, aReach, player.pos.x, player.pos.z, 1.6)) block = true;
       if (!block && u.speed > 0.2 && barrierHit(c.position.x + fx * 4, c.position.z + fz * 4, 0.9)) block = true; // vor Bauzaun halten
-      if (u.type === 'bus') { if ((u.haltT || 0) > 0) { u.haltT -= dt; block = true; } else if ((u.haltT || 0) > -6) u.haltT = (u.haltT || 0) - dt; else for (const st of (u.road.s ? u.road.s.map(q => ({ x: q[0], z: q[1], k: 'bus' })) : CITY.stops)) { if (st.k !== 'bus') continue; const dd = (st.x - c.position.x) ** 2 + (st.z - c.position.z) ** 2; if (dd < 64) { u.haltT = 8; block = true; break; } } } // Bus hält an der Haltestelle
-      if (!block) for (const o of cars) { if (o !== c && (o.visible || o.userData.inst) && Math.abs(o.position.y - c.position.y) < 2.5 && ahead(o.position.x, o.position.z, 1.8)) { block = true; break; } }
-      if (!block) for (const p of peds) { if (p.visible && p.userData.state !== 'dead' && ahead(p.position.x, p.position.z, 1.4)) { block = true; break; } }
+      if (u.type === 'bus') { if ((u.haltT || 0) > 0) { u.haltT -= dt; block = true; } else if ((u.haltT || 0) > -6) u.haltT = (u.haltT || 0) - dt; else if (u.road.s) { for (const q of u.road.s) { const dd = (q[0] - c.position.x) ** 2 + (q[1] - c.position.z) ** 2; if (dd < 64) { u.haltT = 8; block = true; break; } } } else for (const st of CITY.stops) { if (st.k !== 'bus') continue; const dd = (st.x - c.position.x) ** 2 + (st.z - c.position.z) ** 2; if (dd < 64) { u.haltT = 8; block = true; break; } } } // Bus hält an der Haltestelle
+      if (!block) for (const o of cars) { if (o !== c && (o.visible || o.userData.inst) && Math.abs(o.position.y - c.position.y) < 2.5 && aheadOf(c, fx, fz, aReach, o.position.x, o.position.z, 1.8)) { block = true; break; } }
+      if (!block) for (const p of peds) { if (p.visible && p.userData.state !== 'dead' && aheadOf(c, fx, fz, aReach, p.position.x, p.position.z, 1.4)) { block = true; break; } }
       if (!block) for (const sg of signalsNear(c.position.x, c.position.z)) { const rx = sg[0] - c.position.x, rz = sg[1] - c.position.z; const along = rx * fx + rz * fz; if (along > 1 && along < 7 + u.speed * 0.6 && Math.abs(rx * fz - rz * fx) < 7 && signalRed(u.heading, worldT)) { block = true; break; } }
       u.isCar = true; u.speed = block ? Math.max(0, u.speed - 18 * dt) : Math.min(u.speed + (u.bike && !u.moto ? 2.2 : 6) * dt, yieldS ? 2.5 : (u.maxv || 9)); if (yieldS && u.speed > 2.5) u.speed = Math.max(2.5, u.speed - 8 * dt);
       u.stuckT = block && u.speed < 0.5 ? (u.stuckT || 0) + dt : 0; if (u.stuckT > rnd(2.5, 6) && d < 80) { u.stuckT = -rnd(4, 10); sfx('horn', clamp(1 - d / 80, 0.1, 0.8)); }
@@ -3332,6 +3334,8 @@ function update(dt) {
   setSty(cross, 'display', ((!player.car || !player.car.userData.cannon) && !player.dead) ? 'block' : 'none');
   mmT -= dt; if (mmT <= 0) { mmT = 0.05; drawMinimap(); } // Minikarte mit 20 Hz statt jedem Bild
 }
+// Liegt (px, pz) im Fahrkegel des KI-Autos c (Richtung fx/fz, Reichweite reach, halbe Breite r)? Modulfunktion statt Closure je Auto und Bild
+function aheadOf(c, fx, fz, reach, px, pz, r) { const rx = px - c.position.x, rz = pz - c.position.z; const along = rx * fx + rz * fz; return along > 0 && along < reach && Math.abs(rx * fz - rz * fx) < r; }
 function unshoot(o) { const j = shootables.indexOf(o); if (j >= 0) shootables.splice(j, 1); } // nie splice(-1): das entfernte sonst ein fremdes Objekt
 function freeSkel(h) { h.traverse(o => { if (o.isSkinnedMesh && o.skeleton && o.skeleton.boneTexture) o.skeleton.dispose(); }); } // Knochen-Textur je SkinnedMesh (12x12/16x16), sonst bleibt sie je entfernter Figur auf der GPU
 function despawnPed(h) { freeSkel(h); scene.remove(h); const i = peds.indexOf(h); if (i >= 0) peds.splice(i, 1); const j = shootables.indexOf(h); if (j >= 0) shootables.splice(j, 1); }
@@ -3350,8 +3354,8 @@ function copAI(h, dt) {
   if (d > 9) { moveWithCollision(h.position, dirx * u.speed * dt, dirz * u.speed * dt, 0.3); h.position.y = floorAt(h.position.x, h.position.z, h.position.y + 0.3); animateWalk(h, u.t, 4); }
   else animateWalk(h, u.t, 0);
   u.armR.rotation.x = -Math.PI / 2; u.armL.rotation.x = -Math.PI / 2; u.armL.rotation.z = -0.35;
-  u.shotT -= dt; if (u.shotT <= 0 && d < 28) { u.shotT = rnd(0.9, 1.6); const from = new THREE.Vector3(); u.gun.userData.muzzle.getWorldPosition(from); const hit = Math.random() < (player.car ? 0.25 : 0.4); const target = player.pos.clone(); target.y += 1.2; if (!hit) { target.x += rnd(-2, 2); target.y += rnd(-1, 1.5); target.z += rnd(-2, 2); }
-    const len = from.distanceTo(target); const tr = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.04, len), tracerMat); tr.position.copy(from).lerp(target, 0.5); tr.lookAt(target); scene.add(tr); setTimeout(() => { scene.remove(tr); tr.geometry.dispose(); }, 90); sfx('shot', clamp(1 - d / 40, 0.2, 0.7));
+  u.shotT -= dt; if (u.shotT <= 0 && d < 28) { u.shotT = rnd(0.9, 1.6); const from = _shotFrom; u.gun.userData.muzzle.getWorldPosition(from); const hit = Math.random() < (player.car ? 0.25 : 0.4); const target = _shotTo.copy(player.pos); target.y += 1.2; if (!hit) { target.x += rnd(-2, 2); target.y += rnd(-1, 1.5); target.z += rnd(-2, 2); }
+    tracer(from, target, 0.04, 90); sfx('shot', clamp(1 - d / 40, 0.2, 0.7));
     if (hit) { if (player.car) { player.car.userData.hp -= 6; if (player.car.userData.hp <= 0) explode(player.car); } else player.hp -= 9; } }
 }
 const roadLen = r => r._len ?? (r._len = r.p.reduce((a, p, i) => i ? a + Math.hypot(p[0] - r.p[i - 1][0], p[1] - r.p[i - 1][1]) : 0, 0));
