@@ -865,7 +865,7 @@ function* buildDetails() {
       const ux = en.dx / en.l, uz = en.dz / en.l, y = TH(x, z), w = 0.25; const u0x = col / COLS, u1x = (col + 1) / COLS, v1x = 1 - row / ROWS, v0x = 1 - (row + 1) / ROWS; const kox = en.nx * 0.03, koz = en.nz * 0.03; const A = [x - ux * w + kox, y + 0.1, z - uz * w + koz], B = [x + ux * w + kox, y + 0.1, z + uz * w + koz], C = [B[0], y + 2.1, B[2]], D = [A[0], y + 2.1, A[2]]; { const A2 = [x + ux * w - kox, y + 0.1, z + uz * w - koz], B2 = [x - ux * w - kox, y + 0.1, z - uz * w - koz], C2 = [B2[0], y + 2.1, B2[2]], D2 = [A2[0], y + 2.1, A2[2]]; kv.push(...A2, ...B2, ...C2, ...A2, ...C2, ...D2); kuv.push(u0x, v0x, u1x, v0x, u1x, v1x, u0x, v0x, u1x, v1x, u0x, v1x); } /* Rückseite, richtig herum lesbar */ const u0 = col / COLS, u1 = (col + 1) / COLS, v1 = 1 - row / ROWS, v0 = 1 - (row + 1) / ROWS;
       kv.push(...A, ...B, ...C, ...A, ...C, ...D); kuv.push(u0x, v0x, u1x, v0x, u1x, v1x, u0x, v0x, u1x, v1x, u0x, v1x); barrierAdd(A[0], A[2], B[0], B[2], 2); ki++; }
     if (kv.length) { const tex = ownTex(new THREE.CanvasTexture(at)); tex.colorSpace = THREE.SRGBColorSpace; const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(kv, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(kuv, 2)); g.computeVertexNormals(); scene.add(new THREE.Mesh(g, new THREE.MeshLambertMaterial({ map: tex, side: THREE.DoubleSide }))); } }
-  { const wk = [], gr = []; for (const p of CITY.pois) { if (p.k !== 'supermarket') continue; const ne = nearestEdge(p.x, p.z, 15); if (!ne) continue; const en = edgeNormal(ne.b.p, ne.e); const ux = en.dx / en.l, uz = en.dz / en.l; const t0 = clamp(((p.x - en.ax) * en.dx + (p.z - en.az) * en.dz) / (en.l * en.l), 0.2, 0.8); const bx = en.ax + en.dx * t0 + ux * 3 + en.nx * 1.3, bz = en.az + en.dz * t0 + uz * 3 + en.nz * 1.3; if (solidAt(bx, bz) >= 0) continue; const ang = Math.atan2(en.nx, en.nz);
+  { const wk = [], gr = []; for (const p of CITY.pois) { if (p.k !== 'supermarket') continue; const ne = nearestEdge(p.x, p.z, 15); if (!ne) continue; const en = edgeNormal(ne.b.p, ne.e); const ux = en.dx / en.l, uz = en.dz / en.l; const t0 = clamp(((p.x - en.ax) * en.dx + (p.z - en.az) * en.dz) / (en.l * en.l), 0.2, 0.8); const Wc = Math.max(5, Math.min(9, en.l * 0.55)), vs = Wc / 2 + 1.2; /* Wagenreihe neben der Vordachstütze (supermarkt.js) */ const bx = en.ax + en.dx * t0 + ux * vs + en.nx * 1.3, bz = en.az + en.dz * t0 + uz * vs + en.nz * 1.3; if (solidAt(bx, bz) >= 0) continue; const ang = Math.atan2(en.nx, en.nz);
       for (let k = 0; k < 6; k++) { const x = bx + en.nx * k * 0.35, z = bz + en.nz * k * 0.35, y = TH(x, z); const g = new THREE.BoxGeometry(0.55, 0.55, 0.9); g.rotateY(ang); g.translate(x, y + 0.6, z); gr.push(g); const h = new THREE.BoxGeometry(0.55, 0.05, 0.05); h.rotateY(ang); h.translate(x - Math.sin(ang) * 0.45, y + 0.95, z - Math.cos(ang) * 0.45); wk.push(h); }
       barrierAdd(bx, bz, bx + en.nx * 2, bz + en.nz * 2, 1); }
     if (gr.length) addMerged(gr, new THREE.MeshLambertMaterial({ color: 0xb8bcc0, transparent: true, opacity: 0.55 }), false); if (wk.length) addMerged(wk, shLambert(0xd01818), false); }
@@ -1048,7 +1048,7 @@ function buildSky() {
   skylineBeacons.userData.noChunk = true; skylineBeacons.frustumCulled = false; scene.add(skylineBeacons);
 }
 // Himmelsstufe aus der aktuellen Qualität (auch beim Umschalten im Menü): 0 einfach, 1 fein, 2 Volumen (Hoch/Ultra)
-function himmelPost() { return opts.quality === 'hoch' || opts.quality === 'ultra'; }
+function himmelPost() { return (opts.quality === 'hoch' || opts.quality === 'ultra') && !composerBroken; }
 function himmelStufe() { return WEAK_GPU || opts.quality === 'niedrig' ? 0 : himmelPost() ? 2 : 1; }
 const _sunV = new THREE.Vector3();
 function updateSky(dt) {
@@ -3408,7 +3408,7 @@ function update(dt) {
   if (!locked && !menuOpen && !mapOpen && !document.hidden && !window.__touch) ht = 'Ins Spiel klicken für Maussteuerung';
   setTxt(hint, ht); setSty(hint, 'display', ht ? 'block' : 'none');
   setSty(cross, 'display', ((!player.car || !player.car.userData.cannon) && !player.dead) ? 'block' : 'none');
-  mmT -= dt; if (mmT <= 0) { mmT = 0.05; drawMinimap(); } // Minikarte mit 20 Hz statt jedem Bild
+  mmT -= dt; if (mmT <= 0) { mmT = 0.05; if (opts.minimap !== false && opts.hud !== false) drawMinimap(); } // Minikarte mit 20 Hz statt jedem Bild
 }
 // Liegt (px, pz) im Fahrkegel des KI-Autos c (Richtung fx/fz, Reichweite reach, halbe Breite r)? Modulfunktion statt Closure je Auto und Bild
 function aheadOf(c, fx, fz, reach, px, pz, r) { const rx = px - c.position.x, rz = pz - c.position.z; const along = rx * fx + rz * fz; return along > 0 && along < reach && Math.abs(rx * fz - rz * fx) < r; }
@@ -3513,6 +3513,6 @@ renderer.setAnimationLoop(() => {
   // Ein Fehler in einem Bild darf das Spiel nicht einfrieren (three fordert den nächsten Frame erst nach dem Callback an)
   try { update(dt); audioUpdate(dt); } catch (e) { loopErrors++; if (loopErrors <= 3 || loopErrors % 300 === 0) console.error('update-Fehler', loopErrors, e); if (loopErrors === 3) showMsg('FEHLER IM SPIEL – bitte melden (Esc › Fehler melden)', 4000); }
   // Render-Fehler getrennt zählen (aufeinanderfolgend): nach 5 Bildern in Folge Effekte abschalten und direkt zeichnen
-  try { if (composer) composer.render(); else renderer.render(scene, camera); renderErrors = 0; } catch (e) { renderErrors++; if (renderLogs++ < 3) console.error('render-Fehler', e); if (renderErrors === 5) { if (composer) { composerBroken = true; try { disposeComposer(); } catch (e2) { composer = null; } renderErrors = 0; showMsg('EFFEKTE ABGESCHALTET (RENDER-FEHLER)', 4000); } else if (!renderWarned) { renderWarned = true; showMsg('FEHLER BEI DER GRAFIK – bitte melden (Esc › Fehler melden)', 4000); } } }
+  try { if (composer) composer.render(); else renderer.render(scene, camera); renderErrors = 0; } catch (e) { renderErrors++; if (renderLogs++ < 3) console.error('render-Fehler', e); if (renderErrors === 5) { if (composer) { composerBroken = true; try { disposeComposer(); } catch (e2) { composer = null; } try { if (HIMMEL) HIMMEL.setStufe(himmelStufe(), true); } catch (e3) { } renderErrors = 0; showMsg('EFFEKTE ABGESCHALTET (RENDER-FEHLER)', 4000); } else if (!renderWarned) { renderWarned = true; showMsg('FEHLER BEI DER GRAFIK – bitte melden (Esc › Fehler melden)', 4000); } } }
 });
 let loopErrors = 0, renderErrors = 0, renderLogs = 0, renderWarned = false;
