@@ -21,6 +21,7 @@ export function initWeapons(X) {
     grenade: { n: 'Granate', ic: '💣', kind: 'throw', rate: 1.0, give: 2, fuse: 2.5, slot: 0 },
     tnt:     { n: 'Zeitbombe', ic: '⏰', kind: 'throw', rate: 0.9, give: 3, fuse: 5.0, slot: 0 },
     molotov: { n: 'Brandsatz', ic: '🍾', kind: 'throw', rate: 0.9, give: 2, slot: 0, creativeOnly: true },
+    rocket:  { n: 'Raketenwerfer', ic: '🚀', kind: 'gun', dmg: 5000, rate: 1.6, mag: 1, spread: 0.002, range: 600, give: 6, slot: 0, boom: true, creativeOnly: true }, /* Hubschrauber-Abwehr, nur Kreativmodus (André 13.11.2026) */
   };
   const FUSE_STEPS = [1, 2, 3, 5, 10, 15, 30];
   const customFuse = {};
@@ -87,6 +88,7 @@ export function initWeapons(X) {
       const led = new THREE.Mesh(new THREE.SphereGeometry(0.014, 8, 6), new THREE.MeshBasicMaterial({ color: 0xff2020 }));
       led.position.set(0, 0.09, 0.045); g.add(led); g.userData.led = led;
     }
+    else if (id === 'rocket') { const mOl = MS(0x4a5a3a, 0.7, 0.2); g.add(cyl(0.055, 0.95, mOl, 0, 0.1, -0.12, true), box(0.05, 0.14, 0.06, mBlk, 0, -0.03, 0.02), box(0.08, 0.08, 0.12, mBlk, 0.07, 0.17, -0.05), cyl(0.04, 0.1, MS(0x9a3a2a, 0.5, 0.1), 0, 0.1, -0.62, true)); const mz = new THREE.Object3D(); mz.position.set(0, 0.1, -0.6); g.add(mz); g.userData.muzzle = mz; }
     else if (id === 'molotov') { const gl = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.04, 0.2, 8), new THREE.MeshStandardMaterial({ color: 0x3f7a3a, roughness: 0.1, metalness: 0.1, transparent: true, opacity: 0.85 })); gl.position.y = 0.05; const neck = cyl(0.015, 0.08, MS(0x3f7a3a, 0.1, 0.1), 0, 0.19, 0); const cloth = box(0.04, 0.07, 0.04, MS(0xe8e0c8, 0.9, 0), 0, 0.25, 0); g.add(gl, neck, cloth); g.userData.cloth = cloth; }
     if (!g.userData.muzzle) { const mz = new THREE.Object3D(); mz.position.set(0, 0.05, -0.1); g.add(mz); g.userData.muzzle = mz; }
     return g;
@@ -164,6 +166,7 @@ export function initWeapons(X) {
       const wd = wallDist(_ray.ray, d.range); const hits = _ray.intersectObjects(cands, true).filter(h => h.distance > 2.5 && h.distance < wd);
       let end; if (hits.length) { end = hits[0].point.clone(); const o = owner(hits[0].object); if (o) hitTarget(o, d.dmg, _ray.ray.direction.clone()); }
       else { end = _ray.ray.at(wd, new V3()); if (wd < d.range) burst(end, 0xc8c0b0, 3, 1.2); }
+      if (d.boom) { burst(end, 0xff8a30, 40, 7); burst(end, 0xffe0a0, 20, 4); camShake(0.25); sfx('explosion', 0.9); } // Rakete: Einschlag mit Feuerball
       if (k < 4) { const len = muzzle.distanceTo(end); const tr = new THREE.Mesh(new THREE.BoxGeometry(0.035, 0.035, len), tracerMat); tr.position.copy(muzzle).lerp(end, 0.5); tr.lookAt(end); scene.add(tr); setTimeout(() => { scene.remove(tr); tr.geometry.dispose(); }, 90); }
     }
     const f = model.userData.flash; if (f) { f.visible = true; f.material.rotation = Math.random() * 6; setTimeout(() => f.visible = false, 60); }

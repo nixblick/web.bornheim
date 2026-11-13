@@ -16,8 +16,8 @@ export function initShops(X, W) {
   const ALL = Object.keys(ITEMS);
   const price = it => Math.max(1, Math.round(it.p * ((X.perks && X.perks.shop) || 1))); // Rabatt nach Stufe (progress.js)
   const TYPES = {
-    super: { n: 'Supermarkt', ic: '🛒', items: ALL },
-    kiosk: { n: 'Kiosk', ic: '🗞', items: ['drink', 'snack', 'banger', 'flare', 'smoke'] },
+    super: { n: 'Supermarkt', ic: '🛒', items: ALL, wtag: 'Aktionsware der Woche: ' }, // Waffen gibt es nur noch zu kaufen (André 13.11.2026), mit Augenzwinkern
+    kiosk: { n: 'Kiosk', ic: '🗞', items: ['drink', 'snack', 'banger', 'flare', 'smoke', 'pistol', 'a_pistol'], tag: { pistol: 'Unter der Theke: ', a_pistol: 'Unter der Theke: ' } },
     food: { n: 'Imbiss', ic: '🍔', items: ['meal', 'snack', 'drink'] },
     bakery: { n: 'Bäckerei', ic: '🥨', items: ['snack', 'meal', 'drink'] },
     pharmacy: { n: 'Apotheke', ic: '💊', items: ['band', 'kit', 'drink', 'spray'] },
@@ -57,7 +57,7 @@ export function initShops(X, W) {
   function render() {
     const T = TYPES[cur.k]; const list = T.items.map(id => [id, ITEMS[id]]).filter(([, it]) => !(it.ammo && !W.inv[it.ammo]));
     el.innerHTML = `<div class="box"><h3>${T.ic} ${cur.name}</h3><div class="sub">${T.n} · Du hast <b style="color:#ffd84a">${player.money} €</b> · Gesundheit ${Math.round(player.hp)}</div>` +
-      list.map(([id, it]) => { const no = player.money < price(it) || owned(it) || (it.hp && player.hp >= 100); return `<div class="it${no ? ' no' : ''}" data-id="${id}"><span>${it.n}${owned(it) ? ' · hast du' : ''}</span><b>${price(it)} €</b></div>`; }).join('') +
+      list.map(([id, it]) => { const no = player.money < price(it) || owned(it) || (it.hp && player.hp >= 100); return `<div class="it${no ? ' no' : ''}" data-id="${id}"><span>${(T.tag && T.tag[id]) || (T.wtag && it.w && !it.hp ? T.wtag : '')}${it.n}${owned(it) ? ' · hast du' : ''}</span><b>${price(it)} €</b></div>`; }).join('') +
       `<div class="row"><span class="sub">Klick zum Kaufen · Esc schließt</span><button id="shop_x">Fertig</button></div></div>`;
     $('shop_x').onclick = close;
     for (const d of el.querySelectorAll('.it')) d.onclick = () => buy(d.dataset.id);
