@@ -2,6 +2,7 @@
 
 ## 2026-11-13
 
+- **Einbahnstraßen und Parkrichtung (#102):** Am Straßenrand geparkte Autos (buildParked) standen rechts entgegen der Segmentrichtung, links mit ihr, also nach dem Wechsel auf Rechtsverkehr (#99) überall falsch herum, auch in Einbahnstraßen. Jetzt rechts in Fahrtrichtung, links entgegen, in Einbahnstraßen beide Seiten in OSM-Richtung (oneway=yes/-1). Spontan geparkte Autos (spawnCar) standen zur Hälfte links in Fahrtrichtung, jetzt rechts, nur in Einbahnstraßen auch links. Fahrlogik (u.dir = road.o, Abbiegen nur in erlaubter Richtung) geprüft, unverändert. Ungetestet, Test im Nachtfenster.
 - **Rechtsverkehr (#99):** Autos, Räder und Polizei fuhren links. Die Straßennormale (-dz, dx) zeigt bei x = Ost, z = Süd nach rechts (belegt: Hauptwache liegt westlich der Konstablerwache und südlich von Bornheim), der Spurversatz war negativ. Vorzeichen an allen vier Stellen gedreht, Wandprüfung (sideGuard) mit. Ungetestet, Test im Nachtfenster.
 - **HUD oben links (#100):** „Stufe“ stand fest bei 84 px und überlagerte die Waffenzeile. Jetzt im selben Block unter der Waffe, auf Touch ebenso. Ungetestet, Test im Nachtfenster.
 - **Spieltest nimmt Proben immer von main:** Ältere Zweige ohne neue Probendatei lassen sich so trotzdem testen.
