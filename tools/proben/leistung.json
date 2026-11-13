@@ -1,0 +1,120 @@
+[
+ {
+  "n": "leistung_berger_niedrig",
+  "js": "(async () => { const G = window.G, P = G.PERF; if (!P) return 'kein G.PERF'; const t0 = performance.now(); if (G.opts.quality !== 'niedrig' || (G.opts.scale || 1) !== 1) { G.opts.quality = 'niedrig'; G.opts.scale = 1; G.applyQuality(); } const fertig = await P.settle(12000); await new Promise(r => setTimeout(r, 1500)); const s = await P.measure({ frames: 12, maxMs: 14000 }); const z = { ort: 'berger', stufe: 'niedrig', skala: 1, kacheln_fertig: fertig, calls: s.calls, dreiecke: s.triangles, geo: s.geometries, tex: s.textures, shader: s.programs, bild: s.frameMs, cpu: s.cpuMs, gpu: s.gpuMs, puffer: s.buffer, pr: s.pixelRatio, kacheln: s.tiles, lowGfx: s.lowGfx, weakGpu: s.weakGpu, sicht: s.view, teil: s.partial, gruppen: s.groups, top: s.top, ms: Math.round(performance.now() - t0) }; (window.__L = window.__L || []).push(z); return JSON.stringify(z); })()",
+  "tx": -220,
+  "tz": 432,
+  "pitch": 0.05,
+  "wait": 6000,
+  "x": -119,
+  "z": 342
+ },
+ {
+  "n": "leistung_berger_mittel",
+  "js": "(async () => { const G = window.G, P = G.PERF; if (!P) return 'kein G.PERF'; const t0 = performance.now(); if (G.opts.quality !== 'mittel' || (G.opts.scale || 1) !== 1) { G.opts.quality = 'mittel'; G.opts.scale = 1; G.applyQuality(); } const fertig = await P.settle(12000); await new Promise(r => setTimeout(r, 1500)); const s = await P.measure({ frames: 12, maxMs: 14000 }); const z = { ort: 'berger', stufe: 'mittel', skala: 1, kacheln_fertig: fertig, calls: s.calls, dreiecke: s.triangles, geo: s.geometries, tex: s.textures, shader: s.programs, bild: s.frameMs, cpu: s.cpuMs, gpu: s.gpuMs, puffer: s.buffer, pr: s.pixelRatio, kacheln: s.tiles, lowGfx: s.lowGfx, weakGpu: s.weakGpu, sicht: s.view, teil: s.partial, gruppen: s.groups, top: s.top, ms: Math.round(performance.now() - t0) }; (window.__L = window.__L || []).push(z); return JSON.stringify(z); })()",
+  "tx": -220,
+  "tz": 432,
+  "pitch": 0.05,
+  "wait": 3000
+ },
+ {
+  "n": "leistung_berger_hoch",
+  "js": "(async () => { const G = window.G, P = G.PERF; if (!P) return 'kein G.PERF'; const t0 = performance.now(); if (G.opts.quality !== 'hoch' || (G.opts.scale || 1) !== 1) { G.opts.quality = 'hoch'; G.opts.scale = 1; G.applyQuality(); } const fertig = await P.settle(12000); await new Promise(r => setTimeout(r, 1500)); const s = await P.measure({ frames: 12, maxMs: 14000 }); const z = { ort: 'berger', stufe: 'hoch', skala: 1, kacheln_fertig: fertig, calls: s.calls, dreiecke: s.triangles, geo: s.geometries, tex: s.textures, shader: s.programs, bild: s.frameMs, cpu: s.cpuMs, gpu: s.gpuMs, puffer: s.buffer, pr: s.pixelRatio, kacheln: s.tiles, lowGfx: s.lowGfx, weakGpu: s.weakGpu, sicht: s.view, teil: s.partial, gruppen: s.groups, top: s.top, ms: Math.round(performance.now() - t0) }; (window.__L = window.__L || []).push(z); return JSON.stringify(z); })()",
+  "tx": -220,
+  "tz": 432,
+  "pitch": 0.05,
+  "wait": 3000
+ },
+ {
+  "n": "leistung_berger_ultra",
+  "js": "(async () => { const G = window.G, P = G.PERF; if (!P) return 'kein G.PERF'; const t0 = performance.now(); if (G.opts.quality !== 'ultra' || (G.opts.scale || 1) !== 1) { G.opts.quality = 'ultra'; G.opts.scale = 1; G.applyQuality(); } const fertig = await P.settle(12000); await new Promise(r => setTimeout(r, 1500)); const s = await P.measure({ frames: 12, maxMs: 14000 }); const z = { ort: 'berger', stufe: 'ultra', skala: 1, kacheln_fertig: fertig, calls: s.calls, dreiecke: s.triangles, geo: s.geometries, tex: s.textures, shader: s.programs, bild: s.frameMs, cpu: s.cpuMs, gpu: s.gpuMs, puffer: s.buffer, pr: s.pixelRatio, kacheln: s.tiles, lowGfx: s.lowGfx, weakGpu: s.weakGpu, sicht: s.view, teil: s.partial, gruppen: s.groups, top: s.top, ms: Math.round(performance.now() - t0) }; (window.__L = window.__L || []).push(z); return JSON.stringify(z); })()",
+  "tx": -220,
+  "tz": 432,
+  "pitch": 0.05,
+  "wait": 3000
+ },
+ {
+  "n": "leistung_berger_ultra_halbe_skala",
+  "js": "(async () => { const G = window.G, P = G.PERF; if (!P) return 'kein G.PERF'; const t0 = performance.now(); if (G.opts.quality !== 'ultra' || (G.opts.scale || 1) !== 0.5) { G.opts.quality = 'ultra'; G.opts.scale = 0.5; G.applyQuality(); } const fertig = await P.settle(12000); await new Promise(r => setTimeout(r, 1500)); const s = await P.measure({ frames: 12, maxMs: 14000 }); const z = { ort: 'berger', stufe: 'ultra', skala: 0.5, kacheln_fertig: fertig, calls: s.calls, dreiecke: s.triangles, geo: s.geometries, tex: s.textures, shader: s.programs, bild: s.frameMs, cpu: s.cpuMs, gpu: s.gpuMs, puffer: s.buffer, pr: s.pixelRatio, kacheln: s.tiles, lowGfx: s.lowGfx, weakGpu: s.weakGpu, sicht: s.view, teil: s.partial, gruppen: s.groups, top: s.top, ms: Math.round(performance.now() - t0) }; (window.__L = window.__L || []).push(z); return JSON.stringify(z); })()",
+  "tx": -220,
+  "tz": 432,
+  "pitch": 0.05,
+  "wait": 2000
+ },
+ {
+  "n": "leistung_berger_mittel_halbe_skala",
+  "js": "(async () => { const G = window.G, P = G.PERF; if (!P) return 'kein G.PERF'; const t0 = performance.now(); if (G.opts.quality !== 'mittel' || (G.opts.scale || 1) !== 0.5) { G.opts.quality = 'mittel'; G.opts.scale = 0.5; G.applyQuality(); } const fertig = await P.settle(12000); await new Promise(r => setTimeout(r, 1500)); const s = await P.measure({ frames: 12, maxMs: 14000 }); const z = { ort: 'berger', stufe: 'mittel', skala: 0.5, kacheln_fertig: fertig, calls: s.calls, dreiecke: s.triangles, geo: s.geometries, tex: s.textures, shader: s.programs, bild: s.frameMs, cpu: s.cpuMs, gpu: s.gpuMs, puffer: s.buffer, pr: s.pixelRatio, kacheln: s.tiles, lowGfx: s.lowGfx, weakGpu: s.weakGpu, sicht: s.view, teil: s.partial, gruppen: s.groups, top: s.top, ms: Math.round(performance.now() - t0) }; (window.__L = window.__L || []).push(z); return JSON.stringify(z); })()",
+  "tx": -220,
+  "tz": 432,
+  "pitch": 0.05,
+  "wait": 2000
+ },
+ {
+  "n": "leistung_konstablerwache_niedrig",
+  "js": "(async () => { const G = window.G, P = G.PERF; if (!P) return 'kein G.PERF'; const t0 = performance.now(); if (G.opts.quality !== 'niedrig' || (G.opts.scale || 1) !== 1) { G.opts.quality = 'niedrig'; G.opts.scale = 1; G.applyQuality(); } const fertig = await P.settle(12000); await new Promise(r => setTimeout(r, 1500)); const s = await P.measure({ frames: 12, maxMs: 14000 }); const z = { ort: 'konstablerwache', stufe: 'niedrig', skala: 1, kacheln_fertig: fertig, calls: s.calls, dreiecke: s.triangles, geo: s.geometries, tex: s.textures, shader: s.programs, bild: s.frameMs, cpu: s.cpuMs, gpu: s.gpuMs, puffer: s.buffer, pr: s.pixelRatio, kacheln: s.tiles, lowGfx: s.lowGfx, weakGpu: s.weakGpu, sicht: s.view, teil: s.partial, gruppen: s.groups, top: s.top, ms: Math.round(performance.now() - t0) }; (window.__L = window.__L || []).push(z); return JSON.stringify(z); })()",
+  "tx": -1760,
+  "tz": 1640,
+  "pitch": 0.05,
+  "wait": 6000,
+  "x": -1601,
+  "z": 1628
+ },
+ {
+  "n": "leistung_konstablerwache_mittel",
+  "js": "(async () => { const G = window.G, P = G.PERF; if (!P) return 'kein G.PERF'; const t0 = performance.now(); if (G.opts.quality !== 'mittel' || (G.opts.scale || 1) !== 1) { G.opts.quality = 'mittel'; G.opts.scale = 1; G.applyQuality(); } const fertig = await P.settle(12000); await new Promise(r => setTimeout(r, 1500)); const s = await P.measure({ frames: 12, maxMs: 14000 }); const z = { ort: 'konstablerwache', stufe: 'mittel', skala: 1, kacheln_fertig: fertig, calls: s.calls, dreiecke: s.triangles, geo: s.geometries, tex: s.textures, shader: s.programs, bild: s.frameMs, cpu: s.cpuMs, gpu: s.gpuMs, puffer: s.buffer, pr: s.pixelRatio, kacheln: s.tiles, lowGfx: s.lowGfx, weakGpu: s.weakGpu, sicht: s.view, teil: s.partial, gruppen: s.groups, top: s.top, ms: Math.round(performance.now() - t0) }; (window.__L = window.__L || []).push(z); return JSON.stringify(z); })()",
+  "tx": -1760,
+  "tz": 1640,
+  "pitch": 0.05,
+  "wait": 3000
+ },
+ {
+  "n": "leistung_konstablerwache_hoch",
+  "js": "(async () => { const G = window.G, P = G.PERF; if (!P) return 'kein G.PERF'; const t0 = performance.now(); if (G.opts.quality !== 'hoch' || (G.opts.scale || 1) !== 1) { G.opts.quality = 'hoch'; G.opts.scale = 1; G.applyQuality(); } const fertig = await P.settle(12000); await new Promise(r => setTimeout(r, 1500)); const s = await P.measure({ frames: 12, maxMs: 14000 }); const z = { ort: 'konstablerwache', stufe: 'hoch', skala: 1, kacheln_fertig: fertig, calls: s.calls, dreiecke: s.triangles, geo: s.geometries, tex: s.textures, shader: s.programs, bild: s.frameMs, cpu: s.cpuMs, gpu: s.gpuMs, puffer: s.buffer, pr: s.pixelRatio, kacheln: s.tiles, lowGfx: s.lowGfx, weakGpu: s.weakGpu, sicht: s.view, teil: s.partial, gruppen: s.groups, top: s.top, ms: Math.round(performance.now() - t0) }; (window.__L = window.__L || []).push(z); return JSON.stringify(z); })()",
+  "tx": -1760,
+  "tz": 1640,
+  "pitch": 0.05,
+  "wait": 3000
+ },
+ {
+  "n": "leistung_konstablerwache_ultra",
+  "js": "(async () => { const G = window.G, P = G.PERF; if (!P) return 'kein G.PERF'; const t0 = performance.now(); if (G.opts.quality !== 'ultra' || (G.opts.scale || 1) !== 1) { G.opts.quality = 'ultra'; G.opts.scale = 1; G.applyQuality(); } const fertig = await P.settle(12000); await new Promise(r => setTimeout(r, 1500)); const s = await P.measure({ frames: 12, maxMs: 14000 }); const z = { ort: 'konstablerwache', stufe: 'ultra', skala: 1, kacheln_fertig: fertig, calls: s.calls, dreiecke: s.triangles, geo: s.geometries, tex: s.textures, shader: s.programs, bild: s.frameMs, cpu: s.cpuMs, gpu: s.gpuMs, puffer: s.buffer, pr: s.pixelRatio, kacheln: s.tiles, lowGfx: s.lowGfx, weakGpu: s.weakGpu, sicht: s.view, teil: s.partial, gruppen: s.groups, top: s.top, ms: Math.round(performance.now() - t0) }; (window.__L = window.__L || []).push(z); return JSON.stringify(z); })()",
+  "tx": -1760,
+  "tz": 1640,
+  "pitch": 0.05,
+  "wait": 3000
+ },
+ {
+  "n": "leistung_messe_niedrig",
+  "js": "(async () => { const G = window.G, P = G.PERF; if (!P) return 'kein G.PERF'; const t0 = performance.now(); if (G.opts.quality !== 'niedrig' || (G.opts.scale || 1) !== 1) { G.opts.quality = 'niedrig'; G.opts.scale = 1; G.applyQuality(); } const fertig = await P.settle(12000); await new Promise(r => setTimeout(r, 1500)); const s = await P.measure({ frames: 12, maxMs: 14000 }); const z = { ort: 'messe', stufe: 'niedrig', skala: 1, kacheln_fertig: fertig, calls: s.calls, dreiecke: s.triangles, geo: s.geometries, tex: s.textures, shader: s.programs, bild: s.frameMs, cpu: s.cpuMs, gpu: s.gpuMs, puffer: s.buffer, pr: s.pixelRatio, kacheln: s.tiles, lowGfx: s.lowGfx, weakGpu: s.weakGpu, sicht: s.view, teil: s.partial, gruppen: s.groups, top: s.top, ms: Math.round(performance.now() - t0) }; (window.__L = window.__L || []).push(z); return JSON.stringify(z); })()",
+  "tx": -3600,
+  "tz": 1971,
+  "pitch": 0.05,
+  "wait": 6000,
+  "x": -3840,
+  "z": 1971
+ },
+ {
+  "n": "leistung_messe_mittel",
+  "js": "(async () => { const G = window.G, P = G.PERF; if (!P) return 'kein G.PERF'; const t0 = performance.now(); if (G.opts.quality !== 'mittel' || (G.opts.scale || 1) !== 1) { G.opts.quality = 'mittel'; G.opts.scale = 1; G.applyQuality(); } const fertig = await P.settle(12000); await new Promise(r => setTimeout(r, 1500)); const s = await P.measure({ frames: 12, maxMs: 14000 }); const z = { ort: 'messe', stufe: 'mittel', skala: 1, kacheln_fertig: fertig, calls: s.calls, dreiecke: s.triangles, geo: s.geometries, tex: s.textures, shader: s.programs, bild: s.frameMs, cpu: s.cpuMs, gpu: s.gpuMs, puffer: s.buffer, pr: s.pixelRatio, kacheln: s.tiles, lowGfx: s.lowGfx, weakGpu: s.weakGpu, sicht: s.view, teil: s.partial, gruppen: s.groups, top: s.top, ms: Math.round(performance.now() - t0) }; (window.__L = window.__L || []).push(z); return JSON.stringify(z); })()",
+  "tx": -3600,
+  "tz": 1971,
+  "pitch": 0.05,
+  "wait": 3000
+ },
+ {
+  "n": "leistung_messe_hoch",
+  "js": "(async () => { const G = window.G, P = G.PERF; if (!P) return 'kein G.PERF'; const t0 = performance.now(); if (G.opts.quality !== 'hoch' || (G.opts.scale || 1) !== 1) { G.opts.quality = 'hoch'; G.opts.scale = 1; G.applyQuality(); } const fertig = await P.settle(12000); await new Promise(r => setTimeout(r, 1500)); const s = await P.measure({ frames: 12, maxMs: 14000 }); const z = { ort: 'messe', stufe: 'hoch', skala: 1, kacheln_fertig: fertig, calls: s.calls, dreiecke: s.triangles, geo: s.geometries, tex: s.textures, shader: s.programs, bild: s.frameMs, cpu: s.cpuMs, gpu: s.gpuMs, puffer: s.buffer, pr: s.pixelRatio, kacheln: s.tiles, lowGfx: s.lowGfx, weakGpu: s.weakGpu, sicht: s.view, teil: s.partial, gruppen: s.groups, top: s.top, ms: Math.round(performance.now() - t0) }; (window.__L = window.__L || []).push(z); return JSON.stringify(z); })()",
+  "tx": -3600,
+  "tz": 1971,
+  "pitch": 0.05,
+  "wait": 3000
+ },
+ {
+  "n": "leistung_messe_ultra",
+  "js": "(async () => { const G = window.G, P = G.PERF; if (!P) return 'kein G.PERF'; const t0 = performance.now(); if (G.opts.quality !== 'ultra' || (G.opts.scale || 1) !== 1) { G.opts.quality = 'ultra'; G.opts.scale = 1; G.applyQuality(); } const fertig = await P.settle(12000); await new Promise(r => setTimeout(r, 1500)); const s = await P.measure({ frames: 12, maxMs: 14000 }); const z = { ort: 'messe', stufe: 'ultra', skala: 1, kacheln_fertig: fertig, calls: s.calls, dreiecke: s.triangles, geo: s.geometries, tex: s.textures, shader: s.programs, bild: s.frameMs, cpu: s.cpuMs, gpu: s.gpuMs, puffer: s.buffer, pr: s.pixelRatio, kacheln: s.tiles, lowGfx: s.lowGfx, weakGpu: s.weakGpu, sicht: s.view, teil: s.partial, gruppen: s.groups, top: s.top, ms: Math.round(performance.now() - t0) }; (window.__L = window.__L || []).push(z); return JSON.stringify(z); })()",
+  "tx": -3600,
+  "tz": 1971,
+  "pitch": 0.05,
+  "wait": 3000
+ }
+]

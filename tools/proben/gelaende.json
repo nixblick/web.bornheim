@@ -1,0 +1,84 @@
+[
+ {
+  "n": "gelaende_bornheimer_hang",
+  "x": 780,
+  "z": -130,
+  "wait": 8000,
+  "pitch": 0.25,
+  "js": "(async () => { await import('/tools/gelaende.js?' + Date.now()); await window.G.PERF?.settle(12000); const r = await T.gelaende(780, -130, 250, 38000); r.name = 'bornheimer_hang'; (window.__K = window.__K || []).push(r); return JSON.stringify(r); })()"
+ },
+ {
+  "n": "gelaende_seckbacher_landstrasse",
+  "x": 100,
+  "z": -380,
+  "wait": 8000,
+  "pitch": 0.25,
+  "js": "(async () => { await import('/tools/gelaende.js?' + Date.now()); await window.G.PERF?.settle(12000); const r = await T.gelaende(100, -380, 250, 38000); r.name = 'seckbacher_landstrasse'; (window.__K = window.__K || []).push(r); return JSON.stringify(r); })()"
+ },
+ {
+  "n": "gelaende_mainufer_sachsenhausen",
+  "x": -1750,
+  "z": 2470,
+  "wait": 8000,
+  "pitch": 0.25,
+  "js": "(async () => { await import('/tools/gelaende.js?' + Date.now()); await window.G.PERF?.settle(12000); const r = await T.gelaende(-1750, 2470, 250, 38000); r.name = 'mainufer_sachsenhausen'; (window.__K = window.__K || []).push(r); return JSON.stringify(r); })()"
+ },
+ {
+  "n": "gelaende_hauptfriedhof",
+  "x": -1003,
+  "z": -697,
+  "wait": 8000,
+  "pitch": 0.25,
+  "js": "(async () => { await import('/tools/gelaende.js?' + Date.now()); await window.G.PERF?.settle(12000); const r = await T.gelaende(-1003, -697, 250, 38000); r.name = 'hauptfriedhof'; (window.__K = window.__K || []).push(r); return JSON.stringify(r); })()"
+ },
+ {
+  "n": "knick_1",
+  "wait": 1000,
+  "js": "(async () => { const all = (window.__K || []).flatMap(r => r.knick.top.map(t => Object.assign({ ort: r.name }, t))).sort((a, b) => b.k - a.k); const t = all[0]; if (!t) return 'keine Stelle'; const G = window.G; const px = t.x - Math.sin(t.ang) * 14, pz = t.z - Math.cos(t.ang) * 14; await G.streamInit(px, pz); G.player.pos.set(px, G.TH(px, pz), pz); G.player.vy = 0; if (G.player.mesh) G.player.mesh.position.copy(G.player.pos); G.camYaw.v = t.ang; G.camPitch.v = 0.12; await G.PERF?.settle(8000); await new Promise(r => setTimeout(r, 2500)); return JSON.stringify(t); })()"
+ },
+ {
+  "n": "knick_2",
+  "wait": 1000,
+  "js": "(async () => { const all = (window.__K || []).flatMap(r => r.knick.top.map(t => Object.assign({ ort: r.name }, t))).sort((a, b) => b.k - a.k); const t = all[1]; if (!t) return 'keine Stelle'; const G = window.G; const px = t.x - Math.sin(t.ang) * 14, pz = t.z - Math.cos(t.ang) * 14; await G.streamInit(px, pz); G.player.pos.set(px, G.TH(px, pz), pz); G.player.vy = 0; if (G.player.mesh) G.player.mesh.position.copy(G.player.pos); G.camYaw.v = t.ang; G.camPitch.v = 0.12; await G.PERF?.settle(8000); await new Promise(r => setTimeout(r, 2500)); return JSON.stringify(t); })()"
+ },
+ {
+  "n": "knick_3",
+  "wait": 1000,
+  "js": "(async () => { const all = (window.__K || []).flatMap(r => r.knick.top.map(t => Object.assign({ ort: r.name }, t))).sort((a, b) => b.k - a.k); const t = all[2]; if (!t) return 'keine Stelle'; const G = window.G; const px = t.x - Math.sin(t.ang) * 14, pz = t.z - Math.cos(t.ang) * 14; await G.streamInit(px, pz); G.player.pos.set(px, G.TH(px, pz), pz); G.player.vy = 0; if (G.player.mesh) G.player.mesh.position.copy(G.player.pos); G.camYaw.v = t.ang; G.camPitch.v = 0.12; await G.PERF?.settle(8000); await new Promise(r => setTimeout(r, 2500)); return JSON.stringify(t); })()"
+ },
+ {
+  "n": "knick_4",
+  "wait": 1000,
+  "js": "(async () => { const all = (window.__K || []).flatMap(r => r.knick.top.map(t => Object.assign({ ort: r.name }, t))).sort((a, b) => b.k - a.k); const t = all[3]; if (!t) return 'keine Stelle'; const G = window.G; const px = t.x - Math.sin(t.ang) * 14, pz = t.z - Math.cos(t.ang) * 14; await G.streamInit(px, pz); G.player.pos.set(px, G.TH(px, pz), pz); G.player.vy = 0; if (G.player.mesh) G.player.mesh.position.copy(G.player.pos); G.camYaw.v = t.ang; G.camPitch.v = 0.12; await G.PERF?.settle(8000); await new Promise(r => setTimeout(r, 2500)); return JSON.stringify(t); })()"
+ },
+ {
+  "n": "knick_5",
+  "wait": 1000,
+  "js": "(async () => { const all = (window.__K || []).flatMap(r => r.knick.top.map(t => Object.assign({ ort: r.name }, t))).sort((a, b) => b.k - a.k); const t = all[4]; if (!t) return 'keine Stelle'; const G = window.G; const px = t.x - Math.sin(t.ang) * 14, pz = t.z - Math.cos(t.ang) * 14; await G.streamInit(px, pz); G.player.pos.set(px, G.TH(px, pz), pz); G.player.vy = 0; if (G.player.mesh) G.player.mesh.position.copy(G.player.pos); G.camYaw.v = t.ang; G.camPitch.v = 0.12; await G.PERF?.settle(8000); await new Promise(r => setTimeout(r, 2500)); return JSON.stringify(t); })()"
+ },
+ {
+  "n": "knick_6",
+  "wait": 1000,
+  "js": "(async () => { const all = (window.__K || []).flatMap(r => r.knick.top.map(t => Object.assign({ ort: r.name }, t))).sort((a, b) => b.k - a.k); const t = all[5]; if (!t) return 'keine Stelle'; const G = window.G; const px = t.x - Math.sin(t.ang) * 14, pz = t.z - Math.cos(t.ang) * 14; await G.streamInit(px, pz); G.player.pos.set(px, G.TH(px, pz), pz); G.player.vy = 0; if (G.player.mesh) G.player.mesh.position.copy(G.player.pos); G.camYaw.v = t.ang; G.camPitch.v = 0.12; await G.PERF?.settle(8000); await new Promise(r => setTimeout(r, 2500)); return JSON.stringify(t); })()"
+ },
+ {
+  "n": "knick_7",
+  "wait": 1000,
+  "js": "(async () => { const all = (window.__K || []).flatMap(r => r.knick.top.map(t => Object.assign({ ort: r.name }, t))).sort((a, b) => b.k - a.k); const t = all[6]; if (!t) return 'keine Stelle'; const G = window.G; const px = t.x - Math.sin(t.ang) * 14, pz = t.z - Math.cos(t.ang) * 14; await G.streamInit(px, pz); G.player.pos.set(px, G.TH(px, pz), pz); G.player.vy = 0; if (G.player.mesh) G.player.mesh.position.copy(G.player.pos); G.camYaw.v = t.ang; G.camPitch.v = 0.12; await G.PERF?.settle(8000); await new Promise(r => setTimeout(r, 2500)); return JSON.stringify(t); })()"
+ },
+ {
+  "n": "knick_8",
+  "wait": 1000,
+  "js": "(async () => { const all = (window.__K || []).flatMap(r => r.knick.top.map(t => Object.assign({ ort: r.name }, t))).sort((a, b) => b.k - a.k); const t = all[7]; if (!t) return 'keine Stelle'; const G = window.G; const px = t.x - Math.sin(t.ang) * 14, pz = t.z - Math.cos(t.ang) * 14; await G.streamInit(px, pz); G.player.pos.set(px, G.TH(px, pz), pz); G.player.vy = 0; if (G.player.mesh) G.player.mesh.position.copy(G.player.pos); G.camYaw.v = t.ang; G.camPitch.v = 0.12; await G.PERF?.settle(8000); await new Promise(r => setTimeout(r, 2500)); return JSON.stringify(t); })()"
+ },
+ {
+  "n": "knick_9",
+  "wait": 1000,
+  "js": "(async () => { const all = (window.__K || []).flatMap(r => r.knick.top.map(t => Object.assign({ ort: r.name }, t))).sort((a, b) => b.k - a.k); const t = all[8]; if (!t) return 'keine Stelle'; const G = window.G; const px = t.x - Math.sin(t.ang) * 14, pz = t.z - Math.cos(t.ang) * 14; await G.streamInit(px, pz); G.player.pos.set(px, G.TH(px, pz), pz); G.player.vy = 0; if (G.player.mesh) G.player.mesh.position.copy(G.player.pos); G.camYaw.v = t.ang; G.camPitch.v = 0.12; await G.PERF?.settle(8000); await new Promise(r => setTimeout(r, 2500)); return JSON.stringify(t); })()"
+ },
+ {
+  "n": "knick_10",
+  "wait": 1000,
+  "js": "(async () => { const all = (window.__K || []).flatMap(r => r.knick.top.map(t => Object.assign({ ort: r.name }, t))).sort((a, b) => b.k - a.k); const t = all[9]; if (!t) return 'keine Stelle'; const G = window.G; const px = t.x - Math.sin(t.ang) * 14, pz = t.z - Math.cos(t.ang) * 14; await G.streamInit(px, pz); G.player.pos.set(px, G.TH(px, pz), pz); G.player.vy = 0; if (G.player.mesh) G.player.mesh.position.copy(G.player.pos); G.camYaw.v = t.ang; G.camPitch.v = 0.12; await G.PERF?.settle(8000); await new Promise(r => setTimeout(r, 2500)); return JSON.stringify(t); })()"
+ }
+]
