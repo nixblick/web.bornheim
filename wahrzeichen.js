@@ -193,11 +193,21 @@ export function initWahrzeichen(X) {
     g.position.set(ob.cx, y0, ob.cz); g.rotation.y = Math.atan2(fx, fz);
     g.userData.mats = mats; scene.add(g); return g;
   }
-  function drop(g) { scene.remove(g); g.traverse(o => { if (o.geometry) o.geometry.dispose(); }); for (const m of g.userData.mats) { if (m.map) m.map.dispose(); m.dispose(); } }
+  function drop(g) { if (g.userData.sockel) { scene.remove(g.userData.sockel); g.userData.sockel.geometry.dispose(); } scene.remove(g); g.traverse(o => { if (o.geometry) o.geometry.dispose(); }); for (const m of g.userData.mats) { if (m.map) m.map.dispose(); m.dispose(); } }
   // Fernsicht (André 13.11.2026): Der Szenen-Nebel endet je nach Stufe bei 250–700 m, dahinter waren Dom und Skyline weg.
   // Wahrzeichen nehmen nicht am Nebel teil, sondern bekommen einen eigenen, weiteren Dunst: Farbe gleitet bis FERN zur Nebelfarbe.
   const FERN = 2200, _fc = new THREE.Color();
+  // Dunst-Sockel (13.11.2026): Jenseits des Nebels verschwindet der Boden in Nebelfarbe, der Turmfuß blieb scharf, die Hochhäuser
+  // schienen zu schweben. Ein offener Zylinder in Nebelfarbe, unten deckend, oben durchsichtig, legt sich um den Fuß; nah unsichtbar.
+  function sockel(g) { if (g.userData.sockel) return g.userData.sockel; const bb = new THREE.Box3().setFromObject(g); const R = Math.max(bb.max.x - bb.min.x, bb.max.z - bb.min.z) * 0.62 + 6;
+    const geo = new THREE.CylinderGeometry(R, R, 60, 24, 6, true); const p = geo.attributes.position, col = new Float32Array(p.count * 4);
+    for (let i = 0; i < p.count; i++) { const a = Math.max(0, Math.min(1, 1 - (p.getY(i) + 30) / 60)); col.set([1, 1, 1, a * a], i * 4); }
+    geo.setAttribute('color', new THREE.BufferAttribute(col, 4)); geo.translate(0, 26, 0);
+    const m = new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, depthWrite: false, fog: false, opacity: 0 }); const s = new THREE.Mesh(geo, m); s.renderOrder = 2;
+    s.position.set(g.position.x, g.position.y, g.position.z); scene.add(s); g.userData.sockel = s; g.userData.mats.push(m); return s; }
   function haze() { const f = scene.fog; if (!f) return; const cam = X.camera; if (!cam) return;
+    for (const g of built.values()) { if (!g.userData.b || !['coba', 'main', 'westend', 'euro', 'trianon', 'messe'].includes(g.userData.b.lm)) continue; const s = sockel(g);
+      const d = Math.hypot(cam.position.x - g.position.x, cam.position.z - g.position.z); s.material.color.copy(f.color); s.material.opacity = Math.max(0, Math.min(0.95, (d - f.far * 0.8) / 150)); s.visible = s.material.opacity > 0.01; }
     for (const g of [...built.values(), ...(X.FAR_HAZE || []).map(h => (h.position = h.position || { x: h.x, z: h.z }, h.userData = h.userData || { mats: h.mats }, h))]) { const d = Math.hypot(cam.position.x - g.position.x, cam.position.z - g.position.z); const near = Math.max(60, f.near);
       const k = Math.min(0.85, Math.max(0, (d - near) / (Math.max(FERN, f.far * 3) - near)));
       if (g.userData.k !== undefined && Math.abs(g.userData.k - k) < 0.01 && g.userData.fc === f.color.getHex()) continue; g.userData.k = k; g.userData.fc = f.color.getHex(); _fc.copy(f.color);
