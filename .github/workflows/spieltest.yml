@@ -1,0 +1,64 @@
+# Spieltest auf GitHub statt auf dem Notebook (André 13.11.2026): Headless-Chrome mit SwiftShader fährt
+# tools/probe.mjs mit einer oder mehreren Probendateien. Ergebnis: stand.txt im Log, Bilder als Artefakt.
+# Start von Hand (Zweig und Proben wählbar) oder automatisch bei jedem PR nach main.
+name: Spieltest
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: Zweig oder Commit
+        default: main
+      proben:
+        description: Probendateien unter tools/proben/, Leerzeichen-getrennt (leer = alle)
+        default: ''
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  liste:
+    runs-on: ubuntu-latest
+    outputs:
+      proben: ${{ steps.l.outputs.proben }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.event.pull_request.head.sha || github.ref }}
+      - id: l
+        env:
+          WAHL: ${{ inputs.proben }}
+        run: |
+          if [ -n "$WAHL" ]; then set -- $WAHL; else set -- $(cd tools/proben && ls *.json); fi
+          printf '%s\n' "$@" | sed 's/\.json$//' | jq -R . | jq -sc . | sed 's/^/proben=/' >> "$GITHUB_OUTPUT"
+
+  probe:
+    needs: liste
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        probe: ${{ fromJson(needs.liste.outputs.proben) }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.event.pull_request.head.sha || github.ref }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Probe ${{ matrix.probe }}
+        run: node tools/probe.mjs "tools/proben/${{ matrix.probe }}.json" "out/${{ matrix.probe }}" "$(command -v google-chrome)"
+      - name: Stand
+        if: always()
+        run: cat "out/${{ matrix.probe }}/stand.txt" || true
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: probe-${{ matrix.probe }}
+          path: |
+            out/${{ matrix.probe }}/*.jpg
+            out/${{ matrix.probe }}/*.txt
+          retention-days: 14

@@ -1,0 +1,123 @@
+[
+ {
+  "n": "oper_60m",
+  "x": -2688,
+  "z": 1561,
+  "tx": -2688,
+  "tz": 1491,
+  "pitch": 0.35,
+  "wait": 8000,
+  "js": "(() => { const G = window.G, i = G.solidAt(-2688, 1491); const b = i >= 0 ? G.WORLD.buildings[i] : null; return b ? b.lm + ' h=' + b.h + ' ecken=' + b.p.length : 'kein Bau'; })()",
+  "expect": "window.G.solidAt(-2688, 1491) >= 0"
+ },
+ {
+  "n": "roemer_60m",
+  "x": -2005,
+  "z": 2179,
+  "tx": -2005,
+  "tz": 2109,
+  "pitch": 0.35,
+  "wait": 8000,
+  "js": "(() => { const G = window.G, i = G.solidAt(-2005, 2109); const b = i >= 0 ? G.WORLD.buildings[i] : null; return b ? b.lm + ' h=' + b.h + ' ecken=' + b.p.length : 'kein Bau'; })()",
+  "expect": "window.G.solidAt(-2005, 2109) >= 0"
+ },
+ {
+  "n": "dom_60m",
+  "x": -1735,
+  "z": 2157,
+  "tx": -1735,
+  "tz": 2087,
+  "pitch": 0.35,
+  "wait": 8000,
+  "js": "(() => { const G = window.G, i = G.solidAt(-1735, 2087); const b = i >= 0 ? G.WORLD.buildings[i] : null; return b ? b.lm + ' h=' + b.h + ' ecken=' + b.p.length : 'kein Bau'; })()",
+  "expect": "window.G.solidAt(-1735, 2087) >= 0"
+ },
+ {
+  "n": "pauls_60m",
+  "x": -2066,
+  "z": 2101,
+  "tx": -2066,
+  "tz": 2031,
+  "pitch": 0.35,
+  "wait": 8000,
+  "js": "(() => { const G = window.G, i = G.solidAt(-2066, 2031); const b = i >= 0 ? G.WORLD.buildings[i] : null; return b ? b.lm + ' h=' + b.h + ' ecken=' + b.p.length : 'kein Bau'; })()",
+  "expect": "window.G.solidAt(-2066, 2031) >= 0"
+ },
+ {
+  "n": "coba_60m",
+  "x": -2518,
+  "z": 2095,
+  "tx": -2518,
+  "tz": 2025,
+  "pitch": 0.35,
+  "wait": 8000,
+  "js": "(() => { const G = window.G, i = G.solidAt(-2518, 2025); const b = i >= 0 ? G.WORLD.buildings[i] : null; return b ? b.lm + ' h=' + b.h + ' ecken=' + b.p.length : 'kein Bau'; })()",
+  "expect": "window.G.solidAt(-2518, 2025) >= 0"
+ },
+ {
+  "n": "main_60m",
+  "x": -2675,
+  "z": 1950,
+  "tx": -2675,
+  "tz": 1880,
+  "pitch": 0.35,
+  "wait": 8000,
+  "js": "(() => { const G = window.G, i = G.solidAt(-2675, 1880); const b = i >= 0 ? G.WORLD.buildings[i] : null; return b ? b.lm + ' h=' + b.h + ' ecken=' + b.p.length : 'kein Bau'; })()",
+  "expect": "window.G.solidAt(-2675, 1880) >= 0"
+ },
+ {
+  "n": "westend_60m",
+  "x": -3374,
+  "z": 2168,
+  "tx": -3374,
+  "tz": 2098,
+  "pitch": 0.35,
+  "wait": 8000,
+  "js": "(() => { const G = window.G, i = G.solidAt(-3374, 2098); const b = i >= 0 ? G.WORLD.buildings[i] : null; return b ? b.lm + ' h=' + b.h + ' ecken=' + b.p.length : 'kein Bau'; })()",
+  "expect": "window.G.solidAt(-3374, 2098) >= 0"
+ },
+ {
+  "n": "euro_60m",
+  "x": -2550,
+  "z": 2281,
+  "tx": -2550,
+  "tz": 2211,
+  "pitch": 0.35,
+  "wait": 8000,
+  "js": "(() => { const G = window.G, i = G.solidAt(-2550, 2211); const b = i >= 0 ? G.WORLD.buildings[i] : null; return b ? b.lm + ' h=' + b.h + ' ecken=' + b.p.length : 'kein Bau'; })()",
+  "expect": "window.G.solidAt(-2550, 2211) >= 0"
+ },
+ {
+  "n": "trianon_60m",
+  "x": -3062,
+  "z": 1928,
+  "tx": -3062,
+  "tz": 1858,
+  "pitch": 0.35,
+  "wait": 8000,
+  "js": "(() => { const G = window.G, i = G.solidAt(-3062, 1858); const b = i >= 0 ? G.WORLD.buildings[i] : null; return b ? b.lm + ' h=' + b.h + ' ecken=' + b.p.length : 'kein Bau'; })()",
+  "expect": "window.G.solidAt(-3062, 1858) >= 0"
+ },
+ {
+  "n": "waldstadion",
+  "x": -4583,
+  "z": 6771,
+  "y": 40,
+  "tx": -4583,
+  "tz": 6772,
+  "pitch": 1.2,
+  "wait": 8000,
+  "js": "(() => { const G = window.G, i = G.solidAt(-4583, 6771); return i >= 0 ? 'Klotz im Innenraum h=' + G.WORLD.buildings[i].h : 'Innenraum frei'; })()"
+ },
+ {
+  "n": "fsv",
+  "x": 948,
+  "z": 174,
+  "y": 40,
+  "tx": 948,
+  "tz": 175,
+  "pitch": 1.2,
+  "wait": 8000,
+  "js": "(() => { const G = window.G, i = G.solidAt(948, 174); return i >= 0 ? 'Klotz im Innenraum h=' + G.WORLD.buildings[i].h : 'Innenraum frei'; })()"
+ }
+]
