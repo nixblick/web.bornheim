@@ -2079,6 +2079,8 @@ function addHelmet(h, col) { const m = new THREE.Mesh(new THREE.SphereGeometry(0
 // Radler auf einem KI-Rad: eine Figur als Kind des Rads (nicht in peds), beim Klauen steigt sie ab und flieht
 function addRider(c) { const h = makeHuman(Math.random() < 0.5), m = !!c.userData.moto; h.position.set(0, m ? -0.02 : 0.05, m ? -0.22 : -0.24); c.add(h); c.userData.rider = h; poseBikeRider(h, m, Math.random() * 6); return h; }
 function dropRider(c, flee = true) { const u = c.userData; if (!u.rider) return null; c.remove(u.rider); u.rider = null; const d = spawnPedAt(c.position.x + Math.cos(u.heading) * 1.1, c.position.z - Math.sin(u.heading) * 1.1); if (d) { d.userData.state = flee ? 'flee' : 'stunned'; d.userData.fleeT = 8; if (!flee) WPN.stun(d, 'hit', 2.5); } return d; }
+// Umgekipptes Rad/Motorrad (nicht versunken) bleibt nutzbar: E stellt es wieder auf (André 13.11.2026, #101)
+const remountable = u => u.mode === 'wreck' && u.bike && !u.sunk;
 function tipBike(c, src) { const u = c.userData; if (c === player.car) { player.hp -= 15; camShake(0.3); showMsg('GESTÜRZT', 900); exitCar(); } const d = dropRider(c, false); u.hp = 0; u.speed = 0; u.mode = 'wreck'; u.wreckT = 0; c.rotation.z = Math.PI / 2 * 0.92; c.position.y += 0.1; sfx('crash', 0.35); return d; }
 function spawnCar(police = false, near = null, minD = 60, maxD = 220, bike = false) {
   const pool = near ? roadsNear(near.x, near.z, 1, true) : roadsDrivable; if (!pool.length) return null; let p; for (let k = 0; k < 40; k++) { p = randomRoadPoint(pick(pool)); const d = near ? Math.hypot(p.x - near.x, p.z - near.z) : 0; if (!near || (d < maxD && d > minD)) break; }
@@ -2531,9 +2533,10 @@ function toggleCar() {
   if (!started || player.dead) return;
   if (player.car) { if (player.car.userData.heli && !player.car.userData.landed) { showMsg('ERST LANDEN', 900); return; } exitCar(); return; }
   let best = null, bd = 4;
-  for (const c of cars) { if (c.userData.mode === 'wreck') continue; const d = c.position.distanceTo(player.pos) - (c.userData.cannon ? 3 : c.userData.heli ? 4.5 : 0); if (d < bd) { bd = d; best = c; } }
+  for (const c of cars) { if (c.userData.mode === 'wreck' && !remountable(c.userData)) continue; const d = c.position.distanceTo(player.pos) - (c.userData.cannon ? 3 : c.userData.heli ? 4.5 : 0); if (d < bd) { bd = d; best = c; } }
   if (!best) { let sb = null, sd = 3.6; for (const sp of staticParked) { if (!sp.active) continue; const d = Math.hypot(sp.x - player.pos.x, sp.z - player.pos.z); if (d < sd) { sd = d; sb = sp; } } if (!sb) return; best = activateParked(sb); }
   const u = best.userData;
+  if (remountable(u)) { best.rotation.z = 0; u.hp = u.moto ? 90 : 40; u.wreckT = 0; u.speed = 0; showMsg(u.moto ? 'MOTORRAD AUFGESTELLT' : 'RAD AUFGESTELLT', 900); }
   if (u.voi) { if (player.money < 1) { showMsg('VOI: ZU WENIG GELD', 1200); return; } player.money -= 1; u.voiT = 0; showMsg('VOI ENTSPERRT · 1 € + 2 € JE MINUTE', 1600); }
   if (u.mode === 'ai' || u.mode === 'police' || u.mode === 'medicAI') {
     if (u.bike) dropRider(best, true); else { const d = spawnPedAt(best.position.x + Math.cos(u.heading) * 2.2, best.position.z - Math.sin(u.heading) * 2.2); if (d) { d.userData.state = 'flee'; d.userData.fleeT = 8; } }
@@ -3213,8 +3216,8 @@ function update(dt) {
   streetTimer -= dt; if (streetTimer <= 0) { streetTimer = 0.5; streetEl.textContent = nearestStreet(); }
   // Hinweistext einmal zusammenbauen und nur bei Änderung schreiben; Parkautos ohne hypot (Quadratabstand mit Vorprüfung)
   let ht = '';
-  if (!player.car) { let near = null; for (const c of cars) if (c.userData.mode !== 'wreck' && c.position.distanceTo(player.pos) < (c.userData.cannon ? 7 : 4)) near = c;
-    if (near) ht = near.userData.mode === 'parked' ? (near.userData.cannon ? 'E · Wasserwerfer übernehmen' : near.userData.ambulance ? 'E · Rettungswagen nehmen' : near.userData.moto ? 'E · Motorrad nehmen' : near.userData.bike ? 'E · Fahrrad nehmen' : 'E · einsteigen') : near.userData.moto ? 'E · Motorradfahrer runterziehen' : near.userData.bike ? 'E · Radler runterziehen' : 'E · Fahrer rauszerren';
+  if (!player.car) { let near = null; for (const c of cars) if ((c.userData.mode !== 'wreck' || remountable(c.userData)) && c.position.distanceTo(player.pos) < (c.userData.cannon ? 7 : 4)) near = c;
+    if (near) ht = remountable(near.userData) ? (near.userData.moto ? 'E · Motorrad aufheben' : 'E · Fahrrad aufheben') : near.userData.mode === 'parked' ? (near.userData.cannon ? 'E · Wasserwerfer übernehmen' : near.userData.ambulance ? 'E · Rettungswagen nehmen' : near.userData.moto ? 'E · Motorrad nehmen' : near.userData.bike ? 'E · Fahrrad nehmen' : 'E · einsteigen') : near.userData.moto ? 'E · Motorradfahrer runterziehen' : near.userData.bike ? 'E · Radler runterziehen' : 'E · Fahrer rauszerren';
     else { const px = player.pos.x, pz = player.pos.z; for (const sp of staticParked) { if (!sp.active) continue; const dx = sp.x - px; if (dx > 3.6 || dx < -3.6) continue; const dz = sp.z - pz; if (dz > 3.6 || dz < -3.6) continue; if (dx * dx + dz * dz < 12.96) { ht = 'E · einsteigen'; break; } } } }
   else ht = player.car.userData.cannon ? 'E · aussteigen · Linksklick Wasser · Maus zielt' : player.car.userData.ambulance ? 'E · aussteigen · Leertaste bremsen · H Martinshorn' : player.car.userData.moto ? 'E · absteigen · Linksklick schießen · H hupen' : player.car.userData.bike ? 'E · absteigen · Linksklick schießen · H klingeln' : 'E · aussteigen · Leertaste bremsen';
   { const sh = SHOPS.update(dt); if (sh && !player.car && !ht) ht = sh; const ih = INTERIORS.update(dt); if (ih) ht = ih; PROGRESS.update(dt); LANDMARKS.update(dt); WAHRZ.update(dt); if (EULEN) EULEN.update(dt); if (VOKA) VOKA.update(dt); archCheck(); policeHeli(dt); if (WARN_MAT) WARN_MAT.color.setHex(Math.floor(performance.now() / 750) % 2 ? 0xff2a1a : 0x3a0806); if (player.car && player.car.userData.voi) { const vu = player.car.userData; vu.voiT = (vu.voiT || 0) + dt; if (vu.voiT >= 60) { vu.voiT -= 60; if (player.money >= 2) { player.money -= 2; showMsg('VOI −2 €', 700); } else { showMsg('VOI: GUTHABEN LEER', 1200); exitCar(); } } } const hh = HELI.update(dt); if (hh && (!ht || player.car)) ht = hh; }
