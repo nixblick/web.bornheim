@@ -2259,10 +2259,13 @@ function advanceAlongRoad(u, pos, dist, offset) {
       // Kreuzung: Abbiegen, Einbahnstraßen beachten; am Ende einer Einbahnstraße muss abgebogen werden
       const atEnd = (j === 0 || j === r.p.length - 1);
       const tram = u.mode === 'tram'; // Tram wechselt nur am Gleisende, nur auf Tramgleise (oder die eigene Gleisart) und nimmt die geradeste Fortsetzung
-      if (!u.line && (tram ? atEnd : (Math.random() < 0.3 || (atEnd && (r.o || u.isCar)) || u.goal))) { const opts = []; let ends = 0;
-        for (const [q, k] of nodesNear(bx, bz)) { if (q === r) continue; if (tram ? (q.w !== undefined || (q.k !== 'tram' && q.k !== r.k)) : (q.w === undefined || (u.isCar ? q.w < 5 || q.ped : (q.mw || q.ry)) /* Autos nicht in Fußgängerzonen (Zeil, Nordwestzentrum) */)) continue;
-          for (const d of [1, -1]) { if (k + d < 0 || k + d >= q.p.length) continue; ends++; if (u.isCar && !u.police && q.o && q.o !== d) continue; opts.push([q, k, d]); } }
-        if (u.isCar && ends >= 2) { u.sigX = bx; u.sigZ = bz; } // echte Kreuzung (mindestens drei Straßenenden): ihre Ampeln gelten für die Zufahrt, nicht mehr für die Ausfahrt (siehe KI-Schleife)
+      let near = null;
+      if (u.isCar && !tram) { near = nodesNear(bx, bz); let ends = 0; // bei jeder Knotenüberfahrt (auch geradeaus, auch Busse) Straßenenden zählen
+        for (const [q, k] of near) { if (q === r || q.w === undefined || q.w < 5 || q.ped) continue; for (const d of [1, -1]) if (k + d >= 0 && k + d < q.p.length) ends++; }
+        if (ends >= 2) { u.sigX = bx; u.sigZ = bz; } } // echte Kreuzung (mindestens drei Straßenenden): ihre Ampeln gelten für die Zufahrt, nicht mehr für die Ausfahrt (siehe KI-Schleife)
+      if (!u.line && (tram ? atEnd : (Math.random() < 0.3 || (atEnd && (r.o || u.isCar)) || u.goal))) { const opts = [];
+        for (const [q, k] of (near || nodesNear(bx, bz))) { if (q === r) continue; if (tram ? (q.w !== undefined || (q.k !== 'tram' && q.k !== r.k)) : (q.w === undefined || (u.isCar ? q.w < 5 || q.ped : (q.mw || q.ry)) /* Autos nicht in Fußgängerzonen (Zeil, Nordwestzentrum) */)) continue;
+          for (const d of [1, -1]) { if (k + d < 0 || k + d >= q.p.length) continue; if (u.isCar && !u.police && q.o && q.o !== d) continue; opts.push([q, k, d]); } }
         if (tram) { let bo = null, bt = 1.05; for (const o of opts) { const q2 = o[0].p[o[1] + o[2]]; const tn = Math.abs(((Math.atan2(q2[0] - bx, q2[1] - bz) - u.heading + Math.PI) % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI) - Math.PI); if (tn < bt) { bt = tn; bo = o; } }
           if (bo) { u.road = bo[0]; u.seg = bo[1]; u.dir = bo[2]; } else { u.dir *= -1; u.speed = 0; u.stopT = 6; } /* keine Fortsetzung unter 60 Grad: Endhaltestelle, 6 s halten und zurück statt in voller Fahrt umzuspringen */ return; }
         if (opts.length) { let choice = pick(opts); if (u.goal) { let best = 1e9; for (const o of opts) { const [q, k, d] = o; const q2 = q.p[k + d]; const dd = Math.hypot(q2[0] - u.goal.x, q2[1] - u.goal.z); if (dd < best) { best = dd; choice = o; } } } const [nr, k, d] = choice; const [nx2, nz2] = nr.p[k + d]; const nh = Math.atan2(nx2 - bx, nz2 - bz); const turn = ((nh - u.heading + Math.PI) % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI) - Math.PI; if (Math.abs(turn) > 0.5) { u.blink = turn > 0 ? 0 : 1; u.blinkT = 2.5; } u.road = nr; u.seg = k; u.dir = d; return; } }
