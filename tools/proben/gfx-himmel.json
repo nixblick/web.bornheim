@@ -1,0 +1,128 @@
+[
+ {
+  "n": "himmel_tag_klar",
+  "x": -3300,
+  "z": 2500,
+  "tx": -2600,
+  "tz": 2000,
+  "pitch": 0.35,
+  "hour": 13,
+  "wait": 6000,
+  "js": "(async () => { const G = window.G; G.opts.timeSpeed = 0; G.opts.weather = 'clear'; G.weather.kind = 'clear'; G.weather.rain = 0; G.weather.cloud = 0; G.weather.fog = 0; await new Promise(r => setTimeout(r, 1500)); let dome = null, sprites = 0; G.scene.traverse(o => { if (o.userData && o.userData.himmel) dome = o; }); for (const o of G.scene.children) if (o.isSprite && o.scale.x >= 140 && o.material && o.material.blending !== G.THREE.AdditiveBlending) sprites++; const u = dome && dome.material.uniforms.wolken.value; window.__H = { art: dome && dome.userData.himmel, wolkenSprites: sprites, bedeckung: u && +u.x.toFixed(2), deckkraft: u && +u.y.toFixed(2), low: G.LOW_GFX }; return JSON.stringify(window.__H); })()",
+  "expect": "window.__H && window.__H.art && window.__H.wolkenSprites === 0 && window.__H.bedeckung >= 0.25"
+ },
+ {
+  "n": "himmel_tag_klar_horizont",
+  "x": -3300,
+  "z": 2500,
+  "tx": -2600,
+  "tz": 2000,
+  "pitch": 0.05,
+  "hour": 13,
+  "wait": 2500,
+  "js": "(async () => { const G = window.G; G.opts.timeSpeed = 0; G.opts.weather = 'clear'; G.weather.kind = 'clear'; G.weather.rain = 0; G.weather.cloud = 0; G.weather.fog = 0; await new Promise(r => setTimeout(r, 1500)); let dome = null, sprites = 0; G.scene.traverse(o => { if (o.userData && o.userData.himmel) dome = o; }); for (const o of G.scene.children) if (o.isSprite && o.scale.x >= 140 && o.material && o.material.blending !== G.THREE.AdditiveBlending) sprites++; const u = dome && dome.material.uniforms.wolken.value; window.__H = { art: dome && dome.userData.himmel, wolkenSprites: sprites, bedeckung: u && +u.x.toFixed(2), deckkraft: u && +u.y.toFixed(2), low: G.LOW_GFX }; return JSON.stringify(window.__H); })()",
+  "expect": "window.__H && window.__H.art && window.__H.wolkenSprites === 0 && window.__H.bedeckung >= 0.25"
+ },
+ {
+  "n": "himmel_tag_klar_unten",
+  "x": -3300,
+  "z": 2500,
+  "tx": -2600,
+  "tz": 2000,
+  "pitch": -0.35,
+  "hour": 13,
+  "wait": 2500,
+  "js": "(async () => { const G = window.G; G.opts.timeSpeed = 0; G.opts.weather = 'clear'; G.weather.kind = 'clear'; G.weather.rain = 0; G.weather.cloud = 0; G.weather.fog = 0; await new Promise(r => setTimeout(r, 1500)); let dome = null, sprites = 0; G.scene.traverse(o => { if (o.userData && o.userData.himmel) dome = o; }); for (const o of G.scene.children) if (o.isSprite && o.scale.x >= 140 && o.material && o.material.blending !== G.THREE.AdditiveBlending) sprites++; const u = dome && dome.material.uniforms.wolken.value; window.__H = { art: dome && dome.userData.himmel, wolkenSprites: sprites, bedeckung: u && +u.x.toFixed(2), deckkraft: u && +u.y.toFixed(2), low: G.LOW_GFX }; return JSON.stringify(window.__H); })()",
+  "expect": "window.__H && window.__H.art && window.__H.wolkenSprites === 0 && window.__H.bedeckung >= 0.25"
+ },
+ {
+  "n": "himmel_tag_bewoelkt",
+  "x": -3300,
+  "z": 2500,
+  "tx": -2600,
+  "tz": 2000,
+  "pitch": 0.35,
+  "hour": 13,
+  "wait": 2500,
+  "js": "(async () => { const G = window.G; G.opts.timeSpeed = 0; G.opts.weather = 'cloudy'; G.weather.kind = 'cloudy'; G.weather.rain = 0; G.weather.cloud = 0.7; G.weather.fog = 0.1; await new Promise(r => setTimeout(r, 1500)); let dome = null, sprites = 0; G.scene.traverse(o => { if (o.userData && o.userData.himmel) dome = o; }); for (const o of G.scene.children) if (o.isSprite && o.scale.x >= 140 && o.material && o.material.blending !== G.THREE.AdditiveBlending) sprites++; const u = dome && dome.material.uniforms.wolken.value; window.__H = { art: dome && dome.userData.himmel, wolkenSprites: sprites, bedeckung: u && +u.x.toFixed(2), deckkraft: u && +u.y.toFixed(2), low: G.LOW_GFX }; return JSON.stringify(window.__H); })()",
+  "expect": "window.__H && window.__H.art && window.__H.wolkenSprites === 0 && window.__H.bedeckung >= 0.25"
+ },
+ {
+  "n": "himmel_tag_gewitter",
+  "x": -3300,
+  "z": 2500,
+  "tx": -2600,
+  "tz": 2000,
+  "pitch": 0.35,
+  "hour": 13,
+  "wait": 2500,
+  "js": "(async () => { const G = window.G; G.opts.timeSpeed = 0; G.opts.weather = 'storm'; G.weather.kind = 'storm'; G.weather.rain = 1; G.weather.cloud = 1; G.weather.fog = 0.4; await new Promise(r => setTimeout(r, 1500)); let dome = null, sprites = 0; G.scene.traverse(o => { if (o.userData && o.userData.himmel) dome = o; }); for (const o of G.scene.children) if (o.isSprite && o.scale.x >= 140 && o.material && o.material.blending !== G.THREE.AdditiveBlending) sprites++; const u = dome && dome.material.uniforms.wolken.value; window.__H = { art: dome && dome.userData.himmel, wolkenSprites: sprites, bedeckung: u && +u.x.toFixed(2), deckkraft: u && +u.y.toFixed(2), low: G.LOW_GFX }; return JSON.stringify(window.__H); })()",
+  "expect": "window.__H && window.__H.art && window.__H.wolkenSprites === 0 && window.__H.bedeckung >= 0.25"
+ },
+ {
+  "n": "himmel_abend_klar",
+  "x": -3300,
+  "z": 2500,
+  "tx": -2600,
+  "tz": 2000,
+  "pitch": 0.2,
+  "hour": 19.3,
+  "wait": 2500,
+  "js": "(async () => { const G = window.G; G.opts.timeSpeed = 0; G.opts.weather = 'clear'; G.weather.kind = 'clear'; G.weather.rain = 0; G.weather.cloud = 0; G.weather.fog = 0; await new Promise(r => setTimeout(r, 1500)); let dome = null, sprites = 0; G.scene.traverse(o => { if (o.userData && o.userData.himmel) dome = o; }); for (const o of G.scene.children) if (o.isSprite && o.scale.x >= 140 && o.material && o.material.blending !== G.THREE.AdditiveBlending) sprites++; const u = dome && dome.material.uniforms.wolken.value; window.__H = { art: dome && dome.userData.himmel, wolkenSprites: sprites, bedeckung: u && +u.x.toFixed(2), deckkraft: u && +u.y.toFixed(2), low: G.LOW_GFX }; return JSON.stringify(window.__H); })()",
+  "expect": "window.__H && window.__H.art && window.__H.wolkenSprites === 0 && window.__H.bedeckung >= 0.25"
+ },
+ {
+  "n": "himmel_abend_bewoelkt",
+  "x": -3300,
+  "z": 2500,
+  "tx": -2600,
+  "tz": 2000,
+  "pitch": 0.2,
+  "hour": 19.3,
+  "wait": 2500,
+  "js": "(async () => { const G = window.G; G.opts.timeSpeed = 0; G.opts.weather = 'cloudy'; G.weather.kind = 'cloudy'; G.weather.rain = 0; G.weather.cloud = 0.7; G.weather.fog = 0.1; await new Promise(r => setTimeout(r, 1500)); let dome = null, sprites = 0; G.scene.traverse(o => { if (o.userData && o.userData.himmel) dome = o; }); for (const o of G.scene.children) if (o.isSprite && o.scale.x >= 140 && o.material && o.material.blending !== G.THREE.AdditiveBlending) sprites++; const u = dome && dome.material.uniforms.wolken.value; window.__H = { art: dome && dome.userData.himmel, wolkenSprites: sprites, bedeckung: u && +u.x.toFixed(2), deckkraft: u && +u.y.toFixed(2), low: G.LOW_GFX }; return JSON.stringify(window.__H); })()",
+  "expect": "window.__H && window.__H.art && window.__H.wolkenSprites === 0 && window.__H.bedeckung >= 0.25"
+ },
+ {
+  "n": "himmel_nacht_klar",
+  "x": -3300,
+  "z": 2500,
+  "tx": -2600,
+  "tz": 2000,
+  "pitch": 0.3,
+  "hour": 23,
+  "wait": 2500,
+  "js": "(async () => { const G = window.G; G.opts.timeSpeed = 0; G.opts.weather = 'clear'; G.weather.kind = 'clear'; G.weather.rain = 0; G.weather.cloud = 0; G.weather.fog = 0; await new Promise(r => setTimeout(r, 1500)); let dome = null, sprites = 0; G.scene.traverse(o => { if (o.userData && o.userData.himmel) dome = o; }); for (const o of G.scene.children) if (o.isSprite && o.scale.x >= 140 && o.material && o.material.blending !== G.THREE.AdditiveBlending) sprites++; const u = dome && dome.material.uniforms.wolken.value; window.__H = { art: dome && dome.userData.himmel, wolkenSprites: sprites, bedeckung: u && +u.x.toFixed(2), deckkraft: u && +u.y.toFixed(2), low: G.LOW_GFX }; return JSON.stringify(window.__H); })()",
+  "expect": "window.__H && window.__H.art && window.__H.wolkenSprites === 0 && window.__H.bedeckung >= 0.25"
+ },
+ {
+  "n": "himmel_nacht_bewoelkt",
+  "x": -3300,
+  "z": 2500,
+  "tx": -2600,
+  "tz": 2000,
+  "pitch": 0.3,
+  "hour": 23,
+  "wait": 2500,
+  "js": "(async () => { const G = window.G; G.opts.timeSpeed = 0; G.opts.weather = 'cloudy'; G.weather.kind = 'cloudy'; G.weather.rain = 0; G.weather.cloud = 0.7; G.weather.fog = 0.1; await new Promise(r => setTimeout(r, 1500)); let dome = null, sprites = 0; G.scene.traverse(o => { if (o.userData && o.userData.himmel) dome = o; }); for (const o of G.scene.children) if (o.isSprite && o.scale.x >= 140 && o.material && o.material.blending !== G.THREE.AdditiveBlending) sprites++; const u = dome && dome.material.uniforms.wolken.value; window.__H = { art: dome && dome.userData.himmel, wolkenSprites: sprites, bedeckung: u && +u.x.toFixed(2), deckkraft: u && +u.y.toFixed(2), low: G.LOW_GFX }; return JSON.stringify(window.__H); })()",
+  "expect": "window.__H && window.__H.art && window.__H.wolkenSprites === 0 && window.__H.bedeckung >= 0.25"
+ },
+ {
+  "n": "himmel_bornheim_tag",
+  "x": -119,
+  "z": 342,
+  "tx": -220,
+  "tz": 432,
+  "pitch": 0.3,
+  "hour": 13,
+  "wait": 6000,
+  "js": "(async () => { const G = window.G; G.opts.timeSpeed = 0; G.opts.weather = 'cloudy'; G.weather.kind = 'cloudy'; G.weather.rain = 0; G.weather.cloud = 0.7; G.weather.fog = 0.1; await new Promise(r => setTimeout(r, 1500)); let dome = null, sprites = 0; G.scene.traverse(o => { if (o.userData && o.userData.himmel) dome = o; }); for (const o of G.scene.children) if (o.isSprite && o.scale.x >= 140 && o.material && o.material.blending !== G.THREE.AdditiveBlending) sprites++; const u = dome && dome.material.uniforms.wolken.value; window.__H = { art: dome && dome.userData.himmel, wolkenSprites: sprites, bedeckung: u && +u.x.toFixed(2), deckkraft: u && +u.y.toFixed(2), low: G.LOW_GFX }; return JSON.stringify(window.__H); })()",
+  "expect": "window.__H && window.__H.wolkenSprites === 0"
+ },
+ {
+  "n": "himmel_messung",
+  "shot": false,
+  "wait": 1000,
+  "js": "(async () => { const G = window.G, P = G.PERF; if (!P) return 'kein G.PERF'; await P.settle(12000); const s = await P.measure({ frames: 12, maxMs: 14000 }); return JSON.stringify({ calls: s.calls, dreiecke: s.triangles, tex: s.textures, shader: s.programs, lowGfx: s.lowGfx, gruppen: s.groups }); })()"
+ }
+]
