@@ -20,6 +20,6 @@
   "x": -119,
   "z": 342,
   "js": "(async () => { const G = window.G, P = G.PERF; if (!P) return 'kein G.PERF'; await new Promise(r => setTimeout(r, 1500)); const s = await P.measure({ frames: 40, maxMs: 20000, groups: false }); const z = { veryWeak: G.VERY_WEAK, potato: G.opts.potato, bild: s.frameMs, cpu: s.cpuMs, kachelbau: s.buildMs, laengstesStueck: s.buildSliceMax, kachelLaden: s.loadTile, luecke: s.gapMs, overlay: s.overlayMs, langeBilder: s.longFrames, zuwachs: s.resPerS, kacheln: s.tiles, teil: s.partial }; window.__SPAR = z; return JSON.stringify(z); })()",
-  "expect": "window.__SPAR && window.__SPAR.kachelbau && window.__SPAR.kachelbau.n >= 20 && window.__SPAR.kachelbau.mean <= 10"
+  "expect": "window.__SPAR && window.__SPAR.kachelbau && window.__SPAR.kachelbau.n >= 20 && window.__SPAR.kachelbau.p95 <= 10"
  }
 ]
