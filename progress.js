@@ -21,7 +21,7 @@ export function initProgress(X) {
 #zoneban{position:fixed;left:50%;top:22%;transform:translateX(-50%);z-index:7;pointer-events:none;text-align:center;transition:opacity .8s;opacity:0;font-family:Georgia,serif;color:#f3e2b5;text-shadow:0 3px 12px #000}
 #zoneban small{display:block;font:600 13px system-ui;letter-spacing:3px;color:#d9c48f}#zoneban b{display:block;font-size:40px;letter-spacing:2px}#zoneban i{display:block;font:600 14px system-ui;color:#c9a0ff;font-style:normal;margin-top:4px}
 #zone{position:absolute;right:20px;bottom:56px;font:600 14px system-ui;color:#f3e2b5;text-shadow:0 2px 6px #000;text-align:right}
-#lvl{position:absolute;left:16px;top:84px;font:700 12px system-ui;color:#c9a0ff;text-shadow:0 1px 4px #000}#lvl i{display:block;width:140px;height:4px;background:#ffffff22;border-radius:2px;margin-top:3px}#lvl i b{display:block;height:4px;background:#a46bff;border-radius:2px}
+#lvl{margin-top:6px;font:700 12px system-ui;color:#c9a0ff;text-shadow:0 1px 4px #000}#lvl i{display:block;width:140px;height:4px;background:#ffffff22;border-radius:2px;margin-top:3px}#lvl i b{display:block;height:4px;background:#a46bff;border-radius:2px}
 #tabov{position:fixed;inset:0;z-index:30;display:none;align-items:center;justify-content:center;background:#000b;font-family:system-ui,sans-serif;color:#eee}
 #tabov .box{background:#161a24;border:1px solid #333a4a;border-radius:14px;padding:18px 22px;width:min(980px,96vw);max-height:90vh;overflow:auto;display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:18px}
 #tabov h3{margin:0 0 8px;font-size:15px;letter-spacing:2px;color:#ffd84a}#tabov table{width:100%;font-size:13px;border-collapse:collapse}#tabov td{padding:3px 0;vertical-align:top}#tabov td:first-child{color:#aab;width:42%}
@@ -29,7 +29,7 @@ export function initProgress(X) {
   document.head.appendChild(st);
   const xpf = document.createElement('div'); xpf.id = 'xpf'; document.body.appendChild(xpf);
   const ban = document.createElement('div'); ban.id = 'zoneban'; document.body.appendChild(ban);
-  const hud = $('hud'); const zoneEl = document.createElement('div'); zoneEl.id = 'zone'; const lvlEl = document.createElement('div'); lvlEl.id = 'lvl'; if (hud) { hud.appendChild(zoneEl); hud.appendChild(lvlEl); }
+  const hud = $('hud'); const zoneEl = document.createElement('div'); zoneEl.id = 'zone'; const lvlEl = document.createElement('div'); lvlEl.id = 'lvl'; if (hud) { hud.appendChild(zoneEl); (hud.querySelector('.tl') || hud).appendChild(lvlEl); /* im Fluss unter Waffe statt fest bei 84 px, sonst überlagerten sich Stufe und Waffe (#100) */ }
   let xpT = 0, xpSum = 0, banT = 0;
   function gain(n, why) {
     if (n <= 0) return; P.xp += n; xpSum += n; xpf.textContent = `+${xpSum} EP${why ? ' · ' + why : ''}`; xpf.style.opacity = 1; xpT = 2.2;
