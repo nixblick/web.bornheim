@@ -29,7 +29,7 @@
  {
   "n": "kurier_auftrag",
   "wait": 2500,
-  "js": "(async () => { const G = window.G, N = G.NEBENJOBS, A = N.job.auftrag; for (const p of A.pts.slice()) { const c = G.player.car; c.position.set(p[0], G.TH(p[0], p[1]), p[1]); await new Promise(r => setTimeout(r, 800)); } return JSON.stringify({ geld: G.player.money - window.__geld0, fit: (G.PROGRESS.P.fit || 0) - window.__fit0, done: N.job ? N.job.done : -1 }); })()",
+  "js": "(async () => { const G = window.G, N = G.NEBENJOBS, A = N.job.auftrag; for (const p of A.pts.slice()) { const c = G.player.car; const i0 = (N.job && N.job.auftrag) ? N.job.auftrag.i : -1, d0 = N.job ? N.job.done : -1; for (let k = 0; k < 40; k++) { c.position.set(p[0], G.TH(p[0], p[1]), p[1]); await new Promise(r => setTimeout(r, 400)); if (!N.job || N.job.done !== d0 || (N.job.auftrag && N.job.auftrag.i !== i0)) break; } } return JSON.stringify({ geld: G.player.money - window.__geld0, fit: (G.PROGRESS.P.fit || 0) - window.__fit0, done: N.job ? N.job.done : -1 }); })()",
   "expect": "window.G.player.money - window.__geld0 >= 35 && (window.G.PROGRESS.P.fit || 0) > window.__fit0"
  },
  {
@@ -50,7 +50,7 @@
  {
   "n": "rettung_auftrag",
   "wait": 2500,
-  "js": "(async () => { const G = window.G, N = G.NEBENJOBS, A = N.job.auftrag; for (const p of A.pts.slice()) { const c = G.player.car; c.position.set(p[0], G.TH(p[0], p[1]), p[1]); await new Promise(r => setTimeout(r, 800)); } return JSON.stringify({ geld: G.player.money - window.__geld0, done: N.job ? N.job.done : -1 }); })()",
+  "js": "(async () => { const G = window.G, N = G.NEBENJOBS, A = N.job.auftrag; for (const p of A.pts.slice()) { const c = G.player.car; const i0 = (N.job && N.job.auftrag) ? N.job.auftrag.i : -1, d0 = N.job ? N.job.done : -1; for (let k = 0; k < 40; k++) { c.position.set(p[0], G.TH(p[0], p[1]), p[1]); await new Promise(r => setTimeout(r, 400)); if (!N.job || N.job.done !== d0 || (N.job.auftrag && N.job.auftrag.i !== i0)) break; } } return JSON.stringify({ geld: G.player.money - window.__geld0, done: N.job ? N.job.done : -1 }); })()",
   "expect": "window.G.player.money - window.__geld0 >= 120"
  },
  {
@@ -71,7 +71,7 @@
  {
   "n": "muell_route",
   "wait": 2500,
-  "js": "(async () => { const G = window.G, N = G.NEBENJOBS, A = N.job.auftrag; for (const p of A.pts.slice()) { const c = G.player.car; c.userData.speed = 0; c.position.set(p[0], G.TH(p[0], p[1]), p[1]); await new Promise(r => setTimeout(r, 800)); } return JSON.stringify({ geld: G.player.money - window.__geld0, job: !!N.job }); })()",
+  "js": "(async () => { const G = window.G, N = G.NEBENJOBS, A = N.job.auftrag; for (const p of A.pts.slice()) { const c = G.player.car; c.userData.speed = 0; const i0 = (N.job && N.job.auftrag) ? N.job.auftrag.i : -1, d0 = N.job ? N.job.done : -1; for (let k = 0; k < 40; k++) { c.position.set(p[0], G.TH(p[0], p[1]), p[1]); await new Promise(r => setTimeout(r, 400)); if (!N.job || N.job.done !== d0 || (N.job.auftrag && N.job.auftrag.i !== i0)) break; } } return JSON.stringify({ geld: G.player.money - window.__geld0, job: !!N.job }); })()",
   "expect": "window.G.player.money - window.__geld0 >= 90 && !window.G.NEBENJOBS.job && window.G.NEBENJOBS.stats.schichten === window.__sch0 + 3"
  }
 ]
