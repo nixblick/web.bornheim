@@ -46,7 +46,7 @@ function moebel(cx, cz, R, deadline, max = 150) {
     Laternen: G.lampSpots.filter(([x, z]) => near(x, z, cx, cz, R)).map(([x, z]) => [x, z, G.TH(x, z), FT(x, z, 0.15)]),
     Baeume: G.treeSpots.filter(([x, z]) => near(x, z, cx, cz, R)).map(([x, z]) => [x, z, G.TH(x, z), FT(x, z, 0.25)]),
     Baenke: [], Graeber: [] };
-  for (const [, t] of G.TILES) if (t.built && t.data && t.data.furniture) for (const f of t.data.furniture) if (f.k === 'bench' && !f.skip && f.off && near(f.x, f.z, cx, cz, R) && G.solidAt(f.x, f.z) < 0) klassen.Baenke.push([f.x, f.z, G.TH(f.x, f.z), FT(f.x, f.z, 0.8)]);
+  for (const [, t] of G.TILES) if (t.built && t.data && t.data.furniture) for (const f of t.data.furniture) if (f.k === 'bench' && !f.skip && f.off && near(f.x, f.z, cx, cz, R) && G.solidAt(f.x, f.z) < 0) klassen.Baenke.push([f.x, f.z, G.TH(f.x, f.z), (G.thMin ? G.thMin(f.x, f.z, 0.8) - S : FT(f.x, f.z, 0.8))]);
   if (window.GRAEBER) for (const [k, x, z] of window.GRAEBER.list) if (/^a/.test(String(k)) && near(x, z, cx, cz, R)) klassen.Graeber.push([x, z, G.TH(x, z), G.TH(x, z)]);
   const res = {}; let zeitUm = false;
   for (const [name, all] of Object.entries(klassen)) {

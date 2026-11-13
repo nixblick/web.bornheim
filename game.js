@@ -255,7 +255,27 @@ const DEMN = new Map(); let thK = NaN, thH = null; const dkey = (tx, tz) => (tx 
 // Fuß von Stadtmöbeln am Hang (#165): tiefste Geländehöhe unter der Grundfläche (Mitte und vier Ecken im Abstand r);
 // die Modelle reichen FOOT_SINK tiefer, damit nichts über dem gröberen Gelände- oder flachen Gehwegstreifen schwebt
 const FOOT_SINK = 0.25;
-function footTH(x, z, r) { let m = TH(x, z); for (const [a, b] of [[r, r], [r, -r], [-r, r], [-r, -r]]) m = Math.min(m, TH(x + a, z + b)); return m; }
+// Seit 13.11.2026: nicht mehr TH, sondern die sichtbare Oberfläche je Punkt = höhere von Kachel-Geländenetz (gröberes Raster,
+// an Straßen und Ufern abgesenkt) und Gehweg-/Straßenband (flacher Querschnitt in Höhe der Mittellinie); Fuß = tiefster der fünf Punkte
+const _MGH = new Map();
+function meshGroundH(x, z) { // Höhe des Kachel-Geländenetzes wie buildTileGround (Dreiecke der PlaneGeometry, Diagonale b–d)
+  const mul = groundMul(), step = DEM.step * mul, drop = mul === 1 ? 0.03 : 0.06, tx = Math.floor(x / TS), tz = Math.floor(z / TS), x0 = tx * TS, z0 = tz * TS;
+  const fx = (x - x0) / step, fz = (z - z0) / step, ix = Math.floor(fx), iz = Math.floor(fz), u = fx - ix, v = fz - iz;
+  const h = (i, k) => { const gx = x0 + i * step, gz = z0 + k * step, kk = gx * 1e6 + gz + mul * 0.1; let y = _MGH.get(kk); if (y === undefined) { if (_MGH.size > 200000) _MGH.clear(); y = groundH(gx, gz, mul) - drop; _MGH.set(kk, y); } return y; }; // Gitterpunkte teilen sich viele Möbel
+  if (u + v <= 1) { const h00 = h(ix, iz); return h00 + u * (h(ix + 1, iz) - h00) + v * (h(ix, iz + 1) - h00); }
+  const h11 = h(ix + 1, iz + 1); return h11 + (1 - u) * (h(ix, iz + 1) - h11) + (1 - v) * (h(ix + 1, iz) - h11); }
+function bandH(x, z) { // oberstes Gehweg-/Straßen-/Wegband über (x,z) oder null; Höhe = TH der Mittellinie wie ribbon()
+  const c0 = key(Math.floor(x / CELL), Math.floor(z / CELL)); let best = null;
+  const seg = (r, i, lim, y) => { const [ax, az] = r.p[i], [bx, bz] = r.p[i + 1]; const dx = bx - ax, dz = bz - az, L2 = dx * dx + dz * dz || 1; const t = clamp(((x - ax) * dx + (z - az) * dz) / L2, 0, 1); const ex = x - ax - dx * t, ez = z - az - dz * t; if (ex * ex + ez * ez > lim * lim) return; const hh = TH(ax + dx * t, az + dz * t) + y; if (best === null || hh > best) best = hh; };
+  const c = getRoadGrid().get(c0); if (c) for (const [r, i] of c) { if (r.ry && (r.el[i] || r.el[i + 1])) continue; seg(r, i, r.w / 2 + (r.mw ? 0.8 : 2.5), 0.02); }
+  const pc = pathGrid.get(c0); if (pc) for (const [r, i] of pc) seg(r, i, 1, 0.03);
+  return best; }
+function surfH(x, z) { const g = meshGroundH(x, z), b = bandH(x, z); return b !== null && b > g ? b : g; }
+// Untergrenze: höchstens 30 cm unter dem tiefsten TH. Grün-, Platz- und Parkflächen liegen als eigene Netze auf TH über dem abgesenkten
+// Geländenetz; ohne Grenze steckten Bänke und Bäume dort bis 4 m tief (Probe gelaende, Lauf 43470519653)
+// Bänke: Sitzhöhe zählt, hier weiter tiefstes TH (Probe: auf Oberfläche gesetzt steckten sie am Bornheimer Hang bis 80 cm)
+function thMin(x, z, r) { let t = TH(x, z); for (const [a, b] of [[r, r], [r, -r], [-r, r], [-r, -r]]) t = Math.min(t, TH(x + a, z + b)); return t; }
+function footTH(x, z, r) { let m = surfH(x, z), t = TH(x, z); for (const [a, b] of [[r, r], [r, -r], [-r, r], [-r, -r]]) { m = Math.min(m, surfH(x + a, z + b)); t = Math.min(t, TH(x + a, z + b)); } return Math.max(m, t - 0.3); }
 function TH(x, z) {
   let tx = Math.floor(x / TS), tz = Math.floor(z / TS); const k = dkey(tx, tz); let H; if (k === thK) H = thH; else { H = DEMN.get(k); if (H) { thK = k; thH = H; } }
   if (!H) {
@@ -763,7 +783,7 @@ function* buildDetails() {
   // Stadtmöbel (Fahrradständer, Bänke, Poller, Mülleimer …) nie auf der Fahrbahn: OSM-Punkte liegen oft auf der Straßenlinie
   // (Rödelheim, André 12.11.2026). Einmal an den Rand schieben, höchstens 12 m, sonst weglassen
   for (const f of CITY.furniture) if (!f.off) { const [qx, qz] = pushOffRoads(f.x, f.z, 0.7); if (Number.isNaN(qx) || Math.hypot(qx - f.x, qz - f.z) > 12) f.skip = true; else { f.x = qx; f.z = qz; } f.off = true; }
-  for (const f of CITY.furniture) { if (++YC % 3 === 0) yield; if (f.skip || solidAt(f.x, f.z) >= 0) continue; const ty = f.k === 'fountain' ? TH(f.x, f.z) : footTH(f.x, f.z, f.k === 'bench' ? 0.8 : 0.3); const S = FOOT_SINK; const ne = nearestRoadDir(f.x, f.z); const ang = ne ? ne.ang : Math.random() * 6;
+  for (const f of CITY.furniture) { yield; /* je Teil, seit footTH die Oberfläche nachrechnet (#165, Probe sparmodus) */ if (f.skip || solidAt(f.x, f.z) >= 0) continue; const ty = f.k === 'fountain' ? TH(f.x, f.z) : (f.k === 'bench' ? thMin(f.x, f.z, 0.8) : footTH(f.x, f.z, 0.3)); const S = FOOT_SINK; const ne = nearestRoadDir(f.x, f.z); const ang = ne ? ne.ang : Math.random() * 6;
     const bx = (w, h, d, y, arr, ox = 0, oz = 0) => { const g = new THREE.BoxGeometry(w, h, d); g.rotateY(ang); g.translate(f.x + ox, ty + y, f.z + oz); arr.push(g); };
     if (f.k === 'bench') { bx(1.6, 0.06, 0.45, 0.45, benchW); bx(1.6, 0.42, 0.05, 0.72, benchW, -Math.cos(ang) * 0.2, Math.sin(ang) * 0.2); bx(0.08, 0.45 + S, 0.4, 0.225 - S / 2, benchW, Math.sin(ang) * 0.7, Math.cos(ang) * 0.7); bx(0.08, 0.45 + S, 0.4, 0.225 - S / 2, benchW, -Math.sin(ang) * 0.7, -Math.cos(ang) * 0.7); }
     else if (f.k === 'waste_basket') { const g = new THREE.CylinderGeometry(0.2, 0.17, 1.0 + S, 8); g.translate(f.x, ty + (1.0 - S) / 2, f.z); bins.push(g); }
@@ -3363,7 +3383,7 @@ let cardT = null; function card(title, sub, sec = 4) { const el = $('card'); el.
 let breathEl = null, breathHint = false;
 function respawn() { player.dead = false; player.hp = 100; player.breath = 1; player.drowning = false; player.wanted = 0; msgEl.style.display = 'none'; for (const c of cars) if (c.userData.police && c !== player.car) c.userData.mode = 'parked'; }
 
-window.G = { STR, BUILD_STAT, LOAD_STAT, VERY_WEAK, CAR_INST_STAT, get CAR_INST() { return CAR_INST; }, IGPU, isIGPU, optsToSave, get PHONE() { return PHONE; }, barrierHit, HELI, get EULEN() { return EULEN; }, get VOKA() { return VOKA; }, get LAUF() { return LAUF; }, get NEBENJOBS() { return NEBENJOBS; }, get RASEN() { return RASEN; }, get ZIVIL() { return ZIVIL; }, makeMoto, makeAmbulance, updateBikeRacks, onMotorway, PROGRESS, INTERIORS, explode, makeBike, FX, puff, burst, smoke, LOW_GFX, WEAK_GPU, get canvasTexCount() { return _allCanvasTex.length; }, get ANISO() { return ANISO; }, get roadMat() { return roadMatRef; }, DEMN, DEMT, R_DATA, unregisterTile, SHOPS, TILES, WORLD, WIDX, streamUpdate, streamInit, buildTileNow, TS, WPN, DEMO, STORY, FIRE, X, card, hurtPlayer, composerRef: () => composer,  autoQuality, get QUALITY_AUTO() { return QUALITY_AUTO; }, groundH, footTH, FOOT_SINK, dentCar, deckAt, surfAt, signalPoles, treeSpots, lampSpots, pushOffRoads, onOtherRoad, floorAt, solidAtH, solidAt, roofHeight, camShake,  CHAR, CAR_TPL, playAnim, makeHuman, makeCar, makeGun, applyQuality,  staticParked, chunkStatic,  saveGame, loadGame, world, opts, pickups, weather, trams, scene, cars, peds, player, camera, camYaw, camPitch, keys, CITY, DEM, TH, renderer, sun, hemi, THREE, shoot, toggleCar, update, toggleCreative, creative, creativePlace, creativeSpawnerActive };
+window.G = { STR, BUILD_STAT, LOAD_STAT, VERY_WEAK, CAR_INST_STAT, get CAR_INST() { return CAR_INST; }, IGPU, isIGPU, optsToSave, get PHONE() { return PHONE; }, barrierHit, HELI, get EULEN() { return EULEN; }, get VOKA() { return VOKA; }, get LAUF() { return LAUF; }, get NEBENJOBS() { return NEBENJOBS; }, get RASEN() { return RASEN; }, get ZIVIL() { return ZIVIL; }, makeMoto, makeAmbulance, updateBikeRacks, onMotorway, PROGRESS, INTERIORS, explode, makeBike, FX, puff, burst, smoke, LOW_GFX, WEAK_GPU, get canvasTexCount() { return _allCanvasTex.length; }, get ANISO() { return ANISO; }, get roadMat() { return roadMatRef; }, DEMN, DEMT, R_DATA, unregisterTile, SHOPS, TILES, WORLD, WIDX, streamUpdate, streamInit, buildTileNow, TS, WPN, DEMO, STORY, FIRE, X, card, hurtPlayer, composerRef: () => composer,  autoQuality, get QUALITY_AUTO() { return QUALITY_AUTO; }, groundH, footTH, thMin, FOOT_SINK, dentCar, deckAt, surfAt, signalPoles, treeSpots, lampSpots, pushOffRoads, onOtherRoad, floorAt, solidAtH, solidAt, roofHeight, camShake,  CHAR, CAR_TPL, playAnim, makeHuman, makeCar, makeGun, applyQuality,  staticParked, chunkStatic,  saveGame, loadGame, world, opts, pickups, weather, trams, scene, cars, peds, player, camera, camYaw, camPitch, keys, CITY, DEM, TH, renderer, sun, hemi, THREE, shoot, toggleCar, update, toggleCreative, creative, creativePlace, creativeSpawnerActive };
 try { initDebugOverlay(window.G); } catch (e) { console.warn('Debug-Overlay aus', e); } // F3 und G.PERF (#162), muss vor setAnimationLoop stehen
 let fpsN = 0, fpsT = 0;
 renderer.setAnimationLoop(() => {
