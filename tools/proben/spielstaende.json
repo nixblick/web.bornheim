@@ -1,0 +1,34 @@
+[
+ {
+  "n": "st_1_leer",
+  "x": -138,
+  "z": 372,
+  "wait": 9000,
+  "js": "(async () => { const G = window.G; for (const k of Object.keys(localStorage)) if (k.startsWith('notgta.slot')) localStorage.removeItem(k); if (G.player.car) G.toggleCar(); G.player.money = 150; dispatchEvent(new KeyboardEvent('keydown', { code: 'Escape', key: 'Escape' })); await new Promise(r => setTimeout(r, 800)); G.X.menuTab('stand'); await new Promise(r => setTimeout(r, 400)); return JSON.stringify({ nav: [...document.querySelectorAll('#menu .mn-nav button')].map(b => b.textContent), sichtbar: document.querySelector('#menu .pane[data-tab=stand]').style.display, zeilen: document.querySelectorAll('#st_liste .mn-standzeile').length }); })()",
+  "expect": "document.querySelector('#menu .pane[data-tab=stand]').style.display === 'block' && document.querySelector('#menu .mn-nav .on').textContent === 'Spielstand' && !!document.querySelector('#st_neu').offsetWidth"
+ },
+ {
+  "n": "st_2_zwei_plaetze",
+  "wait": 1500,
+  "js": "(async () => { const G = window.G, $ = s => document.querySelector(s); $('#st_name').value = 'Probe A'; $('#st_neu').click(); await new Promise(r => setTimeout(r, 300)); G.player.money = 999; $('#st_name').value = 'Probe B'; $('#st_neu').click(); await new Promise(r => setTimeout(r, 300)); return JSON.stringify({ zeilen: [...document.querySelectorAll('#st_liste .mn-standzeile b')].map(b => b.textContent), idx: JSON.parse(localStorage.getItem('notgta.slots')).map(s => [s.name, s.geld]) }); })()",
+  "expect": "document.querySelectorAll('#st_liste .mn-standzeile').length === 2 && JSON.parse(localStorage.getItem('notgta.slots')).map(s => s.name + s.geld).join() === 'Probe B999,Probe A150'"
+ },
+ {
+  "n": "st_3_laden_a",
+  "shot": false,
+  "wait": 1000,
+  "js": "(async () => { const A = JSON.parse(localStorage.getItem('notgta.slots')).find(s => s.name === 'Probe A'); window.confirm = () => true; setTimeout(() => document.querySelector('#st_liste button[data-a=laden][data-id=\"' + A.id + '\"]').click(), 200); return 'lade ' + A.id; })()"
+ },
+ {
+  "n": "st_4_nach_laden",
+  "wait": 4000,
+  "js": "(async () => { for (let i = 0; i < 170; i++) { if (window.G && document.body.innerText.includes('Frankfurt bereit')) break; await new Promise(r => setTimeout(r, 1000)); } const pend = sessionStorage.getItem('notgta.slot.pending'); const c = document.getElementById('cont'); const sichtbar = c && c.style.display !== 'none'; if (c) c.click(); await new Promise(r => setTimeout(r, 12000)); return JSON.stringify({ pend, fortsetzen: sichtbar, geld: window.G.player.money, plaetze: JSON.parse(localStorage.getItem('notgta.slots')).length }); })()",
+  "expect": "window.G.player.money === 150 && sessionStorage.getItem('notgta.slot.pending') === null && JSON.parse(localStorage.getItem('notgta.slots')).length === 2"
+ },
+ {
+  "n": "st_5_aufraeumen",
+  "shot": false,
+  "wait": 500,
+  "js": "(() => { for (const k of Object.keys(localStorage)) if (k.startsWith('notgta.slot')) localStorage.removeItem(k); return 'ok'; })()"
+ }
+]
