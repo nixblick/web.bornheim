@@ -2,6 +2,7 @@
 // Waffen: In Story 1 und 2 bleiben nur Fäuste und Demo-Zubehör (W.lock 'protest'), in Story 3 nur Fäuste (W.lock 'all').
 import { story2Chapters } from './story2.js';
 import { story3Chapters } from './story3.js';
+import { disposeHierarchy } from './dispose.js';
 /** @param {import('./types').Ctx} X */
 export function initStory(X, W, D, F) {
   const { THREE, scene, camera, player, peds, cars, opts, world, weather, CITY, TH, solidAt, makeHuman, playAnim, sfx, showMsg, raiseWanted, canvasTex, rnd, clamp, pick, distSegSq, pointInPoly } = X;
@@ -58,7 +59,7 @@ export function initStory(X, W, D, F) {
   // ---------- Hilfen ----------
   let spawned = [];
   const track = o => { spawned.push(o); return o; };
-  function cleanup() { X.onG = null; X.rallyLimit = 8; W.lock(null); for (const o of spawned) { if (o.isDemo) { if (!o.result) D.endDemo(o, 'faded'); continue; } if (peds.includes(o)) D.removePed(o); else if (cars.includes(o)) { if (o !== player.car) D.removeCar(o); } else if (o.parent) o.parent.remove(o); if (o.isTarget) W.paintTargets.splice(W.paintTargets.indexOf(o.isTarget), 1); } spawned = []; kim = null; }
+  function cleanup() { X.onG = null; X.rallyLimit = 8; W.lock(null); for (const o of spawned) { if (o.isDemo) { if (!o.result) D.endDemo(o, 'faded'); continue; } if (peds.includes(o)) D.removePed(o); else if (cars.includes(o)) { if (o !== player.car) D.removeCar(o); } else { if (o.parent) o.parent.remove(o); /* Kulissen (Bühne, Plakatwand, Gitter) samt Banner-Textur freigeben (#120); Figuren und Autos haben hp und teilen ihre Vorlagen */ if (o.isObject3D && o.userData.hp === undefined) disposeHierarchy(o, { keep: x => x === adTex }); } if (o.isTarget) W.paintTargets.splice(W.paintTargets.indexOf(o.isTarget), 1); } spawned = []; kim = null; }
   function nameTag(h, text, col = '#7dff9a') { const t = canvasTex(256, 64, (ctx, w, hh) => { ctx.fillStyle = 'rgba(0,0,0,0.55)'; ctx.fillRect(40, 8, 176, 48); ctx.fillStyle = col; ctx.font = 'bold 34px system-ui'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(text, w / 2, 33); }); const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: t, depthTest: false, transparent: true })); s.scale.set(1.2, 0.3, 1); s.position.y = 2.25; s.renderOrder = 5; h.add(s); }
   let kim = null;
   function npc(model, x, z, face, name, col, o = {}) { const h = makeHuman(/woman/.test(model), { model, keepColors: !!o.keep }); if (o.top || o.hair) h.traverse(m => { if (!m.isMesh || !m.material) return; const nm = m.material.name || ''; if (o.top && /Shirt|Main|Dress|Jacket|Top/i.test(nm)) { m.material = m.material.clone(); m.material.color.setHex(o.top); } if (o.hair && /Hair/i.test(nm)) { m.material = m.material.clone(); m.material.color.setHex(o.hair); } }); if (o.student) h.scale.multiplyScalar(0.92);

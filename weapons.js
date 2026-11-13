@@ -344,8 +344,8 @@ export function initWeapons(X) {
 
   // ---------- Farbe ----------
   const splatTex = canvasTex(128, 128, (ctx, w, h) => { ctx.fillStyle = '#fff'; const blob = (x, y, r) => { ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.fill(); }; blob(64, 64, 30); for (let i = 0; i < 22; i++) { const a = Math.random() * 6.28, d = 26 + Math.random() * 30; blob(64 + Math.cos(a) * d, 64 + Math.sin(a) * d, 2 + Math.random() * 7); } for (let i = 0; i < 7; i++) { const a = Math.random() * 6.28; ctx.save(); ctx.translate(64, 64); ctx.rotate(a); ctx.fillRect(-3, 0, 6, 36 + Math.random() * 22); ctx.restore(); } });
-  const splatMats = {}; const splatGeo = new THREE.PlaneGeometry(1, 1); const splats = [];
-  const splatMat = col => splatMats[col] || (splatMats[col] = new THREE.MeshStandardMaterial({ map: splatTex, color: col, roughness: 0.35, metalness: 0, transparent: true, alphaTest: 0.35, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4, emissive: col, emissiveIntensity: 0.12, side: THREE.DoubleSide }));
+  const splatMats = {}; const splatGeo = new THREE.PlaneGeometry(1, 1); const splats = []; splatGeo.userData.shared = true; splatTex.userData.shared = true; // geteilt: Kleckse hängen an Story-Kulissen, die disposeHierarchy abbaut
+  const splatMat = col => splatMats[col] || (splatMats[col] = new THREE.MeshStandardMaterial({ map: splatTex, color: col, roughness: 0.35, metalness: 0, transparent: true, alphaTest: 0.35, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4, emissive: col, emissiveIntensity: 0.12, side: THREE.DoubleSide, userData: { shared: true } }));
   function trimSplats() { while (splats.length > 260) { const o = splats.shift(); if (o.parent) o.parent.remove(o); } }
   function addSplat(pos, normal, col, size, parent) {
     const s = new THREE.Mesh(splatGeo, splatMat(col)); s.position.copy(pos).addScaledVector(normal, 0.035); s.lookAt(s.position.clone().add(normal)); s.rotateZ(rnd(0, 6.28)); s.scale.setScalar(size); s.renderOrder = 2;
