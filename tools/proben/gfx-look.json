@@ -1,0 +1,11 @@
+[
+{ "n": "tag_hoch", "wait": 6000, "js": "(() => { const G = window.G; G.opts.quality = 'hoch'; G.opts.ao = true; G.applyQuality(); G.world.hour = 13; G.opts.timeSpeed = 0; return G.opts.quality + ' ' + G.renderer.toneMapping + ' ' + (G.composerRef() ? G.composerRef().passes.length : 0); })()", "expect": "true" }
+,
+{ "n": "nacht_hoch", "wait": 6000, "js": "(() => { const G = window.G; G.opts.quality = 'hoch'; G.opts.ao = true; G.applyQuality(); G.world.hour = 23; G.opts.timeSpeed = 0; return G.opts.quality + ' ' + G.renderer.toneMapping + ' ' + (G.composerRef() ? G.composerRef().passes.length : 0); })()", "expect": "true" }
+,
+{ "n": "tag_ultra", "wait": 6000, "js": "(() => { const G = window.G; G.opts.quality = 'ultra'; G.opts.ao = true; G.applyQuality(); G.world.hour = 13; G.opts.timeSpeed = 0; return G.opts.quality + ' ' + G.renderer.toneMapping + ' ' + (G.composerRef() ? G.composerRef().passes.length : 0); })()", "expect": "true" }
+,
+{ "n": "tag_niedrig", "wait": 6000, "js": "(() => { const G = window.G; G.opts.quality = 'niedrig'; G.opts.ao = true; G.applyQuality(); G.world.hour = 13; G.opts.timeSpeed = 0; return G.opts.quality + ' ' + G.renderer.toneMapping + ' ' + (G.composerRef() ? G.composerRef().passes.length : 0); })()", "expect": "true" }
+,
+{ "n": "nacht_niedrig", "wait": 6000, "js": "(() => { const G = window.G; G.opts.quality = 'niedrig'; G.opts.ao = true; G.applyQuality(); G.world.hour = 23; G.opts.timeSpeed = 0; return G.opts.quality + ' ' + G.renderer.toneMapping + ' ' + (G.composerRef() ? G.composerRef().passes.length : 0); })()", "expect": "true" }
+]
