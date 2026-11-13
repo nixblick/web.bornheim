@@ -3,6 +3,7 @@
 // (Standort, Mission, Spielfigur), Einstellungen als eigene Seite mit Reiterzeile in Großbuchstaben, Tastenhinweise unten.
 // Anders als Sunset: Navigation oben über die volle Breite (5 Punkte, kein Scrollbalken), Inhalt groß in der Mitte.
 // Die vorhandenen Knöpfe und Seiten aus play.html werden nur umgehängt; game.js schaltet weiter über data-tab (MENU_TAB).
+import { missionList, bestTimes, resumable, fmtMs } from './missionen.js';
 /** @param {import('./types').Ctx} X @param {any} S */
 export function initMenuNeu(X, S) {
   const { player, world, weather } = X;
@@ -75,8 +76,27 @@ export function initMenuNeu(X, S) {
       <div class="mn-vital"><span>Geld</span><b>${player.money || 0} €</b></div>${P ? `<div class="mn-vital"><span>Karma · Fitness</span><b>${P.karma > 0 ? '+' : ''}${P.karma} · ${P.fit}</b></div>` : ''}<button type="button" class="mn-link" data-go="fortschritt">Statistik</button></div>`;
     for (const b of cards.querySelectorAll('[data-go]')) /** @type {HTMLElement} */ (b).onclick = () => X.menuTab && X.menuTab(/** @type {HTMLElement} */ (b).dataset.go);
   }
+  // Übersicht, zweite Reihe: Als Nächstes (fortsetzbar), Medaillen, Bestzeiten — füllt die freie Fläche unter den Karten
+  const extra = el('div', 'mn-cards mn-extra'); pane.insertBefore(extra, acts);
+  function board2() {
+    const P = S.PROGRESS && S.PROGRESS.P, med = (P && P.medals) || [], best = bestTimes().slice(0, 4), sv = resumable(), L = S.LAUF;
+    const next = sv && sv.name ? [`${esc(sv.name)} fortsetzen`, `Ab Wegpunkt ${(+sv.i || 0) + 1}`] : L && !L.run ? ['Laufrunde', '1–3 km mit einem Passanten, bringt Fitness.'] : null;
+    extra.innerHTML = `<div class="mn-card"><div class="mn-kicker">Als Nächstes</div>${next ? `<div class="mn-big mn-mid">${next[0]}</div><div class="mn-obj">${next[1]}</div>` : '<div class="mn-obj is-muted">Gerade nichts offen.</div>'}<button type="button" class="mn-link" data-go="story">Mission wählen</button></div>
+      <div class="mn-card mn-medals"><div class="mn-kicker">Medaillen · ${med.length}</div>${med.length ? `<ul>${med.slice(-4).reverse().map(m => `<li><i></i><span>${esc(m.n)}</span>${m.ms ? `<b>${fmtMs(m.ms)}</b>` : ''}</li>`).join('')}</ul>` : '<div class="mn-obj is-muted">Noch keine. Marathon oder Megamarsch beenden.</div>'}</div>
+      <div class="mn-card"><div class="mn-kicker">Bestzeiten Frischlufteulen</div>${best.length ? `<ul class="mn-best">${best.map(b => `<li><span>${esc(b.name)}${b.mode === 'rad' ? ' · Rad' : ''}</span><b>${fmtMs(b.ms)}</b></li>`).join('')}</ul>` : '<div class="mn-obj is-muted">Noch keine Zeit gelaufen.</div>'}</div>`;
+    for (const b of extra.querySelectorAll('[data-go]')) /** @type {HTMLElement} */ (b).onclick = () => X.menuTab && X.menuTab(/** @type {HTMLElement} */ (b).dataset.go);
+  }
+  // Missionen: alle startbaren Missionen wie im Handy, über story.js' Storyblöcken (die Storys mit Kapiteln bleiben dort)
+  function missions() {
+    const sp = $('storypane'); if (!sp) return;
+    const rows = missionList(X, S, () => X.closeMenu(), t => X.showMsg(String(t).toUpperCase(), 1600), { stories: false });
+    const box2 = el('div', 'mn-mis', `<div class="mn-kicker">Missionen</div><div class="mn-misgrid">${rows.map((r, i) => `<div class="mn-card"><div class="mn-kicker">${esc(r.k)}</div><b>${esc(r.name)}</b><p>${esc(r.info)}</p>${r.btn ? `<button type="button" data-i="${i}">${esc(r.btn)}</button>` : ''}</div>`).join('')}</div><div class="mn-kicker">Storys</div>`);
+    for (const b of box2.querySelectorAll('button[data-i]')) /** @type {HTMLElement} */ (b).onclick = () => { const f = rows[+/** @type {HTMLElement} */ (b).dataset.i].fn; if (f) f(); };
+    const old = sp.querySelector('.mn-mis'); if (old) old.remove();
+    sp.prepend(box2);
+  }
   // Nach game.js' Hook (der 'schnell' setzt): Startseite ist die Übersicht; F1 und Handy-Karte schalten danach selbst um
-  X.menuHooks.push(() => { try { board(); } catch (e) { console.warn('Übersicht', e); } if (X.menuTab) X.menuTab('uebersicht'); sync(); });
+  X.menuHooks.push(() => { try { board(); board2(); missions(); } catch (e) { console.warn('Übersicht', e); } if (X.menuTab) X.menuTab('uebersicht'); sync(); });
   sync();
   return { board, pane };
 }
