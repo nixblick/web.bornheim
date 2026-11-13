@@ -1524,7 +1524,11 @@ function* buildCity() {
     if (!v.length) return null;
     const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(v, 3));
     const n = new Float32Array(v.length), uv = new Float32Array(v.length / 3 * 2);
-    for (let i = 0, j = 0; i < v.length; i += 3, j += 2) { n[i + 1] = 1; uv[j] = v[i]; uv[j + 1] = v[i + 2]; }
+    for (let i = 0, j = 0; i < v.length; i += 3, j += 2) { uv[j] = v[i]; uv[j + 1] = v[i + 2]; }
+    /* echte Flächennormale je Dreieck statt (0,1,0): Gefälle von Wegen und Straßen wird im Licht sichtbar (André 13.11.2026, Günthersburgpark) */
+    for (let i = 0; i < v.length; i += 9) { const ax = v[i + 3] - v[i], ay = v[i + 4] - v[i + 1], az = v[i + 5] - v[i + 2], bx = v[i + 6] - v[i], by = v[i + 7] - v[i + 1], bz = v[i + 8] - v[i + 2];
+      let nx = ay * bz - az * by, ny = az * bx - ax * bz, nz = ax * by - ay * bx; if (ny < 0) { nx = -nx; ny = -ny; nz = -nz; } const l = Math.hypot(nx, ny, nz) || 1;
+      for (let k = 0; k < 9; k += 3) { n[i + k] = nx / l; n[i + k + 1] = ny / l; n[i + k + 2] = nz / l; } }
     g.setAttribute('normal', new THREE.BufferAttribute(n, 3)); g.setAttribute('uv', new THREE.BufferAttribute(uv, 2)); return g;
   };
   const flatMat = (geo, mat) => { const m = new THREE.Mesh(geo, mat); m.receiveShadow = true; scene.add(m); };
@@ -2623,7 +2627,7 @@ function addSkid(x, z, h) { if (!skids.mesh) { const g = new THREE.PlaneGeometry
 function driveCar(c, dt, ctrl) {
   if (c.userData.heli) { if (X.heliDrive) X.heliDrive(c, dt, ctrl); return; } /* Hubschrauber: eigene Flugphysik in heli.js */
   const u = c.userData; if (c === player.car && !u.bike && ((u.mwT = (u.mwT || 0) - 1) <= 0)) { u.mwT = 15; u.onMw = onMotorway(c.position.x, c.position.z); } const maxS = (u.maxS || (u.police ? 30 : 26)) * (c === player.car && u.onMw ? (u.moto ? 1.25 : 1.7) : 1); /* Autobahn: bis ~160 km/h */ const prev = u.speed, h0 = u.heading;
-  if (ctrl.fwd) u.speed += (u.speed < 0 ? 18 : (u.accel || 12) * (1 - 0.55 * Math.max(0, u.speed) / maxS)) * dt; else if (ctrl.back) u.speed -= (u.speed > 0 ? 11 : 6) * dt; else { u.speed *= Math.pow(u.bike ? 0.8 : 0.88, dt); if (Math.abs(u.speed) < 0.3 && !(c === player.car && Math.abs(Math.sin(c.rotation.x || 0)) > 0.04)) u.speed = 0; } // Ausrollen statt Vollbremsung; das eigene Auto rollt ab 4 % Gefälle von selbst los
+  if (ctrl.fwd) u.speed += (u.speed < 0 ? 18 : (u.accel || 12) * (1 - 0.55 * Math.max(0, u.speed) / maxS)) * dt; else if (ctrl.back) u.speed -= (u.speed > 0 ? 11 : 6) * dt; else { u.speed *= Math.pow(u.bike ? 0.8 : 0.88, dt); if (Math.abs(u.speed) < 0.3 && !(c === player.car && Math.abs(TH(c.position.x - fx * 6, c.position.z - fz * 6) - TH(c.position.x + fx * 6, c.position.z + fz * 6)) / 12 > 0.05)) u.speed = 0; } // Ausrollen statt Vollbremsung; das eigene Auto rollt erst ab 5 % Gefälle über 12 m von selbst los (André 13.11.: flach wirkende Wiese soll stehen)
   { const fx = Math.sin(u.heading), fz = Math.cos(u.heading), px = c.position.x, pz = c.position.z; const onDeck = deckAt(px, pz, c.position.y, 1.0) !== null;
     /* Neigung für den Hangabtrieb über 12 m statt aus dem Kippwinkel (±1,5 m, carTerrain): das 4-m-Raster hat 3–8 cm Buckel, die man auf der Wiese nicht sieht, die aber über 3 m Basis 8–14 % der Strecke über 4 % Neigung bringen (Günthersburgpark, 13.11.2026). Auf Brücken weiter der Kippwinkel */
     const sl = onDeck ? Math.sin(c.rotation.x || 0) : (TH(px - fx * 6, pz - fz * 6) - TH(px + fx * 6, pz + fz * 6)) / 12; /* Hangabtrieb: g·sin(Neigung) entlang der Fahrtrichtung minus Rollwiderstand (1,2 % g); KI erst in Fahrt, damit wartende Autos nicht wegrollen */ if (Math.abs(sl) > 0.015 && !(ctrl.brake && Math.abs(u.speed) < 1) && (c === player.car || Math.abs(u.speed) > 0.5)) u.speed += 9.81 * (sl - Math.sign(sl) * 0.012) * dt; }
@@ -2646,7 +2650,6 @@ function driveCar(c, dt, ctrl) {
     const tRoll = -u.steerS * Math.min(1, sp / 18) * 0.075, tPitch = clamp(-acc * 0.0045, -0.06, 0.06);
     const h = Math.min(dt, 1 / 30), K = 140, C = 12; // gedämpfte Feder, leicht unterkritisch
     u.rv += (K * (tRoll - u.rollS) - C * u.rv) * h; u.pv += (K * (tPitch - u.pitchS) - C * u.pv) * h; u.hv += (180 * -u.heave - 14 * u.hv) * h;
-    if (sp > 3 && Math.random() < dt * sp * 0.08) { u.hv += (Math.random() - 0.5) * 0.25; u.pv += (Math.random() - 0.5) * 0.12; } // Unebenheiten
     const gy = c.position.y; if (u.lastY !== undefined) { const vy = (gy - u.lastY) / Math.max(dt, 1e-3); if (u.lastVy !== undefined) u.hv -= clamp((vy - u.lastVy) * 0.04, -0.6, 0.6); u.lastVy = vy; } u.lastY = gy;
     u.rollS += u.rv * h; u.pitchS += u.pv * h; u.heave = clamp(u.heave + u.hv * h, -0.12, 0.1);
     body.rotation.z = u.rollS; body.rotation.x = u.pitchS; body.position.y = u.by0 + u.heave; }
