@@ -2,6 +2,7 @@
 
 ## 2026-11-13
 
+- Höhendunst statt linearem Nebel ab „Mittel“ (#152, Technik aus Sunset `uHaze`, neue Datei `dunst.js`): Dichte nach Höhe entlang des Blickstrahls, Dächer und Türme bleiben klarer, zur Sonne hin Sonnenfarbe im Dunst (nur tagsüber). Farbe, Weite und Wetter weiter aus `scene.fog`, Kachelrand bleibt verdeckt; Fernobjekte aus `wahrzeichen.js` unverändert. Sparstufe und schwache GPU behalten den linearen Nebel. Spieltest-Lauf 43420388654 grün (Probe `gfx-dunst`, Tag/Nacht, mit und ohne Dunst).
 - **Gräber und Haltestelle nachgebessert:** Mustergrabanlage dreht die Steinvorderseiten zum nächsten OSM-Weg (bis 60 m). Tramhalte mit neuem Haltestellenmodell (Gleis in 20 m) bekommen den alten blauen Halte-Mast nicht mehr. Glas der Wartehalle als Milchglas mit deutlichem weißen Punktraster (Foto Wasserpark). Spieltest per CI mit `graeber`.
 
 - **Doku privat:** `docs/vergleich-project-sunset.md` liegt nur noch lokal (gitignore), auf Andrés Wunsch. In der Git-Historie bleibt die frühere Fassung.
