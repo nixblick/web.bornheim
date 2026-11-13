@@ -1,4 +1,3 @@
-import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { disposeHierarchy } from './dispose.js';
 // Supermarkt-Eingang (André 13.11.2026: „so ein Supermarkt sieht im Grunde überall gleich aus“). An den echten
 // Standorten aus OSM (POI supermarket) bekommt die Fassadenkante am Eingang den typischen Aufbau: flaches Vordach
@@ -31,6 +30,11 @@ export function initSupermarkt(X) {
     for (const k in M) M[k].userData.shared = true; tex.userData.shared = true;
     return M;
   }
+  /** Mehrere Geometrien zu einer (Position, Normale, UV; ohne Index). Eigene kleine Fassung, weil Module three-Zusätze nicht direkt importieren. */
+  const mergeGeometries = geos => { const ni = geos.map(q => q.index ? q.toNonIndexed() : q); let n = 0; for (const q of ni) n += q.attributes.position.count;
+    const P = new Float32Array(n * 3), N = new Float32Array(n * 3), U = new Float32Array(n * 2); let o = 0;
+    for (let i = 0; i < ni.length; i++) { const q = ni[i]; P.set(q.attributes.position.array, o * 3); N.set(q.attributes.normal.array, o * 3); U.set(q.attributes.uv.array, o * 2); o += q.attributes.position.count; if (q !== geos[i]) q.dispose(); }
+    const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(P, 3)); g.setAttribute('normal', new THREE.BufferAttribute(N, 3)); g.setAttribute('uv', new THREE.BufferAttribute(U, 2)); return g; };
   const box = (w, h, d, x, y, z) => { const g = new THREE.BoxGeometry(w, h, d); g.translate(x, y, z); return g; };
   const art = n => /aldi|lidl|penny|netto|norma/i.test(n) ? 1 : /alnatura|denn|bio|reform/i.test(n) ? 2 : /rewe|edeka|tegut|nahkauf|kaufland|real|hit|super/i.test(n) ? 0 : 3;
 
