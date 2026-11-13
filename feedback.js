@@ -1,6 +1,9 @@
-// Feedback: öffnet ein vorausgefülltes GitHub-Issue (Hauptweg; E-Mail/Teilen nur ohne GitHub-Konto) mit Beschreibung und Spielzustand.
-// Keine Daten gehen ohne Klick des Spielers raus; das Issue legt der Spieler selbst auf GitHub an.
+// Feedback: „Senden“ schickt Beschreibung, Spielzustand und optional ein Bildschirmfoto an unseren Dienst
+// (relay.geolage.de/bornheim, legt das GitHub-Issue an; kein Konto, keine Mail, kein Token im Client).
+// Geht das nicht (Netz, 429, Fehler), bleiben GitHub-Link, Teilen und E-Mail als Ausweich. Nichts geht ohne Klick raus.
 const REPO = 'https://github.com/nixblick/web.bornheim';
+const ENDPOINT = 'https://relay.geolage.de/bornheim/feedback';
+const MAX_BILD = 1400 * 1024; // Dienst nimmt bis 1,5 MB JPEG (dekodiert), etwas Luft
 const MAIL = 'service@creavisions.de';
 // Fehler überleben einen Absturz: im localStorage, beim nächsten Start als „vorige Sitzung“ im Bericht
 const LS = 'bornheim_fehler';
@@ -37,9 +40,10 @@ el.innerHTML = `<div class="box"><h3>Fehler melden oder Idee schicken</h3>
 <textarea id="fb_text" placeholder="Was hast du gemacht, was ist passiert, was hättest du erwartet?"></textarea>
 <div id="fb_shotrow" style="display:none;gap:10px;align-items:center;margin:2px 0 8px"><img id="fb_shot" alt="Bildschirmfoto" style="width:120px;border-radius:6px;border:1px solid #444"><label><input type="checkbox" id="fb_useshot" checked> Bildschirmfoto mitschicken</label></div>
 <label><input type="checkbox" id="fb_info" checked> Technische Infos anhängen (Browser, Grafik, Position, letzte Fehlermeldungen)</label>
-<div class="row"><button class="y" id="fb_gh">Auf GitHub melden</button><button id="fb_close">Abbrechen</button></div>
-<p id="fb_hint"></p>
-<p style="margin-top:12px">Das Bild liegt danach in der Zwischenablage, im Issue mit Strg+V einfügen. Ohne GitHub-Konto: <a href="#" id="fb_share" style="color:#ffd84a">teilen</a> oder <a href="#" id="fb_mail" style="color:#ffd84a">per E-Mail</a>.</p></div>`;
+<div class="row"><button class="y" id="fb_send">Senden</button><button id="fb_close">Abbrechen</button></div>
+<p id="fb_hint" aria-live="polite"></p>
+<p id="fb_what">Gesendet werden nur dein Text, der Spielzustand (falls angehakt) und das Bild (falls angehakt), öffentlich als Issue auf GitHub. Bitte keinen Namen, keine Mail-Adresse oder Ähnliches eintragen.</p>
+<p id="fb_alt" style="display:none;margin-top:12px">Andere Wege: <a href="#" id="fb_gh" style="color:#ffd84a">auf GitHub melden</a> (Bild liegt dann in der Zwischenablage, mit Strg+V einfügen), <a href="#" id="fb_share" style="color:#ffd84a">teilen</a> oder <a href="#" id="fb_mail" style="color:#ffd84a">per E-Mail</a>.</p></div>`;
 document.body.appendChild(el);
 const $ = id => document.getElementById(id);
 function info() {
@@ -57,21 +61,33 @@ function compose() {
   const body = ($('fb_text').value.trim() || '(keine Beschreibung)') + ($('fb_info').checked ? '\n\n---\n' + info() : '');
   return { title: `[${kind}] ${title}`, body: body.slice(0, 5500), kind };
 }
-let wasLocked = false, shotBlob = null;
+let wasLocked = false, shotBlob = null, shotCanvas = null;
 // Bildschirmfoto: direkt nach einem eigenen render() lesen, sonst ist der WebGL-Puffer leer
 function takeShot() {
-  shotBlob = null; $('fb_shotrow').style.display = 'none';
+  shotBlob = null; shotCanvas = null; $('fb_shotrow').style.display = 'none';
   try {
     const G = window.G; if (!G || !G.renderer) return;
     const r = G.composerRef?.(); if (r) r.render(); else G.renderer.render(G.scene, G.camera);
     const src = G.renderer.domElement, k = Math.min(1, 1280 / src.width), c = document.createElement('canvas');
-    c.width = Math.round(src.width * k); c.height = Math.round(src.height * k); c.getContext('2d').drawImage(src, 0, 0, c.width, c.height);
+    c.width = Math.round(src.width * k); c.height = Math.round(src.height * k); c.getContext('2d').drawImage(src, 0, 0, c.width, c.height); shotCanvas = c;
     c.toBlob(b => { if (!b) return; shotBlob = b; $('fb_shot').src = URL.createObjectURL(b); $('fb_shotrow').style.display = 'flex'; }, 'image/jpeg', 0.85);
   } catch (e) {}
 }
 const shotFile = () => shotBlob && $('fb_useshot').checked ? new File([shotBlob], 'bornheim-bildschirmfoto.jpg', { type: 'image/jpeg' }) : null;
 const canShareFiles = () => { try { return !!navigator.canShare && navigator.canShare({ files: [new File([''], 'x.jpg', { type: 'image/jpeg' })] }); } catch (e) { return false; } };
-export function openFeedback() { if (document.pointerLockElement) { wasLocked = true; document.exitPointerLock(); } takeShot(); $('fb_hint').textContent = ''; $('fb_share').style.display = navigator.share ? '' : 'none'; /* GitHub ist der Hauptweg, Mail nur Ausweich (André 13.11.2026) */ el.style.display = 'flex'; setTimeout(() => $('fb_title').focus(), 50); }
+// Bild für den Dienst: JPEG-dataURL unter MAX_BILD, notfalls kleiner und gröber
+function shotDataUrl() {
+  if (!shotCanvas || !$('fb_useshot').checked) return null;
+  for (const [k, q] of [[1, 0.85], [1, 0.6], [0.7, 0.6], [0.5, 0.5]]) {
+    let c = shotCanvas;
+    if (k < 1) { c = document.createElement('canvas'); c.width = Math.round(shotCanvas.width * k); c.height = Math.round(shotCanvas.height * k); c.getContext('2d').drawImage(shotCanvas, 0, 0, c.width, c.height); }
+    const d = c.toDataURL('image/jpeg', q);
+    if (d.startsWith('data:image/jpeg;base64,') && (d.length - 23) * 0.75 < MAX_BILD) return d;
+  }
+  return null;
+}
+function showAlt(msg) { $('fb_hint').textContent = msg; $('fb_alt').style.display = ''; }
+export function openFeedback() { if (document.pointerLockElement) { wasLocked = true; document.exitPointerLock(); } takeShot(); $('fb_hint').textContent = ''; $('fb_alt').style.display = 'none'; $('fb_send').disabled = false; $('fb_share').style.display = navigator.share ? '' : 'none'; /* GitHub ist der Hauptweg, Mail nur Ausweich (André 13.11.2026) */ el.style.display = 'flex'; setTimeout(() => $('fb_title').focus(), 50); }
 function close() { el.style.display = 'none'; }
 $('fb_close').onclick = close; el.addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Escape') close(); }); el.addEventListener('keyup', e => e.stopPropagation());
 function download(f) { const a = document.createElement('a'); a.href = URL.createObjectURL(f); a.download = f.name; document.body.appendChild(a); a.click(); a.remove(); }
@@ -86,6 +102,30 @@ $('fb_mail').onclick = ev => { ev.preventDefault();
   if (f) { download(f); body = 'Das Bildschirmfoto ist gerade heruntergeladen worden (bornheim-bildschirmfoto.jpg) – bitte an diese Mail anhängen.\n\n' + body; }
   location.href = `mailto:${MAIL}?subject=${encodeURIComponent('Bornheim: ' + c.title)}&body=${encodeURIComponent(body)}`;
   $('fb_hint').textContent = f ? 'Dein Mailprogramm öffnet sich. Das Bild liegt in deinen Downloads – bitte anhängen.' : 'Dein Mailprogramm öffnet sich.';
+};
+$('fb_send').onclick = async ev => {
+  ev.preventDefault(); const b = $('fb_send'); if (b.disabled) return;
+  const kind = $('fb_kind').value;
+  const payload = { kind: 'feedback', typ: kind === 'Fehler' ? 'bug' : 'idee', titel: ($('fb_title').value.trim() || (kind === 'Fehler' ? 'Fehler im Spiel' : 'Idee')).slice(0, 120),
+    text: ($('fb_text').value.trim() || '(keine Beschreibung)').slice(0, 5000), zustand: $('fb_info').checked ? info().slice(0, 4000) : '' };
+  const bild = shotDataUrl(); if (bild) payload.bild = bild;
+  b.disabled = true; $('fb_hint').textContent = 'Wird gesendet …';
+  let res, data = null;
+  try {
+    const ctl = new AbortController(), t = setTimeout(() => ctl.abort(), 20000);
+    res = await fetch(ENDPOINT, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload), signal: ctl.signal, credentials: 'omit' });
+    clearTimeout(t); try { data = await res.json(); } catch (e) {}
+  } catch (e) { b.disabled = false; showAlt('Senden ging gerade nicht (keine Verbindung). Bitte einen der anderen Wege nehmen:'); return; }
+  if (res.ok && data && data.ok) {
+    const h = $('fb_hint'); h.textContent = '';
+    const url = typeof data.issue === 'string' && /^https:\/\/github\.com\/nixblick\/web\.bornheim\/issues\/\d+$/.test(data.issue) ? data.issue : null;
+    if (url) { h.append('Danke! Gemeldet: '); const a = document.createElement('a'); a.href = url; a.target = '_blank'; a.rel = 'noopener'; a.style.color = '#ffd84a'; a.textContent = url.replace('https://github.com/nixblick/web.bornheim/issues/', 'Issue #'); h.append(a); }
+    else h.textContent = 'Danke! Deine Meldung ist angekommen.';
+    $('fb_title').value = ''; $('fb_text').value = '';
+    return;
+  }
+  b.disabled = false;
+  showAlt(res.status === 429 ? 'Gerade kommen zu viele Meldungen an, bitte später noch einmal oder einen der anderen Wege nehmen:' : 'Senden ging nicht (Fehler ' + res.status + '). Bitte einen der anderen Wege nehmen:');
 };
 $('fb_gh').onclick = async ev => {
   ev.preventDefault(); const c = compose(), f = shotFile();
