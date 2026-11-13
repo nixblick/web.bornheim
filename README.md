@@ -40,7 +40,7 @@ Dann http://127.0.0.1:8765/ öffnen. Jeder statische Webserver reicht (GitHub Pa
 ## Steuerung
 
 WASD laufen, Maus umschauen, Shift rennen, Leertaste springen, E Auto klauen/aussteigen,
-Linksklick schießen, R nachladen, Enter nach dem Tod, C Kreativmodus, Strg im Wasser tauchen. Start: Mann oder Frau wählen.
+Linksklick schießen, R nachladen, Enter nach dem Tod, C Kreativmodus, B im Wasser tauchen (Strg geht auch). Start: Mann oder Frau wählen.
 
 ## Stand
 
