@@ -1467,7 +1467,8 @@ function* buildCity() { CITY_PART = 'c0';
     const key = fk + '|' + c; if (!byKey.has(key)) byKey.set(key, []);
     for (const grp of g.groups) {
       const sub = new THREE.BufferGeometry();
-      for (const name of ['position', 'normal', 'uv']) { const a = g.attributes[name]; sub.setAttribute(name, new THREE.BufferAttribute(a.array.slice(grp.start * a.itemSize, (grp.start + grp.count) * a.itemSize), a.itemSize)); }
+      const top = grp.materialIndex === 0 && !lift && grp.count % 6 === 0 ? grp.count >> 1 : 0; // Dach: nur der Deckel (zweite Hälfte), der Boden liegt unsichtbar im Gelände; aufgeständert bleibt die Unterseite
+      for (const name of ['position', 'normal', 'uv']) { const a = g.attributes[name]; sub.setAttribute(name, new THREE.BufferAttribute(a.array.slice((grp.start + top) * a.itemSize, (grp.start + grp.count) * a.itemSize), a.itemSize)); }
       sub.userData.base = tTop; sub.userData.top = tTop + b.h;
       (grp.materialIndex === 0 ? roofGeos : byKey.get(key)).push(sub);
     }
