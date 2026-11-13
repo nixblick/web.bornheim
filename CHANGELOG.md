@@ -2,6 +2,8 @@
 
 ## 2026-11-13
 
+- **Zivilcourage-Mission (#129):** Ab und zu belästigt ein Passant einen anderen diskriminierend. Über ihm steht nur die Einordnung („pöbelt rassistisch“, „belästigt sexistisch“, „beleidigt homophob“), nie eine Beleidigung. **F** in der Nähe = Einschreiten ohne Gewalt: dazustellen, ruhig ansprechen, manchmal Hilfe rufen (110), die betroffene Person bedankt sich, der Pöbler geht. Karma +5 (und EP). Wegsehen in Hörweite (25 m), bis die Szene nach 30 s endet: Karma −2. Wer zuschlägt, beendet die Szene ohne Karma, die Fahndung läuft wie bisher. Neue Datei `zivilcourage.js`, in `game.js` nur Init/Update. Probe `zivilcourage`.
+
 - **Sicherheit: Banner maskiert alle Texte:** `banner()` in `progress.js` setzte Medaillen- und Gebietsnamen ungeprüft per innerHTML. Medaillennamen können aus Streckennamen von frischlufteulen.de kommen, also von außen. Jetzt werden alle drei Texte maskiert (Hinweis der Sitzung „programmierer bornheim“).
 - **Doku:** `docs/vergleich-project-sunset.md`, der Vergleich Project Sunset vs. Bornheim aus Andrés Google Drive, als Markdown abgelegt.
 
