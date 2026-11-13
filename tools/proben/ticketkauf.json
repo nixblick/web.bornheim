@@ -1,0 +1,27 @@
+[
+ {
+  "n": "merianplatz_start",
+  "x": -1035,
+  "z": 1060,
+  "wait": 8000,
+  "shot": false
+ },
+ {
+  "n": "ticket_klick_bockenheimer",
+  "wait": 1000,
+  "js": "(() => { const I = window.G.INTERIORS; I.travelMenu(I.ST.get('merianplatz')); const el = document.querySelector('#metromenu .mi[data-id=\"bockenheimer warte\"]'); if (!el) return 'EXC kein Eintrag bockenheimer warte: ' + [...document.querySelectorAll('#metromenu .mi')].map(e => e.dataset.id).join(','); el.click(); return 'geklickt, noAutoMenu=' + window.__noAutoMenu + ' lock=' + !!document.pointerLockElement; })()"
+ },
+ {
+  "n": "ankunft_station",
+  "wait": 20000,
+  "js": "(() => { const I = window.G.INTERIORS; return JSON.stringify({ inside: !!I.inside, station: I.inside && I.inside.station ? I.inside.station.id : null }); })()",
+  "expect": "(() => { const I = window.G.INTERIORS; return !!I.inside && !!I.inside.station && I.inside.station.id === \"bockenheimer warte\"; })()"
+ },
+ {
+  "n": "ausgestiegen_bockenheimer",
+  "leave": true,
+  "wait": 3000,
+  "js": "(() => { const P = window.G.player.pos, I = window.G.INTERIORS, b = I.ST.get('bockenheimer warte').p, k = I.ST.get('konstablerwache').p; return JSON.stringify({ bw: Math.round(Math.hypot(P.x - b[0], P.z - b[1])), kw: Math.round(Math.hypot(P.x - k[0], P.z - k[1])) }); })()",
+  "expect": "(() => { const P = window.G.player.pos, I = window.G.INTERIORS, b = I.ST.get('bockenheimer warte').p, k = I.ST.get('konstablerwache').p; return Math.hypot(P.x - b[0], P.z - b[1]) < 250 && Math.hypot(P.x - k[0], P.z - k[1]) > 500; })()"
+ }
+]

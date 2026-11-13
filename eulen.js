@@ -1,6 +1,7 @@
 // Frischlufteulen im Spiel (#61, erster Kunde): Plakate an Litfaßsäulen (geteilt mit weiteren Kunden-Motiven, #81 Vokabaum), Eulen-Lauf und Eulen-Marathon mit Ziel an der Festhalle.
 // Daten nur aus https://frischlufteulen.de/api/spiel/strecken.json (einmal je Sitzung), nichts ausgedacht: ohne freigegebene Strecke keine Plakate und keine Mission.
 // Format je Strecke: { name, laenge_km, linie: [[lon, lat], …], link, marathon? }. Keine Nutzerdaten, keine fremden Marken.
+import { initWegweiser } from './wegweiser.js';
 /** @param {import('./types').Ctx} X */
 export function initEulen(X) {
   const { THREE, scene, player, TH, showMsg, canvasTex, card, sfx, burst, solidAt } = X;
@@ -11,7 +12,17 @@ export function initEulen(X) {
   const load = async () => { for (const u of ['https://frischlufteulen.de/api/spiel/strecken.json']) { try { const r = await fetch(u); if (!r.ok) continue; const d = await r.json(); if (d && d.strecken && d.strecken.length) return d.strecken; } catch (e) { /* nächste Quelle */ } } return []; };
   // API-Daten landen per innerHTML in card(): Name ohne HTML-Zeichen, Länge als Zahl, Link nur auf frischlufteulen.de (Nachttest 13.11.)
   const clean = r => { const l = String(r.link || ''); return { name: String(r.name || 'Strecke').replace(/[<>&"'`]/g, '').slice(0, 80), laenge_km: Math.round((Number(r.laenge_km) || 0) * 10) / 10, link: /^https:\/\/frischlufteulen\.de(\/[^"'<>\s]*)?$/.test(l) ? l : 'https://frischlufteulen.de/' }; };
-  load().then(s => { routes = s.map(r => ({ ...r, ...clean(r), marathon: r.marathon || /marathon/i.test(r.name || ''), pts: (r.linie || []).map(xy) })).filter(r => r.pts.length > 1); if (routes.length) { for (const p of posters) scene.remove(p); posters = []; /* Säulen neu verteilen, jetzt mit Eulen-Motiv */ } buildStart(); });
+  // Zuschnitt auf das Spielgebiet (#61): nur Punkte in vorhandenen Kacheln (Index wie interiors.js reachable), längster zusammenhängender Abschnitt
+  const inArea = ([x, z]) => !!(X.WIDX && X.WIDX.tiles[Math.floor(x / X.TS) + '_' + Math.floor(z / X.TS)]);
+  const plen = a => { let s = 0; for (let i = 1; i < a.length; i++) s += Math.hypot(a[i][0] - a[i - 1][0], a[i][1] - a[i - 1][1]); return s; };
+  const section = all => { let best = [], cur = []; for (const q of all) { if (inArea(q)) cur.push(q); else { if (plen(cur) > plen(best)) best = cur; cur = []; } } if (plen(cur) > plen(best)) best = cur; return best; };
+  const prep = r => { const all = (r.linie || []).map(xy).filter(q => q.every(Number.isFinite)); const pts = section(all); const km = Math.round(plen(pts) / 100) / 10;
+    const full = pts.length === all.length; const endIn = all.length > 1 && inArea(all[all.length - 1]);
+    if (pts.length < 2 || km < 1) { console.info(`Frischlufteulen: „${r.name}“ nicht angeboten, im Spielgebiet nur ${km} km`); return null; }
+    return { ...r, pts, km_gebiet: km, ganz: full, ziel: endIn ? all[all.length - 1] : pts[pts.length - 1], info: full ? `${r.laenge_km} km` : `Abschnitt im Spielgebiet: ${String(km).replace('.', ',')} km von ${String(r.laenge_km).replace('.', ',')} km` }; };
+  // use(): auch für die Probe im Spieltest, deren Ursprung (127.0.0.1) der Endpunkt per CORS nicht bedient
+  const use = s => { if (startMark) { for (const m of startMark) scene.remove(m); startMark = null; } routes = s.map(r => prep({ ...r, ...clean(r), marathon: r.marathon || /marathon/i.test(r.name || ''), mega: /megamarsch/i.test(r.name || '') })).filter(Boolean); if (routes.length) { for (const p of posters) scene.remove(p); posters = []; /* Säulen neu verteilen, jetzt mit Eulen-Motiv */ } buildStart(); };
+  load().then(use);
 
   // ---------- Plakat (gezeichnet): Eule, Titel, Streckenname ----------
   const posterTex = name => canvasTex(256, 384, (c, w, h) => { const g = c.createLinearGradient(0, 0, 0, h); g.addColorStop(0, '#1f5b3a'); g.addColorStop(1, '#0f2f20'); c.fillStyle = g; c.fillRect(0, 0, w, h);
@@ -39,28 +50,67 @@ export function initEulen(X) {
     for (const s of stops.slice(0, 4 - posters.length)) { for (const [ox, oz] of [[3, 3], [-3, 3], [3, -3], [-3, -3]]) { const x = s.x + ox, z = s.z + oz; if (solidAt(x, z) >= 0 || (X.nearestRoadDir && (() => { const n = X.nearestRoadDir(x, z, 8); return n && Math.hypot(n.x - x, n.z - z) < n.w / 2 + 0.8; })())) continue; posters.push(litfass(x, z, nextMotif())); break; } } }
 
   // ---------- Start-Markierung des Marathons (grüne Eulen-Säule) ----------
-  function buildStart() { const m = routes.find(r => r.marathon); if (!m || startMark) return; const [x, z] = m.pts[0]; startMark = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 1.2, 60, 16, 1, true), new THREE.MeshBasicMaterial({ color: 0x3ad17a, transparent: true, opacity: 0.25, depthWrite: false })); startMark.position.set(x, TH(x, z) + 30, z); scene.add(startMark); startMark.userData.route = m; }
+  // je angebotener Strecke eine Säule am ersten Punkt des Abschnitts im Spielgebiet, von der Fahrbahn geschoben, sobald die Kachel steht
+  const offRoad = q => { if (q.off || !X.pushOffRoads) return q; const [nx, nz] = X.pushOffRoads(q[0], q[1], 1.0); if (!Number.isNaN(nx) && Math.hypot(nx - q[0], nz - q[1]) < 25) { q[0] = nx; q[1] = nz; } q.off = true; return q; };
+  function buildStart() { if (startMark) return; startMark = []; for (const r of routes) { r.pts[0] = r.pts[0].slice(); const [x, z] = r.pts[0]; const m = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 1.2, 60, 16, 1, true), new THREE.MeshBasicMaterial({ color: 0x3ad17a, transparent: true, opacity: 0.25, depthWrite: false })); m.position.set(x, TH(x, z) + 30, z); scene.add(m); m.userData.route = r; startMark.push(m); if (big(r)) { const rb = new THREE.Mesh(new THREE.CylinderGeometry(0.9, 0.9, 6, 12, 1, true), new THREE.MeshBasicMaterial({ color: 0xff9a2a, transparent: true, opacity: 0.45, depthWrite: false })); rb.position.set(4, -27, 0); m.add(rb); /* Rad-Start 4 m östlich */ } } }
+  function placeMarks() { for (const m of startMark || []) { const q = m.userData.route.pts[0]; if (q.off || Math.hypot(q[0] - player.pos.x, q[1] - player.pos.z) > 200) continue; offRoad(q); m.position.set(q[0], TH(q[0], q[1]) + 30, q[1]); } }
 
   // ---------- Lauf ----------
-  const ringMat = new THREE.MeshBasicMaterial({ color: 0x3ad17a, transparent: true, opacity: 0.8 }); let ring = null;
-  function wps(r) { const out = [r.pts[0]]; let acc = 0; for (let i = 1; i < r.pts.length; i++) { const a = r.pts[i - 1], b = r.pts[i]; acc += Math.hypot(b[0] - a[0], b[1] - a[1]); if (acc > (r.marathon ? 900 : 300) || i === r.pts.length - 1) { out.push(b); acc = 0; } } return out; }
-  function start(r, resume) { const W = wps(r); const saved = resume ? readSave() : null; run = { r, W, i: saved && saved.name === r.name ? saved.i : 1, t0: performance.now() - (saved && saved.name === r.name ? saved.ms : 0), last: player.pos.clone() };
-    if (!ring) { ring = new THREE.Mesh(new THREE.TorusGeometry(3, 0.25, 8, 32), ringMat); scene.add(ring); } ring.visible = true; if (r.marathon) buildFinish(r.pts[r.pts.length - 1]);
-    card(r.marathon ? 'EULEN-MARATHON' : 'EULEN-LAUF', `${r.name} · ${r.laenge_km} km · zu Fuß, ohne Auto, Rad oder Bahn` + (r.marathon ? ' · Verpflegungsstationen speichern' : ''), 5); sfx('bell', 0.5); }
-  function stop(msg) { run = null; if (ring) ring.visible = false; const o = document.getElementById('obj'); if (o) o.textContent = ''; if (msg) showMsg(msg, 2600); }
-  const readSave = () => { try { return JSON.parse(localStorage.getItem(SPAR) || 'null'); } catch (e) { return null; } };
-  const writeSave = v => { try { if (v) localStorage.setItem(SPAR, JSON.stringify(v)); else localStorage.removeItem(SPAR); } catch (e) { /* ohne Speicher weiterlaufen */ } };
+  const WEG = X.WEG || (X.WEG = initWegweiser(X)); // Strahl, Kartenlinie, Richtung (wegweiser.js)
+  function wps(r) { if (r.W) return r.W; const out = r.W = [r.pts[0]]; let acc = 0; for (let i = 1; i < r.pts.length; i++) { const a = r.pts[i - 1], b = r.pts[i]; acc += Math.hypot(b[0] - a[0], b[1] - a[1]); if (acc > (big(r) ? 900 : 300) || i === r.pts.length - 1) { out.push(b.slice()); acc = 0; } } return out; }
+  // ---------- Wettbewerbe (#127, André 13.11.2026): Marathon und Megamarsch zu Fuß (gehen oder rennen) und als zweiter Wettbewerb nur mit dem Rad ----------
+  // Etappen à ~10,5 km mit Speichern an der Etappengrenze (Verpflegung); je Etappe eine Zeit, Gesamtzeit = Summe. Fortsetzen startet an der Grenze.
+  const STAGE_M = 10500;
+  // Tempo im Spiel (game.js): rennen 7,5 m/s (× Stufen-/Fitness-Bonus), Rad höchstens 9 m/s (makeBike maxS)
+  const V = { lauf: 7.5, rad: 9 };
+  // Echte Zeit: Spielzeit × (Spieltempo / reales Tempo). Reales Tempo: Hobbyläufer 10 km/h = 2,78 m/s, Freizeit-Radler 25 km/h = 6,94 m/s.
+  // Dazu hochgerechnet von der gelaufenen Länge im Spielgebiet auf die ganze Strecke (laenge_km).
+  const REAL = { lauf: 7.5 / 2.78, rad: 9 / 6.94 };
+  // Belohnung: Lauf Marathon 10.000 € (#61), Megamarsch 15.000 € (gut doppelt so lang, im Spielgebiet aber nur ein Abschnitt), Rad 2.500 €
+  // (rund 1,2× so schnell und ohne Ausdauer, deshalb ein Viertel des Laufs, wie im Auftrag vorgeschlagen)
+  const PAY = r => ({ lauf: r.mega ? 15000 : 10000, rad: 2500 });
+  // Medaillen: Schnitt in Bezug auf das Höchsttempo des Modus. Gold ab 85 % (fast durchgehend volles Tempo, nur kurze Pausen),
+  // Silber ab 65 %, Bronze für jedes gültige Finish. Bei 42 km zu Fuß: Gold unter ~1:06 h Spielzeit, Silber unter ~1:26 h.
+  /** @type {Array<[number, string, string]>} */
+  const TIER = [[0.85, 'Gold', '🥇'], [0.65, 'Silber', '🥈'], [0, 'Bronze', '🥉']];
+  const big = r => !!(r.marathon || r.mega);
+  const kind = r => r.mega ? 'Megamarsch' : r.marathon ? 'Marathon' : 'Eulen-Lauf';
+  function stages(r) { if (r.B) return r.B; const W = wps(r); const B = []; let acc = 0, next = STAGE_M; for (let i = 1; i < W.length; i++) { acc += Math.hypot(W[i][0] - W[i - 1][0], W[i][1] - W[i - 1][1]); if (acc >= next && i < W.length - 1) { B.push(i); next += STAGE_M; } } r.len = acc; return (r.B = B); }
+  const saveKey = mode => SPAR + (mode === 'rad' ? '_rad' : '');
+  const readSave = mode => { try { return JSON.parse(localStorage.getItem(saveKey(mode)) || 'null'); } catch (e) { return null; } };
+  const writeSave = (mode, v) => { try { if (v) localStorage.setItem(saveKey(mode), JSON.stringify(v)); else localStorage.removeItem(saveKey(mode)); } catch (e) { /* ohne Speicher weiterlaufen */ } };
   const fmt = ms => { const s = Math.floor(ms / 1000); return Math.floor(s / 3600) + ':' + String(Math.floor(s / 60) % 60).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0'); };
-  function runUpdate() { const u = run; if (player.car) { stop('DISQUALIFIZIERT: NUR ZU FUSS'); return; } if (player.pos.distanceTo(u.last) > 60) { stop('DISQUALIFIZIERT: KEINE ABKÜRZUNG PER BAHN ODER SPRUNG'); return; } u.last.copy(player.pos);
-    const [x, z] = u.W[u.i]; ring.position.set(x, TH(x, z) + 3, z); ring.rotation.y += 0.03; const d = Math.hypot(player.pos.x - x, player.pos.z - z); const ms = performance.now() - u.t0;
-    const o = document.getElementById('obj'); if (o) o.textContent = `🦉 ${u.r.name}: Wegpunkt ${u.i}/${u.W.length - 1} · ${Math.round(d)} m · ${fmt(ms)}`;
-    if (d < 7) { u.i++; sfx('click', 0.6); if (u.r.marathon && u.i % 5 === 0 && u.i < u.W.length) { writeSave({ name: u.r.name, i: u.i, ms }); showMsg('VERPFLEGUNG: STAND GESPEICHERT', 1500); player.hp = Math.min(100, player.hp + 30); }
-      if (u.i >= u.W.length) done(ms); } }
-  function done(ms) { const r = run.r; stop(); writeSave(null);
-    if (r.marathon) { player.money = (player.money || 0) + 10000; player.hp = 100; if ('stamina' in player) player.stamina = 1; try { const a = JSON.parse(localStorage.getItem('eulenErfolge') || '[]'); a.push({ was: 'Marathon gefinisht', zeit: fmt(ms), am: new Date().toISOString().slice(0, 10) }); localStorage.setItem('eulenErfolge', JSON.stringify(a)); } catch (e) { /* Erfolg nur für diese Sitzung */ }
-      for (let k = 0; k < 6; k++) setTimeout(() => burst(player.pos.clone().setY(player.pos.y + 3), [0xff4060, 0xffd84a, 0x3ad17a, 0x4fa8ff][k % 4], 40), k * 250); }
-    if (r.marathon && X.emit) X.emit('medal', player.pos, { id: 'marathon', n: 'Eulen-Marathon · ' + r.name, ms }); /* Medaille in der Statistik (#127) */
-    card(r.marathon ? 'MARATHON GEFINISHT' : 'EULEN-LAUF GESCHAFFT', `${fmt(ms)}` + (r.marathon ? ' · +10.000 € · volles Leben · Erfolg „Marathon gefinisht“' : '') + ` · <a href="${r.link}" target="_blank" rel="noopener" style="color:#7fe0a0">Strecke auf frischlufteulen.de</a>`, 9); }
+  const G = () => /** @type {any} */ (window).G;
+  function giveBike(x, z) { const g = G(); if (!g || !g.makeBike) return false; const c = g.makeBike(); c.position.set(x, TH(x, z), z); g.scene.add(c); g.cars.push(c); player.pos.set(x + 0.5, TH(x, z), z); g.toggleCar(); return !!(player.car && player.car.userData.bike); }
+  function start(r, resume, mode = 'lauf', opt = {}) { const W = wps(r); const B = big(r) ? stages(r) : []; const sv = resume ? readSave(mode) : null; const go = sv && sv.name === r.name;
+    const i = go ? sv.i : 1; const stage = B.filter(b => b < i).length;
+    if (go && mode === 'lauf' && !player.car) { const [x, z] = W[i - 1]; player.pos.set(x, TH(x, z), z); }
+    if (mode === 'rad' && !(player.car && player.car.userData.bike && !player.car.userData.moto)) { const [x, z] = W[go ? i - 1 : 0]; if (!giveBike(x, z)) { showMsg('KEIN RAD VERFÜGBAR', 1500); return; } }
+    run = { r, W, B, mode, i, stage, times: go ? sv.times.slice() : [], st0: performance.now(), grace: performance.now() + 3000, last: player.pos.clone(), test: !!opt.test };
+    WEG.route({ pts: W, get i() { return run ? run.i : 1; }, off: 1, big: big(r), label: (mode === 'rad' ? '🚲 ' : '🦉 ') + kind(r) }); if (r.marathon) buildFinish(r.ziel);
+    const et = B.length ? ` · Etappe ${stage + 1}/${B.length + 1}` : '';
+    card((mode === 'rad' ? 'RAD-WETTBEWERB · ' : 'EULEN-') + kind(r).toUpperCase(), `${r.name} · ${r.info}${et} · ` + (mode === 'rad' ? 'nur mit dem Fahrrad, Absteigen macht ungültig' : 'zu Fuß, gehen oder rennen, ohne Auto, Rad oder Bahn') + (B.length ? ' · an jeder Etappengrenze wird gespeichert' : ''), 5); sfx('bell', 0.5); }
+  function stop(msg) { run = null; WEG.route(null); const o = document.getElementById('obj'); if (o) o.textContent = ''; if (msg) showMsg(msg, 2600); }
+  function runUpdate(dt) { const u = run;
+    if (u.mode === 'lauf' && player.car) { stop('DISQUALIFIZIERT: NUR ZU FUSS'); return; }
+    if (u.mode === 'rad' && performance.now() > u.grace && !(player.car && player.car.userData.bike && !player.car.userData.moto)) { stop('UNGÜLTIG: RAD-WETTBEWERB NUR AUF DEM FAHRRAD'); return; }
+    const here = player.car ? player.car.position : player.pos; if (!u.test && here.distanceTo(u.last) > 60) { stop('DISQUALIFIZIERT: KEINE ABKÜRZUNG PER BAHN ODER SPRUNG'); return; } u.last.copy(here);
+    if (Math.hypot(u.W[u.i][0] - here.x, u.W[u.i][1] - here.z) < 200) offRoad(u.W[u.i]); const [x, z] = u.W[u.i]; WEG.update(dt); const d = Math.hypot(here.x - x, here.z - z); const ms = performance.now() - u.st0;
+    const o = document.getElementById('obj'); if (o) o.textContent = `${u.mode === 'rad' ? '🚲' : '🦉'} ${u.r.name}${u.B.length ? ` · Etappe ${u.stage + 1}/${u.B.length + 1}` : ''}: Wegpunkt ${u.i}/${u.W.length - 1} · ${Math.round(d)} m · ${fmt(ms)}`;
+    if (d < (u.mode === 'rad' ? 9 : 7)) { u.i++; sfx('click', 0.6);
+      if (u.B.includes(u.i - 1) || u.i >= u.W.length) { u.times.push(ms); u.st0 = performance.now(); u.stage++;
+        if (u.i < u.W.length) { writeSave(u.mode, { name: u.r.name, i: u.i, times: u.times }); player.hp = Math.min(100, player.hp + 30); showMsg(`ETAPPE ${u.stage} GESCHAFFT · ${fmt(ms)} · GESPEICHERT`, 2200); } }
+      if (u.i >= u.W.length) done(); } }
+  function best(key, ms) { let a = []; try { a = JSON.parse(localStorage.getItem('eulenBest') || '{}')[key] || []; } catch (e) { /* leer */ } a.push({ ms, am: new Date().toISOString().slice(0, 10) }); a.sort((p, q) => p.ms - q.ms); a = a.slice(0, 5);
+    try { const all = JSON.parse(localStorage.getItem('eulenBest') || '{}'); all[key] = a; localStorage.setItem('eulenBest', JSON.stringify(all)); } catch (e) { /* nur Anzeige */ } return a; }
+  function done() { const u = run, r = u.r, mode = u.mode; stop(); writeSave(mode, null); const ms = u.times.reduce((a, b) => a + b, 0); const len = r.len || 1;
+    const vMax = V[mode] * (mode === 'lauf' ? ((X.perks && X.perks.run) || 1) : 1), frac = len / (ms / 1000) / vMax; const [, tier, ic] = TIER.find(([f]) => frac >= f);
+    const real = ms * REAL[mode] * (r.laenge_km && r.km_gebiet ? r.laenge_km / r.km_gebiet : 1);
+    let pay = 0; if (big(r)) { pay = PAY(r)[mode]; player.money = (player.money || 0) + pay; player.hp = 100; if ('stamina' in player) player.stamina = 1; for (let k = 0; k < 6; k++) setTimeout(() => burst(player.pos.clone().setY(player.pos.y + 3), [0xff4060, 0xffd84a, 0x3ad17a, 0x4fa8ff][k % 4], 40), k * 250); }
+    if (big(r) && X.emit) X.emit('medal', player.pos, { id: `${mode}-${r.mega ? 'megamarsch' : 'marathon'}-${tier.toLowerCase()}`, n: `${ic} ${tier} · ${mode === 'rad' ? 'Rad' : 'Lauf'} · ${kind(r)}`, ms });
+    const top = best(`${mode}|${r.name}`, ms); const rank = top.findIndex(e => e.ms === ms) + 1;
+    const et = u.times.length > 1 ? ' · Etappen: ' + u.times.map(fmt).join(' / ') : '';
+    card((mode === 'rad' ? 'RAD-' : '') + kind(r).toUpperCase() + ' GESCHAFFT', `${ic} ${tier} · Spielzeit ${fmt(ms)}${et} · entspricht etwa ${fmt(real)} echter Zeit für ${String(r.laenge_km).replace('.', ',')} km` + (pay ? ` · +${pay.toLocaleString('de-DE')} € · volles Leben` : '') + (rank ? ` · Bestenliste Platz ${rank}` : '') + ` · <a href="${r.link}" target="_blank" rel="noopener" style="color:#7fe0a0">Strecke auf frischlufteulen.de</a>`, 10); }
 
   // ---------- Ziel Festhalle: Bogen, roter Teppich, Zuschauer ----------
   function buildFinish([x, z]) { if (finish) return; const g = new THREE.Group(); const y = TH(x, z); const red = new THREE.MeshLambertMaterial({ color: 0xb01020 }), arch = new THREE.MeshLambertMaterial({ color: 0x1f5b3a });
@@ -72,10 +122,10 @@ export function initEulen(X) {
   // ---------- F-Aktionen und Update ----------
   X.fHooks = X.fHooks || [];
   X.fHooks.push(() => { if (run) return null; for (const p of posters) if (Math.hypot(p.position.x - player.pos.x, p.position.z - player.pos.z) < 2.2) { if (p.userData.motif === 'vokabaum') return { label: 'F · Vokabaum-Plakat lesen', act: () => card('VOKABAUM', 'Vokabeln lernen, Wald wachsen lassen · <a href="https://vokabaum.hinjas.de/?von=bornheim" target="_blank" rel="noopener" style="color:#9fe08a">vokabaum.hinjas.de</a>', 8) }; if (!routes.length) continue; const r = routes.find(q => !q.marathon) || routes[0]; return { label: `F · Eulen-Lauf „${r.name}“ starten`, act: () => { const [sx, sz] = r.pts[0]; if (Math.hypot(sx - player.pos.x, sz - player.pos.z) > 40) { showMsg('ZUM START: GRÜNE MARKIERUNG AUF DER KARTE', 2000); pendingStart = r; } else start(r); } }; }
-    if (startMark) { const [x, z] = startMark.userData.route.pts[0]; if (Math.hypot(x - player.pos.x, z - player.pos.z) < 5) { const sv = readSave(); return { label: sv ? 'F · Eulen-Marathon fortsetzen' : 'F · Eulen-Marathon starten (42 km)', act: () => start(startMark.userData.route, !!sv) }; } }
+    for (const m of startMark || []) { const r = m.userData.route, [x, z] = r.pts[0]; if (big(r) && Math.hypot(x + 4 - player.pos.x, z - player.pos.z) < 2.5) { const sv = readSave('rad'); const goes = sv && sv.name === r.name; return { label: goes ? `F · Rad-Wettbewerb fortsetzen (${kind(r)})` : `F · Rad-Wettbewerb starten (${kind(r)}, ${r.km_gebiet} km)`, act: () => start(r, goes, 'rad') }; } if (Math.hypot(x - player.pos.x, z - player.pos.z) < 5) { const sv = big(r) ? readSave('lauf') : null; const goes = sv && sv.name === r.name; return { label: big(r) ? (goes ? `F · ${kind(r)} fortsetzen (Etappe ${(r.B || stages(r)).filter(b => b < sv.i).length + 1})` : `F · ${kind(r)} zu Fuß starten (${r.km_gebiet} km)`) : `F · Eulen-Lauf „${r.name}“ starten (${r.km_gebiet} km)`, act: () => { pendingStart = null; start(r, goes); } }; } }
     if (pendingStart) { const [x, z] = pendingStart.pts[0]; if (Math.hypot(x - player.pos.x, z - player.pos.z) < 5) { const r = pendingStart; return { label: `F · Eulen-Lauf „${r.name}“ starten`, act: () => { pendingStart = null; start(r); } }; } }
     return null; });
-  function update(dt) { t += dt; if (Math.floor(t) !== Math.floor(t - dt)) updatePosters(); if (run) runUpdate();
+  function update(dt) { t += dt; if (Math.floor(t) !== Math.floor(t - dt)) { updatePosters(); placeMarks(); } if (run) runUpdate(dt);
     if (finish) for (const [i, f] of finish.fans.entries()) f.position.y = 0.8 + Math.abs(Math.sin(t * 6 + i)) * 0.35; }
-  return { update, get posters() { return posters; }, get routes() { return routes; }, get run() { return run; }, start, stop };
+  return { update, get posters() { return posters; }, get routes() { return routes; }, get run() { return run; }, get marks() { return startMark || []; }, weg: WEG, wps, use, start, stop };
 }

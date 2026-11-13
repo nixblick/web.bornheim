@@ -1,0 +1,23 @@
+[
+ { "n": "wb_strecke", "x": -138, "z": 372, "wait": 10000, "shot": false,
+   "js": "(() => { const G = window.G, E = G.EULEN, R = 6371000, LAT0 = 50.129441, LON0 = 8.7096938; const ll = (x, z) => [LON0 + x / (R * Math.cos(LAT0 * Math.PI / 180)) * 180 / Math.PI, LAT0 - z / R * 180 / Math.PI]; const pts = []; for (let k = 0; k < 14; k++) { const z = -100 + k * 60; pts.push(ll(k % 2 ? 900 : -900, z), ll(k % 2 ? -900 : 900, z)); } E.use([{ name: 'Frankfurt Marathon Probe', laenge_km: 42.2, link: 'https://frischlufteulen.de/x?von=bornheim', linie: pts }]); const r = E.routes[0]; return JSON.stringify({ routes: E.routes.length, km: r && r.km_gebiet, wps: r && E.wps(r).length }); })()",
+   "expect": "window.G.EULEN.routes.length === 1" },
+ { "n": "wb_etappe1", "wait": 1500,
+   "js": "(async () => { const G = window.G, E = G.EULEN, r = E.routes[0]; localStorage.removeItem('eulenMarathon'); E.start(r, false, 'lauf', { test: true }); const B = E.run.B; while (E.run && E.run.i <= B[0]) { const [x, z] = E.run.W[E.run.i]; G.player.pos.set(x, G.TH(x, z), z); await new Promise(res => setTimeout(res, 120)); } const sv = JSON.parse(localStorage.getItem('eulenMarathon') || 'null'); const st = E.run ? E.run.stage : -1; E.stop(); return JSON.stringify({ grenzen: B, gespeichert: sv, etappe: st }); })()",
+   "expect": "(() => { const sv = JSON.parse(localStorage.getItem('eulenMarathon') || 'null'); return sv && sv.times.length === 1 && sv.i > 1; })()" },
+ { "n": "wb_etappe2_fortsetzen", "wait": 1000,
+   "js": "(() => { const G = window.G, E = G.EULEN, r = E.routes[0]; E.start(r, true, 'lauf', { test: true }); const out = { etappe: E.run.stage, i: E.run.i, zeiten: E.run.times.length }; E.stop(); return JSON.stringify(out); })()",
+   "expect": "true" },
+ { "n": "wb_rad_absteigen_ungueltig", "wait": 1000,
+   "js": "(async () => { const G = window.G, E = G.EULEN, r = E.routes[0]; E.start(r, false, 'rad', { test: true }); const auf = !!(G.player.car && G.player.car.userData.bike); await new Promise(res => setTimeout(res, 3500)); G.toggleCar(); await new Promise(res => setTimeout(res, 800)); return JSON.stringify({ aufRad: auf, laeuftNoch: !!E.run }); })()",
+   "expect": "!window.G.EULEN.run" },
+ { "n": "wb_ziel_lauf", "wait": 1000,
+   "js": "(async () => { const G = window.G, E = G.EULEN, r = E.routes[0]; localStorage.removeItem('eulenMarathon'); if (G.player.car) G.toggleCar(); E.start(r, false, 'lauf', { test: true }); while (E.run) { const [x, z] = E.run.W[E.run.i]; G.player.pos.set(x, G.TH(x, z), z); await new Promise(res => setTimeout(res, 120)); } return document.getElementById('card').innerText.slice(0, 300); })()",
+   "expect": "/echter Zeit/.test(document.getElementById('card').innerText) && /Spielzeit/.test(document.getElementById('card').innerText)" },
+ { "n": "wb_ziel_rad", "wait": 1000,
+   "js": "(async () => { const G = window.G, E = G.EULEN, r = E.routes[0]; localStorage.removeItem('eulenMarathon_rad'); E.start(r, false, 'rad', { test: true }); while (E.run) { const [x, z] = E.run.W[E.run.i]; const c = G.player.car; if (c) { c.position.set(x, G.TH(x, z), z); } await new Promise(res => setTimeout(res, 150)); } return JSON.stringify(G.PROGRESS.P.medals.map(m => m.n)); })()",
+   "expect": "(() => { const n = window.G.PROGRESS.P.medals.map(m => m.n); return n.some(t => /Lauf/.test(t)) && n.some(t => /Rad/.test(t)); })()" },
+ { "n": "wb_fortschritt", "wait": 500,
+   "js": "(() => { const h = window.G.PROGRESS.html(true); return /Rad · Marathon/.test(h) && /Lauf · Marathon/.test(h) ? 'beide Medaillen in der Statistik' : 'fehlt'; })()",
+   "expect": "/Rad · Marathon/.test(window.G.PROGRESS.html(true)) && /Lauf · Marathon/.test(window.G.PROGRESS.html(true))" }
+]

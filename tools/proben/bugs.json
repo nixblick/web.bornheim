@@ -1,33 +1,33 @@
 [
- {
-  "n": "bug99_rechtsverkehr",
-  "x": -138,
-  "z": 372,
-  "wait": 15000,
-  "js": "(async () => { window.__c = await (async () => { const G = window.G; const snap = () => G.cars.filter(c => c && c.position && !c.userData?.parked).map(c => [c, c.position.x, c.position.z]);\n const a = snap(); await new Promise(r => setTimeout(r, 1500)); let rechts = 0, links = 0;\n for (const [c, x0, z0] of a) { const dx = c.position.x - x0, dz = c.position.z - z0, l = Math.hypot(dx, dz); if (l < 2) continue;\n  let best = 1e9, off = 0; for (const r of G.WORLD.roads) { if (!r || r.ped || !r.p) continue; for (let i = 1; i < r.p.length; i++) { const [ax, az] = r.p[i - 1], [bx, bz] = r.p[i]; const ux = bx - ax, uz = bz - az, L2 = ux * ux + uz * uz; if (!L2) continue;\n   const t = Math.max(0, Math.min(1, ((c.position.x - ax) * ux + (c.position.z - az) * uz) / L2)); const px = ax + ux * t, pz = az + uz * t, d = Math.hypot(c.position.x - px, c.position.z - pz);\n   if (d < best) { best = d; off = (c.position.x - px) * (-dz / l) + (c.position.z - pz) * (dx / l); } } }\n  if (best > 8 || Math.abs(off) < 0.4) continue; if (off > 0) rechts++; else links++; }\n return JSON.stringify({ rechts, links }); })(); return window.__c; })()",
-  "expect": "(() => { const r = JSON.parse(window.__c); return r.rechts + r.links >= 5 && r.rechts > 3 * r.links; })()"
- },
- {
-  "n": "bug99_rechtsverkehr_berger",
-  "x": -120,
-  "z": -60,
-  "wait": 15000,
-  "js": "(async () => { window.__c = await (async () => { const G = window.G; const snap = () => G.cars.filter(c => c && c.position && !c.userData?.parked).map(c => [c, c.position.x, c.position.z]);\n const a = snap(); await new Promise(r => setTimeout(r, 1500)); let rechts = 0, links = 0;\n for (const [c, x0, z0] of a) { const dx = c.position.x - x0, dz = c.position.z - z0, l = Math.hypot(dx, dz); if (l < 2) continue;\n  let best = 1e9, off = 0; for (const r of G.WORLD.roads) { if (!r || r.ped || !r.p) continue; for (let i = 1; i < r.p.length; i++) { const [ax, az] = r.p[i - 1], [bx, bz] = r.p[i]; const ux = bx - ax, uz = bz - az, L2 = ux * ux + uz * uz; if (!L2) continue;\n   const t = Math.max(0, Math.min(1, ((c.position.x - ax) * ux + (c.position.z - az) * uz) / L2)); const px = ax + ux * t, pz = az + uz * t, d = Math.hypot(c.position.x - px, c.position.z - pz);\n   if (d < best) { best = d; off = (c.position.x - px) * (-dz / l) + (c.position.z - pz) * (dx / l); } } }\n  if (best > 8 || Math.abs(off) < 0.4) continue; if (off > 0) rechts++; else links++; }\n return JSON.stringify({ rechts, links }); })(); return window.__c; })()",
-  "expect": "(() => { const r = JSON.parse(window.__c); return r.rechts + r.links >= 5 && r.rechts > 3 * r.links; })()"
- },
- {
-  "n": "bug100_hud",
-  "x": -138,
-  "z": 372,
-  "js": "(() => { window.G.player.wanted = 3; const a = document.getElementById('stars').getBoundingClientRect(), w = document.getElementById('weapon').getBoundingClientRect(); return JSON.stringify({ stars: [a.left, a.top, a.right, a.bottom].map(Math.round), weapon: [w.left, w.top, w.right, w.bottom].map(Math.round) }); })()",
-  "wait": 3000,
-  "expect": "(() => { const a = document.getElementById('stars').getBoundingClientRect(), w = document.getElementById('weapon').getBoundingClientRect(); return !(a.left < w.right && w.left < a.right && a.top < w.bottom && w.top < a.bottom); })()"
- },
- {
-  "n": "bug97_ausgaenge",
-  "shot": false,
-  "wait": 500,
-  "js": "(() => { const S = window.G.INTERIORS.metro.stations; const u = S.filter(s => s.entr && s.entr.length); return JSON.stringify({ stationen: u.length, nur_einer: u.filter(s => s.entr.length === 1).map(s => s.id).slice(0, 15), anzahl_nur_einer: u.filter(s => s.entr.length === 1).length }); })()",
-  "expect": "(() => { const u = window.G.INTERIORS.metro.stations.filter(s => s.entr && s.entr.length); return u.filter(s => s.entr.length === 1).length <= u.length * 0.3; })()"
- }
+  {
+    "n": "bug99_rechtsverkehr",
+    "x": -138,
+    "z": 372,
+    "wait": 15000,
+    "js": "(async () => { window.__c = await (async () => { const G = window.G; const snap = () => G.cars.filter(c => c && c.position && !c.userData?.parked).map(c => [c, c.position.x, c.position.z]);\n let rechts = 0, links = 0; for (let rep = 0; rep < 16 && rechts + links < 20; rep++) { const a = snap(); await new Promise(r => setTimeout(r, 1500));\n for (const [c, x0, z0] of a) { const dx = c.position.x - x0, dz = c.position.z - z0, l = Math.hypot(dx, dz); if (l < 2) continue;\n  let best = 1e9, off = 0; for (const r of G.WORLD.roads) { if (!r || r.ped || !r.p) continue; for (let i = 1; i < r.p.length; i++) { const [ax, az] = r.p[i - 1], [bx, bz] = r.p[i]; const ux = bx - ax, uz = bz - az, L2 = ux * ux + uz * uz; if (!L2) continue;\n   const t = Math.max(0, Math.min(1, ((c.position.x - ax) * ux + (c.position.z - az) * uz) / L2)); const px = ax + ux * t, pz = az + uz * t, d = Math.hypot(c.position.x - px, c.position.z - pz);\n   if (d < best) { best = d; off = (c.position.x - px) * (-dz / l) + (c.position.z - pz) * (dx / l); } } }\n  if (best > 8 || Math.abs(off) < 0.4) continue; if (off > 0) rechts++; else links++; } }\n return JSON.stringify({ rechts, links }); })(); return window.__c; })()",
+    "expect": "(() => { const r = JSON.parse(window.__c); return r.rechts + r.links >= 5 && r.rechts > 3 * r.links; })()"
+  },
+  {
+    "n": "bug99_rechtsverkehr_berger",
+    "x": -120,
+    "z": -60,
+    "wait": 15000,
+    "js": "(async () => { window.__c = await (async () => { const G = window.G; const snap = () => G.cars.filter(c => c && c.position && !c.userData?.parked).map(c => [c, c.position.x, c.position.z]);\n let rechts = 0, links = 0; for (let rep = 0; rep < 16 && rechts + links < 20; rep++) { const a = snap(); await new Promise(r => setTimeout(r, 1500));\n for (const [c, x0, z0] of a) { const dx = c.position.x - x0, dz = c.position.z - z0, l = Math.hypot(dx, dz); if (l < 2) continue;\n  let best = 1e9, off = 0; for (const r of G.WORLD.roads) { if (!r || r.ped || !r.p) continue; for (let i = 1; i < r.p.length; i++) { const [ax, az] = r.p[i - 1], [bx, bz] = r.p[i]; const ux = bx - ax, uz = bz - az, L2 = ux * ux + uz * uz; if (!L2) continue;\n   const t = Math.max(0, Math.min(1, ((c.position.x - ax) * ux + (c.position.z - az) * uz) / L2)); const px = ax + ux * t, pz = az + uz * t, d = Math.hypot(c.position.x - px, c.position.z - pz);\n   if (d < best) { best = d; off = (c.position.x - px) * (-dz / l) + (c.position.z - pz) * (dx / l); } } }\n  if (best > 8 || Math.abs(off) < 0.4) continue; if (off > 0) rechts++; else links++; } }\n return JSON.stringify({ rechts, links }); })(); return window.__c; })()",
+    "expect": "(() => { const r = JSON.parse(window.__c); return r.rechts + r.links >= 5 && r.rechts > 3 * r.links; })()"
+  },
+  {
+    "n": "bug100_hud",
+    "x": -138,
+    "z": 372,
+    "js": "(() => { window.G.player.wanted = 3; const a = document.getElementById('stars').getBoundingClientRect(), w = document.getElementById('weapon').getBoundingClientRect(); return JSON.stringify({ stars: [a.left, a.top, a.right, a.bottom].map(Math.round), weapon: [w.left, w.top, w.right, w.bottom].map(Math.round) }); })()",
+    "wait": 3000,
+    "expect": "(() => { const a = document.getElementById('stars').getBoundingClientRect(), w = document.getElementById('weapon').getBoundingClientRect(); return !(a.left < w.right && w.left < a.right && a.top < w.bottom && w.top < a.bottom); })()"
+  },
+  {
+    "n": "bug97_ausgaenge",
+    "shot": false,
+    "wait": 500,
+    "js": "(() => { const S = window.G.INTERIORS.metro.stations; const u = S.filter(s => s.entr && s.entr.length); return JSON.stringify({ stationen: u.length, nur_einer: u.filter(s => s.entr.length === 1).map(s => s.id).slice(0, 15), anzahl_nur_einer: u.filter(s => s.entr.length === 1).length }); })()",
+    "expect": "(() => { const u = window.G.INTERIORS.metro.stations.filter(s => s.entr && s.entr.length); return u.filter(s => s.entr.length === 1).length <= u.length * 0.3; })()"
+  }
 ]

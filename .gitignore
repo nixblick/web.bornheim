@@ -15,3 +15,6 @@ Thumbs.db
 .claude/
 data/raw/
 __pycache__/
+
+# Privat: Vergleich Project Sunset (André 13.11.2026, liegt nur lokal)
+docs/vergleich-project-sunset.md

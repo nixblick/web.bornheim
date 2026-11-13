@@ -14,6 +14,7 @@ const CORE_ASSETS = [
   './story.js',
   './shops.js',
   './interiors.js',
+  './dispose.js',
   './progress.js',
   './fire.js',
   './heli.js',
@@ -21,6 +22,7 @@ const CORE_ASSETS = [
   './vokabaum.js',
   './touch.js',
   './feedback.js',
+  './debugoverlay.js',
   './vendor/three/build/three.module.js',
   './data/tiles/index.json'
 ];
