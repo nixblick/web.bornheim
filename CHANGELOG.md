@@ -2,6 +2,7 @@
 
 ## 2026-11-13
 
+- **Kartenklick auf Ziel (#98):** Im Pausemenü traf ein Klick ein U-Bahn- oder Bushalt nur 12 px um den Punkt; ein Klick auf den Namen rechts daneben galt als „Springe hierher“ und setzte die Figur dorthin, ohne Fahrt. Jetzt zählt auch die Beschriftung zum Ziel, Trefferradius 16 px. Ungetestet, Test im Nachtfenster.
 - **Rechtsverkehr (#99):** Autos, Räder und Polizei fuhren links. Die Straßennormale (-dz, dx) zeigt bei x = Ost, z = Süd nach rechts (belegt: Hauptwache liegt westlich der Konstablerwache und südlich von Bornheim), der Spurversatz war negativ. Vorzeichen an allen vier Stellen gedreht, Wandprüfung (sideGuard) mit. Ungetestet, Test im Nachtfenster.
 - **HUD oben links (#100):** „Stufe“ stand fest bei 84 px und überlagerte die Waffenzeile. Jetzt im selben Block unter der Waffe, auf Touch ebenso. Ungetestet, Test im Nachtfenster.
 - **Spieltest nimmt Proben immer von main:** Ältere Zweige ohne neue Probendatei lassen sich so trotzdem testen.
