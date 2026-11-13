@@ -2252,9 +2252,10 @@ function advanceAlongRoad(u, pos, dist, offset) {
     if (step >= remain) { u.seg = j;
       // Kreuzung: Abbiegen, Einbahnstraßen beachten; am Ende einer Einbahnstraße muss abgebogen werden
       const atEnd = (j === 0 || j === r.p.length - 1);
-      if (!u.line && (Math.random() < 0.3 || (atEnd && (r.o || u.isCar)) || u.goal)) { const opts = [];
+      if (!u.line && (Math.random() < 0.3 || (atEnd && (r.o || u.isCar)) || u.goal)) { const opts = []; let ends = 0;
         for (const [q, k] of nodesNear(bx, bz)) { if (q === r) continue; if (u.mode === 'tram' ? q.w !== undefined : (q.w === undefined || (u.isCar ? q.w < 5 || q.ped : (q.mw || q.ry)) /* Autos nicht in Fußgängerzonen (Zeil, Nordwestzentrum) */)) continue;
-          for (const d of [1, -1]) { if (k + d < 0 || k + d >= q.p.length) continue; if (u.isCar && !u.police && q.o && q.o !== d) continue; opts.push([q, k, d]); } }
+          for (const d of [1, -1]) { if (k + d < 0 || k + d >= q.p.length) continue; ends++; if (u.isCar && !u.police && q.o && q.o !== d) continue; opts.push([q, k, d]); } }
+        if (u.isCar && ends >= 2) { u.sigX = bx; u.sigZ = bz; } // echte Kreuzung (mindestens drei Straßenenden): ihre Ampeln gelten für die Zufahrt, nicht mehr für die Ausfahrt (siehe KI-Schleife)
         if (opts.length) { let choice = pick(opts); if (u.goal) { let best = 1e9; for (const o of opts) { const [q, k, d] = o; const q2 = q.p[k + d]; const dd = Math.hypot(q2[0] - u.goal.x, q2[1] - u.goal.z); if (dd < best) { best = dd; choice = o; } } } const [nr, k, d] = choice; const [nx2, nz2] = nr.p[k + d]; const nh = Math.atan2(nx2 - bx, nz2 - bz); const turn = ((nh - u.heading + Math.PI) % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI) - Math.PI; if (Math.abs(turn) > 0.5) { u.blink = turn > 0 ? 0 : 1; u.blinkT = 2.5; } u.road = nr; u.seg = k; u.dir = d; return; } }
     }
   }
@@ -3316,7 +3317,8 @@ function update(dt) {
       if (u.type === 'bus') { if ((u.haltT || 0) > 0) { u.haltT -= dt; block = true; } else if ((u.haltT || 0) > -6) u.haltT = (u.haltT || 0) - dt; else if (u.road.s) { for (const q of u.road.s) { const dd = (q[0] - c.position.x) ** 2 + (q[1] - c.position.z) ** 2; if (dd < 64) { u.haltT = 8; block = true; break; } } } else for (const st of CITY.stops) { if (st.k !== 'bus') continue; const dd = (st.x - c.position.x) ** 2 + (st.z - c.position.z) ** 2; if (dd < 64) { u.haltT = 8; block = true; break; } } } // Bus hält an der Haltestelle
       if (!block) for (const o of cars) { if (o !== c && (o.visible || o.userData.inst) && Math.abs(o.position.y - c.position.y) < 2.5 && aheadOf(c, fx, fz, aReach, o.position.x, o.position.z, 1.8)) { block = true; break; } }
       if (!block) for (const p of peds) { if (p.visible && p.userData.state !== 'dead' && aheadOf(c, fx, fz, aReach, p.position.x, p.position.z, 1.4)) { block = true; break; } }
-      if (!block) for (const sg of signalsNear(c.position.x, c.position.z)) { const rx = sg[0] - c.position.x, rz = sg[1] - c.position.z; const along = rx * fx + rz * fz; if (along > 1 && along < 7 + u.speed * 0.6 && Math.abs(rx * fz - rz * fx) < 7 && signalRed(u.heading, worldT)) { block = true; break; } }
+      const sf = u.sigX !== undefined && (c.position.x - u.sigX) ** 2 + (c.position.z - u.sigZ) ** 2 < 900; // gerade über eine Kreuzung gefahren: deren Ampeln (25 m um den Knoten) stehen jetzt an der Ausfahrt und gelten dem Gegenverkehr
+      if (!block) for (const sg of signalsNear(c.position.x, c.position.z)) { if (sf && (sg[0] - u.sigX) ** 2 + (sg[1] - u.sigZ) ** 2 < 625) continue; const rx = sg[0] - c.position.x, rz = sg[1] - c.position.z; const along = rx * fx + rz * fz; if (along > 1 && along < 7 + u.speed * 0.6 && Math.abs(rx * fz - rz * fx) < 7 && signalRed(u.heading, worldT)) { block = true; break; } }
       u.isCar = true; u.speed = block ? Math.max(0, u.speed - 18 * dt) : Math.min(u.speed + (u.bike && !u.moto ? 2.2 : 6) * dt, yieldS ? 2.5 : (u.maxv || 9)); if (yieldS && u.speed > 2.5) u.speed = Math.max(2.5, u.speed - 8 * dt);
       u.stuckT = block && u.speed < 0.5 ? (u.stuckT || 0) + dt : 0; if (u.stuckT > rnd(2.5, 6) && d < 80) { u.stuckT = -rnd(4, 10); sfx('horn', clamp(1 - d / 80, 0.1, 0.8)); }
       u.jamT = block ? (u.jamT || 0) + dt : 0; if (u.jamT > 12 && d > 130) { u.jamT = 0; u.respawn = true; } // Dauerstau außer Sicht löst sich auf statt für immer zu stehen
