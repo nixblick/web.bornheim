@@ -2,6 +2,8 @@
 
 ## 2026-11-13
 
+- **Spieltest nimmt Proben immer von main:** Ältere Zweige ohne neue Probendatei lassen sich so trotzdem testen.
+
 - **Spieltest auf GitHub (Actions):** Workflow „Spieltest“ fährt `tools/probe.mjs` auf einem GitHub-Rechner (Headless-Chrome, SwiftShader), je Probendatei ein paralleler Job, Bilder als Artefakt. Start von Hand mit Zweig und Proben oder automatisch bei jedem PR. Tests laufen damit tagsüber ohne Last auf dem Notebook. Neue Probe `tools/proben/wahrzeichen.json` (neun Wahrzeichen aus 70 m, Kollision im Kern, Stadion-Innenraum).
 
 - **U-Bahn-Ausstieg am nächsten Eingang:** Nach einer Fahrt kommt man am Eingang heraus, der dem Stationspunkt am nächsten liegt, nicht am ersten aus OSM. Nachgemessen in `data/metro.json`: 9 Stationen lagen über 100 m daneben, Hauptwache 174 m → 24 m, Dornbusch 177 m → 51 m, Alte Oper 136 m → 63 m. Ungetestet, Test im Nachtfenster: `node tools/probe.mjs tools/proben/ausstieg.json <ordner>`.
