@@ -12,7 +12,7 @@ export function missionList(X, S, close, toast, o = {}) {
   if (L && L.run) row('Läuft', 'Laufrunde', `Wegpunkt ${L.run.i + 1} von ${L.run.pts.length}`, L.stop ? 'Abbrechen' : '', () => { L.stop(); toast('Abgebrochen'); });
   if (E && E.run) row('Läuft', 'Frischlufteulen', obj || 'Strecke läuft', 'Abbrechen', () => { E.stop(); toast('Abgebrochen'); });
   if (V && V.mission) row('Läuft', 'Vokabaum', obj || 'Mission läuft', '', null);
-  if (ST && ST.busy) row('Läuft', 'Story', obj || 'Kapitel läuft', '', null);
+  if (ST && ST.busy) row('Läuft', 'Story', obj || 'Kapitel läuft', 'Pausieren', () => { ST.stop(); ST.S.declined = true; ST.persist(); close(); }); // wie der Menüknopf in story.js
   if (L && !L.run) row('Fitness', 'Laufrunde', '1–3 km zu Fuß mit einem Passanten, bringt Fitness und EP.', 'Laufrunde starten', foot(frei(() => { if (L.force()) close(); else toast('Gerade keine Runde möglich', 'error'); })));
   const NJ = S.NEBENJOBS; // Zivile Nebenjobs (#148, nebenjobs.js)
   if (NJ && NJ.job) row('Läuft', NJ.job.J.name, `${NJ.job.done}/${NJ.job.J.n} erledigt`, 'Feierabend', () => { NJ.stop(); close(); });
