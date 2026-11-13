@@ -21,9 +21,12 @@
    "js": "(() => { const P = window.G.PHONE; P.open(); P.openApp('karte'); return JSON.stringify({ menu: document.getElementById('menu').style.display }); })()",
    "expect": "document.getElementById('menu').style.display === 'flex' && document.querySelector('#menu .pane[data-tab=karte]').style.display === 'block'" },
  { "n": "menu_esc", "wait": 1500,
-   "js": "(() => { window.G.X.closeMenu(); dispatchEvent(new KeyboardEvent('keydown', { code: 'Escape', key: 'Escape' })); return document.querySelector('#menu .ps-board').textContent.slice(0, 200); })()",
-   "expect": "document.getElementById('menu').style.display === 'flex' && document.getElementById('menu').classList.contains('sun') && document.querySelector('#menu .ps-board').style.display === 'block' && /Laufrunde/.test(document.querySelector('#menu .ps-board').textContent)" },
+   "js": "(() => { window.G.X.closeMenu(); dispatchEvent(new KeyboardEvent('keydown', { code: 'Escape', key: 'Escape' })); return document.getElementById('menu').style.display; })()",
+   "expect": "document.getElementById('menu').style.display === 'flex' && !document.getElementById('menu').classList.contains('sun') && document.querySelector('#menu .pane[data-tab=schnell]').style.display === 'block'" },
  { "n": "menu_grafik", "wait": 800,
    "js": "(() => { document.querySelector('#menu button[data-tab=grafik]').click(); return document.querySelector('#menu .pane[data-tab=grafik]').style.display; })()",
-   "expect": "document.querySelector('#menu .pane[data-tab=grafik]').style.display === 'block' && !!document.getElementById('o_quality')" }
+   "expect": "document.querySelector('#menu .pane[data-tab=grafik]').style.display === 'block' && !!document.getElementById('o_quality')" },
+ { "n": "menu_f1", "wait": 800, "shot": false,
+   "js": "(() => { window.G.X.closeMenu(); dispatchEvent(new KeyboardEvent('keydown', { code: 'F1', key: 'F1' })); return 'ok'; })()",
+   "expect": "document.getElementById('menu').style.display === 'flex' && document.querySelector('#menu .pane[data-tab=hilfe]').style.display === 'block'" }
 ]
