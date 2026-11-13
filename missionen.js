@@ -9,7 +9,7 @@ export function missionList(X, S, close, toast, o = {}) {
   const foot = fn => () => { if (player.car) { toast('Nur zu Fuß', 'error'); return; } fn(); };
   // Nur eine Strecke zugleich (Laufrunde, Eulen-Lauf, Nebenjob teilen sich den Wegweiser): sagen, was noch läuft
   const frei = fn => () => { const c = X.WEG && X.WEG.cur; if (c) { toast(`Läuft noch: ${c.label} – erst beenden`, 'error'); return; } fn(); };
-  if (L && L.run) row('Läuft', 'Laufrunde', `Wegpunkt ${L.run.i + 1} von ${L.run.pts.length}`, '', null);
+  if (L && L.run) row('Läuft', 'Laufrunde', `Wegpunkt ${L.run.i + 1} von ${L.run.pts.length}`, L.stop ? 'Abbrechen' : '', () => { L.stop(); toast('Abgebrochen'); });
   if (E && E.run) row('Läuft', 'Frischlufteulen', obj || 'Strecke läuft', 'Abbrechen', () => { E.stop(); toast('Abgebrochen'); });
   if (V && V.mission) row('Läuft', 'Vokabaum', obj || 'Mission läuft', '', null);
   if (ST && ST.busy) row('Läuft', 'Story', obj || 'Kapitel läuft', '', null);

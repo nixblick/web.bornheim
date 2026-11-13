@@ -54,5 +54,5 @@ export function initLaufrunden(X) {
     scanT -= dt; if (scanT <= 0) { scanT = 2; if (Math.random() < 0.2) tryOffer(); } }
   // Testhilfe: G.LAUF.force() setzt die Stunden-Sperre zurück, sucht einen Passanten und startet
   function force() { if (!WEG.frei()) return false; lastHour = null; release(false); tryOffer(); if (!ped) { let best = null, bd = 1e9; for (const p of peds) { if (!okPed(p)) continue; const d = p.position.distanceTo(player.pos); if (d < bd) { bd = d; best = p; } } if (best && bd < 120) offer(best); } return start(); }
-  return { update, force, tryOffer, start, get run() { return run; }, get ped() { return ped; }, weg: WEG };
+  return { update, force, tryOffer, start, stop: () => { if (run) abort('LAUFRUNDE ABGEBROCHEN'); }, get run() { return run; }, get ped() { return ped; }, weg: WEG };
 }
