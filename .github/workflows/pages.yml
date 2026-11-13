@@ -36,16 +36,23 @@ jobs:
         run: |
           mkdir _site
           cp index.html play.html credits.html impressum.html manifest.webmanifest _site/
+          cp *.css _site/  # Stylesheets im Wurzelverzeichnis (menu-neu.css, ui-sunset.css): fehlten live, 404 (13.11.2026)
           cp *.js _site/   # alle Spielmodule im Wurzelverzeichnis (tools/ bleibt draußen); eine feste Liste hat story3.js vergessen und die Seite hing bei „Lade Stadt“
           V="${GITHUB_SHA::7}"
           sed -i "s/game\.js[^']*/game.js?v=$V/" _site/play.html
-          sed -i -E "s/from '\.\/([a-z0-9_]+\.js)'/from '.\/\1?v=$V'/g" _site/*.js
+          sed -i -E "s/from '\.\/([a-z0-9_-]+\.js)'/from '.\/\1?v=$V'/g" _site/*.js
           # Service Worker: Cache fuer Programm, Bilder und CSS je Deploy neu benennen (alter wird beim Aktivieren geloescht),
           # sonst bekaemen Spieler geaenderte Bilder/CSS nie und der Cache wuechse mit jeder Version (12.11.2026)
           sed -i "s/bornheim-static-v2/bornheim-static-$V/" _site/sw.js
           cp -r assets vendor _site/
-          mkdir _site/data && cp -r data/tiles data/dem data/metro.json data/districts.json data/busroutes.json data/overview.json _site/data/
+          mkdir _site/data && cp -r data/tiles data/dem _site/data/ && cp data/*.json _site/data/   # alle JSON im Datenordner (belag.json und vokabeln.json fehlten live); Rohdaten *.osm.json sind nicht eingecheckt
           touch _site/.nojekyll
+          # Wächter: jede lokal verlinkte Datei (href/src in HTML, fetch('data/…') und import './…' in JS) muss im Paket liegen
+          fehlt=0
+          for f in $( { grep -ohE "(href|src)=\"[^\"#:]+\"" _site/*.html | sed -E 's/^[a-z]+="//; s/"$//'; grep -ohE "fetch\('data/[^'\$]+'\)" _site/*.js | sed -E "s/^fetch\('//; s/'\)$//"; grep -ohE "from '\./[^']+'" _site/*.js | sed -E "s/^from '\.\///; s/'$//"; } | sed -E 's/\?.*$//' | sort -u ); do
+            [ -e "_site/$f" ] || { echo "FEHLT im Paket: $f"; fehlt=1; }
+          done
+          [ "$fehlt" = 0 ]
           du -sh _site
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
