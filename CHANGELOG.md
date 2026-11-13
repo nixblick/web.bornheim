@@ -2,6 +2,7 @@
 
 ## 2026-11-13
 
+- **Kachelhöhen benannter Hochhäuser (#94, #96):** `tools/build_city.py` hat eine kleine Tabelle `LANDMARK_H` mit belegten Dachhöhen, die greift, wenn die OSM-Höhe fehlt oder darunter liegt. Main Tower 170 → 200 m (de.wikipedia Main_Tower: offizielle Höhe 200,0 m; Antenne 240 m bleibt Sache des Modells), Access Tower 16 → 70 m (de.wikipedia Liste der Hochhäuser in Frankfurt: 70,0 m, 21 Etagen). Nur die Kacheln `-6_3` und `-13_11` geändert, Kachel-Cache `bornheim-tiles-v4`. Offen, weil keine Höhe auf de.wikipedia gefunden: Blue Towers, Horizon/Taunus/Central Tower Eschborn, Wasserturm Eschersheim (bleiben bei OSM). Probe `tools/proben/kachelhoehen.json` (Spieltest auf GitHub, Strahl von oben).
 - **Wahrzeichen sichtbar über den Nebel hinaus:** Der Szenen-Nebel endet je nach Grafikstufe bei 250–700 m, dahinter verschwanden Dom und Skyline. Wahrzeichen und Hochhäuser aus `wahrzeichen.js` nehmen jetzt nicht mehr am Nebel teil und bekommen einen eigenen, weiten Dunst bis 2,2 km, der der Nebelfarbe folgt (auch bei Regen und nachts). Neue Probe `tools/proben/fernsicht.json`. Getestet: Spieltest auf GitHub (fernsicht, wahrzeichen grün), Skyline vom Schaumainkai deutlich statt blasser Umrisse.
 
 - **Auto rollt erst ab 5 % von selbst los:** Gemessen über 12 m statt am Kippwinkel. Auf flach wirkender Wiese (2–4 %) bleibt das stehende Auto stehen, an echten Hängen rollt es an. Fahrprüfung „Hangabtrieb“ entsprechend: unter 6 % muss das Auto stehen bleiben, ab 6 % anrollen.

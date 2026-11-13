@@ -7,7 +7,20 @@ def xy(lat, lon):
     z = -math.radians(lat-lat0)*R   # Norden = -z (three.js: Kamera schaut nach -z)
     return [round(x,2), round(z,2)]
 
+# Benannte Hochhäuser, deren OSM-Höhe fehlt oder unter der belegten Bauwerkshöhe liegt (Dachhöhe ohne Antenne).
+# Nur Werte mit Quelle; ohne belegte Zahl bleibt es bei OSM (Blue Towers, Horizon/Taunus/Central Tower Eschborn,
+# Wasserturm Eschersheim: auf de.wikipedia keine Höhe gefunden, 13.11.2026, #96).
+LANDMARK_H = {
+    "Main Tower": 200.0,    # de.wikipedia.org/wiki/Main_Tower: offizielle Höhe 200,0 m, Spitze 240,0 m (#94)
+    "Access Tower": 70.0,   # de.wikipedia.org/wiki/Liste_der_Hochhäuser_in_Frankfurt_am_Main: 70,0 m, 21 Etagen (#96)
+}
+
 def height(t):
+    lh = LANDMARK_H.get(t.get("name", ""))
+    if lh: return max(lh, _osm_height(t))
+    return _osm_height(t)
+
+def _osm_height(t):
     for k in ("height","building:height"):
         if k in t:
             try: return float(str(t[k]).replace("m","").strip())
