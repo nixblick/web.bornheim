@@ -51,6 +51,10 @@ renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFShadowMap;
 applyLookTone(THREE, renderer); // AgX statt ACES (#152, look.js)
 document.body.appendChild(renderer.domElement);
+// Grafik-Kontext verloren (#184): Welt anhalten und einmal speichern (das Overlay aus feedback.js verspricht das); nach der Wiederherstellung läuft die Schleife weiter
+let glLost = false;
+renderer.domElement.addEventListener('webglcontextlost', () => { glLost = true; try { if (started && !player.dead) saveGame(true); } catch (e) {} });
+renderer.domElement.addEventListener('webglcontextrestored', () => { glLost = false; });
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x3a3550);
@@ -93,7 +97,6 @@ function updateWeather(dt) {
   if (SND.rain) SND.rain.gain.setTargetAtTime(weather.rain * 0.22 * (player.car ? 0.4 : 1), SND.ctx.currentTime, 0.5);
 } // Spielstunden je Realsekunde
 const _cSky = new THREE.Color(), _cFog = new THREE.Color(), _cTmp1 = new THREE.Color(), _cTmp2 = new THREE.Color();
-const lerpC = (a, b, t) => new THREE.Color(a).lerp(new THREE.Color(b), t);
 const lerpC2 = (out, a, b, t) => out.setHex(a).lerp(_cTmp1.setHex(b), t);
 function applyTime() {
   const h = world.hour; // 0..24
@@ -107,7 +110,7 @@ function applyTime() {
   if (weather.flash > 0) { _cSky.addScalar(weather.flash * 2); }
   if (skyU) { skyU.top.value.copy(_cSky).multiplyScalar(0.78); skyU.bot.value.copy(_cFog); }
   scene.environmentIntensity = 0.15 + day * 0.65;
-  scene.background.copy(_cSky); scene.fog.color.copy(_cFog); const VW = (typeof opts !== 'undefined' && opts.view) || 700; scene.fog.near = Math.min(180, VW * 0.25) - weather.fog * 150 - weather.rain * 60; scene.fog.far = Math.max(120, VW - weather.fog * (VW - 140) - weather.rain * VW * 0.35);
+  scene.background.copy(_cSky); scene.fog.color.copy(_cFog); const VW = opts.view || 700; scene.fog.near = Math.min(180, VW * 0.25) - weather.fog * 150 - weather.rain * 60; scene.fog.far = Math.max(120, VW - weather.fog * (VW - 140) - weather.rain * VW * 0.35);
   lerpC2(hemi.color, 0x646c8a, 0xdde8ff, day) /* Nacht weniger blau (#152 Nachbesserung) */; lerpC2(hemi.groundColor, 0x3a3028, 0x8a8070, day); hemi.intensity = (1.0 + day * 0.35 + dusk * 0.25) * (1 - weather.cloud * 0.25) + weather.flash * 3;
   if (day < 0.15 && dusk < 0.3) sun.color.setHex(0x9ea8c4); else lerpC2(sun.color, 0xffa860, 0xfff2dd, Math.max(0, day - dusk * 0.6));
   sun.intensity = (0.45 * (1 - day) * (1 - dusk) + day * 2.0 + dusk * 0.6) * (1 - weather.cloud * 0.7) + weather.flash * 6;
@@ -115,7 +118,7 @@ function applyTime() {
   if (!world.sunDir) world.sunDir = new THREE.Vector3();
   world.sunDir.set(Math.cos(ang) * 120, Math.max(8, Math.sin(ang) * 160), 60);
   world.night = day < 0.35; world.day = day;
-  if (typeof PFUETZEN !== 'undefined' && PFUETZEN) PFUETZEN.update(day, weather.rain); // Licht-Pfützen blenden in der Dämmerung ein (#152)
+  if (PFUETZEN) PFUETZEN.update(day, weather.rain); // Licht-Pfützen blenden in der Dämmerung ein (#152)
 }
 const sun = new THREE.DirectionalLight(0xffa860, 1.6);
 sun.castShadow = true;
@@ -124,21 +127,26 @@ const sc = sun.shadow.camera; sc.left = -70; sc.right = 70; sc.top = 70; sc.bott
 sun.shadow.bias = -0.0005; sun.shadow.normalBias = 0.04; // normalBias gegen Streifen und Treppen auf flachen Flächen (Fahrbahn, Gehweg)
 scene.add(sun, sun.target);
 
-let composer = null, bloomPass = null;
+let composer = null, bloomPass = null, composerBroken = false, _qSig = '';
 // Seitenverhältnis nie NaN (Fenster mit Höhe 0, etwa ein Hintergrund-Tab): sonst wird die Projektionsmatrix ungültig und jeder Strahl (Schüsse, Kamera) NaN
 const aspectNow = () => (innerWidth > 0 && innerHeight > 0) ? innerWidth / innerHeight : 16 / 9;
 addEventListener('resize', () => { camera.aspect = aspectNow(); camera.updateProjectionMatrix(); if (innerWidth > 0 && innerHeight > 0) { renderer.setSize(innerWidth, innerHeight); if (composer) composer.setSize(innerWidth, innerHeight); } });
 // Umgebungslicht (PMREM) wird erst nach dem Lesen der Qualitätsstufe gesetzt: bei „Niedrig“ und schwacher GPU entfällt es (LOW_GFX)
+// Composer samt Pässen freigeben: composer.dispose() allein lässt Bloom-, GTAO- und Shader-Ziele liegen
+function disposeComposer() { if (!composer) return; for (const p of composer.passes) if (p.dispose) p.dispose(); composer.dispose(); composer = aoPass = bloomPass = gradePass = null; }
+// Gibt true zurück, wenn wirklich neu eingestellt wurde; bei unveränderter Signatur (Regler für Lautstärke, Zeit …) nur Bloom-Stärke
 function applyQuality() {
   const q = opts.quality || 'mittel';
-  const ultra = q === 'ultra', post = q === 'hoch' || ultra;
-  renderer.setPixelRatio((q === 'niedrig' ? 0.75 : ultra ? Math.min(1.5, Math.max(1, devicePixelRatio || 1)) : 1) * (opts.scale || 1)); renderer.setSize(innerWidth, innerHeight);
+  const ultra = q === 'ultra', post = (q === 'hoch' || ultra) && !composerBroken;
+  const sig = [q, opts.scale || 1, !!opts.ao, innerWidth, innerHeight, devicePixelRatio || 1].join('|'), same = sig === _qSig; _qSig = sig;
+  if (!same) renderer.setPixelRatio((q === 'niedrig' ? 0.75 : ultra ? Math.min(1.5, Math.max(1, devicePixelRatio || 1)) : 1) * (opts.scale || 1)); if (!same) renderer.setSize(innerWidth, innerHeight);
   const sm = ultra ? 4096 : q === 'hoch' ? 2048 : 1024; sun.shadow.mapSize.set(sm, sm); { const e = ultra ? 95 : q === 'mittel' ? 50 : 70; /* Mittel: 1024er Karte auf 100 m statt 140 m, ~10 statt 14 cm je Texel: weniger Treppen an Bordsteinkanten */ sc.left = -e; sc.right = e; sc.top = e; sc.bottom = -e; sc.updateProjectionMatrix(); } sun.shadow.radius = ultra ? 2 : 1;
-  WIN_U.value = q === 'niedrig' ? 0 : 1; if (typeof applyTreeQuality === 'function') applyTreeQuality(); if (typeof rebuildAllTiles === 'function') rebuildAllTiles();
+  WIN_U.value = q === 'niedrig' ? 0 : 1; applyTreeQuality(); rebuildAllTiles();
+  if (same) { if (composer && bloomPass) { bloomPass.strength = LOOK_PRESET[ultra ? 'ultra' : 'hoch'].bloom.strength * (opts.bloom ?? 1); bloomPass.baseStrength = bloomPass.strength; } return false; }
   { const an = ANISO = ultra ? renderer.capabilities.getMaxAnisotropy() : q === 'niedrig' ? 2 : 4;
-    if (typeof syncAnisoAll === 'function') syncAnisoAll(an);
-    scene.traverse(o => { const ms = o.material ? (Array.isArray(o.material) ? o.material : [o.material]) : []; for (const m of ms) for (const key of ['map', 'normalMap', 'roughnessMap', 'emissiveMap']) { const t = m[key]; if (t && t.anisotropy !== an) { t.anisotropy = an; t.needsUpdate = true; } } }); } if (sun.shadow.map) { sun.shadow.map.dispose(); sun.shadow.map = null; }
-  if (post) { const key = q + (opts.ao ? 'a' : '') + innerWidth + 'x' + innerHeight; if (!composer || composer.userData !== key) { if (composer) composer.dispose(); const rt = new THREE.WebGLRenderTarget(innerWidth, innerHeight, { type: THREE.HalfFloatType, samples: 2 }); composer = new EffectComposer(renderer, rt); composer.userData = key; composer.addPass(new RenderPass(scene, camera)); aoPass = null; if (opts.ao) {
+    syncAnisoAll(an);
+    scene.traverse(o => { const ms = o.material ? (Array.isArray(o.material) ? o.material : [o.material]) : []; for (const m of ms) for (const key of ['map', 'normalMap', 'roughnessMap', 'emissiveMap']) { const t = m[key]; if (t && t.anisotropy !== an) { t.anisotropy = an; t.needsUpdate = true; } } }); } if (sun.shadow.map && sun.shadow.map.width !== sm) { sun.shadow.map.dispose(); sun.shadow.map = null; }
+  if (post) { const key = q + (opts.ao ? 'a' : ''); /* Größe folgt über setSize, kein Neubau */ if (!composer || composer.userData !== key) { disposeComposer(); const rt = new THREE.WebGLRenderTarget(innerWidth, innerHeight, { type: THREE.HalfFloatType, samples: 2 }); composer = new EffectComposer(renderer, rt); composer.userData = key; composer.addPass(new RenderPass(scene, camera)); aoPass = null; if (opts.ao) {
     const aoScale = ultra ? 0.75 : 0.6;
     aoPass = new GTAOPass(scene, camera, Math.max(1, Math.round(innerWidth * aoScale)), Math.max(1, Math.round(innerHeight * aoScale)));
     const origSetSize = aoPass.setSize.bind(aoPass); aoPass.setSize = (w, h) => origSetSize(Math.max(1, Math.round(w * aoScale)), Math.max(1, Math.round(h * aoScale)));
@@ -149,7 +157,7 @@ function applyQuality() {
     const r0 = aoPass.render.bind(aoPass), _aoHid = [];
     aoPass.render = (...args) => {
       _aoHid.length = 0; const hide = o => { if (o && o.visible) { o.visible = false; _aoHid.push(o); } };
-      hide(skyDome); hide(sunDisk); hide(skylineMesh); hide(skylineBeacons); hide(WET && WET.rainPts); hide(farPlane); hide(streaks); if (streaks) hide(streaks.userData.car); if (skids.mesh) hide(skids.mesh); if (typeof FX !== 'undefined') hide(FX.mesh);
+      hide(skyDome); hide(sunDisk); hide(skylineMesh); hide(skylineBeacons); hide(WET && WET.rainPts); hide(farPlane); hide(streaks); if (streaks) hide(streaks.userData.car); if (skids.mesh) hide(skids.mesh); hide(FX.mesh);
       for (let i = 0; i < clouds.length; i++) hide(clouds[i]);
       for (let i = 0; i < leafMeshes.length; i++) hide(leafMeshes[i]);
       for (let i = 0; i < nightOnly.length; i++) hide(nightOnly[i]);
@@ -157,8 +165,9 @@ function applyQuality() {
       for (const [, t] of TILES) if (t.built && t.grp && t.grp.visible) { const dx = (t.tx + 0.5) * TS - cx, dz = (t.tz + 0.5) * TS - cz; if (dx * dx + dz * dz > 420 * 420) hide(t.grp); }
       r0(...args);
       for (let i = 0; i < _aoHid.length; i++) _aoHid[i].visible = true;
-    }; composer.addPass(aoPass); } const LP = LOOK_PRESET[ultra ? 'ultra' : 'hoch']; bloomPass = new UnrealBloomPass(new THREE.Vector2(innerWidth / 2, innerHeight / 2), LP.bloom.strength, LP.bloom.radius, LP.bloom.threshold); composer.addPass(bloomPass); composer.addPass(makeLookPass(ShaderPass, LP)); gradePass = new ShaderPass(GradeShader); gradePass.uniforms.vig.value = 0; composer.addPass(gradePass); if (LP.fxaa) composer.addPass(makeFxaaPass(THREE, ShaderPass, innerWidth, innerHeight)); } composer.setSize(innerWidth, innerHeight); bloomPass.strength = LOOK_PRESET[ultra ? 'ultra' : 'hoch'].bloom.strength * (opts.bloom ?? 1); bloomPass.baseStrength = bloomPass.strength; bloomPass.baseThreshold = LOOK_PRESET[ultra ? 'ultra' : 'hoch'].bloom.threshold; }
-  else composer = null;
+    }; composer.addPass(aoPass); } const LP = LOOK_PRESET[ultra ? 'ultra' : 'hoch']; bloomPass = new UnrealBloomPass(new THREE.Vector2(innerWidth / 2, innerHeight / 2), LP.bloom.strength, LP.bloom.radius, LP.bloom.threshold); composer.addPass(bloomPass); composer.addPass(makeLookPass(ShaderPass, LP)); gradePass = new ShaderPass(GradeShader); gradePass.uniforms.vig.value = 0; composer.addPass(gradePass); if (LP.fxaa) composer.addPass(makeFxaaPass(THREE, ShaderPass, innerWidth, innerHeight)); } composer._width = innerWidth; composer._height = innerHeight; composer.setPixelRatio(renderer.getPixelRatio()); /* Render-Skala auch im Composer; setPixelRatio ruft setSize */ bloomPass.strength = LOOK_PRESET[ultra ? 'ultra' : 'hoch'].bloom.strength * (opts.bloom ?? 1); bloomPass.baseStrength = bloomPass.strength; bloomPass.baseThreshold = LOOK_PRESET[ultra ? 'ultra' : 'hoch'].bloom.threshold; }
+  else disposeComposer();
+  return true;
 }
 
 // ---------- Hilfen ----------
@@ -2372,14 +2381,23 @@ const POTATO_KEYS = Object.keys(POTATO).filter(k => k !== 'quality');
 // Gespeichert wird nie ein automatischer Sparmodus: ohne potatoManuell stehen für Sparmodus-Werte die Standardwerte in localStorage (#173)
 function optsToSave() { const s = Object.assign({}, opts); if (!s.potatoManuell) for (const k of POTATO_KEYS) if (s[k] === POTATO[k] && !(k === 'ao' && s.aoManuell)) s[k] = OPTS_DEFAULT[k]; return s; } /* selbst abgeschaltete AO bleibt aus (aoManuell) */
 function loadOpts() { try { Object.assign(opts, JSON.parse(localStorage.getItem('notgta.opts') || '{}')); } catch (e) {} if (!opts.zeitV2) { if (opts.timeSpeed === 1) opts.timeSpeed = 0.25; opts.zeitV2 = true; } /* alter Standard 1 Std./Min. war zu schnell (12.11.2026) */ if (WEAK_VIEW) { opts.view = Math.min(opts.view || 700, 425); opts.weakTuned = true; } /* #173: Sparmodus wie die Stufe. Nur ein vom Nutzer gesetzter Sparmodus (potatoManuell) bleibt; alte Stände mit potato ohne Markierung (automatisch gesetzt oder vor #173) gehen auf die Standardwerte zurück: Andrés Chrome lief mit Sichtweite 250, Skala 0,7 und ohne Schatten, obwohl die Stufe schon frei war (13.11.2026) */ if (opts.potato && !opts.potatoManuell) { for (const k of POTATO_KEYS) opts[k] = OPTS_DEFAULT[k]; } delete opts.potatoTuned; if (VERY_WEAK && !opts.potatoManuell) { const q = opts.quality; Object.assign(opts, POTATO); if (opts.qualityManuell) opts.quality = q; } /* sehr schwache GPU: Sparmodus nur zur Laufzeit, jeden Start neu */ if (!opts.qualityManuell) opts.quality = VERY_WEAK ? 'niedrig' : QUALITY; /* #173: GTAO verdoppelt auf integrierter GPU ~500 Draw-Calls (Normalenpass); aus, außer der Spieler hat AO selbst gesetzt */ if (IGPU && !opts.aoManuell) opts.ao = false; applyOpts(); } // einmalig: kürzere Sichtweite auf schwacher GPU, danach frei änderbar
-function applyOpts() { camera.far = Math.max(1600, (opts.view || 700) + 200); /* 1600: Skyline und Messeturm aus wahrzeichen.js bis 1,6 km (13.11.2026); Nebel endet früher, Kacheln sind dort ohnehin nicht gebaut */ camera.updateProjectionMatrix(); const mm = document.getElementById('minimap'); if (mm) mm.style.display = opts.minimap === false ? 'none' : ''; const hd = document.getElementById('hud'); if (hd) hd.style.visibility = opts.hud === false ? 'hidden' : 'visible'; const fe = document.getElementById('fps'); if (fe) fe.style.display = opts.fps ? 'block' : 'none'; renderer.shadowMap.enabled = !!opts.shadows && opts.quality !== 'niedrig'; applyQuality(); scene.traverse(o => { if (o.material) { const ms = Array.isArray(o.material) ? o.material : [o.material]; for (const m of ms) m.needsUpdate = true; } }); world.speed = opts.timeSpeed / 60; SND.vol = opts.vol; if (SND.master) SND.master.gain.value = opts.vol; try { localStorage.setItem('notgta.opts', JSON.stringify(optsToSave())); } catch (e) {} }
+function applyOpts() { camera.far = Math.max(1600, (opts.view || 700) + 200); /* 1600: Skyline und Messeturm aus wahrzeichen.js bis 1,6 km (13.11.2026); Nebel endet früher, Kacheln sind dort ohnehin nicht gebaut */ camera.updateProjectionMatrix(); const mm = document.getElementById('minimap'); if (mm) mm.style.display = opts.minimap === false ? 'none' : ''; const hd = document.getElementById('hud'); if (hd) hd.style.visibility = opts.hud === false ? 'hidden' : 'visible'; const fe = document.getElementById('fps'); if (fe) fe.style.display = opts.fps ? 'block' : 'none'; const shNeu = !!opts.shadows && opts.quality !== 'niedrig', shWechsel = renderer.shadowMap.enabled !== shNeu; renderer.shadowMap.enabled = shNeu; if (shWechsel && !shNeu && sun.shadow.map) { sun.shadow.map.dispose(); sun.shadow.map = null; } /* Schatten aus: Karte freigeben */ if (applyQuality() || shWechsel) scene.traverse(o => { if (o.material) { const ms = Array.isArray(o.material) ? o.material : [o.material]; for (const m of ms) m.needsUpdate = true; } }); world.speed = opts.timeSpeed / 60; SND.vol = opts.vol; if (SND.master) SND.master.gain.value = opts.vol; saveOpts(); }
+function saveOpts() { try { localStorage.setItem('notgta.opts', JSON.stringify(optsToSave())); } catch (e) {} } // nur speichern, ohne Renderer-Arbeit
 function saveGame(quiet) {
   const c = player.car; const data = { v: 1, pos: POCKET ? [POCKET.anchor[0], TH(POCKET.anchor[0], POCKET.anchor[1]), POCKET.anchor[1]] : [player.pos.x, player.pos.y, player.pos.z] /* im Innenraum den Ausgang speichern, nicht den Taschenraum bei x=60000 */, yaw: camYaw.v, hp: Math.max(1, player.hp), inv: WPN.save(), story: STORY ? STORY.sid : null /* nur die Kennung: der Story-Zustand enthält Figuren und Fahrzeuge, die sich nicht speichern lassen ("Speichern fehlgeschlagen"); die Story speichert sich selbst */, money: player.money, score: player.score, wanted: player.wanted, female: player.female, hour: world.hour, car: c ? { x: c.position.x, z: c.position.z, h: c.userData.heading, col: c.userData.col ?? 0xffffff, type: c.userData.type } : null, when: Date.now() };
   try { localStorage.setItem('notgta.save', JSON.stringify(data)); showMsg(quiet ? 'AUTOMATISCH GESPEICHERT' : 'GESPEICHERT', 900, 'ok'); if (!quiet) sfx('click'); } catch (e) { console.warn('Speichern', e); showMsg('SPEICHERN FEHLGESCHLAGEN', 1500); }
 }
 function hasSave() { try { return !!localStorage.getItem('notgta.save'); } catch (e) { return false; } }
+// Spielstand prüfen und Werte absichern (importierte oder von Hand geänderte Dateien); null = unbrauchbar. Liefert eine Kopie, das Original bleibt wie es ist
+function saneSave(d) {
+  if (!d || typeof d !== 'object' || !Array.isArray(d.pos) || d.pos.length !== 3 || !d.pos.every(Number.isFinite)) return null;
+  const num = (x, f) => (typeof x === 'number' || (typeof x === 'string' && x !== '')) && Number.isFinite(+x) ? +x : f;
+  const s = Object.assign({}, d); s.money = num(d.money, 0); s.score = num(d.score, 0); s.wanted = clamp(num(d.wanted, 0), 0, 5); s.hour = clamp(num(d.hour, 19.5), 0, 24);
+  const c = d.car; s.car = c && typeof c === 'object' && Number.isFinite(c.x) && Number.isFinite(c.z) ? Object.assign({}, c, { h: num(c.h, 0) }) : null; // Auto ohne gültige Lage entfällt, sonst würde die Spielerposition NaN
+  return s;
+}
 function loadGame() {
-  let d; try { d = JSON.parse(localStorage.getItem('notgta.save')); } catch (e) {} if (!d || !Array.isArray(d.pos) || !d.pos.every(Number.isFinite)) { showMsg('SPIELSTAND UNBRAUCHBAR', 1500); return false; }
+  let d; try { d = saneSave(JSON.parse(localStorage.getItem('notgta.save'))); } catch (e) {} if (!d) { showMsg('SPIELSTAND UNBRAUCHBAR', 1500); return false; }
   if (INTERIORS && INTERIORS.inside) INTERIORS.leave(); // sonst bleibt der Innenraum-Zustand (kein Verkehr, Karte versteckt) aktiv
   if (player.car) exitCar(); player.pos.set(d.pos[0], d.pos[1], d.pos[2]); camYaw.v = Number.isFinite(d.yaw) ? d.yaw : 0; player.hp = clamp(+d.hp || 100, 1, 100); /* Werte aus importierten Dateien absichern */ WPN.load(d.inv); player.money = d.money || 0; player.score = d.score || 0; player.wanted = d.wanted || 0; world.hour = d.hour ?? 19.5; player.dead = false; msgEl.style.display = 'none';
   if (player.mesh) player.mesh.position.copy(player.pos);
@@ -2428,7 +2446,7 @@ function drawBigMap() {
   cv.addEventListener('touchmove', e => { if (!mapOpen) return; e.preventDefault(); e.stopPropagation(); if (e.touches.length === 1 && drag) { const t = e.touches[0]; const sc = mapZoom / (cv.clientWidth || 600); mapPanX -= (t.clientX - lx) * sc; mapPanZ -= (t.clientY - ly) * sc; lx = t.clientX; ly = t.clientY; drawBigMap(); } else if (e.touches.length === 2 && pinchD > 10) { const d = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY); if (d > 10) { mapZoom = clamp(mapZoom * (pinchD / d), 600, 16000); pinchD = d; drawBigMap(); } } }, { passive: false });
   cv.addEventListener('touchend', () => { drag = false; pinchD = 0; });
 }
-addEventListener('keydown', e => { if (e.code === 'Escape') { if (started && !menuOpen) openMenu(); return; } if (menuOpen) return; keys[e.code] = true; if (e.code === 'KeyM') toggleMap(); if (e.code === 'KeyN' && started) { opts.mapNorth = !opts.mapNorth; applyOpts(); showMsg(opts.mapNorth ? 'MINIKARTE: NORDEN OBEN' : 'MINIKARTE: BLICKRICHTUNG OBEN', 1200, 'info'); } if (e.code === 'F5' && e.ctrlKey) return; if (e.code === 'F6') { e.preventDefault(); saveGame(); } if (e.code === 'F9') { e.preventDefault(); if (confirm('Letzten Spielstand laden? Nicht gespeicherter Fortschritt geht verloren.')) loadGame(); } if (e.code === 'KeyE') toggleCar(); if (e.code === 'KeyR') WPN.reload(); if (e.code === 'KeyT' && WPN && WPN.cycleFuse) WPN.cycleFuse(); if (e.code === 'KeyG') DEMO.rally(); if (e.code === 'KeyV') DEMO.film(); if (e.code === 'KeyX') STORY.skipLine(); if (e.code === 'KeyQ' && !creative.on) WPN.quick(); if (e.code === 'Space') e.preventDefault(); if (e.code === 'KeyC') toggleCreative(); if (e.code === 'KeyH' && player.car) { const u = player.car.userData; if (u.police || u.cannon || u.brigade || u.ambulance) { u.siren = !u.siren; showMsg(u.siren ? 'SONDERSIGNAL AN' : 'SONDERSIGNAL AUS', 900); sfx('click', 0.5); } else sfx(u.bike && !u.moto ? 'bell' : 'horn'); } if (e.code === 'KeyL' && player.car) { const u = player.car.userData; const now = u.lightsForce ?? world.night; u.lightsForce = !now; showMsg(u.lightsForce ? 'LICHT AN' : 'LICHT AUS', 700); sfx('click', 0.4); } if (creative.on && (e.code === 'Comma' || e.code === 'Period')) creativeSelect(creative.slot + (e.code === 'Period' ? 1 : -1)); if (creative.on && e.code === 'Minus') creativeSelect(20); if (e.code.startsWith('Digit')) { const n = (+e.code.slice(5) + 9) % 10; if (creative.on) creativeSelect(n + (e.shiftKey ? 10 : 0)); else if (!player.car || !player.car.userData.cannon) WPN.slotKey(+e.code.slice(5)); } });
+addEventListener('keydown', e => { if (e.code === 'Escape') { if (started && !menuOpen) openMenu(); return; } if (menuOpen) return; keys[e.code] = true; if (e.code === 'KeyM') toggleMap(); if (e.code === 'KeyN' && started) { opts.mapNorth = !opts.mapNorth; saveOpts(); showMsg(opts.mapNorth ? 'MINIKARTE: NORDEN OBEN' : 'MINIKARTE: BLICKRICHTUNG OBEN', 1200, 'info'); } if (e.code === 'F5' && e.ctrlKey) return; if (e.code === 'F6') { e.preventDefault(); saveGame(); } if (e.code === 'F9') { e.preventDefault(); if (confirm('Letzten Spielstand laden? Nicht gespeicherter Fortschritt geht verloren.')) loadGame(); } if (e.code === 'KeyE') toggleCar(); if (e.code === 'KeyR') WPN.reload(); if (e.code === 'KeyT' && WPN && WPN.cycleFuse) WPN.cycleFuse(); if (e.code === 'KeyG') DEMO.rally(); if (e.code === 'KeyV') DEMO.film(); if (e.code === 'KeyX') STORY.skipLine(); if (e.code === 'KeyQ' && !creative.on) WPN.quick(); if (e.code === 'Space') e.preventDefault(); if (e.code === 'KeyC') toggleCreative(); if (e.code === 'KeyH' && player.car) { const u = player.car.userData; if (u.police || u.cannon || u.brigade || u.ambulance) { u.siren = !u.siren; showMsg(u.siren ? 'SONDERSIGNAL AN' : 'SONDERSIGNAL AUS', 900); sfx('click', 0.5); } else sfx(u.bike && !u.moto ? 'bell' : 'horn'); } if (e.code === 'KeyL' && player.car) { const u = player.car.userData; const now = u.lightsForce ?? world.night; u.lightsForce = !now; showMsg(u.lightsForce ? 'LICHT AN' : 'LICHT AUS', 700); sfx('click', 0.4); } if (creative.on && (e.code === 'Comma' || e.code === 'Period')) creativeSelect(creative.slot + (e.code === 'Period' ? 1 : -1)); if (creative.on && e.code === 'Minus') creativeSelect(20); if (e.code.startsWith('Digit')) { const n = (+e.code.slice(5) + 9) % 10; if (creative.on) creativeSelect(n + (e.shiftKey ? 10 : 0)); else if (!player.car || !player.car.userData.cannon) WPN.slotKey(+e.code.slice(5)); } });
 const CREATIVE_ITEMS = [
   { n: 'Schläger', w: 'bat' }, { n: 'Pistole', w: 'pistol' }, { n: 'MP', w: 'smg' }, { n: 'Schrotflinte', w: 'shotgun' }, { n: 'Gewehr', w: 'rifle' }, { n: 'Pfefferspray', w: 'spray' }, { n: 'Taser', w: 'taser' }, { n: 'Farbbeutel', w: 'paint' }, { n: 'Böller', w: 'banger' }, { n: 'Rauchtopf', w: 'smoke' },
   { n: 'Bengalo', w: 'flare' }, { n: 'Granate', w: 'grenade' }, { n: 'Zeitbombe', w: 'tnt' }, { n: 'Brandsatz', w: 'molotov' }, { n: 'Raketenwerfer', w: 'rocket' }, { n: 'Feuerwerk', s: 'firework', ic: '🎆' }, { n: 'Demo', s: 'demo', ic: '✊' }, { n: 'Polizei', s: 'police', ic: '🚓' }, { n: 'Wasserwerfer', s: 'cannon', ic: '💦' }, { n: 'Feuerwehr', s: 'firetruck', ic: '🚒' }, { n: 'Rettung', s: 'ambulance', ic: '🚑' }, { n: 'Auto', s: 'car', ic: '🚗' }, { n: 'Mensch', s: 'ped', ic: '🚶' },
@@ -3063,7 +3081,7 @@ await streamInit();
 loadOpts(); applyTime();
 // Spielstand als Datei: kein Konto nötig, auf jedem Gerät wieder ladbar
 function exportSave() { saveGame(); const data = localStorage.getItem('notgta.save'); if (!data) return; const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([data], { type: 'application/json' })); a.download = 'bornheim-spielstand-' + new Date().toISOString().slice(0, 10) + '.json'; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000); }
-function importSave(file) { const fr = new FileReader(); fr.onload = () => { try { const d = JSON.parse(fr.result); if (!d || typeof d !== 'object' || !d.pos) throw new Error('kein Spielstand'); localStorage.setItem('notgta.save', JSON.stringify(d)); if (started) { loadGame(); closeMenu(); } else { $('cont').style.display = 'inline-block'; setLoading('Spielstand importiert. Mit „Fortsetzen“ weiterspielen.'); } } catch (e) { alert('Diese Datei ist kein gültiger Spielstand.'); } }; fr.readAsText(file); }
+function importSave(file) { const fr = new FileReader(); fr.onload = () => { try { const d = JSON.parse(fr.result); if (!saneSave(d)) throw new Error('kein Spielstand'); /* erst prüfen, dann schreiben: eine kaputte Datei überschreibt den alten Stand nicht */ localStorage.setItem('notgta.save', JSON.stringify(d)); if (started) { loadGame(); closeMenu(); } else { $('cont').style.display = 'inline-block'; setLoading('Spielstand importiert. Mit „Fortsetzen“ weiterspielen.'); } } catch (e) { alert('Diese Datei ist kein gültiger Spielstand.'); } }; fr.readAsText(file); }
 $('m_export').onclick = exportSave; $('m_import').onclick = $('s_import').onclick = () => $('importfile').click(); $('importfile').onchange = e => { if (e.target.files[0]) importSave(e.target.files[0]); e.target.value = ''; };
 $('m_home').onclick = () => { if (!started || confirm('Zur Startseite? Nicht gespeicherter Fortschritt geht verloren.')) location.href = './'; };
 $('s_opts').onclick = openMenu;
@@ -3408,8 +3426,10 @@ let fpsN = 0, fpsT = 0;
 renderer.setAnimationLoop(() => {
   fpsN++; const tn = performance.now(); if (tn - fpsT > 500) { const fe = document.getElementById('fps'); if (fe && opts.fps) fe.textContent = Math.round(fpsN * 1000 / (tn - fpsT)) + ' fps'; fpsN = 0; fpsT = tn; }
   const now = performance.now() / 1000; const dt = Math.min(now - lastT, 0.05); lastT = now;
+  if (glLost) return; // ohne Grafik-Kontext weder simulieren noch zeichnen
   // Ein Fehler in einem Bild darf das Spiel nicht einfrieren (three fordert den nächsten Frame erst nach dem Callback an)
   try { update(dt); audioUpdate(dt); } catch (e) { loopErrors++; if (loopErrors <= 3 || loopErrors % 300 === 0) console.error('update-Fehler', loopErrors, e); if (loopErrors === 3) showMsg('FEHLER IM SPIEL – bitte melden (Esc › Fehler melden)', 4000); }
-  try { if (composer) composer.render(); else renderer.render(scene, camera); } catch (e) { loopErrors++; if (loopErrors <= 3) console.error('render-Fehler', e); }
+  // Render-Fehler getrennt zählen (aufeinanderfolgend): nach 5 Bildern in Folge Effekte abschalten und direkt zeichnen
+  try { if (composer) composer.render(); else renderer.render(scene, camera); renderErrors = 0; } catch (e) { renderErrors++; if (renderLogs++ < 3) console.error('render-Fehler', e); if (renderErrors === 5) { if (composer) { composerBroken = true; try { disposeComposer(); } catch (e2) { composer = null; } renderErrors = 0; showMsg('EFFEKTE ABGESCHALTET (RENDER-FEHLER)', 4000); } else if (!renderWarned) { renderWarned = true; showMsg('FEHLER BEI DER GRAFIK – bitte melden (Esc › Fehler melden)', 4000); } } }
 });
-let loopErrors = 0;
+let loopErrors = 0, renderErrors = 0, renderLogs = 0, renderWarned = false;
