@@ -16,15 +16,15 @@ export function initGraeber(X) {
     if (M) return M;
     const L = c => new THREE.MeshLambertMaterial({ color: c });
     const dots = document.createElement('canvas'); dots.width = dots.height = 64; const c = dots.getContext('2d');
-    c.fillStyle = 'rgba(200,215,225,0.25)'; c.fillRect(0, 0, 64, 64); c.fillStyle = 'rgba(255,255,255,0.85)';
-    for (let y = 4; y < 64; y += 10) for (let x = 4 + (y / 10 % 2) * 5; x < 64; x += 10) { c.beginPath(); c.arc(x, y, 1.6, 0, 7); c.fill(); }
-    const dotTex = new THREE.CanvasTexture(dots); dotTex.wrapS = dotTex.wrapT = THREE.RepeatWrapping; dotTex.repeat.set(4, 6);
+    c.fillStyle = 'rgba(150,165,175,0.55)'; c.fillRect(0, 0, 64, 64); c.fillStyle = 'rgba(255,255,255,1)'; // Milchglas mit deutlichem Punktraster (Foto Wasserpark)
+    for (let y = 4; y < 64; y += 8) for (let x = 4 + (y / 8 % 2) * 4; x < 64; x += 8) { c.beginPath(); c.arc(x, y, 2.2, 0, 7); c.fill(); }
+    const dotTex = new THREE.CanvasTexture(dots); dotTex.wrapS = dotTex.wrapT = THREE.RepeatWrapping; dotTex.repeat.set(3, 4); dotTex.colorSpace = THREE.SRGBColorSpace;
     M = { sand: L(0xc9bfae), grau: L(0x6e6c68), granit: L(0xa8a49c), dunkel: L(0x3e3f42), klinker: L(0xa2604a), klinkerHell: L(0xc79a86),
       beet: L(0x2f4a26), lav: L(0x6b6a8c), mulch: L(0x4a3426), tanne: L(0x2c4a2a), stamm: L(0x7a4a32), holz: L(0x5a3a26),
       rahmen: L(0x4a4c50), dach: L(0x585a5e), gruen: L(0x2f9a6a), gelb: new THREE.MeshBasicMaterial({ color: 0xf2d21b }),
       vitrine: L(0x8d8f92), anz: new THREE.MeshBasicMaterial({ color: 0x1a1a1a }), anzT: new THREE.MeshBasicMaterial({ color: 0xff9a1a }),
       platte: L(0xb4aea4), kante: L(0xd8d4cc),
-      glas: new THREE.MeshLambertMaterial({ map: dotTex, transparent: true, opacity: 0.55, side: THREE.DoubleSide, depthWrite: false }) };
+      glas: new THREE.MeshLambertMaterial({ map: dotTex, transparent: true, opacity: 0.9, emissive: 0x30363c, side: THREE.DoubleSide, depthWrite: false }) };
     return M;
   }
   const box = (g, w, h, d, m, x, y, z, ry = 0) => { const o = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m); o.position.set(x, y, z); o.rotation.y = ry; g.add(o); return o; };
@@ -112,6 +112,8 @@ export function initGraeber(X) {
   // ---- Platzierung ----
   const railDir = (x, z) => { let best = 1e9, ang = 0; for (const r of CITY.rails || []) { if (r.k === 'platform') continue; const p = r.p; for (let i = 0; i < p.length - 1; i++) { const ax = p[i][0], az = p[i][1], bx = p[i + 1][0], bz = p[i + 1][1]; const dx = bx - ax, dz = bz - az, l = dx * dx + dz * dz || 1; const t = Math.max(0, Math.min(1, ((x - ax) * dx + (z - az) * dz) / l)); const d = (ax + t * dx - x) ** 2 + (az + t * dz - z) ** 2; if (d < best) { best = d; ang = Math.atan2(dz, dx); } } } return best < 400 ? ang : null; };
   function place(grp, x, z, ang) { grp.position.set(x, TH(x, z), z); grp.rotation.y = -ang; grp.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } }); scene.add(grp); return grp; }
+  /** Winkel für place(), damit lokal +z (Steinvorderseiten) zum nächsten Weg aus OSM zeigt; null = kein Weg in 60 m */
+  const wegZu = (x, z) => { let best = 3600, dx0 = 0, dz0 = 0; for (const r of CITY.roads || []) { const p = r.p; if (!p) continue; for (let i = 0; i < p.length - 1; i++) { const ax = p[i][0], az = p[i][1], dx = p[i + 1][0] - ax, dz = p[i + 1][1] - az, l = dx * dx + dz * dz || 1; const t = Math.max(0, Math.min(1, ((x - ax) * dx + (z - az) * dz) / l)); const qx = ax + t * dx - x, qz = az + t * dz - z, d = qx * qx + qz * qz; if (d < best) { best = d; dx0 = qx; dz0 = qz; } } } return best < 3600 ? -Math.atan2(dx0, dz0) : null; };
   function wanted() {
     const px = player.pos.x, pz = player.pos.z, out = [];
     let nh = 0; for (const st of CITY.stops || []) { if (st.k !== 'tram' || nh >= MAX_HALT) continue; if ((st.x - px) ** 2 + (st.z - pz) ** 2 > NAH * NAH) continue; nh++; out.push({ key: 'h' + st.x.toFixed(0) + ',' + st.z.toFixed(0), st }); }
@@ -128,7 +130,7 @@ export function initGraeber(X) {
     for (const e of w) { if (built.has(e.key)) continue;
       if (e.st) { const ang = railDir(e.st.x, e.st.z); if (ang === null) { built.set(e.key, new THREE.Group()); continue; } const s = (e.st.x * 7 + e.st.z * 3) % 2 > 0 ? 1 : -1; // Bahnsteig neben das Gleis
         const ox = -Math.sin(ang) * 3.3 * s, oz = Math.cos(ang) * 3.3 * s; const g = makeHaltestelle(e.st.n || 'Haltestelle'); built.set(e.key, place(g, e.st.x + ox, e.st.z + oz, ang + (s > 0 ? Math.PI : 0))); }
-      else built.set(e.key, place(makeAnlage(), e.a.x, e.a.z, e.a.ang)); }
+      else { const w2 = wegZu(e.a.x, e.a.z); built.set(e.key, place(makeAnlage(), e.a.x, e.a.z, w2 === null ? e.a.ang : w2)); } }
   }
   setInterval(() => { try { update(1.5); } catch (e) { console.warn('graeber', e); } }, 1500); // eigener Takt, keine Zeile in der Spielschleife
   const api = { update, makeGrave, makeAnlage, makeHaltestelle, get count() { return built.size; }, get list() { return [...built].map(([k, g]) => [k, Math.round(g.position.x), Math.round(g.position.z)]); } };
