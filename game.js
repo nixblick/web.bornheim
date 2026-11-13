@@ -3341,7 +3341,11 @@ function update(dt) {
   FX.update(dt); // Partikel (ein Pool, ein Draw-Call)
   // Fahndung
   if (creative.on) player.wanted = 0;
-  if (player.wanted > 0) { player.wantedTimer -= dt; if (player.wantedTimer <= 0) player.wanted = Math.max(0, player.wanted - dt * 0.25); const want = Math.min(Math.floor(player.wanted) + 1, 5); let n = 0; for (const c of cars) if (c.userData.mode === 'police') n++; if (n < want && Math.random() < dt * 0.5) spawnCar(true, player.pos); }
+  if (player.wanted > 0) { let n = 0, nah = false; for (const c of cars) if (c.userData.mode === 'police') { n++; if (!nah && c.position.distanceToSquared(player.pos) < 1225) nah = true; }
+    // Kein Abklingen, solange Polizei dran ist (Streifenwagen < 35 m oder Beamter < 28 m); in Innenräumen und der U-Bahn läuft die Uhr weiter
+    if (!nah) for (const p of peds) if (p.userData.cop && p.userData.state !== 'dead' && p.position.distanceToSquared(player.pos) < 784) { nah = true; break; }
+    if (nah && !(INTERIORS && INTERIORS.inside) && !inPocket(player.pos.x, player.pos.z)) player.wantedTimer = Math.max(player.wantedTimer, 3);
+    player.wantedTimer -= dt; if (player.wantedTimer <= 0) player.wanted = Math.max(0, player.wanted - dt * 0.25); const want = Math.min(Math.floor(player.wanted) + 1, 5); if (n < want && Math.random() < dt * 0.5) spawnCar(true, player.pos); }
   else { for (let i = cars.length - 1; i >= 0; i--) { const c = cars[i]; if (c.userData.mode !== 'police') continue; if (c.position.distanceTo(player.pos) > 120) { disposeCar(c); scene.remove(c); cars.splice(i, 1); unshoot(c); } else { c.userData.mode = 'parked'; c.userData.speed = 0; c.userData.officer = null; } } } // nahe Streifenwagen bleiben stehen statt weiter Beamte abzusetzen
   // Tod
   if (opts.god) player.hp = 100;
@@ -3376,9 +3380,12 @@ function freeSkel(h) { h.traverse(o => { if (o.isSkinnedMesh && o.skeleton && o.
 function despawnPed(h) { freeSkel(h); scene.remove(h); const i = peds.indexOf(h); if (i >= 0) peds.splice(i, 1); const j = shootables.indexOf(h); if (j >= 0) shootables.splice(j, 1); }
 function copCount() { let n = 0; for (const p of peds) if (p.userData.cop && p.userData.state !== 'dead') n++; return n; }
 function spawnOfficer(car) {
-  const h = makeHuman(false, { model: 'swat', keepColors: true, top: 0x1f3a6b, pants: 0x1a2e52, style: 'jacket', hair: 'cap' }); const u = car.userData; const x = car.position.x + Math.cos(u.heading) * 2.2, z = car.position.z - Math.sin(u.heading) * 2.2;
-  if (solidAt(x, z) >= 0) return null; h.position.set(x, TH(x, z), z); const gun = makeGun(); h.userData.hand.add(gun); h.userData.gun = gun; h.userData.aiming = true;
-  Object.assign(h.userData, { road: pick(CITY.roads), seg: 0, dir: 1, side: 1, speed: 2.6, hp: 100, state: 'cop', t: 0, cop: true, shotT: rnd(0.5, 1.5), car });
+  // erst die Wand prüfen, dann das Modell bauen (sonst alle paar Sekunden ein weggeworfener Klon); steht vorn eine Wand, steigt er hinten aus
+  const u = car.userData; let x = car.position.x + Math.cos(u.heading) * 2.2, z = car.position.z - Math.sin(u.heading) * 2.2;
+  if (solidAt(x, z) >= 0) { x = car.position.x - Math.cos(u.heading) * 2.2; z = car.position.z + Math.sin(u.heading) * 2.2; if (solidAt(x, z) >= 0) return null; }
+  const h = makeHuman(false, { model: 'swat', keepColors: true, top: 0x1f3a6b, pants: 0x1a2e52, style: 'jacket', hair: 'cap' });
+  h.position.set(x, TH(x, z), z); const gun = makeGun(); h.userData.hand.add(gun); h.userData.gun = gun; h.userData.aiming = true;
+  Object.assign(h.userData, { road: pick(CITY.roads), seg: 0, dir: 1, side: 1, speed: 2.6, hp: 100, state: 'cop', t: 0, cop: true, shotT: rnd(0.5, 1.5), car, grab: 0, hotT: 0, shots: 0 });
   scene.add(h); peds.push(h); shootables.push(h); u.officer = h; return h;
 }
 function copAI(h, dt) {
@@ -3386,10 +3393,20 @@ function copAI(h, dt) {
   // Fahndung vorbei: Beamter verschwindet (steigt ein). Vorher wurde er zum Passanten mit Pistole, das Auto bekam sofort den nächsten – hunderte „Polizisten“ in Sekunden (Issues #1, #2)
   if (player.wanted <= 0 || player.dead) { if (u.car) { u.car.userData.officer = null; u.car.userData.officerT = 6; } despawnPed(h); return; }
   const dirx = to.x / (d || 1), dirz = to.z / (d || 1); h.rotation.y = Math.atan2(dirx, dirz);
+  // Unter 2 Sternen wird festgenommen statt geschossen. Schusswaffe nur ab 2 Sternen oder wenn der Spieler selbst eine in der Hand hat (wirkt 6 s nach)
+  if (WPN.DEF[WPN.cur].kind === 'gun') u.hotT = 6; else if (u.hotT > 0) u.hotT -= dt;
+  const fire = player.wanted >= 2 || u.hotT > 0; u.aiming = fire;
+  if (!fire) { // Festnahme: hinlaufen (schneller als Streife, langsamer als ein rennender Spieler), Waffe unten, 1,4 s festhalten wie die Demo-Polizei
+    if (!u.warned) { u.warned = true; showMsg('POLIZEI · Stehen bleiben!', 2500); }
+    if (d > (player.car ? 4 : 1.1)) { moveWithCollision(h.position, dirx * 5 * dt, dirz * 5 * dt, 0.3); h.position.y = floorAt(h.position.x, h.position.z, h.position.y + 0.3); animateWalk(h, u.t, 5.5); }
+    else animateWalk(h, u.t, 0);
+    if (!player.car && !(player.bustedT > 0) && d < 1.35) { u.grab += dt; if (u.grab > 1.4) { u.grab = 0; DEMO.busted(); } } else u.grab = Math.max(0, u.grab - dt);
+    return;
+  }
   if (d > 9) { moveWithCollision(h.position, dirx * u.speed * dt, dirz * u.speed * dt, 0.3); h.position.y = floorAt(h.position.x, h.position.z, h.position.y + 0.3); animateWalk(h, u.t, 4); }
   else animateWalk(h, u.t, 0);
   u.armR.rotation.x = -Math.PI / 2; u.armL.rotation.x = -Math.PI / 2; u.armL.rotation.z = -0.35;
-  u.shotT -= dt; if (u.shotT <= 0 && d < 28) { u.shotT = rnd(0.9, 1.6); const from = _shotFrom; u.gun.userData.muzzle.getWorldPosition(from); const hit = Math.random() < (player.car ? 0.25 : 0.4); const target = _shotTo.copy(player.pos); target.y += 1.2; if (!hit) { target.x += rnd(-2, 2); target.y += rnd(-1, 1.5); target.z += rnd(-2, 2); }
+  u.shotT -= dt; if (u.shotT <= 0 && d < 28) { u.shotT = rnd(0.9, 1.6); u.shots++; const from = _shotFrom; u.gun.userData.muzzle.getWorldPosition(from); const hit = Math.random() < (player.car ? 0.25 : 0.4); const target = _shotTo.copy(player.pos); target.y += 1.2; if (!hit) { target.x += rnd(-2, 2); target.y += rnd(-1, 1.5); target.z += rnd(-2, 2); }
     tracer(from, target, 0.04, 90); sfx('shot', clamp(1 - d / 40, 0.2, 0.7));
     if (hit) { if (player.car) { player.car.userData.hp -= 6; if (player.car.userData.hp <= 0) explode(player.car); } else player.hp -= 9; } }
 }
@@ -3409,7 +3426,7 @@ function policeAI(c, dt) {
   if (Math.abs(u.speed) < 1 && d > 8) { u.stuck = (u.stuck || 0) + dt; if (u.stuck > 1.5) { ctrl.fwd = false; ctrl.back = true; ctrl.left = !ctrl.left; if (u.stuck > 3) u.stuck = 0; } } else u.stuck = 0;
   driveCar(c, dt, ctrl);
   if (!player.car && d < 2.6 && Math.abs(u.speed) > 4) player.hp -= 12 * dt;
-  u.officerT = Math.max(0, (u.officerT || 0) - dt); if (player.wanted > 0 && !player.car && d < 24 && Math.abs(u.speed) < 3 && !u.officer && u.officerT <= 0 && copCount() < 4) { spawnOfficer(c); u.officerT = 4; }
+  u.officerT = Math.max(0, (u.officerT || 0) - dt); if (player.wanted > 0 && !player.dead && !player.car && d < 24 && Math.abs(u.speed) < 3 && !u.officer && u.officerT <= 0 && copCount() < 4) { spawnOfficer(c); u.officerT = 4; }
 }
 // Dynamisches Scheinwerfer-SpotLight & Blaulicht-PointLight (gepoolt, nur auf Hoch/Ultra aktiv; bei visible=false 0 GPU-Kosten)
 let carSpot = null, sirenLight = null;
@@ -3445,9 +3462,11 @@ function hurtPlayer(kind, amt) { if (player.dead) return; if (!opts.god) player.
 function updateFx(dt) { for (const k of ['spray', 'water', 'paint']) { fxEl[k] = Math.max(0, fxEl[k] - dt); $('fx_' + k).style.opacity = Math.min(1, fxEl[k] / (k === 'water' ? 1 : 2)); } if (fxEl.spray > 0 && Math.random() < dt * 0.8) sfx('cough', 0.4); }
 let cardT = null; function card(title, sub, sec = 4) { const el = $('card'); el.innerHTML = `<h2>${title}</h2>${sub ? '<p>' + sub + '</p>' : ''}`; el.style.display = 'block'; el.style.opacity = 1; clearTimeout(cardT); cardT = setTimeout(() => { el.style.opacity = 0; cardT = setTimeout(() => el.style.display = 'none', 600); }, sec * 1000); }
 let breathEl = null, breathHint = false;
-function respawn() { player.dead = false; player.hp = 100; player.breath = 1; player.drowning = false; player.wanted = 0; msgEl.style.display = 'none'; for (const c of cars) if (c.userData.police && c !== player.car) c.userData.mode = 'parked'; }
+// Sterben darf nicht billiger sein als eine Festnahme: Behandlung kostet 10 %, mit Fahndung 15 % und die Waffen wie bei busted()
+function respawn() { const w = player.wanted; player.dead = false; player.hp = 100; player.breath = 1; player.drowning = false; player.wanted = 0; msgEl.style.display = 'none';
+  if (!opts.god && !creative.on) { player.money = Math.floor(player.money * (w > 0 ? 0.85 : 0.9)); if (w > 0) WPN.confiscate(); card('NOTAUFNAHME', w > 0 ? 'Behandlung bezahlt. Die Polizei hat Waffen und Pyro beschlagnahmt.' : 'Behandlung bezahlt.'); } for (const c of cars) if (c.userData.police && c !== player.car) c.userData.mode = 'parked'; }
 
-window.G = { STR, BUILD_STAT, LOAD_STAT, VERY_WEAK, CAR_INST_STAT, get CAR_INST() { return CAR_INST; }, IGPU, isIGPU, optsToSave, get PHONE() { return PHONE; }, barrierHit, HELI, get EULEN() { return EULEN; }, get VOKA() { return VOKA; }, get LAUF() { return LAUF; }, get NEBENJOBS() { return NEBENJOBS; }, get RASEN() { return RASEN; }, get ZIVIL() { return ZIVIL; }, makeMoto, makeAmbulance, updateBikeRacks, onMotorway, PROGRESS, INTERIORS, explode, makeBike, FX, puff, burst, smoke, LOW_GFX, WEAK_GPU, get canvasTexCount() { return _allCanvasTex.length; }, get ANISO() { return ANISO; }, get roadMat() { return roadMatRef; }, DEMN, DEMT, R_DATA, unregisterTile, SHOPS, TILES, WORLD, WIDX, streamUpdate, streamInit, buildTileNow, TS, WPN, DEMO, STORY, FIRE, X, card, hurtPlayer, composerRef: () => composer,  autoQuality, get QUALITY_AUTO() { return QUALITY_AUTO; }, groundH, footTH, thMin, FOOT_SINK, dentCar, deckAt, surfAt, signalPoles, treeSpots, lampSpots, pushOffRoads, onOtherRoad, floorAt, solidAtH, solidAt, roofHeight, camShake,  CHAR, CAR_TPL, playAnim, makeHuman, makeCar, makeGun, applyQuality,  staticParked, chunkStatic,  saveGame, loadGame, world, opts, pickups, weather, trams, scene, cars, peds, player, camera, camYaw, camPitch, keys, CITY, DEM, TH, renderer, sun, hemi, THREE, shoot, toggleCar, update, toggleCreative, creative, creativePlace, creativeSpawnerActive, get barrierCount() { let n = 0; for (const v of barrierGrid.values()) n += v.length; return n; } };
+window.G = { STR, BUILD_STAT, LOAD_STAT, VERY_WEAK, CAR_INST_STAT, get CAR_INST() { return CAR_INST; }, IGPU, isIGPU, optsToSave, get PHONE() { return PHONE; }, barrierHit, HELI, get EULEN() { return EULEN; }, get VOKA() { return VOKA; }, get LAUF() { return LAUF; }, get NEBENJOBS() { return NEBENJOBS; }, get RASEN() { return RASEN; }, get ZIVIL() { return ZIVIL; }, makeMoto, makeAmbulance, updateBikeRacks, onMotorway, PROGRESS, INTERIORS, explode, makeBike, FX, puff, burst, smoke, LOW_GFX, WEAK_GPU, get canvasTexCount() { return _allCanvasTex.length; }, get ANISO() { return ANISO; }, get roadMat() { return roadMatRef; }, DEMN, DEMT, R_DATA, unregisterTile, SHOPS, TILES, WORLD, WIDX, streamUpdate, streamInit, buildTileNow, TS, WPN, DEMO, STORY, FIRE, X, card, hurtPlayer, composerRef: () => composer,  autoQuality, get QUALITY_AUTO() { return QUALITY_AUTO; }, groundH, footTH, thMin, FOOT_SINK, dentCar, deckAt, surfAt, signalPoles, treeSpots, lampSpots, pushOffRoads, onOtherRoad, floorAt, solidAtH, solidAt, roofHeight, camShake,  CHAR, CAR_TPL, playAnim, makeHuman, makeCar, makeGun, applyQuality,  staticParked, chunkStatic,  saveGame, loadGame, world, opts, pickups, weather, trams, scene, cars, peds, player, camera, camYaw, camPitch, keys, CITY, DEM, TH, renderer, sun, hemi, THREE, shoot, toggleCar, update, toggleCreative, creative, creativePlace, creativeSpawnerActive, get barrierCount() { let n = 0; for (const v of barrierGrid.values()) n += v.length; return n; }, spawnOfficer };
 try { initDebugOverlay(window.G); } catch (e) { console.warn('Debug-Overlay aus', e); } // F3 und G.PERF (#162), muss vor setAnimationLoop stehen
 let fpsN = 0, fpsT = 0;
 renderer.setAnimationLoop(() => {
