@@ -151,6 +151,12 @@ export interface Ctx {
   // Laufrunden (#128): von game.js nach initVokabaum gesetzt
   VOKA_BUSY?: () => boolean;
   PROGRESS_GAIN?: (n: number, why?: string) => void;
+  // Rasen (rasen.js): vor initRasen per Object.assign gesetzt
+  LOW_GFX?: boolean;
+  WEAK_GPU?: boolean;
+  waterAt?: (x: number, z: number, y?: number) => any;
+  deckAt?: (x: number, z: number, y?: number, reach?: number) => any;
+  rasenRoad?: (x: number, z: number) => boolean;
   // per Object.assign nach initWeapons… (game.js)
   wachen: any;
   nearestRoadDir: any;
