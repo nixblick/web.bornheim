@@ -2941,6 +2941,7 @@ function registerTile(t) {
   for (const w of d.water || []) waterAdd(w);
   for (const s of d.signals || []) { const k = key(Math.floor(s[0] / CELL), Math.floor(s[1] / CELL)); if (!SIGGRID.has(k)) SIGGRID.set(k, []); SIGGRID.get(k).push(s); }
   for (const k of WKEYS) if (k !== 'buildings' && k !== 'roads' && k !== 'rails' && d[k]) for (const o of d[k]) WORLD[k].push(o);
+  if (d.green && d.green.length) WORLD.greenVer = (WORLD.greenVer | 0) + 1; // rasen.js baut seinen Index neu
   t.bar = []; /* Zäune kommen erst mit dem Bild (buildDetails): beim Laden fehlen oft noch Straßen und Häuser der Nachbarkacheln, dann stand das Hindernis mitten auf der Straße, das Bild aber nicht */
   if (typeof DEMO !== 'undefined' && DEMO && DEMO.addRoads) DEMO.addRoads(d.roads || []);
 }
@@ -2962,6 +2963,7 @@ function unregisterTile(t) {
   for (const w of d.water || []) if (w.x0 !== undefined) for (let cx = Math.floor(w.x0 / CELL); cx <= Math.floor(w.x1 / CELL); cx++) for (let cz = Math.floor(w.z0 / CELL); cz <= Math.floor(w.z1 / CELL); cz++) gridDrop(waterGrid, key(cx, cz), v => v === w);
   for (const s of d.signals || []) gridDrop(SIGGRID, key(Math.floor(s[0] / CELL), Math.floor(s[1] / CELL)), v => v === s);
   for (const k of WKEYS) { if (k === 'buildings' || !d[k] || !d[k].length) continue; /* Straßen, Gleise und alle Listen in Ort kompaktieren (CITY teilt die Arrays) */ const S = new Set(d[k]); const L = WORLD[k]; let w = 0; for (let i = 0; i < L.length; i++) if (!S.has(L[i])) L[w++] = L[i]; L.length = w; }
+  if (d.green && d.green.length) WORLD.greenVer = (WORLD.greenVer | 0) + 1; // rasen.js baut seinen Index neu
   barrierDrop(t); barrierDrop(t, 'barH');
   DEMT.delete(t.k); DEMN.delete(dkey(t.tx, t.tz)); thK = NaN; thH = null; t.mm = null; t.data = null; t.rd = []; t.rp = []; t.bi = t.bar = null; TILES.delete(t.k);
 }
