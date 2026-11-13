@@ -1,0 +1,7 @@
+[
+  { "n": "start_bornheim", "x": -138, "z": 372, "shot": false },
+  { "n": "hauptwache_aus", "ride": ["", "hauptwache"], "leave": true,
+    "expect": "Math.hypot(window.G.player.pos.x + 2201, window.G.player.pos.z - 1727) < 120" },
+  { "n": "konstablerwache_aus", "ride": ["", "konstablerwache"], "leave": true,
+    "expect": "Math.hypot(window.G.player.pos.x + 1601, window.G.player.pos.z - 1628) < 120" }
+]
