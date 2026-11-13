@@ -15,7 +15,7 @@ export function initDebugOverlay(G) {
   // #173: Zeit außerhalb update+render sichtbar machen. Lange Bilder/Aufgaben des Browsers (long-animation-frame, sonst longtask) je Quelle,
   // Arbeit nach dem Kachelladen (Promise, außerhalb der Schleife), Zuwachs an Shadern/Geometrien/Texturen je Sekunde, Eigenkosten des Overlays
   const LAF = []; // { t, dur, script, src } der letzten 5 s
-  let lafType = null, po = null, buildMax = 0, buildStep = '', loadMs = 0, loadN = 0, lastRes = null, resDelta = null, resT = 0;
+  let lafType = null, po = null, buildMax = 0, buildStep = '', syncMs = 0, syncN = 0, loadMs = 0, loadN = 0, lastRes = null, resDelta = null, resT = 0;
   function observe(on) {
     if (!on) { if (po) po.disconnect(); po = null; return; } if (po || typeof PerformanceObserver === 'undefined') return;
     const types = PerformanceObserver.supportedEntryTypes || []; lafType = types.includes('long-animation-frame') ? 'long-animation-frame' : types.includes('longtask') ? 'longtask' : null; if (!lafType) return;
@@ -80,7 +80,7 @@ export function initDebugOverlay(G) {
   function endFrame(q, t0, t1) {
     if (q) { gl.endQuery(ext.TIME_ELAPSED_EXT); pending.push(q); }
     if (lastT) push(ft, t0 - lastT); lastT = t0; push(cpu, t1 - t0);
-    const B = G.BUILD_STAT; if (B) { push(bld, B.ms); if (B.max > buildMax) { buildMax = B.max; buildStep = B.step; } B.ms = 0; B.max = 0; }
+    const B = G.BUILD_STAT; if (B) { push(bld, B.ms); if (B.max > buildMax) { buildMax = B.max; buildStep = B.step; } syncMs += B.sync || 0; syncN += B.syncN || 0; B.ms = 0; B.max = 0; B.sync = 0; B.syncN = 0; }
     const L = G.LOAD_STAT; if (L) { loadMs += L.ms; loadN += L.n; L.ms = 0; L.n = 0; } resStep();
     const r = renderer.info.render, m = renderer.info.memory;
     frameInfo = /** @type {any} */ ({ calls: r.calls, triangles: r.triangles, points: r.points, lines: r.lines, geometries: m.geometries, textures: m.textures, programs: (renderer.info.programs || []).length });
@@ -110,7 +110,7 @@ export function initDebugOverlay(G) {
     return { calls: f.calls, triangles: f.triangles, geometries: f.geometries, textures: f.textures, programs: f.programs,
       frameMs: stat(ft), cpuMs: stat(cpu), gpuMs: ext ? stat(gpu) : 'nicht messbar (EXT_disjoint_timer_query_webgl2 fehlt)',
       groups: f.groups || null, top, quality: G.opts.quality, scale: G.opts.scale || 1, pixelRatio: renderer.getPixelRatio(), buffer: [size.x, size.y],
-      buildMs: stat(bld), buildSliceMax: { ms: +buildMax.toFixed(1), step: buildStep }, loadTile: { ms: Math.round(loadMs), n: loadN }, overlayMs: stat(ovl),
+      buildMs: stat(bld), buildSliceMax: { ms: +buildMax.toFixed(1), step: buildStep }, buildSync: { ms: Math.round(syncMs), n: syncN }, loadTile: { ms: Math.round(loadMs), n: loadN }, overlayMs: stat(ovl),
       gapMs: (() => { const a = stat(ft), c = stat(cpu); return a && c ? +(a.mean - c.mean).toFixed(1) : null; })(), longFrames: lafStat(), resPerS: resDelta,
       tiles: [...G.TILES.values()].filter(t => t.built).length, lowGfx: !!G.LOW_GFX, weakGpu: !!G.WEAK_GPU, view: G.opts.view || 700 };
   }
@@ -119,10 +119,10 @@ export function initDebugOverlay(G) {
   async function measure({ frames = 60, maxMs = 30000, groups: wg = true } = {}) {
     const dyn = G.opts.dynres; G.opts.dynres = false; start(wg);
     try { const t0 = performance.now(); ft.length = cpu.length = gpu.length = 0; lastT = 0;
-      buildMax = 0; loadMs = loadN = 0; bld.length = ovl.length = 0;
+      buildMax = 0; loadMs = loadN = 0; syncMs = syncN = 0; bld.length = ovl.length = 0;
       while (cpu.length < frames && performance.now() - t0 < maxMs) await new Promise(r => setTimeout(r, 50));
       await new Promise(r => setTimeout(r, 200)); // letzte GPU-Abfragen einsammeln
-      const s = snapshot(); s.partial = cpu.length < frames; return s;
+      const s = snapshot(); s.partial = cpu.length < frames; s.messMs = Math.round(performance.now() - t0); return s;
     } finally { stop(wg); G.opts.dynres = dyn; }
   }
   // Warten, bis alle geladenen Kacheln im Umkreis gebaut sind (nach Sprung oder Wechsel der Grafikstufe)
