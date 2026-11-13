@@ -82,6 +82,10 @@
   #menu.mn .pmbar label:not(:first-child),#menu.mn .pmlines{display:none}
   #menu.mn .mn-foot{display:none}
 }
+/* Handy hochkant: fünf Reiter brechen in zwei Zeilen um statt ineinander zu laufen */
+@container mn (max-width:480px){
+  #menu.mn .mn-nav{flex-wrap:wrap;justify-content:center}#menu.mn .mn-nav button{flex:0 0 auto;padding:8px 8px}
+}
 /* Spielstände (spielstaende.js) */
 #menu.mn .mn-stand .mn-kicker{margin:14px 0 8px}
 #menu.mn .mn-standneu,#menu.mn .mn-standakt{display:flex;flex-wrap:wrap;gap:8px}
