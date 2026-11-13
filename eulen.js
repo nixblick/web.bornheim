@@ -1,6 +1,7 @@
 // Frischlufteulen im Spiel (#61, erster Kunde): Plakate an Litfaßsäulen (geteilt mit weiteren Kunden-Motiven, #81 Vokabaum), Eulen-Lauf und Eulen-Marathon mit Ziel an der Festhalle.
 // Daten nur aus https://frischlufteulen.de/api/spiel/strecken.json (einmal je Sitzung), nichts ausgedacht: ohne freigegebene Strecke keine Plakate und keine Mission.
 // Format je Strecke: { name, laenge_km, linie: [[lon, lat], …], link, marathon? }. Keine Nutzerdaten, keine fremden Marken.
+/** @param {import('./types').Ctx} X */
 export function initEulen(X) {
   const { THREE, scene, player, TH, showMsg, canvasTex, card, sfx, burst, solidAt } = X;
   const LAT0 = 50.129441, LON0 = 8.7096938, R = 6371000;

@@ -33,9 +33,20 @@
   "z": 2200,
   "tx": -4061,
   "tz": 1898,
-  "pitch": -0.25,
+  "pitch": -0.3,
   "wait": 12000,
-  "js": "JSON.stringify({ haze: (window.G.X.FAR_HAZE || []).length })",
-  "expect": "(window.G.X.FAR_HAZE || []).length >= 1"
+  "js": "(() => { let lm = []; window.G.scene.traverse(o => { if (o.isGroup && o.userData && o.userData.b) lm.push(o.userData.b.lm); }); return JSON.stringify(lm); })()",
+  "expect": "(() => { let ok = false; window.G.scene.traverse(o => { if (o.isGroup && o.userData && o.userData.b && o.userData.b.lm === 'messe') ok = true; }); return ok; })()"
+ },
+ {
+  "n": "fern_messeturm_1200m",
+  "x": -2950,
+  "z": 2350,
+  "tx": -4061,
+  "tz": 1898,
+  "pitch": -0.3,
+  "wait": 12000,
+  "js": "(() => { let lm = []; window.G.scene.traverse(o => { if (o.isGroup && o.userData && o.userData.b) lm.push(o.userData.b.lm); }); return JSON.stringify(lm); })()",
+  "expect": "(() => { let ok = false; window.G.scene.traverse(o => { if (o.isGroup && o.userData && o.userData.b && o.userData.b.lm === 'messe') ok = true; }); return ok; })()"
  }
 ]
