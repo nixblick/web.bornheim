@@ -18,7 +18,9 @@ export function initEulen(X) {
     const full = pts.length === all.length; const endIn = all.length > 1 && inArea(all[all.length - 1]);
     if (pts.length < 2 || km < 1) { console.info(`Frischlufteulen: „${r.name}“ nicht angeboten, im Spielgebiet nur ${km} km`); return null; }
     return { ...r, pts, km_gebiet: km, ganz: full, ziel: endIn ? all[all.length - 1] : pts[pts.length - 1], info: full ? `${r.laenge_km} km` : `Abschnitt im Spielgebiet: ${String(km).replace('.', ',')} km von ${String(r.laenge_km).replace('.', ',')} km` }; };
-  load().then(s => { routes = s.map(r => prep({ ...r, ...clean(r), marathon: r.marathon || /marathon/i.test(r.name || '') })).filter(Boolean); if (routes.length) { for (const p of posters) scene.remove(p); posters = []; /* Säulen neu verteilen, jetzt mit Eulen-Motiv */ } buildStart(); });
+  // use(): auch für die Probe im Spieltest, deren Ursprung (127.0.0.1) der Endpunkt per CORS nicht bedient
+  const use = s => { if (startMark) { for (const m of startMark) scene.remove(m); startMark = null; } routes = s.map(r => prep({ ...r, ...clean(r), marathon: r.marathon || /marathon/i.test(r.name || '') })).filter(Boolean); if (routes.length) { for (const p of posters) scene.remove(p); posters = []; /* Säulen neu verteilen, jetzt mit Eulen-Motiv */ } buildStart(); };
+  load().then(use);
 
   // ---------- Plakat (gezeichnet): Eule, Titel, Streckenname ----------
   const posterTex = name => canvasTex(256, 384, (c, w, h) => { const g = c.createLinearGradient(0, 0, 0, h); g.addColorStop(0, '#1f5b3a'); g.addColorStop(1, '#0f2f20'); c.fillStyle = g; c.fillRect(0, 0, w, h);
@@ -86,5 +88,5 @@ export function initEulen(X) {
     return null; });
   function update(dt) { t += dt; if (Math.floor(t) !== Math.floor(t - dt)) { updatePosters(); placeMarks(); } if (run) runUpdate();
     if (finish) for (const [i, f] of finish.fans.entries()) f.position.y = 0.8 + Math.abs(Math.sin(t * 6 + i)) * 0.35; }
-  return { update, get posters() { return posters; }, get routes() { return routes; }, get run() { return run; }, get marks() { return startMark || []; }, wps, start, stop };
+  return { update, get posters() { return posters; }, get routes() { return routes; }, get run() { return run; }, get marks() { return startMark || []; }, wps, use, start, stop };
 }
