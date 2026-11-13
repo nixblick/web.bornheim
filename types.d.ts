@@ -148,6 +148,9 @@ export interface Ctx {
   onG?: any;
   perks?: any;
   shopOpen?: any;
+  // Laufrunden (#128): von game.js nach initVokabaum gesetzt
+  VOKA_BUSY?: () => boolean;
+  PROGRESS_GAIN?: (n: number, why?: string) => void;
   // per Object.assign nach initWeapons… (game.js)
   wachen: any;
   nearestRoadDir: any;

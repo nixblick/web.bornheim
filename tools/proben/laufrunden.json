@@ -1,0 +1,8 @@
+[
+ { "n": "laufrunde_start", "x": -138, "z": 372, "wait": 12000,
+   "js": "(async () => { const G = window.G, L = G.LAUF; let ok = false; for (let i = 0; i < 10 && !ok; i++) { ok = L.force(); if (!ok) await new Promise(r => setTimeout(r, 1500)); } return JSON.stringify({ ok, punkte: L.run ? L.run.pts.length : 0, km: L.run ? +(L.run.len / 1000).toFixed(2) : 0 }); })()",
+   "expect": "!!window.G.LAUF.run" },
+ { "n": "laufrunde_ziel", "wait": 2000,
+   "js": "(async () => { const G = window.G, L = G.LAUF, f0 = G.PROGRESS.P.fit; while (L.run) { const [x, z] = L.run.pts[L.run.i]; G.player.pos.set(x, G.TH(x, z), z); await new Promise(r => setTimeout(r, 400)); } return JSON.stringify({ vorher: f0, nachher: G.PROGRESS.P.fit }); })()",
+   "expect": "window.G.PROGRESS.P.fit > 0 && !window.G.LAUF.run" }
+]
