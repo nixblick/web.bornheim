@@ -2199,7 +2199,12 @@ function spawnCar(police = false, near = null, minD = 60, maxD = 220, bike = fal
   // Modus, Parkplatz und Hauswand-Probe zuerst nur mit Koordinaten: abgelehnte Plätze kosten keinen Fahrzeugbau mehr (GLB-Klon samt Materialien)
   let sh = p.heading, sx = p.x, sz = p.z; const sdir = p.road.o ? p.road.o : p.dir; if (sdir < 0) sh += Math.PI;
   const smode = police ? 'police' : (Math.random() < (bike ? 0.65 : 0.55) || p.road.mw || p.road.ry ? 'ai' : 'parked');
-  if (smode === 'parked') { const side = p.road.o && Math.random() < 0.5 ? 1 : -1; /* #102: (cos h, -sin h) zeigt links; Rechtsverkehr parkt rechts in Fahrtrichtung, nur in Einbahnstraßen auch links */ const w = p.road.w / 2 + (bike ? 0.7 : 1.1); sx += Math.cos(sh) * side * w; sz -= Math.sin(sh) * side * w; if (bike) sh += side * Math.PI / 2 * (Math.random() < 0.5 ? 1 : -1) * 0.5; }
+  if (smode === 'parked') { const side = p.road.o && Math.random() < 0.5 ? 1 : -1; /* #102: (cos h, -sin h) zeigt links; Rechtsverkehr parkt rechts in Fahrtrichtung, nur in Einbahnstraßen auch links */ const w = p.road.w / 2 + (bike ? 0.7 : 0.55); sx += Math.cos(sh) * side * w; sz -= Math.sin(sh) * side * w; if (bike) sh += side * Math.PI / 2 * (Math.random() < 0.5 ? 1 : -1) * 0.5;
+    if (!bike) { // Autos parken wie die festen Reihen (buildParked): gleicher Randabstand, nur auf 5 bis 9,5 m breiten Straßen, nicht in einem Reihenauto, nicht in Einmündungen, an Ampeln, Haltestellen und Überwegen
+      if (p.road.ped || p.road.w < 5 || p.road.w > 9.5) return null;
+      for (const sp of staticParked) if (sp.active && (sp.x - sx) ** 2 + (sp.z - sz) ** 2 < 30) return null;
+      const ex = Math.sin(sh) * 2.2, ez = Math.cos(sh) * 2.2;
+      if (onOtherRoad(sx + ex, sz + ez, p.road, 1.5) || onOtherRoad(sx - ex, sz - ez, p.road, 1.5) || nearPoint(sx, sz, signalsNear(sx, sz), 10) || nearPoint(sx, sz, CITY.stops, 12) || nearPoint(sx, sz, CITY.crossings, 7)) return null; } }
   const fr = bike ? 0.8 : 1.8;
   if (solidAt(sx, sz) >= 0 || solidAt(sx + fr, sz) >= 0 || solidAt(sx - fr, sz) >= 0 || solidAt(sx, sz + fr) >= 0 || solidAt(sx, sz - fr) >= 0) return null;
   const c = moto ? makeMoto() : bike ? makeBike() : amb ? makeAmbulance() : makeCar(police, wantBus ? 'bus' : null); c.position.set(sx, roadY(p.road, p.x, p.z), sz);
