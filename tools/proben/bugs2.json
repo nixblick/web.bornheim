@@ -12,7 +12,7 @@
     "x": -138,
     "z": 372,
     "wait": 3000,
-    "js": "(async () => { const G = window.G, P = G.player; if (P.car) G.toggleCar(); const c = G.cars.find(c => c.userData && c.userData.bike && c.userData.mode !== 'wreck' && !c.userData.police); if (!c) return 'kein Rad'; G.X.tipBike(c); const w = c.userData.mode; P.pos.set(c.position.x + 1.5, G.TH(c.position.x, c.position.z), c.position.z); P.mesh.position.copy(P.pos); for (let i = 0; i < 5; i++) G.update(1 / 60); G.toggleCar(); for (let i = 0; i < 10; i++) G.update(1 / 60); window.__b101 = P.car === c && Math.abs(c.rotation.z) < 0.01; const r = JSON.stringify({ vorher: w, drauf: P.car === c, aufrecht: Math.abs(c.rotation.z) < 0.01, moto: !!c.userData.moto }); return r; })()",
+    "js": "(async () => { const G = window.G, P = G.player; if (P.car) G.toggleCar(); const c = G.cars.find(c => c.userData && c.userData.bike && c.userData.mode !== 'wreck' && !c.userData.police); if (!c) return 'kein Rad'; G.X.tipBike(c); const w = c.userData.mode; P.pos.set(c.position.x + 1.5, G.TH(c.position.x, c.position.z), c.position.z); P.mesh.position.copy(P.pos); for (let i = 0; i < 5; i++) G.update(1 / 60); G.toggleCar(); for (let i = 0; i < 10; i++) G.update(1 / 60); window.__b101 = P.car === c && Math.abs(c.rotation.z) < 0.01; const r = JSON.stringify({ vorher: w, drauf: P.car === c, aufrecht: Math.abs(c.rotation.z) < 0.01, moto: !!c.userData.moto }); if (P.car) G.toggleCar(); return r; })()",
     "expect": "window.__b101 === true"
   },
   {
