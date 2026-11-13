@@ -25,7 +25,7 @@ import { autolack } from './autolack.js';
 import { initVokabaum } from './vokabaum.js';
 import { initLaufrunden } from './laufrunden.js';
 import { initNebenjobs } from './nebenjobs.js';
-import { installDunst, initDunst } from './dunst.js'; import { makeHimmel } from './himmel.js';
+import { installDunst, initDunst } from './dunst.js'; import { makeHimmel } from './himmel.js'; import { initWasser } from './wasser.js';
 import { weather, initWetter } from './wetter.js';
 import { initRasen, rasenMat, RASEN_KINDS } from './rasen.js';
 import { initLandmarks } from './landmarks.js';
@@ -64,7 +64,7 @@ const camera = new THREE.PerspectiveCamera(65, (innerWidth > 0 && innerHeight > 
 
 const hemi = new THREE.HemisphereLight(0x8a90c8, 0x4a4038, 1.1); scene.add(hemi);
 const world = { hour: 8, speed: 0.25 / 60, headlights: true }; /* Start 8 Uhr, 1 Spielstunde = 4 Minuten (12.11.2026, André) */
-let skyU = null, HIMMEL = null, skyDome = null, sunDisk = null, skylineMesh = null, skylineBeacons = null;
+let skyU = null, HIMMEL = null, WASSER = null, skyDome = null, sunDisk = null, skylineMesh = null, skylineBeacons = null;
 let WET = null, roadMatRef = null; const lampSpots = []; let streaks = null, streakT = 0;
 // Wiederverwendete Hilfsobjekte für updateStreaks: nichts wird je Lauf neu angelegt
 const _stO = new THREE.Object3D(), _stC = new THREE.Color(), _stD = [], _stL = [], _stI = [], _stCmp = (a, b) => _stD[a] - _stD[b];
@@ -1056,6 +1056,7 @@ function updateSky(dt) {
   if (!skyDome) return; skyDome.position.copy(camera.position);
   const sd = _sunV.copy(world.sunDir).normalize(); sunDisk.position.copy(camera.position).addScaledVector(sd, 700); sunDisk.material.opacity = clamp(world.day * 1.2 - weather.cloud * 0.9, 0, 1); sunDisk.visible = sunDisk.material.opacity > 0.02;
   HIMMEL.update(dt, { day: world.day, cloud: weather.cloud, flash: weather.flash, night: !!world.night, sunColor: sun.color, sunDir: world.sunDir });
+  if (WASSER) WASSER.update(dt, { sky: skyU.top.value, sunColor: sun.color, sunDir: world.sunDir, sunI: sun.intensity, night: !!world.night, camera });
   if (skylineMesh) {
     const showSkyline = !POCKET;
     skylineMesh.visible = showSkyline;
@@ -1609,7 +1610,7 @@ function* buildCity() { CITY_PART = 'c0';
     if (all.length) { const m = new THREE.Mesh(mergeGeometries(all), vcolMat()); m.castShadow = true; scene.add(m); } }
   const waters = [];
   yield; CITY_PART = 'c11'; for (const w of CITY.water) { const shape = new THREE.Shape(w.p.map(([x, z]) => new THREE.Vector2(x, -z))); const geo = new THREE.ShapeGeometry(shape); geo.rotateX(-Math.PI / 2); geo.translate(0, Math.min(...w.p.map(([x, z]) => TH(x, z))) + 0.2, 0); waters.push(geo); }
-  if (waters.length) scene.add(new THREE.Mesh(mergeGeometries(waters), shLambert(0x4f7fa0)));
+  if (waters.length) scene.add(new THREE.Mesh(mergeGeometries(waters), LOW_GFX ? shLambert(0x4f7fa0) : (WASSER || (WASSER = initWasser(THREE))).mat)); // ab Mittel Wellen und Himmel im Wasser (wasser.js, #152)
   // Straßen als Bänder
   const wSurf = (x, z) => { const c = waterGrid.get(key(Math.floor(x / CELL), Math.floor(z / CELL))); if (c) for (const w of c) if (x >= w.x0 && x <= w.x1 && z >= w.z0 && z <= w.z1 && pointInPoly(x, z, w.p)) return (w.wy ?? (TH(x, z) + 0.2)) + 0.04; return TH(x, z); };
   const ribbon = (lines, y, widthFn) => {

@@ -2,6 +2,7 @@
 
 ## 2026-11-14
 
+- **Wasser mit Wellen und Himmel (#152, Sunset-Rest, `wasser.js`):** Main, Hafenbecken und Weiher sind ab „Mittel“ keine flache Farbfläche mehr: kleine wandernde Wellen (zwei Zugriffe auf eine kachelbare Rauschtextur), Himmelsfarbe im Wasser, die zum flachen Blick hin zunimmt, und Sonnenglanz. Das eingebaute Lambert-Material bleibt (Licht, Schatten, Nebel, Höhendunst unverändert), gleiche Geometrie, gleiche Draw-Calls. Sparstufe und schwache GPU behalten die flache Farbe. Lokal am Mainkai angesehen (Tag, Abend), Probe `gfx-wasser`.
 - **Ampeln, Vokabaum und Autosave (Audit 3):** KI-Autos und Busse ignorieren die Ampeln an der Ausfahrt jetzt nach jeder Kreuzung, auch wenn sie geradeaus fahren (bisher nur bei etwa 30 % der Knoten). Wird die Vokabaum-Mission im Handy gestartet, bleibt die Maus beim Schließen des Handys frei, damit die Antwortknöpfe anklickbar sind. Nach „Neues Spiel“ überschreibt das automatische Speichern einen vorhandenen Spielstand nicht mehr still; das passiert erst nach bewusstem Speichern (F6, Menü, Handy, Spielstand-Platz) oder Laden.
 - **Kleinigkeiten:** Offline-Start behält ui-sunset.css, Minikarte rechnet nur noch wenn sichtbar, Himmel schaltet nach Effekt-Ausfall auf die Sparstufe, Einkaufswagen am Supermarkt stehen nicht mehr in der Vordachstütze, Hilfetexte nennen Handy auf H und Menüpunkt "Missionen", Spielstand-Plätze melden Speicherfehler.
 

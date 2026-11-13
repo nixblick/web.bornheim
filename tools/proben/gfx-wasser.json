@@ -1,0 +1,38 @@
+[
+ {
+  "n": "wasser_main_tag",
+  "x": -1900,
+  "z": 2270,
+  "tx": -1800,
+  "tz": 2600,
+  "pitch": 0.1,
+  "hour": 15,
+  "wait": 7000,
+  "js": "(async () => { const g = window.G; const M = await import('/wasser.js'); const W = window.__W || (window.__W = M.initWasser(g.THREE)); let n = 0; g.scene.traverse(o => { if (o.isMesh && o.material && o.material.isMeshLambertMaterial && o.material.color && o.material.color.getHex() === 0x4f7fa0 && o.material !== W.mat) { o.material = W.mat; n++; } }); const top = g.scene.children.find(o => o.userData && o.userData.himmel); W.update(0.5, { sky: top.material.uniforms.top.value, sunColor: g.X.sun.color, sunDir: g.world.sunDir, sunI: g.X.sun.intensity, night: !!g.world.night, camera: g.camera }); await new Promise(r => setTimeout(r, 2500)); window.__wasser = { getauscht: n, programm: g.renderer.info.programs.filter(p => String(p.cacheKey).includes('wasser1')).length, eingebaut: g.LOW_GFX ? 'Sparstufe: flache Farbe' : 'Material aus dem Kachelbau' }; return JSON.stringify(window.__wasser); })()",
+  "expect": "window.__wasser && window.__wasser.programm >= 1"
+ },
+ {
+  "n": "wasser_main_abend",
+  "x": -1900,
+  "z": 2270,
+  "tx": -2900,
+  "tz": 2720,
+  "pitch": 0.06,
+  "hour": 17.6,
+  "wait": 3000,
+  "js": "(async () => { const g = window.G; const M = await import('/wasser.js'); const W = window.__W || (window.__W = M.initWasser(g.THREE)); let n = 0; g.scene.traverse(o => { if (o.isMesh && o.material && o.material.isMeshLambertMaterial && o.material.color && o.material.color.getHex() === 0x4f7fa0 && o.material !== W.mat) { o.material = W.mat; n++; } }); const top = g.scene.children.find(o => o.userData && o.userData.himmel); W.update(0.5, { sky: top.material.uniforms.top.value, sunColor: g.X.sun.color, sunDir: g.world.sunDir, sunI: g.X.sun.intensity, night: !!g.world.night, camera: g.camera }); await new Promise(r => setTimeout(r, 2500)); window.__wasser = { getauscht: n, programm: g.renderer.info.programs.filter(p => String(p.cacheKey).includes('wasser1')).length, eingebaut: g.LOW_GFX ? 'Sparstufe: flache Farbe' : 'Material aus dem Kachelbau' }; return JSON.stringify(window.__wasser); })()",
+  "expect": "window.__wasser && window.__wasser.programm >= 1"
+ },
+ {
+  "n": "wasser_main_nacht",
+  "x": -1900,
+  "z": 2270,
+  "tx": -1800,
+  "tz": 2600,
+  "pitch": 0.1,
+  "hour": 23,
+  "wait": 3000,
+  "js": "(async () => { const g = window.G; const M = await import('/wasser.js'); const W = window.__W || (window.__W = M.initWasser(g.THREE)); let n = 0; g.scene.traverse(o => { if (o.isMesh && o.material && o.material.isMeshLambertMaterial && o.material.color && o.material.color.getHex() === 0x4f7fa0 && o.material !== W.mat) { o.material = W.mat; n++; } }); const top = g.scene.children.find(o => o.userData && o.userData.himmel); W.update(0.5, { sky: top.material.uniforms.top.value, sunColor: g.X.sun.color, sunDir: g.world.sunDir, sunI: g.X.sun.intensity, night: !!g.world.night, camera: g.camera }); await new Promise(r => setTimeout(r, 2500)); window.__wasser = { getauscht: n, programm: g.renderer.info.programs.filter(p => String(p.cacheKey).includes('wasser1')).length, eingebaut: g.LOW_GFX ? 'Sparstufe: flache Farbe' : 'Material aus dem Kachelbau' }; return JSON.stringify(window.__wasser); })()",
+  "expect": "window.__wasser && window.__wasser.programm >= 1"
+ }
+]
