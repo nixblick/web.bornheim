@@ -51,6 +51,7 @@ export function initDebugOverlay(G) {
     else if (LAMPS.has(o)) g = 'Laternen';
     else if (o.isInstancedMesh && gp && gp.radiusTop === 0.15 && gp.height === 2.2) g = 'Bäume';
     else if (o.isInstancedMesh && mat && (mat.alphaTest === 0.45 || (o.instanceColor && geo.type !== 'BufferGeometry' && /Icosahedron/.test(geo.type)) || (o.instanceColor && mat.color && mat.color.getHex() === 0xffffff && !mat.map))) g = 'Bäume';
+    else if (o.userData && o.userData.carInst) g = 'Autos (instanziert)';
     else if ((G.staticParked || []).some(sp => sp.refs && sp.refs.some(r => r.mesh === o))) g = 'Autos (geparkt)';
     else if (!inTile(o) && o.parent && o.parent !== G.scene) g = 'Einzelmodelle (Gräber, Haltestellen, Wahrzeichen)';
     else if (mat && mat.vertexColors && mat.emissiveMap) g = 'Gebäude';

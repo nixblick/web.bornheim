@@ -1,0 +1,14 @@
+[
+ {
+  "n": "autos_instanz_hoch",
+  "x": -119, "z": 342, "hour": 13, "wait": 15000, "pitch": 0.05,
+  "js": "(async () => { const G = window.G, P = G.PERF; if (G.opts.quality !== 'hoch') { G.opts.quality = 'hoch'; G.applyQuality(); } if (P) await P.settle(12000); await new Promise(r => setTimeout(r, 2000)); const p = G.player.pos; const ai = G.cars.filter(c => c.userData.mode === 'ai' && !c.userData.bike); const d = ai.map(c => c.position.distanceTo(p)); const s = P ? await P.measure({ frames: 10, maxMs: 12000 }) : {}; const z = { ai: ai.length, unter60: d.filter(x => x < 60).length, von60bis180: d.filter(x => x >= 60 && x < 180).length, instanziert: G.CAR_INST_STAT.n, modelle_sichtbar: ai.filter(c => c.visible).length, calls: s.calls, gruppen: s.groups }; return JSON.stringify(z); })()",
+  "expect": "window.G.CAR_INST_STAT.n > 0 && window.G.cars.filter(c => c.userData.inst).every(c => !c.visible && c.userData.mode === 'ai')"
+ },
+ {
+  "n": "autos_instanz_nacht",
+  "x": -119, "z": 342, "hour": 23, "wait": 10000, "pitch": 0.05,
+  "js": "(() => { const G = window.G, I = G.CAR_INST; const lit = I ? Object.values(I).filter(e => e && e.lit && e.lit.visible).length : -1; return JSON.stringify({ instanziert: G.CAR_INST_STAT.n, leuchten_gruppen: lit, nacht: G.world.night }); })()",
+  "expect": "window.G.CAR_INST_STAT.n === 0 || !window.G.world.night || Object.values(window.G.CAR_INST).some(e => e && e.lit && e.lit.visible)"
+ }
+]
