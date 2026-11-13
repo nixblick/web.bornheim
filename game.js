@@ -6,7 +6,6 @@ import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
-import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { GTAOPass } from 'three/addons/postprocessing/GTAOPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { initWeapons } from './weapons.js';
@@ -18,6 +17,7 @@ import { initProgress } from './progress.js';
 import { initFire } from './fire.js';
 import { initHeli } from './heli.js';
 import { initEulen } from './eulen.js';
+import { applyLookTone, makeLookPass, makeFxaaPass, LOOK_PRESET } from './look.js';
 import { initVokabaum } from './vokabaum.js';
 import { initLaufrunden } from './laufrunden.js';
 import { initLandmarks } from './landmarks.js';
@@ -39,7 +39,7 @@ renderer.setPixelRatio(1);
 renderer.setSize(innerWidth, innerHeight);
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFShadowMap;
-renderer.toneMapping = THREE.ACESFilmicToneMapping;
+applyLookTone(THREE, renderer); // AgX statt ACES (#152, look.js)
 document.body.appendChild(renderer.domElement);
 
 const scene = new THREE.Scene();
@@ -163,7 +163,7 @@ function applyQuality() {
       for (const [, t] of TILES) if (t.built && t.grp && t.grp.visible) { const dx = (t.tx + 0.5) * TS - cx, dz = (t.tz + 0.5) * TS - cz; if (dx * dx + dz * dz > 420 * 420) hide(t.grp); }
       r0(...args);
       for (let i = 0; i < _aoHid.length; i++) _aoHid[i].visible = true;
-    }; composer.addPass(aoPass); } bloomPass = new UnrealBloomPass(new THREE.Vector2(innerWidth / 2, innerHeight / 2), 0.28, 0.35, 0.93); composer.addPass(bloomPass); composer.addPass(new OutputPass()); gradePass = new ShaderPass(GradeShader); composer.addPass(gradePass); } composer.setSize(innerWidth, innerHeight); bloomPass.strength = 0.28 * (opts.bloom ?? 1); }
+    }; composer.addPass(aoPass); } const LP = LOOK_PRESET[ultra ? 'ultra' : 'hoch']; bloomPass = new UnrealBloomPass(new THREE.Vector2(innerWidth / 2, innerHeight / 2), LP.bloom.strength, LP.bloom.radius, LP.bloom.threshold); composer.addPass(bloomPass); composer.addPass(makeLookPass(ShaderPass, LP)); gradePass = new ShaderPass(GradeShader); gradePass.uniforms.vig.value = 0; composer.addPass(gradePass); if (LP.fxaa) composer.addPass(makeFxaaPass(THREE, ShaderPass, innerWidth, innerHeight)); } composer.setSize(innerWidth, innerHeight); bloomPass.strength = LOOK_PRESET[ultra ? 'ultra' : 'hoch'].bloom.strength * (opts.bloom ?? 1); }
   else composer = null;
 }
 
