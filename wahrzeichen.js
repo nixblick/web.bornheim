@@ -46,13 +46,38 @@ function obox(p) {
   return best;
 }
 
-// Nachttest 12.11.2026: Bei Dom, Paulskirche und den Hochhäusern ist das Modell deutlich kleiner als der OSM-Grundriss,
-// die Kollision (ganzer Grundriss, volle Höhe) stand bis 22 m vor der sichtbaren Wand (unsichtbare Wände, Kanten auf Dächern).
-// Bis die Kollision dem Modell folgt (#73), bleiben sie der OSM-Klotz wie zuvor.
-const OFF = new Set(['dom', 'pauls', 'coba', 'main', 'westend', 'euro', 'trianon']);
+// Nachttest 12.11.2026: Bei Dom, Paulskirche und den Hochhäusern ist das Modell kleiner als der OSM-Grundriss, die
+// Kollision stand bis 22 m vor der sichtbaren Wand. Seit 13.11. (#73) bekommt b.p den Grundriss des Modells (core),
+// der OSM-Umriss bleibt in e.p0 für Lage und Maß des Modells. markLandmark läuft vor registerTile, Raster und Entladen sehen nur den Kern.
+function frame(e, p) {
+  const ob = obox(p); if (!ob) return null;
+  let fx = ob.vx, fz = ob.vz;
+  if (e.t) { let bd = -1e9; for (const [dx, dz] of [[ob.ux, ob.uz], [-ob.ux, -ob.uz], [ob.vx, ob.vz], [-ob.vx, -ob.vz]]) { const d = (e.t[0] - ob.cx) * dx + (e.t[1] - ob.cz) * dz; if (d > bd) { bd = d; fx = dx; fz = dz; } } }
+  const alongU = Math.abs(fx * ob.ux + fz * ob.uz) > 0.5; return { ob, fx, fz, W: alongU ? ob.W : ob.L, D: alongU ? ob.L : ob.W };
+}
+const ring = (rx, rz, z0 = 0, n = 20, a0 = 0, a1 = Math.PI * 2) => { const q = []; for (let i = 0; i < n; i++) { const a = a0 + (a1 - a0) * i / (a1 - a0 >= 6.28 ? n : n - 1); q.push([rx * Math.sin(a), z0 + rz * Math.cos(a)]); } return q; };
+const rect = (w, d, z0 = 0) => [[-w / 2, z0 - d / 2], [w / 2, z0 - d / 2], [w / 2, z0 + d / 2], [-w / 2, z0 + d / 2]];
+const tri = (R, rot) => [0, 1, 2].map(i => { const a = i * 2 * Math.PI / 3 + rot; return [R * Math.sin(a), R * Math.cos(a)]; });
+// Kern je Bau im Modellsystem (Front +z), gleiche Maße wie mk(); Rückgabe [Polygon, Kollisionshöhe]
+function core(e, W, D) {
+  const H = e.h, r = Math.min(W, D) / 2;
+  if (e.id === 'dom') { const nw = Math.min(W * 0.42, 26), zq = -D * 0.05, a = nw / 2, b = W / 2; // Kreuz: Langhaus/Turm über ganze Tiefe, Querhaus 11 m
+    return [[[-a, -D / 2], [a, -D / 2], [a, zq - 5.5], [b, zq - 5.5], [b, zq + 5.5], [a, zq + 5.5], [a, D / 2], [-a, D / 2], [-a, zq + 5.5], [-b, zq + 5.5], [-b, zq - 5.5], [-a, zq - 5.5]], 23]; }
+  if (e.id === 'pauls') { const rx = Math.min(20, W / 2), rz = 15; return [ring(rx, rz, -D / 2 + rz + 0.5), 28]; }
+  if (e.id === 'coba') return [tri(r * 1.12, Math.PI / 6), H];
+  if (e.id === 'trianon') return [tri(r * 1.1, Math.PI / 6), H - 22];
+  if (e.id === 'main') { const rr = Math.min(r, D / 2) * 0.95, zc = D / 2 - rr, hw = Math.max(rr, W * 0.45), zb = zc - rr - (D - 2 * rr) / 2 + 1 - (D - 2 * rr + 6) / 2;
+    return [[...ring(rr, rr, zc, 13, Math.PI / 2, -Math.PI / 2), [-hw, zc], [-hw, zb], [hw, zb], [hw, zc]].reverse(), H]; }
+  if (e.id === 'westend') return [rect(W * 0.85, D * 0.85), H - 16];
+  if (e.id === 'euro') return [rect(W * 0.9, D * 0.75), H];
+  return null;
+}
 export function markLandmark(b) {
   if (!b || !b.n || !b.p) return;
-  for (const e of LIST) if (e.n === b.n && !OFF.has(e.id)) { const [x, z] = centroid(b.p); if (Math.hypot(x - e.c[0], z - e.c[1]) > 80) continue; b.lm = e.id; b.h = e.h; e.b = b; return; }
+  for (const e of LIST) if (e.n === b.n) { const [x, z] = centroid(b.p); if (Math.hypot(x - e.c[0], z - e.c[1]) > 80) continue;
+    e.p0 = b.p; const fr = frame(e, b.p); const c = fr && core(e, fr.W, fr.D); b.lm = e.id; b.h = e.h; e.b = b;
+    if (c) { const { ob, fx, fz } = fr, co = fz, si = fx; b.p = c[0].map(([lx, lz]) => [ob.cx + lx * co + lz * si, ob.cz - lx * si + lz * co]); b.h = c[1]; b.r = 0; b.rh = 0; }
+    return; }
 }
 
 export function initWahrzeichen(X) {
@@ -60,12 +85,9 @@ export function initWahrzeichen(X) {
   const built = new Map(); let scanT = 0; let lastNight = null;
 
   function mk(e) {
-    const ob = obox(e.b.p); if (!ob) return null;
-    // Front: die Achse, die am meisten zum Zielpunkt zeigt; ohne Ziel die lange Achse
-    let fx = ob.vx, fz = ob.vz;
-    if (e.t) { let bd = -1e9; for (const [dx, dz] of [[ob.ux, ob.uz], [-ob.ux, -ob.uz], [ob.vx, ob.vz], [-ob.vx, -ob.vz]]) { const d = (e.t[0] - ob.cx) * dx + (e.t[1] - ob.cz) * dz; if (d > bd) { bd = d; fx = dx; fz = dz; } } }
-    const alongU = Math.abs(fx * ob.ux + fz * ob.uz) > 0.5; const W = alongU ? ob.W : ob.L, D = alongU ? ob.L : ob.W;
-    let y0 = 1e9; for (const [x, z] of e.b.p) y0 = Math.min(y0, TH(x, z));
+    // Front: die Achse, die am meisten zum Zielpunkt zeigt; ohne Ziel die lange Achse (frame)
+    const fr = frame(e, e.p0); if (!fr) return null; const { ob, fx, fz, W, D } = fr;
+    let y0 = 1e9; for (const [x, z] of e.p0) y0 = Math.min(y0, TH(x, z));
     const mats = [];
     const M = (col, o = {}) => { const m = new THREE.MeshLambertMaterial(Object.assign({ color: col, emissive: col, emissiveIntensity: 0.05 }, o)); mats.push(m); return m; };
     const T = (w, h, draw, rx = 1, ry = 1) => { const t = canvasTex(w, h, draw, rx, ry); const m = M(0xffffff, { map: t, emissive: 0xffe2b8, emissiveMap: t }); return m; };
@@ -157,7 +179,7 @@ export function initWahrzeichen(X) {
   function update(dt) {
     scanT -= dt; if (scanT > 0) return; scanT = 1;
     const night = !!world.night;
-    for (const e of LIST) { if (!e.b) continue; const key = e.n; const [cx, cz] = e.cc || (e.cc = centroid(e.b.p)); const d = Math.hypot(player.pos.x - cx, player.pos.z - cz); let g = built.get(key);
+    for (const e of LIST) { if (!e.b) continue; const key = e.n; const [cx, cz] = centroid(e.p0); const d = Math.hypot(player.pos.x - cx, player.pos.z - cz); let g = built.get(key);
       if (g && g.userData.b !== e.b) { drop(g); built.delete(key); g = null; }
       if (!g && d < e.r) { g = mk(e); if (g) { g.userData.b = e.b; built.set(key, g); lastNight = null; } }
       else if (g && d > e.r * 1.2) { drop(g); built.delete(key); } }
