@@ -2,6 +2,7 @@
 // drei Sätze, je vier deutsche Antworten (Multiple Choice, Taste 1–4, Maus, Touch). 3 von 3 richtig = 1000 €.
 // Sätze und alle Antworten wortgleich aus Vokabaum (data/vokabeln.json, Quelle je Satz, Tickets #82/#83), nichts ausgedacht.
 // Höchstens einmal je Ingame-Stunde, nicht bei Fahndung, nicht im Auto. Keine Nutzerdaten an Vokabaum.
+/** @param {import('./types').Ctx} X */
 export function initVokabaum(X) {
   const { THREE, scene, player, peds, world, keys, showMsg, card, sfx, canvasTex } = X;
   const LINK = 'https://vokabaum.hinjas.de/?von=bornheim', LOHN = 1000, SPAR = 'vokabaumErfolge';

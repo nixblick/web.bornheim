@@ -1,4 +1,5 @@
 // Demos, Polizei-Eskalation, Wasserwerfer, Social-Feed und Ruf. Alle Namen, Accounts und Firmen sind erfunden.
+/** @param {import('./types').Ctx} X */
 export function initDemo(X, W) {
   const { THREE, scene, camera, player, peds, cars, shootables, keys, camYaw, camPitch, opts, world, CITY, TH, floorAt, solidAt, moveWithCollision, makeHuman, makeCar, playAnim, animateWalk, sfx, SND, showMsg, raiseWanted, camShake, canvasTex, rnd, clamp, pick, lerpAngle, driveCar, carFx, carTerrain, distSegSq } = X;
   const V3 = THREE.Vector3; const $ = id => document.getElementById(id);
@@ -261,6 +262,7 @@ export function initDemo(X, W) {
   function showChant(d, text) { d.chant = text; d.chantShow = 3.2; }
   function placeChant() { let best = null, bd = 70; for (const d of demos) { if (d.result || !(d.chantShow > 0)) continue; const dd = Math.hypot(d.cx - player.pos.x, d.cz - player.pos.z); if (dd < bd) { bd = dd; best = d; } }
     if (!chantEl) return; if (!best) { chantEl.style.display = 'none'; return; } const p = new V3(best.cx, TH(best.cx, best.cz) + 3.4, best.cz).project(camera); if (p.z > 1 || Math.abs(p.x) > 1.1 || Math.abs(p.y) > 1.1) { chantEl.style.display = 'none'; return; }
+    // @ts-ignore -- Baseline #119: DOM-/Zahl-String-Typen, kein X-Fehler
     chantEl.style.display = 'block'; chantEl.style.left = ((p.x + 1) / 2 * innerWidth) + 'px'; chantEl.style.top = ((1 - p.y) / 2 * innerHeight) + 'px'; chantEl.textContent = '»' + best.chant + '«'; chantEl.style.opacity = Math.min(1, best.chantShow) * clamp(1.3 - bd / 70, 0, 1); }
 
   // ---------- Hauptschleife ----------
@@ -331,6 +333,7 @@ export function initDemo(X, W) {
     let n = 0; for (const p of peds) { const u = p.userData; if (u.state !== 'walk' || u.demo || u.cop || u.follow) continue; if (!YOUNG.includes(u.charName)) continue; if (p.position.distanceTo(player.pos) > 28) continue; if (Math.random() < 0.6 + rep.kollektiv / 250) { u.state = 'follow'; u.follow = true; u.jit = [rnd(-1.5, 1.5), rnd(-1, 1)]; followers.push(p); n++; if (Math.random() < 0.35 && !u.sign) addSign(p); } }
     sfx('click'); say(pick(['Kommt mit! Bornheim bleibt!', 'Alle zum Park! Kommt mit!', 'Hitzefrei! Kommt mit!']), 0.9, 1.15, 1.1);
     if (n) showMsg('+' + n + ' FOLGEN DIR (' + followers.length + ')', 1100); else showMsg(followers.length ? followers.length + ' FOLGEN DIR' : 'NIEMAND HÖRT ZU – SUCH JUNGE LEUTE', 1100);
+    // @ts-ignore -- Baseline #119: DOM-/Zahl-String-Typen, kein X-Fehler
     if (followers.length >= 4 && !rally.posted) { rally.posted = true; post('du', 'Wir laufen jetzt durch Bornheim. Kommt dazu! #Hitzefrei', Math.round(stats.reach * 0.1)); }
     if (followers.length >= (X.rallyLimit || 8)) { const fl = followers; followers = []; for (const f of fl) f.userData.follow = false; const d2 = spawnDemo({ x: player.pos.x, z: player.pos.z, leadPlayer: true, members: fl, n: fl.length + 4, max: 32 }); d2.energy = 0.8; X.card('SPONTANDEMO', 'Du führst. G: Sprechchor oder deeskalieren · V: filmen'); post('kollektiv', 'Spontandemo in Bornheim! Läuft gerade vorne weg: ' + myHandle() + ' 🔥', 1300); emit('demoFormed', player.pos, { demo: d2, leadPlayer: true }); addRep('kollektiv', 4); }
   }

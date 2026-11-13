@@ -1,0 +1,5 @@
+[
+ { "n": "karma_fitness_medaille", "x": -138, "z": 372, "wait": 3000, "shot": false,
+   "js": "(() => { const G = window.G, e = G.X.emit; e('karma', G.player.pos, { n: 5, why: 'Test' }); e('karma', G.player.pos, { n: -2 }); e('fitness', G.player.pos, { n: 10 }); e('medal', G.player.pos, { id: 'test', n: 'Test <b>x</b>', ms: 3725000 }); const P = G.PROGRESS.P; const h = G.PROGRESS.html(true); return JSON.stringify({ karma: P.karma, fit: P.fit, medals: P.medals.length, zeile: /Medaillen/.test(h), html: /<b>x<\\/b>/.test(h) }); })()",
+   "expect": "(() => { const P = window.G.PROGRESS.P, h = window.G.PROGRESS.html(true); return P.karma === 3 && P.fit === 10 && P.medals.length === 1 && /Karma/.test(h) && /Fitness/.test(h) && !/<b>x<\\/b>/.test(h); })()" }
+]

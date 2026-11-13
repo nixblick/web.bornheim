@@ -19,6 +19,15 @@ permissions:
   contents: read
 
 jobs:
+  typen:
+    # Typprüfung schon im PR, nicht erst beim Ausrollen (#119); gleicher Befehl wie in pages.yml
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.event.pull_request.head.sha || github.ref }}
+      - run: npx -y -p typescript@5 tsc -p jsconfig.json
+
   liste:
     runs-on: ubuntu-latest
     outputs:
