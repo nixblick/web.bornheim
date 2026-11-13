@@ -59,7 +59,7 @@
  {
   "n": "mn_10_laufrunde_aus_menue",
   "wait": 1500,
-  "js": "(async () => { const G = window.G; for (let i = 0; i < 8 && !G.LAUF.run; i++) { G.X.openMenu(); G.X.menuTab('story'); const b = [...document.querySelectorAll('#storypane .mn-misgrid button')].find(x => /Laufrunde/.test(x.textContent)); if (b) b.click(); await new Promise(r => setTimeout(r, 1500)); } return JSON.stringify({ run: !!G.LAUF.run, menu: document.getElementById('menu').style.display }); })()",
+  "js": "(async () => { const G = window.G, w = ms => new Promise(r => setTimeout(r, ms)); let n = 0; for (; n < 12 && !G.LAUF.run; n++) { G.X.closeMenu(); await w(2500); G.X.openMenu(); G.X.menuTab('story'); await w(300); const b = [...document.querySelectorAll('#storypane .mn-misgrid button')].find(x => /Laufrunde/.test(x.textContent)); if (b) b.click(); await w(800); } return JSON.stringify({ run: !!G.LAUF.run, versuche: n, menu: document.getElementById('menu').style.display }); })()",
   "expect": "!!window.G.LAUF.run && document.getElementById('menu').style.display === 'none'"
  }
 ]
