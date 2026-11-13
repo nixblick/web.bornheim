@@ -1,7 +1,8 @@
 [
- { "n": "pf_tag", "x": 0, "z": 0, "hour": 13, "tx": 60, "tz": 40, "pitch": -0.25, "wait": 6000 },
- { "n": "pf_nacht", "x": 0, "z": 0, "hour": 23, "tx": 60, "tz": 40, "pitch": -0.25, "wait": 6000,
+ { "n": "pf_tag", "x": -138, "z": 372, "y": 44, "hour": 13, "tx": -138, "tz": 300, "pitch": 0.6, "wait": 6000 },
+ { "n": "pf_nacht_a", "x": -138, "z": 372, "y": 44, "hour": 23, "tx": -138, "tz": 300, "pitch": 0.6, "wait": 6000,
    "js": "String(window.G.world.night)", "expect": "window.G.world.night === true" },
- { "n": "pf_nacht2", "x": -138, "z": 372, "hour": 22, "tx": -100, "tz": 420, "pitch": -0.3, "wait": 6000 },
- { "n": "pf_daemmerung", "x": 0, "z": 0, "hour": 19.5, "tx": 60, "tz": 40, "pitch": -0.25, "wait": 6000 }
+ { "n": "pf_nacht_b", "x": -138, "z": 372, "y": 44, "hour": 23, "tx": -138, "tz": 450, "pitch": 0.6, "wait": 3000 },
+ { "n": "pf_nacht_c", "x": -138, "z": 372, "y": 44, "hour": 23, "tx": -60, "tz": 372, "pitch": 0.6, "wait": 3000 },
+ { "n": "pf_nacht_boden", "x": -138, "z": 372, "hour": 23, "tx": -138, "tz": 300, "pitch": 0.1, "wait": 3000 }
 ]
