@@ -39,8 +39,8 @@ export function initProgress(X) {
     while (P.xp >= need(P.lvl)) { P.xp -= need(P.lvl); P.lvl++; perks(); banner('STUFE ' + P.lvl, 'Aufgestiegen', `Auto ${Math.round((1 - X.perks.car) * 100)} % robuster · Läden ${Math.round((1 - X.perks.shop) * 100)} % billiger · ${Math.round((X.perks.run - 1) * 100)} % schneller rennen`); sfx('bell', 0.6); }
     drawLvl(); save();
   }
-  // @ts-ignore -- Baseline #119: DOM-/Zahl-String-Typen, kein X-Fehler
   function fmtMs(ms) { const t = Math.round(ms / 1000); return Math.floor(t / 3600) + ':' + String(Math.floor(t / 60) % 60).padStart(2, '0') + ':' + String(t % 60).padStart(2, '0') + ' h'; }
+  // @ts-ignore -- Baseline #119: DOM-/Zahl-String-Typen, kein X-Fehler
   function banner(big, small, sub) { ban.innerHTML = `<small>${small}</small><b>${big}</b>${sub ? '<i>' + sub + '</i>' : ''}`; ban.style.opacity = 1; banT = 4; }
   function drawLvl() { lvlEl.innerHTML = `Stufe ${P.lvl}<i><b style="width:${Math.round(P.xp / need(P.lvl) * 100)}%"></b></i>`; }
   drawLvl();

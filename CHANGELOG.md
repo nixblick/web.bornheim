@@ -2,6 +2,9 @@
 
 ## 2026-11-13
 
+- **Statistik: Karma, Fitness, Medaillen (Basis für #127–#129):** Drei neue Werte im Spielstand und in der Statistik (Tab/Menü). Missionen melden sie über Ereignisse: `karma` (−100…+100, positiv gibt EP), `fitness` (0…100, bis +20 % Laufgeschwindigkeit), `medal` (Name, Zeit, Datum; Banner „MEDAILLE“, +200 EP). Der Eulen-Marathon vergibt beim Finish schon eine Medaille. Medaillennamen werden escaped.
+- Getestet: Spieltest auf GitHub, Probe `karma` (Karma 3, Fitness 10, 1 Medaille, Statistikzeilen da, kein eingeschleustes HTML), `waffen`, `bugs2` grün, `tsc` lokal grün.
+
 - **Waffen nur noch kaufen (#126):** Auf Straßen liegen keine Waffen und keine Munition mehr, nur Geld und Gesundheit. Waffen gibt es im Supermarkt als „Aktionsware der Woche“, im Baumarkt und Sportladen wie bisher, die Pistole am Kiosk „unter der Theke“. Start mit Fäusten.
 - **Kreativmodus (#126):** weiter freie Auswahl von allem, Mülltonne entfernt, neu **Raketenwerfer** (Hubschrauber-Abwehr, ein Treffer holt einen Polizeihubschrauber herunter, Einschlag mit Feuerball). Nur im Kreativmodus: Beim Verlassen wird das Inventar auf den Stand davor zurückgesetzt, Kreativ-Waffen bleiben nicht.
 - Getestet: Spieltest auf GitHub (Lauf 43405902269), Probe `waffen`: 0 Waffen-Pickups, Raketenwerfer im Kreativmodus da, danach weg. Der Abschuss eines Hubschraubers ist nicht automatisch geprüft.
