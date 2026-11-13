@@ -94,9 +94,11 @@ export function initRasen(X) {
     mesh = new THREE.InstancedMesh(tuftGeo(THREE), mat, cap); mesh.count = 0; mesh.frustumCulled = false; mesh.castShadow = false; mesh.receiveShadow = true; mesh.name = 'rasen-halme';
     mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage); mesh.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(cap * 3), 3); scene.add(mesh); }
 
-  // Grünflächen-Index: Eimer zu 64 m; WORLD.green wächst beim Nachladen, neue Einträge werden nachgezogen
-  const buckets = new Map(); let indexed = 0;
-  function index() { const G = X.WORLD.green; for (; indexed < G.length; indexed++) { const g = G[indexed]; if (!RASEN_KINDS.has(g.k)) continue;
+  // Grünflächen-Index: Eimer zu 64 m. WORLD.green wächst beim Nachladen und wird beim Entladen ferner Kacheln in Ort gekürzt,
+  // ein Zähler „bis hier indexiert“ stimmt danach nicht mehr (Halme fehlten nach einer Reise, alte Flächen blieben in den Eimern).
+  // Deshalb bei jeder Änderung (WORLD.greenVer aus register-/unregisterTile, zur Sicherheit auch die Länge) den ganzen Index neu.
+  const buckets = new Map(); let seenVer = -1, seenLen = -1, gen = 0;
+  function index() { buckets.clear(); for (const g of X.WORLD.green) { if (!RASEN_KINDS.has(g.k)) continue;
     let x0 = 1e9, x1 = -1e9, z0 = 1e9, z1 = -1e9; for (const [x, z] of g.p) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (z < z0) z0 = z; if (z > z1) z1 = z; }
     const e = { g, x0, x1, z0, z1, meadow: g.k === 'meadow' || g.k === 'village_green', col: g.k === 'meadow' ? 0x86a85c : g.k === 'grass' || g.k === 'dog_park' ? 0x7aa35a : 0x6f9a52 };
     for (let bx = Math.floor(x0 / BUCKET); bx <= Math.floor(x1 / BUCKET); bx++) for (let bz = Math.floor(z0 / BUCKET); bz <= Math.floor(z1 / BUCKET); bz++) { const k = bx + ',' + bz; if (!buckets.has(k)) buckets.set(k, []); buckets.get(k).push(e); } } }
@@ -106,7 +108,7 @@ export function initRasen(X) {
   const cells = new Map(); let pending = [], lastX = 1e9, lastZ = 1e9, dirty = false, stufe = null, dens = 0, rad = 0, total = 0;
   const hash = (a, b) => { let h = Math.imul(a, 374761393) ^ Math.imul(b, 668265263); h = Math.imul(h ^ h >>> 13, 1274126177); return h ^ h >>> 16; };
   function buildCell(cx, cz) {
-    const x0 = cx * CELL, z0 = cz * CELL, list = buckets.get(Math.floor((x0 + 4) / BUCKET) + ',' + Math.floor((z0 + 4) / BUCKET)); const out = { m: null, c: null, n: 0 }; if (!list) return out;
+    const x0 = cx * CELL, z0 = cz * CELL, list = buckets.get(Math.floor((x0 + 4) / BUCKET) + ',' + Math.floor((z0 + 4) / BUCKET)); const out = { m: null, c: null, n: 0, v: gen }; if (!list) return out;
     // 1-m-Raster: Grünfläche und frei (kein Weg, Haus, Wasser, Brücke)
     const ok = new Array(64); let any = false;
     for (let j = 0; j < 8; j++) for (let i = 0; i < 8; i++) { const x = x0 + i + 0.5, z = z0 + j + 0.5, e = greenAt(list, x, z); ok[j * 8 + i] = e && free(x, z) ? e : null; if (ok[j * 8 + i]) any = true; }
@@ -132,13 +134,14 @@ export function initRasen(X) {
     if (st !== stufe) { stufe = st; reset(); if (st) { dens = st.d; rad = st.r; wind.uFade.value.set(rad * 0.72, rad - 1); } }
     if (mesh) mesh.visible = !!stufe; if (!stufe) return;
     wind.uTime.value += dt; wind.uWind.value = X.weather && X.weather.wind ? 1 + X.weather.wind : (X.weather && X.weather.rain ? 1.6 : 1);
-    if (indexed < X.WORLD.green.length) { index(); cells.clear(); lastX = 1e9; }
+    // Index geändert: Zellen nicht leeren (Rasen verschwand kurz und wuchs neu), sondern stehen lassen und nach und nach ersetzen (c.v = Stand)
+    if (seenVer !== (X.WORLD.greenVer | 0) || seenLen !== X.WORLD.green.length) { seenVer = X.WORLD.greenVer | 0; seenLen = X.WORLD.green.length; index(); gen++; lastX = 1e9; }
     const p = camera.position, ccx = Math.floor(p.x / CELL), ccz = Math.floor(p.z / CELL), R = Math.ceil(rad / CELL);
     if (Math.hypot(p.x - lastX, p.z - lastZ) > CELL / 2) { lastX = p.x; lastZ = p.z; pending = [];
-      for (let j = -R; j <= R; j++) for (let i = -R; i <= R; i++) if (Math.hypot(i, j) * CELL <= rad + CELL && !cells.has((ccx + i) + ',' + (ccz + j))) pending.push([ccx + i, ccz + j]);
+      for (let j = -R; j <= R; j++) for (let i = -R; i <= R; i++) if (Math.hypot(i, j) * CELL <= rad + CELL) { const c = cells.get((ccx + i) + ',' + (ccz + j)); if (!c || c.v !== gen) pending.push([ccx + i, ccz + j]); }
       pending.sort((a, b) => Math.hypot(b[0] - ccx, b[1] - ccz) - Math.hypot(a[0] - ccx, a[1] - ccz));
       for (const [k, c] of cells) { const [a, b] = k.split(',').map(Number); if (Math.hypot(a - ccx, b - ccz) * CELL > rad + 2 * CELL) { cells.delete(k); dirty = true; } } }
-    const t0 = performance.now(); while (pending.length && performance.now() - t0 < 2) { const [a, b] = pending.pop(), k = a + ',' + b; if (!cells.has(k)) { cells.set(k, buildCell(a, b)); dirty = true; } }
+    const t0 = performance.now(); while (pending.length && performance.now() - t0 < 2) { const [a, b] = pending.pop(), k = a + ',' + b, c = cells.get(k); if (!c || c.v !== gen) { cells.set(k, buildCell(a, b)); dirty = true; } }
     if (dirty && (!pending.length || (performance.now() | 0) % 4 === 0)) assemble();
   }
   return { update, get count() { return total; }, get cells() { return cells.size; }, get stufe() { return stufe ? opts.quality : 'aus'; }, reset };
