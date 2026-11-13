@@ -1,0 +1,14 @@
+[
+ {
+  "n": "nacht_berger_mittel",
+  "x": -119, "z": 342, "hour": 23, "wait": 12000, "pitch": 0.05,
+  "js": "(async () => { const G = window.G, P = G.PERF; G.opts.timeSpeed = 0; G.world.hour = 23; if (G.opts.quality !== 'mittel') { G.opts.quality = 'mittel'; G.applyQuality(); } if (P) await P.settle(12000); await new Promise(r => setTimeout(r, 2000)); const s = P ? await P.measure({ frames: 10, maxMs: 12000, groups: false }) : {}; return JSON.stringify({ q: G.opts.quality, nacht: G.world.night, calls: s.calls, dreiecke: s.triangles, programme: s.programs }); })()",
+  "expect": "window.G.world.night"
+ },
+ {
+  "n": "nacht_berger_hoch",
+  "x": -119, "z": 342, "hour": 23, "wait": 12000, "pitch": 0.05,
+  "js": "(async () => { const G = window.G, P = G.PERF; G.opts.timeSpeed = 0; G.world.hour = 23; if (G.opts.quality !== 'hoch') { G.opts.quality = 'hoch'; G.applyQuality(); } if (P) await P.settle(12000); await new Promise(r => setTimeout(r, 2000)); const s = P ? await P.measure({ frames: 10, maxMs: 12000, groups: false }) : {}; return JSON.stringify({ q: G.opts.quality, nacht: G.world.night, calls: s.calls, dreiecke: s.triangles, programme: s.programs }); })()",
+  "expect": "window.G.world.night"
+ }
+]
