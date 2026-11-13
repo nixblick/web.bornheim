@@ -1,0 +1,8 @@
+[
+ { "n": "wasserpark_halt", "x": -930, "z": -628, "tx": -956, "tz": -637, "pitch": 0.15, "wait": 7000,
+   "js": "(() => { const g = window.GRAEBER; const o = []; window.G.scene.traverse(m => {}); return JSON.stringify({ n: g ? g.count : -1 }); })()",
+   "expect": "window.GRAEBER && window.GRAEBER.count >= 2" },
+ { "n": "hauptfriedhof_anlage", "x": -955, "z": -690, "tx": -985, "tz": -690, "pitch": 0.2, "wait": 7000,
+   "js": "(() => JSON.stringify({ n: window.GRAEBER ? window.GRAEBER.count : -1 }))()",
+   "expect": "window.GRAEBER && window.GRAEBER.count >= 3" }
+]
