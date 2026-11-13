@@ -1121,7 +1121,7 @@ const staticParked = []; let parkedMesh = null; let roadMeshRef = null; const ro
 const instRefs = [];
 let PARK_TG = null, PARK_LOW = null;
 // Wachen ohne Namen in OSM, Lage aus der Adresse (Nominatim) und Gebäudegröße: Feuer- und Rettungswache 2, Heinrichstraße 8; Lage per Google-Maps-Punkt bestätigt (50.107023, 8.651487), beide Gebäudeteile
-const HECKE_DONE = { v: 0 };
+let HECKE_MAT = null; // Feuerdorn-Hecke: ein Material samt Textur für alle Kacheln
 const WOELL = [[406, -503], [356, -491], [301, -479], [245, -468], [186, -459], [136, -457]]; // Wöllstädter Straße (OSM)
 const SCHILDER = [ // Nasenschilder nach Fotos (OSM-Punkte): [x, z, Text, Grund, Schrift]
   { x: -1288, z: 239, t: 'zappbar', bg: '#0e0e10', fg: '#f2f2f2' }, { x: 248, z: -488, t: 'CARAVAN', bg: '#efe9dc', fg: '#e8501c' }, { x: -4153, z: 2492, t: 'FEUERWACHE 2', bg: '#c8102e', fg: '#ffffff' }, { x: 224, z: 148, t: 'KIRCHNERSCHULE', bg: '#efe9dc', fg: '#3a2a22' }, { x: -14, z: -175, t: 'DÖNERIA', bg: '#dff5ec', fg: '#d4165a' }, { x: 414, z: -509, t: "Moni's", bg: '#e8d8a0', fg: '#8a2a1a' }, { x: 68, z: -210, t: 'nahkauf', bg: '#d8101c', fg: '#ffffff' }, { x: 191, z: -449, t: 'BÄCKEREI', bg: '#f2c230', fg: '#5a2a10', brezel: 1 }];
@@ -1429,14 +1429,15 @@ function* buildCity() { CITY_PART = 'c0';
     { const [cx, cz] = centroidOf(b.p); if (b.h >= 10 && WOELL.some((p, i) => i && distSegSq(cx, cz, WOELL[i - 1][0], WOELL[i - 1][1], p[0], p[1]) < 625)) return 'zwanziger'; if (b.h >= 10 && hsh >= 6 && hsh < 8 && cz < -300 && cz > -900 && cx > -700 && cx < 900) return 'zwanziger'; if (b.h >= 11 && b.h <= 19 && hsh >= 8 && hsh < 10 && cz < 300 && cz > -1600 && cx > -1600 && cx < 1600) return 'abg'; } // Wöllstädter Straße und Bornheim-Nord; ABG-Häuser
     if (b.h >= 12 && hsh >= 2 && hsh < 6) { const [cx, cz] = centroidOf(b.p); if (cx > -800 && cx < 900 && cz > -900 && cz < 900) return 'gruender'; } // Bornheim: Gründerzeit wie an der Berger Straße
     if (b.r && b.rh > 0 && b.h <= 11.5) { const [cx, cz] = centroidOf(b.p); const alt = cx > -80 && cx < 460 && cz > -400 && cz < 220; /* Alt-Bornheim: Eulengasse, Turmstraße, Rendeler Straße */ if (alt && hsh < 7) return 'fw'; if (alt && hsh < 9) return 'schiefer'; if (!alt && hsh === 0) return 'schiefer'; } return hsh < 6 ? 'res' : hsh < 8 ? 'nk' : hsh < 10 ? 'nb' : 'zi'; };
+  if (BUILD_TILE) { const T = BUILD_TILE, hx = T.tx * TS, hz = T.tz * TS; barrierDrop(T, 'barH'); // Feuerdorn-Hecken mit roten Beeren an der Wöllstädter Straße (Foto Caravan): je Kachel, Bild und Hindernis gehen mit ihr (13.11.2026)
+    if (hx < 420 && hx + TS > 120 && hz < -440 && hz + TS > -520) {
+      const hm = HECKE_MAT || (HECKE_MAT = Object.assign(new THREE.MeshLambertMaterial({ map: canvasTex(128, 64, (c, w, h) => { c.fillStyle = '#2c4a26'; c.fillRect(0, 0, w, h); for (let i = 0; i < 500; i++) { c.fillStyle = Math.random() < 0.12 ? '#e0521c' : pick(['#36592e', '#24401f', '#41693a']); c.fillRect(Math.random() * w, Math.random() * h, 3, 3); } }, 1, 1) }), { userData: { shared: true } })); const hg = [];
+      const hr = (a, b, c) => { const v = Math.sin(a * 127.1 + b * 311.7 + c * 74.7) * 43758.5453; return v - Math.floor(v); }; // fester Zufall: Lücken bleiben beim Neuaufbau gleich
+      for (let i = 1; i < WOELL.length; i++) { const [ax, az] = WOELL[i - 1], [bx, bz] = WOELL[i]; const l = Math.hypot(bx - ax, bz - az); const nx = -(bz - az) / l, nz = (bx - ax) / l; for (const sd of [-1, 1]) for (let s = 3; s < l - 3; s += 9) { if (hr(i, sd, s) < 0.45) continue; const x = ax + (bx - ax) * s / l + nx * sd * 7.2, z = az + (bz - az) * s / l + nz * sd * 7.2; if (Math.floor(x / TS) !== T.tx || Math.floor(z / TS) !== T.tz) continue; if (solidAt(x, z) >= 0) continue; const g2 = new THREE.BoxGeometry(4, 1.1, 0.9); g2.rotateY(Math.atan2(bx - ax, bz - az) + Math.PI / 2); g2.translate(x, TH(x, z) + 0.55, z); hg.push(g2); { const a2 = Math.atan2(bx - ax, bz - az); const ex = Math.cos(a2) * 2, ez = -Math.sin(a2) * 2; T.barH.push(barrierAdd(x - ex, z - ez, x + ex, z + ez, 1.1)); } } }
+      if (hg.length) { const m = new THREE.Mesh(mergeGeometries(hg), hm); m.castShadow = m.receiveShadow = true; scene.add(m); } } }
   yield; for (const b of CITY.buildings) { yield; /* je Gebäude: Dächer und Sonderbauten bis 35 ms je drei Häuser (Probe sparmodus, 13.11.2026) */
     const kind = kindOf(b);
     if (kind === 'wache') WACHEN.push(centroidOf(b.p));
-    if (!HECKE_DONE.v && CITY.buildings.length) { HECKE_DONE.v = 1; // Feuerdorn-Hecken mit roten Beeren an der Wöllstädter Straße (Foto Caravan)
-      const ht = canvasTex(128, 64, (c, w, h) => { c.fillStyle = '#2c4a26'; c.fillRect(0, 0, w, h); for (let i = 0; i < 500; i++) { c.fillStyle = Math.random() < 0.12 ? '#e0521c' : pick(['#36592e', '#24401f', '#41693a']); c.fillRect(Math.random() * w, Math.random() * h, 3, 3); } }, 1, 1);
-      const hm = new THREE.MeshLambertMaterial({ map: ht }); const hg = [];
-      for (let i = 1; i < WOELL.length; i++) { const [ax, az] = WOELL[i - 1], [bx, bz] = WOELL[i]; const l = Math.hypot(bx - ax, bz - az); const nx = -(bz - az) / l, nz = (bx - ax) / l; for (const sd of [-1, 1]) for (let s = 3; s < l - 3; s += 9) { if (Math.random() < 0.45) continue; const x = ax + (bx - ax) * s / l + nx * sd * 7.2, z = az + (bz - az) * s / l + nz * sd * 7.2; if (solidAt(x, z) >= 0) continue; const g2 = new THREE.BoxGeometry(4, 1.1, 0.9); g2.rotateY(Math.atan2(bx - ax, bz - az) + Math.PI / 2); g2.translate(x, TH(x, z) + 0.55, z); hg.push(g2); { const a2 = Math.atan2(bx - ax, bz - az); const ex = Math.cos(a2) * 2, ez = -Math.sin(a2) * 2; barrierAdd(x - ex, z - ez, x + ex, z + ez, 1.1); } } }
-      if (hg.length) { const m = new THREE.Mesh(mergeGeometries(hg), hm); m.castShadow = m.receiveShadow = true; scene.add(m); } }
     for (const ZAPP of SCHILDER) if (!ZAPP.done && pointInPoly(ZAPP.x, ZAPP.z, b.p)) { ZAPP.done = 1; let best = null; for (let i = 0; i < b.p.length; i++) { const [ax, az] = b.p[i], [bx, bz] = b.p[(i + 1) % b.p.length]; const l = Math.hypot(bx - ax, bz - az); if (l < 2) continue; const t = Math.max(0, Math.min(1, ((ZAPP.x - ax) * (bx - ax) + (ZAPP.z - az) * (bz - az)) / (l * l))); const px = ax + (bx - ax) * t, pz = az + (bz - az) * t; const d = Math.hypot(px - ZAPP.x, pz - ZAPP.z); if (!best || d < best.d) best = { d, px, pz, ux: (bx - ax) / l, uz: (bz - az) / l }; }
       if (best) { const tex = canvasTex(256, 96, (c, w, h) => { c.fillStyle = ZAPP.bg; c.fillRect(0, 0, w, h); if (ZAPP.brezel) { c.strokeStyle = '#7a3a12'; c.lineWidth = 9; c.beginPath(); c.arc(w / 2 - 22, h / 2, 26, 0, 6.3); c.arc(w / 2 + 22, h / 2, 26, 3.14, 9.4); c.stroke(); } else { c.fillStyle = ZAPP.fg; let fs = 52; c.font = `bold ${fs}px sans-serif`; while (c.measureText(ZAPP.t).width > w - 16 && fs > 18) { fs--; c.font = `bold ${fs}px sans-serif`; } c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(ZAPP.t, w / 2, h / 2 + 2); } }, 1, 1);
         const rand = shLambert(0x2a2a2a); const sg = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.5, 1.3), [rand, rand, rand, rand, new THREE.MeshBasicMaterial({ map: tex }), new THREE.MeshBasicMaterial({ map: tex })]);
@@ -2882,7 +2883,7 @@ function barrierSegs(d) {
 }
 function barrierH(k) { return k === "retaining_wall" ? 1.0 : k === "fence" || k === "hedge" ? 1.3 : 1.7; }
 let BUILD_TILE = null; // Kachel, an der runJob gerade baut
-function barrierDrop(t) { for (const seg of t.bar || []) { const [ax, az, bx, bz] = seg; for (let cx = Math.floor((Math.min(ax, bx) - 2) / CELL); cx <= Math.floor((Math.max(ax, bx) + 2) / CELL); cx++) for (let cz = Math.floor((Math.min(az, bz) - 2) / CELL); cz <= Math.floor((Math.max(az, bz) + 2) / CELL); cz++) gridDrop(barrierGrid, key(cx, cz), v => v === seg); } t.bar = []; }
+function barrierDrop(t, f = 'bar') { for (const seg of t[f] || []) { const [ax, az, bx, bz] = seg; for (let cx = Math.floor((Math.min(ax, bx) - 2) / CELL); cx <= Math.floor((Math.max(ax, bx) + 2) / CELL); cx++) for (let cz = Math.floor((Math.min(az, bz) - 2) / CELL); cz <= Math.floor((Math.max(az, bz) + 2) / CELL); cz++) gridDrop(barrierGrid, key(cx, cz), v => v === seg); } t[f] = []; }
 // Hindernis = genau die gezeichneten Stücke (t.bar, damit unregisterTile sie wieder aus dem Raster nehmen kann)
 function barrierRegister(t, segs) { barrierDrop(t); t.bar = segs.map(([ax, az, bx, bz, k]) => barrierAdd(ax, az, bx, bz, barrierH(k))); }
 // Kachelbild für Minikarte und große Karte
@@ -2929,7 +2930,7 @@ function unregisterTile(t) {
   for (const w of d.water || []) if (w.x0 !== undefined) for (let cx = Math.floor(w.x0 / CELL); cx <= Math.floor(w.x1 / CELL); cx++) for (let cz = Math.floor(w.z0 / CELL); cz <= Math.floor(w.z1 / CELL); cz++) gridDrop(waterGrid, key(cx, cz), v => v === w);
   for (const s of d.signals || []) gridDrop(SIGGRID, key(Math.floor(s[0] / CELL), Math.floor(s[1] / CELL)), v => v === s);
   for (const k of WKEYS) { if (k === 'buildings' || !d[k] || !d[k].length) continue; /* Straßen, Gleise und alle Listen in Ort kompaktieren (CITY teilt die Arrays) */ const S = new Set(d[k]); const L = WORLD[k]; let w = 0; for (let i = 0; i < L.length; i++) if (!S.has(L[i])) L[w++] = L[i]; L.length = w; }
-  barrierDrop(t);
+  barrierDrop(t); barrierDrop(t, 'barH');
   DEMT.delete(t.k); DEMN.delete(dkey(t.tx, t.tz)); thK = NaN; thH = null; t.mm = null; t.data = null; t.rd = []; t.rp = []; t.bi = t.bar = null; TILES.delete(t.k);
 }
 const loadingTiles = new Set(); const LOAD_STAT = { ms: 0, n: 0 }; // registerTile & Co. je Kachel, summiert bis F3 abholt
@@ -2990,8 +2991,8 @@ let job = null; // Kachel, die gerade schrittweise gebaut wird
 let BUILD_BUDGET = 8, _smoothFt = 16.7; // ms Hauptthread je Bild für den Kachelbau, höchstens 8 (#173)
 const BUILD_STAT = { ms: 0, max: 0, step: '', sync: 0, syncN: 0 }; // Kachelbau im laufenden Bild (F3, G.PERF): Summe, längstes Stück ohne yield, dessen Schritt
 function stepJob() { const b = opts.potato ? 4 : (_smoothFt > 26 ? 4.5 : BUILD_BUDGET); const t0 = performance.now(); const done = runJob(job, b); if (done) { job = null; refreshActive(); } BUILD_STAT.ms += performance.now() - t0; }
-function cancelJob() { if (!job) return; const t = { built: true, grp: job.grp, owned: job.owned }; scene.add(job.grp); unbuildTile(t); job = null; }
-function unbuildTile(t) { barrierDrop(t);
+function cancelJob() { if (!job) return; const t = { built: true, grp: job.grp, owned: job.owned }; scene.add(job.grp); unbuildTile(t); barrierDrop(job.t, 'barH'); job = null; }
+function unbuildTile(t) { barrierDrop(t); barrierDrop(t, 'barH');
   if (!t.built) return; scene.remove(t.grp); const L = OWN_LISTS();
   L.forEach((l, i) => { const own = t.owned[i]; if (!own.length) return; const s = new Set(own); let w = 0; for (let r = 0; r < l.length; r++) if (!s.has(l[r])) l[w++] = l[r]; l.length = w; });
   disposeHierarchy(t.grp, { keep: x => x.isTexture && !(x.userData && x.userData.own) }); /* Kachel-Texturen kommen aus Caches (TEX, Fassaden, Gehweg), Speicherprobe #120: Zahl bleibt stabil; eigene markiert userData.own */
