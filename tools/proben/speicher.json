@@ -1,0 +1,68 @@
+[
+ {
+  "n": "mem_1_bornheim",
+  "x": -196,
+  "z": 427,
+  "wait": 12000,
+  "shot": false,
+  "js": "(() => { const m = window.G.renderer.info.memory, G = window.G; const r = { g: m.geometries, t: m.textures, ct: G.canvasTexCount, tiles: [...G.TILES.values()].filter(t => t.built).length }; (window.__mem = window.__mem || []).push(r); return JSON.stringify(r); })()"
+ },
+ {
+  "n": "mem_1_messe",
+  "x": -3650,
+  "z": 2200,
+  "wait": 12000,
+  "shot": false,
+  "js": "(() => { const m = window.G.renderer.info.memory, G = window.G; const r = { g: m.geometries, t: m.textures, ct: G.canvasTexCount, tiles: [...G.TILES.values()].filter(t => t.built).length }; (window.__mem = window.__mem || []).push(r); return JSON.stringify(r); })()"
+ },
+ {
+  "n": "mem_2_bornheim",
+  "x": -196,
+  "z": 427,
+  "wait": 12000,
+  "shot": false,
+  "js": "(() => { const m = window.G.renderer.info.memory, G = window.G; const r = { g: m.geometries, t: m.textures, ct: G.canvasTexCount, tiles: [...G.TILES.values()].filter(t => t.built).length }; (window.__mem = window.__mem || []).push(r); return JSON.stringify(r); })()"
+ },
+ {
+  "n": "mem_2_messe",
+  "x": -3650,
+  "z": 2200,
+  "wait": 12000,
+  "shot": false,
+  "js": "(() => { const m = window.G.renderer.info.memory, G = window.G; const r = { g: m.geometries, t: m.textures, ct: G.canvasTexCount, tiles: [...G.TILES.values()].filter(t => t.built).length }; (window.__mem = window.__mem || []).push(r); return JSON.stringify(r); })()"
+ },
+ {
+  "n": "mem_3_bornheim",
+  "x": -196,
+  "z": 427,
+  "wait": 12000,
+  "shot": false,
+  "js": "(() => { const m = window.G.renderer.info.memory, G = window.G; const r = { g: m.geometries, t: m.textures, ct: G.canvasTexCount, tiles: [...G.TILES.values()].filter(t => t.built).length }; (window.__mem = window.__mem || []).push(r); return JSON.stringify(r); })()"
+ },
+ {
+  "n": "mem_3_messe",
+  "x": -3650,
+  "z": 2200,
+  "wait": 12000,
+  "shot": false,
+  "js": "(() => { const m = window.G.renderer.info.memory, G = window.G; const r = { g: m.geometries, t: m.textures, ct: G.canvasTexCount, tiles: [...G.TILES.values()].filter(t => t.built).length }; (window.__mem = window.__mem || []).push(r); return JSON.stringify(r); })()"
+ },
+ {
+  "n": "mem_4_bornheim",
+  "x": -196,
+  "z": 427,
+  "wait": 12000,
+  "shot": true,
+  "js": "(() => { const m = window.G.renderer.info.memory, G = window.G; const r = { g: m.geometries, t: m.textures, ct: G.canvasTexCount, tiles: [...G.TILES.values()].filter(t => t.built).length }; (window.__mem = window.__mem || []).push(r); return JSON.stringify(r); })()",
+  "expect": "(() => { const a = window.__mem[0], b = window.__mem[6]; return b.g <= a.g * 1.15 + 50 && b.t <= a.t * 1.15 + 20; })()"
+ },
+ {
+  "n": "mem_4_messe",
+  "x": -3650,
+  "z": 2200,
+  "wait": 12000,
+  "shot": true,
+  "js": "(() => { const m = window.G.renderer.info.memory, G = window.G; const r = { g: m.geometries, t: m.textures, ct: G.canvasTexCount, tiles: [...G.TILES.values()].filter(t => t.built).length }; (window.__mem = window.__mem || []).push(r); return JSON.stringify(r); })()",
+  "expect": "(() => { const a = window.__mem[1], b = window.__mem[7]; return b.g <= a.g * 1.15 + 50 && b.t <= a.t * 1.15 + 20; })()"
+ }
+]

@@ -2,6 +2,7 @@
 
 ## 2026-11-13
 
+- **Speicherprobe (#120):** `tools/proben/speicher.json` springt 4-mal zwischen Bornheim und Messe hin und her und liest `renderer.info.memory` (Geometrien, Texturen) je Besuch; rot, wenn der vierte Besuch mehr als 15 % (+50 Geometrien/+20 Texturen) über dem ersten liegt.
 - **Messeturm im Fern-Dunst:** Fassade, Krone, Glaszylinder und Pyramide nehmen wie die Wahrzeichen nicht mehr am Szenen-Nebel teil, sondern am weiten Dunst aus `wahrzeichen.js` (Liste `FAR_HAZE`, für weitere Bauten offen). Grenze: In der Sparstufe baut das Spiel nur Kacheln im Umkreis von etwa 500–750 m; weiter entfernte Bauten fehlen ganz, Dunst hin oder her. Spieltest GitHub: fernsicht/wahrzeichen ohne Fehler, Messeturm angemeldet; Sichtprüfung im Bild steht noch aus (Probe blickt am Turm vorbei).
 
 - Pausemenü-Karte (#98): Ein alter Timer aus dem Schließen des Menüs sperrte die Maus, wenn das Menü binnen 1,3 s wieder offen war; der Klick auf die U-Bahn-Station ging dann als Schuss ins Spiel. Timer wird jetzt beim Öffnen abgebrochen, bei offenem Menü wird keine Sperre mehr gesetzt bzw. sofort gelöst. Probe `tools/proben/kartenklick.json` (Spieltest auf GitHub, rechnet den Stationspunkt auf der Karte selbst aus, Reiter Karte erst nach dem Menü-Hook, prüft Fahrtanzeige und Ankunft).
