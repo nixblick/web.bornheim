@@ -7,7 +7,7 @@
   "tz": 1892,
   "pitch": 0.6,
   "wait": 6000,
-  "js": "(async () => { const G = window.G, T = G.THREE; await new Promise(r => setTimeout(r, 2500)); const b = G.WORLD.buildings.find(q => q && q.n === \"Main Tower\"); if (!b) return 'nicht geladen'; let cx = 0, cz = 0; for (const q of b.p) { cx += q[0]; cz += q[1]; } cx /= b.p.length; cz /= b.p.length; const rc = new T.Raycaster(new T.Vector3(cx, 600, cz), new T.Vector3(0, -1, 0)); rc.far = 900; const hit = rc.intersectObjects(G.scene.children, true).find(h => h.object.isMesh && h.object.visible && !h.object.isSprite); window.__last = JSON.stringify({ bau: b.n, kachel_h: b.h, oben_m: hit ? +(hit.point.y - G.TH(cx, cz)).toFixed(1) : null }); return window.__last; })()",
+  "js": "(async () => { const G = window.G, T = G.THREE; await new Promise(r => setTimeout(r, 2500)); const b = G.WORLD.buildings.find(q => q && q.n === \"Main Tower\"); if (!b) return 'nicht geladen'; let cx = 0, cz = 0; for (const q of b.p) { cx += q[0]; cz += q[1]; } cx /= b.p.length; cz /= b.p.length; const rc = new T.Raycaster(new T.Vector3(cx, 600, cz), new T.Vector3(0, -1, 0)); rc.far = 900; rc.camera = G.camera; const hit = rc.intersectObjects(G.scene.children, true).find(h => h.object.isMesh && h.object.visible && !h.object.isSprite); window.__last = JSON.stringify({ bau: b.n, kachel_h: b.h, oben_m: hit ? +(hit.point.y - G.TH(cx, cz)).toFixed(1) : null }); return window.__last; })()",
   "expect": "(() => { try { const r = JSON.parse(window.__last); return r.kachel_h >= 200 && r.oben_m >= 200 - 3; } catch (e) { return false; } })()"
  },
  {
@@ -18,7 +18,7 @@
   "tz": 5801,
   "pitch": 0.6,
   "wait": 6000,
-  "js": "(async () => { const G = window.G, T = G.THREE; await new Promise(r => setTimeout(r, 2500)); const b = G.WORLD.buildings.find(q => q && q.n === \"Access Tower\"); if (!b) return 'nicht geladen'; let cx = 0, cz = 0; for (const q of b.p) { cx += q[0]; cz += q[1]; } cx /= b.p.length; cz /= b.p.length; const rc = new T.Raycaster(new T.Vector3(cx, 600, cz), new T.Vector3(0, -1, 0)); rc.far = 900; const hit = rc.intersectObjects(G.scene.children, true).find(h => h.object.isMesh && h.object.visible && !h.object.isSprite); window.__last = JSON.stringify({ bau: b.n, kachel_h: b.h, oben_m: hit ? +(hit.point.y - G.TH(cx, cz)).toFixed(1) : null }); return window.__last; })()",
+  "js": "(async () => { const G = window.G, T = G.THREE; await new Promise(r => setTimeout(r, 2500)); const b = G.WORLD.buildings.find(q => q && q.n === \"Access Tower\"); if (!b) return 'nicht geladen'; let cx = 0, cz = 0; for (const q of b.p) { cx += q[0]; cz += q[1]; } cx /= b.p.length; cz /= b.p.length; const rc = new T.Raycaster(new T.Vector3(cx, 600, cz), new T.Vector3(0, -1, 0)); rc.far = 900; rc.camera = G.camera; const hit = rc.intersectObjects(G.scene.children, true).find(h => h.object.isMesh && h.object.visible && !h.object.isSprite); window.__last = JSON.stringify({ bau: b.n, kachel_h: b.h, oben_m: hit ? +(hit.point.y - G.TH(cx, cz)).toFixed(1) : null }); return window.__last; })()",
   "expect": "(() => { try { const r = JSON.parse(window.__last); return r.kachel_h >= 70 && r.oben_m >= 70 - 3; } catch (e) { return false; } })()"
  }
 ]
