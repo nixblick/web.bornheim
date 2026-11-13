@@ -2178,13 +2178,16 @@ function spawnCar(police = false, near = null, minD = 60, maxD = 220, bike = fal
   if (wantBus) { const cx = player.pos.x, cz = player.pos.z; for (let k = 0; k < 12 && !line; k++) { const L = pick(BUSLINES); for (let i = 0; i < L.p.length - 1; i += 3) { const d = Math.hypot(L.p[i][0] - cx, L.p[i][1] - cz); if (d > minD && d < maxD) { line = L; li = i; break; } } } if (line) p = { x: line.p[li][0], z: line.p[li][1], heading: Math.atan2(line.p[li + 1][0] - line.p[li][0], line.p[li + 1][1] - line.p[li][1]), road: { p: line.p, w: 8, o: 1, s: line.s }, seg: li, dir: 1 }; else wantBus = false; }
   const moto = bike && Math.random() < 0.35, amb = !police && !bike && Math.random() < 0.035; if (bike && !moto && (p.road.mw || p.road.ry)) return null; // keine Fahrräder auf Autobahn und Hochstraße (Motorräder schon)
   const minGap = bike ? 9 : 64; for (const o of cars) if ((o.position.x - p.x) ** 2 + (o.position.z - p.z) ** 2 < minGap) return null; // nicht in ein anderes Fahrzeug setzen
-  const c = moto ? makeMoto() : bike ? makeBike() : amb ? makeAmbulance() : makeCar(police, wantBus ? 'bus' : null); c.position.set(p.x, roadY(p.road, p.x, p.z), p.z);
-  const u = c.userData; u.heading = p.heading; u.road = p.road; u.seg = p.seg; u.dir = p.road.o ? p.road.o : p.dir; if (u.dir < 0) u.heading += Math.PI;
+  // Modus, Parkplatz und Hauswand-Probe zuerst nur mit Koordinaten: abgelehnte Plätze kosten keinen Fahrzeugbau mehr (GLB-Klon samt Materialien)
+  let sh = p.heading, sx = p.x, sz = p.z; const sdir = p.road.o ? p.road.o : p.dir; if (sdir < 0) sh += Math.PI;
+  const smode = police ? 'police' : (Math.random() < (bike ? 0.65 : 0.55) || p.road.mw || p.road.ry ? 'ai' : 'parked');
+  if (smode === 'parked') { const side = p.road.o && Math.random() < 0.5 ? 1 : -1; /* #102: (cos h, -sin h) zeigt links; Rechtsverkehr parkt rechts in Fahrtrichtung, nur in Einbahnstraßen auch links */ const w = p.road.w / 2 + (bike ? 0.7 : 1.1); sx += Math.cos(sh) * side * w; sz -= Math.sin(sh) * side * w; if (bike) sh += side * Math.PI / 2 * (Math.random() < 0.5 ? 1 : -1) * 0.5; }
+  const fr = bike ? 0.8 : 1.8;
+  if (solidAt(sx, sz) >= 0 || solidAt(sx + fr, sz) >= 0 || solidAt(sx - fr, sz) >= 0 || solidAt(sx, sz + fr) >= 0 || solidAt(sx, sz - fr) >= 0) return null;
+  const c = moto ? makeMoto() : bike ? makeBike() : amb ? makeAmbulance() : makeCar(police, wantBus ? 'bus' : null); c.position.set(sx, roadY(p.road, p.x, p.z), sz);
+  const u = c.userData; u.heading = sh; u.road = p.road; u.seg = p.seg; u.dir = sdir;
   if (line) { u.line = line.ref; let m = BUS_DISP.get(line.ref); if (!m) { m = new THREE.MeshBasicMaterial({ map: canvasTex(256, 40, (cx2, w, h) => { cx2.fillStyle = '#111'; cx2.fillRect(0, 0, w, h); cx2.fillStyle = '#ffa020'; cx2.font = 'bold 30px monospace'; cx2.fillText(`${line.ref} ${line.n}`.slice(0, 15), 6, 31); }, 1, 1) }); BUS_DISP.set(line.ref, m); } c.traverse(o => { if (o.material && o.material.name === 'Display') o.material = m; }); } // Liniennummer vorn
-  u.mode = police ? 'police' : (Math.random() < (bike ? 0.65 : 0.55) || p.road.mw || p.road.ry ? 'ai' : 'parked'); u.maxv = moto ? Math.min((p.road.v || 50) / 3.6, 22) * rnd(0.9, 1.15) : bike ? rnd(3.8, 6.2) : Math.min((p.road.v || 50) / 3.6, 15) * rnd(0.8, 1.05);
-  if (u.mode === 'parked') { const side = p.road.o && Math.random() < 0.5 ? 1 : -1; /* #102: (cos h, -sin h) zeigt links; Rechtsverkehr parkt rechts in Fahrtrichtung, nur in Einbahnstraßen auch links */ const w = p.road.w / 2 + (bike ? 0.7 : 1.1); c.position.x += Math.cos(u.heading) * side * w; c.position.z -= Math.sin(u.heading) * side * w; if (bike) u.heading += side * Math.PI / 2 * (Math.random() < 0.5 ? 1 : -1) * 0.5; }
-  const fr = bike ? 0.8 : 1.8, cx = c.position.x, cz = c.position.z;
-  if (solidAt(cx, cz) >= 0 || solidAt(cx + fr, cz) >= 0 || solidAt(cx - fr, cz) >= 0 || solidAt(cx, cz + fr) >= 0 || solidAt(cx, cz - fr) >= 0) return null;
+  u.mode = smode; u.maxv = moto ? Math.min((p.road.v || 50) / 3.6, 22) * rnd(0.9, 1.15) : bike ? rnd(3.8, 6.2) : Math.min((p.road.v || 50) / 3.6, 15) * rnd(0.8, 1.05);
   if (u.mode === 'ai') { u.isCar = true; snapToLane(u, c.position, u.road.w * laneK(u)); u.vh = u.heading; if (solidAt(c.position.x, c.position.z) >= 0) return null; if (bike) { const rd = addRider(c); if (moto) addHelmet(rd); } }
   c.rotation.y = u.heading; scene.add(c); cars.push(c); shootables.push(c); return c;
 }
