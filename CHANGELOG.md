@@ -2,6 +2,8 @@
 
 ## 2026-11-13
 
+- **Doku privat:** `docs/vergleich-project-sunset.md` liegt nur noch lokal (gitignore), auf Andrés Wunsch. In der Git-Historie bleibt die frühere Fassung.
+
 - Typprüfung für `graeber.js` repariert (`window.GRAEBER` als any), Deploy war rot.
 
 - Gräber und Straßenbahn-Haltestellen nach Andrés Fotos (`graeber.js`): Mustergrabanlage mit fünf Grabtypen (Stele mit Baum-Relief, Stele mit Figur, Rundkopf mit Rosette, Kreuzstele, Liegestein), Bodendeckerbeete, Klinkerwege, Tannen, Bank; in jedem nahen Friedhof (OSM `landuse=cemetery`) bis zu drei Anlagen. Inschriften nur als unlesbare Rillen. Haltestelle mit Bahnsteig, Glas-Wartehalle mit Punktraster, neutraler Vitrine, grünem Kästchen, grünem H-Mast mit gelbem H-Schild, Anzeiger, Glasgeländer, Oberleitungsmast; an jedem nahen Tramhalt, z. B. „Wasserpark“ (Tram 18, OSM) neben dem Hauptfriedhof (OSM/Wikipedia). Probe `tools/proben/graeber.json` (Nahaufnahmen Haltestelle Wasserpark und Anlage am Hauptfriedhof, Spieltest auf GitHub grün).
