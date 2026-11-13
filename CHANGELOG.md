@@ -2,6 +2,10 @@
 
 ## 2026-11-13
 
+- **Waffen nur noch kaufen (#126):** Auf Straßen liegen keine Waffen und keine Munition mehr, nur Geld und Gesundheit. Waffen gibt es im Supermarkt als „Aktionsware der Woche“, im Baumarkt und Sportladen wie bisher, die Pistole am Kiosk „unter der Theke“. Start mit Fäusten.
+- **Kreativmodus (#126):** weiter freie Auswahl von allem, Mülltonne entfernt, neu **Raketenwerfer** (Hubschrauber-Abwehr, ein Treffer holt einen Polizeihubschrauber herunter, Einschlag mit Feuerball). Nur im Kreativmodus: Beim Verlassen wird das Inventar auf den Stand davor zurückgesetzt, Kreativ-Waffen bleiben nicht.
+- Getestet: Spieltest auf GitHub (Lauf 43405902269), Probe `waffen`: 0 Waffen-Pickups, Raketenwerfer im Kreativmodus da, danach weg. Der Abschuss eines Hubschraubers ist nicht automatisch geprüft.
+
 - **Messeturm bis 2 km sichtbar, Sichtweite 1,6 km:** Der Messeturm wird jetzt von `wahrzeichen.js` gebaut (Granit-Schaft, gestufte Krone, Glaszylinder, Pyramide, Kollision am Modell), unabhängig davon, ob seine Kachel gebaut ist. Kamera-Sichtweite von 920 auf 1600 m, damit die Skyline nicht abgeschnitten wird.
 - **Hochhäuser schweben nicht mehr:** Jenseits des Nebels legt sich ein Dunst-Sockel in Nebelfarbe um den Turmfuß (nah unsichtbar). Gemeldet von der Sitzung „programmierer bornheim“.
 - **Fahrprüfung Hangabtrieb:** Ohne Strecke mit ≥ 4 % Gefälle in der Nähe heißt es „übersprungen“ statt rot.
