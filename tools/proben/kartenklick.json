@@ -1,0 +1,53 @@
+[
+ {
+  "n": "start_bornheim",
+  "x": -138,
+  "z": 372,
+  "shot": false
+ },
+ {
+  "n": "a_menue_karte",
+  "wait": 1500,
+  "js": "(async () => { window.__lockSeen = false; document.addEventListener('pointerlockchange', () => { if (document.pointerLockElement && document.getElementById('menu').style.display === 'flex') window.__lockSeen = true; }); window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Escape' })); await new Promise(r => setTimeout(r, 200)); [...document.querySelectorAll('#menu button[data-tab]')].find(b => b.dataset.tab === 'karte').click(); const cv = document.getElementById('pmap'), W = cv.width, H = cv.height, G = window.G, px = G.player.pos.x, pz = G.player.pos.z, sp = 3000, sc = W / sp; const st = G.INTERIORS.metro.stations.map(s => ({ s, d: Math.hypot(s.p[0] - px, s.p[1] - pz), x: (s.p[0] - px + sp / 2) * sc, y: (s.p[1] - pz + sp * H / W / 2) * sc })).filter(q => q.x > 40 && q.y > 40 && q.x < W - 40 && q.y < H - 40 && q.d > 400).sort((a, b) => a.d - b.d); window.__ziel = st[0] && { id: st[0].s.id, x: st[0].s.p[0], z: st[0].s.p[1], cx: cv.getBoundingClientRect().left + st[0].x * cv.getBoundingClientRect().width / W, cy: cv.getBoundingClientRect().top + st[0].y * cv.getBoundingClientRect().height / H }; return JSON.stringify(window.__ziel); })()",
+  "expect": "document.getElementById('menu').style.display === 'flex' && window.__ziel"
+ },
+ {
+  "n": "a_klick",
+  "wait": 0,
+  "js": "(async () => { const z = window.__ziel, cv = document.getElementById('pmap'); for (const t of ['mousedown', 'mouseup']) cv.dispatchEvent(new MouseEvent(t, { bubbles: true, clientX: z.cx, clientY: z.cy, button: 0 })); await new Promise(r => setTimeout(r, 300)); window.__fahrtA = !!document.getElementById('rbar'); return 'fahrt=' + window.__fahrtA + ' ' + 'menue=' + document.getElementById('menu').style.display; })()",
+  "expect": "window.__fahrtA",
+  "shot": false
+ },
+ {
+  "n": "a_angekommen",
+  "wait": 45000,
+  "js": "'ziel=' + window.__ziel.id",
+  "expect": "(Math.hypot(window.G.player.pos.x - window.__ziel.x, window.G.player.pos.z - window.__ziel.z) < 250 || !!window.G.INTERIORS.inside)"
+ },
+ {
+  "n": "zurueck_bornheim",
+  "x": -138,
+  "z": 372,
+  "shot": false,
+  "wait": 3000
+ },
+ {
+  "n": "b_zu_und_auf",
+  "wait": 1500,
+  "js": "(async () => { if (window.G.INTERIORS.inside) window.G.INTERIORS.leave(); window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Escape' })); await new Promise(r => setTimeout(r, 200)); [...document.querySelectorAll('#menu button[data-tab]')].find(b => b.dataset.tab === 'karte').click(); document.getElementById('m_resume').click(); window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Escape' })); await new Promise(r => setTimeout(r, 200)); [...document.querySelectorAll('#menu button[data-tab]')].find(b => b.dataset.tab === 'karte').click(); const cv = document.getElementById('pmap'), W = cv.width, H = cv.height, G = window.G, px = G.player.pos.x, pz = G.player.pos.z, sp = 3000, sc = W / sp; const st = G.INTERIORS.metro.stations.map(s => ({ s, d: Math.hypot(s.p[0] - px, s.p[1] - pz), x: (s.p[0] - px + sp / 2) * sc, y: (s.p[1] - pz + sp * H / W / 2) * sc })).filter(q => q.x > 40 && q.y > 40 && q.x < W - 40 && q.y < H - 40 && q.d > 400).sort((a, b) => a.d - b.d); window.__ziel = st[0] && { id: st[0].s.id, x: st[0].s.p[0], z: st[0].s.p[1], cx: cv.getBoundingClientRect().left + st[0].x * cv.getBoundingClientRect().width / W, cy: cv.getBoundingClientRect().top + st[0].y * cv.getBoundingClientRect().height / H }; return 'menue=' + document.getElementById('menu').style.display + ' ziel=' + (window.__ziel && window.__ziel.id); })()",
+  "expect": "document.getElementById('menu').style.display === 'flex' && !document.pointerLockElement && !window.__lockSeen && window.__ziel"
+ },
+ {
+  "n": "b_klick",
+  "wait": 1500,
+  "js": "(async () => { const l = 'lock=' + !!document.pointerLockElement + ' lockSeen=' + window.__lockSeen; const z = window.__ziel, cv = document.getElementById('pmap'); for (const t of ['mousedown', 'mouseup']) cv.dispatchEvent(new MouseEvent(t, { bubbles: true, clientX: z.cx, clientY: z.cy, button: 0 })); await new Promise(r => setTimeout(r, 300)); window.__fahrtB = !!document.getElementById('rbar'); return 'fahrt=' + window.__fahrtB + ' ' + l; })()",
+  "expect": "window.__fahrtB && !window.__lockSeen",
+  "shot": false
+ },
+ {
+  "n": "b_angekommen",
+  "wait": 45000,
+  "js": "'ziel=' + window.__ziel.id + ' lockSeen=' + window.__lockSeen",
+  "expect": "(Math.hypot(window.G.player.pos.x - window.__ziel.x, window.G.player.pos.z - window.__ziel.z) < 250 || !!window.G.INTERIORS.inside) && !window.__lockSeen"
+ }
+]
