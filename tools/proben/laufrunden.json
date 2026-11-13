@@ -1,8 +1,37 @@
 [
- { "n": "laufrunde_start", "x": -138, "z": 372, "wait": 12000,
-   "js": "(async () => { const G = window.G, L = G.LAUF; let ok = false; for (let i = 0; i < 10 && !ok; i++) { ok = L.force(); if (!ok) await new Promise(r => setTimeout(r, 1500)); } return JSON.stringify({ ok, punkte: L.run ? L.run.pts.length : 0, km: L.run ? +(L.run.len / 1000).toFixed(2) : 0 }); })()",
-   "expect": "!!window.G.LAUF.run" },
- { "n": "laufrunde_ziel", "wait": 2000,
-   "js": "(async () => { const G = window.G, L = G.LAUF, f0 = G.PROGRESS.P.fit; while (L.run) { const [x, z] = L.run.pts[L.run.i]; G.player.pos.set(x, G.TH(x, z), z); await new Promise(r => setTimeout(r, 400)); } return JSON.stringify({ vorher: f0, nachher: G.PROGRESS.P.fit }); })()",
-   "expect": "window.G.PROGRESS.P.fit > 0 && !window.G.LAUF.run" }
+ {
+  "n": "laufrunde_start",
+  "x": -138,
+  "z": 372,
+  "wait": 12000,
+  "js": "(async () => { const G = window.G, L = G.LAUF; let ok = false; for (let i = 0; i < 10 && !ok; i++) { ok = L.force(); if (!ok) await new Promise(r => setTimeout(r, 1500)); } return JSON.stringify({ ok, punkte: L.run ? L.run.pts.length : 0, km: L.run ? +(L.run.len / 1000).toFixed(2) : 0, erster_m: L.run ? Math.round(Math.hypot(L.run.pts[0][0] - L.run.x0, L.run.pts[0][1] - L.run.z0)) : -1 }); })()",
+  "expect": "!!window.G.LAUF.run && Math.hypot(window.G.LAUF.run.pts[0][0] - window.G.LAUF.run.x0, window.G.LAUF.run.pts[0][1] - window.G.LAUF.run.z0) < 100"
+ },
+ {
+  "n": "laufrunde_strahl",
+  "wait": 2500,
+  "shot": true,
+  "js": "(() => { const G = window.G, W = G.LAUF.weg, [x, z] = G.LAUF.run.pts[0]; G.player.pos.set(x + 25, G.TH(x + 25, z + 25), z + 25); G.camYaw.v = Math.atan2(x - G.player.pos.x, z - G.player.pos.z); return JSON.stringify({ strahl: W.beam.visible, hud: W.hud.textContent, mm: W.drawn.mm }); })()",
+  "expect": "window.G.LAUF.weg.beam.visible && window.G.LAUF.weg.hud.style.display === 'flex' && /Punkt 1\\//.test(window.G.LAUF.weg.hud.textContent) && window.G.LAUF.weg.drawn.mm > 0"
+ },
+ {
+  "n": "laufrunde_pausenkarte",
+  "wait": 2000,
+  "shot": true,
+  "js": "(() => { const G = window.G, W = G.LAUF.weg, m0 = W.drawn.map; G.X.openMenu(); G.X.menuTab('karte'); return JSON.stringify({ vorher: m0, nachher: W.drawn.map }); })()",
+  "expect": "window.G.LAUF.weg.drawn.map > 0 && document.getElementById('menu').style.display === 'flex'"
+ },
+ {
+  "n": "laufrunde_karte_zu",
+  "wait": 1000,
+  "shot": false,
+  "js": "(() => { window.G.X.closeMenu(); return 'ok'; })()",
+  "expect": "document.getElementById('menu').style.display !== 'flex'"
+ },
+ {
+  "n": "laufrunde_ziel",
+  "wait": 2000,
+  "js": "(async () => { const G = window.G, L = G.LAUF, f0 = G.PROGRESS.P.fit; while (L.run) { const [x, z] = L.run.pts[L.run.i]; G.player.pos.set(x, G.TH(x, z), z); await new Promise(r => setTimeout(r, 400)); } return JSON.stringify({ vorher: f0, nachher: G.PROGRESS.P.fit }); })()",
+  "expect": "window.G.PROGRESS.P.fit > 0 && !window.G.LAUF.run && !window.G.LAUF.weg.beam.visible"
+ }
 ]
