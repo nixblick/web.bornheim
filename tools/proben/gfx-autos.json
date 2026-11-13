@@ -1,0 +1,12 @@
+[
+ { "n": "hoch_setzen", "shot": false, "wait": 500,
+   "js": "(() => { const o = JSON.parse(localStorage.getItem('notgta.opts') || '{}'); o.quality = 'hoch'; localStorage.setItem('notgta.opts', JSON.stringify(o)); setTimeout(() => location.reload(), 300); return 'reload'; })()" },
+ { "n": "neu_laden", "shot": false, "wait": 1000,
+   "js": "(async () => { const s = ms => new Promise(r => setTimeout(r, ms)); for (let i = 0; i < 150 && !document.body.innerText.includes('Frankfurt bereit'); i++) await s(1000); for (let i = 0; i < 2; i++) { [...document.querySelectorAll('button')].find(b => /Rein da/.test(b.textContent))?.click(); await s(i ? 5000 : 12000); } return JSON.stringify({ q: window.G && window.G.opts.quality }); })()",
+   "expect": "window.G && window.G.opts.quality === 'hoch'" },
+ { "n": "autos_tag", "x": 60, "z": -200, "hour": 13, "wait": 12000, "pitch": 0.05,
+   "js": "(() => { const G = window.G, T = G.THREE || null; const p = G.player.pos; const out = []; for (let k = 0; k < 3; k++) { const c = G.makeCar(k === 2, ['sedan', 'ev', null][k]); const x = p.x + 4 + k * 0.1, z = p.z + 5 + k * 5.5; c.position.set(x, G.TH(x, z), z); c.rotation.y = 0.6; c.userData.heading = 0.6; G.scene.add(c); G.cars.push(c); let ty = []; c.traverse(o => { if (o.isMesh) ty.push(o.material.type); }); out.push([...new Set(ty)].join('/')); } G.camYaw.v = Math.atan2(4, 10); return JSON.stringify(out); })()",
+   "expect": "true" },
+ { "n": "autos_tag_nah", "wait": 3000, "pitch": 0.1, "shot": true, "js": "(() => { const G = window.G; G.camYaw.v = Math.atan2(4, 6) + 0.3; return 'ok'; })()" },
+ { "n": "autos_nacht", "x": 60, "z": -200, "hour": 22, "wait": 12000, "pitch": 0.05, "js": "(() => { const G = window.G; G.world.hour = 22; G.camYaw.v = Math.atan2(4, 10); return 'ok'; })()" }
+]

@@ -157,6 +157,10 @@ export interface Ctx {
   waterAt?: (x: number, z: number, y?: number) => any;
   deckAt?: (x: number, z: number, y?: number, reach?: number) => any;
   rasenRoad?: (x: number, z: number) => boolean;
+  // Handy und Pausenmenü (#150, phone.js/menu.js)
+  openMenu?: () => void;
+  menuTab?: (tab: string) => void;
+  started?: boolean;
   // per Object.assign nach initWeapons… (game.js)
   wachen: any;
   nearestRoadDir: any;
