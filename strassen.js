@@ -97,7 +97,7 @@ float sf(vec2 p){return .5*sn(p)+.25*sn(p*2.03+7.)+.125*sn(p*4.01+3.)+.0625*sn(p
       sh.fragmentShader = 'varying vec3 vSW;\nuniform float uWet, uPud, uT, uRing;\n' + NOISE + '\n' + sh.fragmentShader
         .replace('#include <map_fragment>', `#include <map_fragment>
 float sMac = sf(vSW.xz * 0.019); diffuseColor.rgb *= 0.86 + sMac * 0.28; // großflächige Hell/Dunkel-Wolken gegen die 8-m-Wiederholung
-float sPm = 0.0; ${pfuetzen ? 'if (uPud > 0.01) { float sp = sf(vSW.xz * 0.11 + 13.0) * 0.7 + sMac * 0.3; float th = 0.8 - uPud * 0.18; sPm = smoothstep(th, th + 0.035, sp); }' : ''}
+float sPm = 0.0; ${pfuetzen ? 'if (uPud > 0.01) { float sp = sf(vSW.xz * 0.11 + 13.0) * 0.7 + sMac * 0.3; float th = 0.84 - uPud * 0.1; sPm = smoothstep(th, th + 0.03, sp); }' : ''}
 diffuseColor.rgb *= mix(1.0, 0.45, sPm);`)
         .replace('#include <roughnessmap_fragment>', '#include <roughnessmap_fragment>\nroughnessFactor = mix(roughnessFactor, 0.035, sPm);')
         .replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>
@@ -157,10 +157,10 @@ if (sPm > 0.0) { normal = normalize(mix(normal, nonPerturbedNormal, sPm));
         let back = Math.min(toA, toB) < 4 ? 7 : 0; const hx = px - ux * back, hz = pz - uz * back; if (X.onOtherRoad(hx, hz, r, 0)) continue;
         const rx = -uz, rz = ux; const c0 = r.o ? 0 : r.w / 4, wid = r.o ? r.w - 0.6 : r.w / 2 - 0.4; const cx = hx + rx * c0, cz = hz + rz * c0;
         const y = X.TH(cx, cz); B.quad(cx, cz, rx, rz, wid, 0.5, UVL, () => y, 0.065); sgl._halt = [hx, hz, ux, uz, r]; }
-      // Fußgängerfurt (Blockmarkierung 0,5 × 0,5 m, Lücke 0,2 m) an Querungen nahe einer Ampel, statt Zebrastreifen
+      // Fußgängerfurt (Blockmarkierung 0,3 × 0,3 m, Lücke 0,2 m; 0,5 m wirkten zu wuchtig, 13.11.2026) an Querungen nahe einer Ampel, statt Zebrastreifen
       for (const c of crossings || []) { const x = c.x ?? (c.p && c.p[Math.floor(c.p.length / 2)][0]), z = c.z ?? (c.p && c.p[Math.floor(c.p.length / 2)][1]); if (x === undefined || !near(x, z, signals, 18)) continue;
         const nr = X.nearestRoadDir && X.nearestRoadDir(x, z, 7); if (!nr || nr.w < 5) continue; const ux = Math.sin(nr.ang), uz = Math.cos(nr.ang), qx = -uz, qz = ux; // ux: entlang der Straße
-        for (const e of [-2, 2]) for (let s = -nr.w / 2 + 0.4; s < nr.w / 2 - 0.3; s += 0.7) { const bx = nr.x + ux * e + qx * s, bz = nr.z + uz * e + qz * s; const y = X.TH(bx, bz); B.quad(bx, bz, ux, uz, 0.5, 0.5, UVL, () => y, 0.065); } }
+        for (const e of [-2, 2]) for (let s = -nr.w / 2 + 0.4; s < nr.w / 2 - 0.3; s += 0.5) { const bx = nr.x + ux * e + qx * s, bz = nr.z + uz * e + qz * s; const y = X.TH(bx, bz); B.quad(bx, bz, ux, uz, 0.3, 0.3, UVL, () => y, 0.065); } }
     }
     STAT.mark += B.p.length / 18; STAT.markCalls++;
     return B.mesh(markMat(markTex));
