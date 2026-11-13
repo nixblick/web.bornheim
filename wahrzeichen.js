@@ -58,16 +58,27 @@ function frame(e, p) {
 const ring = (rx, rz, z0 = 0, n = 20, a0 = 0, a1 = Math.PI * 2) => { const q = []; for (let i = 0; i < n; i++) { const a = a0 + (a1 - a0) * i / (a1 - a0 >= 6.28 ? n : n - 1); q.push([rx * Math.sin(a), z0 + rz * Math.cos(a)]); } return q; };
 const rect = (w, d, z0 = 0) => [[-w / 2, z0 - d / 2], [w / 2, z0 - d / 2], [w / 2, z0 + d / 2], [-w / 2, z0 + d / 2]];
 const tri = (R, rot) => [0, 1, 2].map(i => { const a = i * 2 * Math.PI / 3 + rot; return [R * Math.sin(a), R * Math.cos(a)]; });
+// Vereinigung konvexer Teile, sternförmig um (ox, oz): je Strahl die Austrittsstelle per Halbierung (inside = Punkt im Modell)
+function star(inside, ox, oz, R, n = 96) { const q = []; for (let i = 0; i < n; i++) { const a = i * 2 * Math.PI / n, dx = Math.sin(a), dz = Math.cos(a); let lo = 0, hi = R;
+  for (let k = 0; k < 30; k++) { const m = (lo + hi) / 2; if (inside(ox + dx * m, oz + dz * m)) lo = m; else hi = m; } q.push([ox + dx * lo, oz + dz * lo]); } return q; }
 // Kern je Bau im Modellsystem (Front +z), gleiche Maße wie mk(); Rückgabe [Polygon, Kollisionshöhe]
+// Nachttest 13.11.2026: Alte Oper und Römer bekommen den Kasten des Modells (OSM-Umriss war bis 9 m kleiner), der Dom den
+// schmaleren Westturm, die Paulskirche ihren Turm, der Main Tower Zylinder plus Steinturm statt Rechteck (8 m unsichtbare Wand).
 function core(e, W, D) {
   const H = e.h, r = Math.min(W, D) / 2;
-  if (e.id === 'dom') { const nw = Math.min(W * 0.42, 26), zq = -D * 0.05, a = nw / 2, b = W / 2; // Kreuz: Langhaus/Turm über ganze Tiefe, Querhaus 11 m
-    return [[[-a, -D / 2], [a, -D / 2], [a, zq - 5.5], [b, zq - 5.5], [b, zq + 5.5], [a, zq + 5.5], [a, D / 2], [-a, D / 2], [-a, zq + 5.5], [-b, zq + 5.5], [-b, zq - 5.5], [-a, zq - 5.5]], 23]; }
-  if (e.id === 'pauls') { const rx = Math.min(20, W / 2), rz = 15; return [ring(rx, rz, -D / 2 + rz + 0.5), 28]; }
+  if (e.id === 'oper') { const rw = W * 0.44, a = W / 2, f = rw / 2, z2 = D / 2 + 4.9; // Hauptkörper und Mittelrisalit
+    return [[[-a, -D / 2], [a, -D / 2], [a, D / 2], [f, D / 2], [f, z2], [-f, z2], [-f, D / 2], [-a, D / 2]], 20]; }
+  if (e.id === 'roemer') return [rect(W, D), 12];
+  if (e.id === 'dom') { const nw = Math.min(W * 0.42, 26), zq = -D * 0.05, a = nw / 2, b = W / 2, zt = D / 2 - 18, t = 9.5; // Langhaus, Querhaus 11 m, Westturm 19 m
+    return [[[-a, -D / 2], [a, -D / 2], [a, zq - 5.5], [b, zq - 5.5], [b, zq + 5.5], [a, zq + 5.5], [a, zt], [t, zt], [t, D / 2], [-t, D / 2], [-t, zt], [-a, zt], [-a, zq + 5.5], [-b, zq + 5.5], [-b, zq - 5.5], [-a, zq - 5.5]], 23]; }
+  if (e.id === 'pauls') { const rx = Math.min(20, W / 2), rz = 15, z0 = -D / 2 + rz + 0.5, tz = Math.min(D / 2 - 5, z0 + rz + 3);
+    const inside = (x, z) => ((x / rx) ** 2 + ((z - z0) / rz) ** 2 <= 1) || (Math.abs(x) <= 5.5 && Math.abs(z - tz) <= 5.5);
+    return [star(inside, 0, Math.max(z0, tz - 5), 60), 28]; }
   if (e.id === 'coba') return [tri(r * 1.12, Math.PI / 6), H];
   if (e.id === 'trianon') return [tri(r * 1.1, Math.PI / 6), H - 22];
-  if (e.id === 'main') { const rr = Math.min(r, D / 2) * 0.95, zc = D / 2 - rr, hw = Math.max(rr, W * 0.45), zb = zc - rr - (D - 2 * rr) / 2 + 1 - (D - 2 * rr + 6) / 2;
-    return [[...ring(rr, rr, zc, 13, Math.PI / 2, -Math.PI / 2), [-hw, zc], [-hw, zb], [hw, zb], [hw, zc]].reverse(), H]; }
+  if (e.id === 'main') { const rr = Math.min(r, D / 2) * 0.95, zc = D / 2 - rr, hw = W * 0.45, z0 = -D / 2 - 2, z1 = zc - rr + 4; // Glaszylinder und Steinturm wie mk()
+    const inside = (x, z) => (x * x + (z - zc) ** 2 <= rr * rr) || (Math.abs(x) <= hw && z >= z0 && z <= z1);
+    return [star(inside, 0, Math.min(z1, zc) - 1, Math.max(W, D) + 10), H]; }
   if (e.id === 'westend') return [rect(W * 0.85, D * 0.85), H - 16];
   if (e.id === 'euro') return [rect(W * 0.9, D * 0.75), H];
   return null;

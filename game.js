@@ -283,7 +283,7 @@ function deepInPoly(x, z, poly, m2 = 0.5625) {
 }
 function inPassage(b, x, z) { for (const q of b.pass) if (distSegSq(x, z, q[0], q[1], q[2], q[3]) < q[4] * q[4]) return true; return false; }
 // neues Gebäude: Straßenstücke aus dem Straßenraster, die echt durch den Grundriss laufen, als Durchfahrt eintragen
-function buildingPassages(bi) { const b = WORLD.buildings[bi]; if (b.mh >= 2.2) return; let x0 = 1e9, x1 = -1e9, z0 = 1e9, z1 = -1e9; for (const [x, z] of b.p) { x0 = Math.min(x0, x); x1 = Math.max(x1, x); z0 = Math.min(z0, z); z1 = Math.max(z1, z); }
+function buildingPassages(bi) { const b = WORLD.buildings[bi]; if (b.mh >= 2.2 || b._stad || b.lm) return; /* Stadion und Wahrzeichen: eigenes Modell ohne Durchfahrt */ let x0 = 1e9, x1 = -1e9, z0 = 1e9, z1 = -1e9; for (const [x, z] of b.p) { x0 = Math.min(x0, x); x1 = Math.max(x1, x); z0 = Math.min(z0, z); z1 = Math.max(z1, z); }
   const g = getRoadGrid(), seen = new Map(); /* Raster liefert die Straße selbst (kein Index): je Straße die schon geprüften Segmente merken */
   for (let cx = Math.floor(x0 / CELL); cx <= Math.floor(x1 / CELL); cx++) for (let cz = Math.floor(z0 / CELL); cz <= Math.floor(z1 / CELL); cz++) { const c = g.get(key(cx, cz)); if (!c) continue;
     for (const [r, i] of c) { let sg = seen.get(r); if (!sg) seen.set(r, sg = new Set()); if (sg.has(i)) continue; sg.add(i); if (r.mw || isPedArea(r)) continue; const [ax, az] = r.p[i], [bx, bz] = r.p[i + 1]; if (Math.max(ax, bx) < x0 || Math.min(ax, bx) > x1 || Math.max(az, bz) < z0 || Math.min(az, bz) > z1) continue;
@@ -291,7 +291,7 @@ function buildingPassages(bi) { const b = WORLD.buildings[bi]; if (b.mh >= 2.2) 
 function passageAdd(r, minBi = 0) { if (isPedArea(r)) return; const hw = Math.max(1.6, r.w / 2 + 0.3);
   for (let i = 0; i < r.p.length - 1; i++) { const [ax, az] = r.p[i], [bx, bz] = r.p[i + 1]; const L = Math.hypot(bx - ax, bz - az); if (L < 2.5) continue; const seen = new Set();
     for (let s = 1.2; s <= L - 1.2; s += 1.5) { const x = ax + (bx - ax) * s / L, z = az + (bz - az) * s / L; const c = grid.get(key(Math.floor(x / CELL), Math.floor(z / CELL))); if (!c) continue;
-      for (const bi of c) { if (bi < minBi || seen.has(bi)) continue; const b = WORLD.buildings[bi]; if (!deepInPoly(x, z, b.p)) continue; seen.add(bi); const q = b.pass || (b.pass = []); if (!q.some(e => e[0] === ax && e[1] === az && e[2] === bx && e[3] === bz)) q.push([ax, az, bx, bz, hw]); } } } }
+      for (const bi of c) { if (bi < minBi || seen.has(bi)) continue; const b = WORLD.buildings[bi]; if (b._stad || b.lm || !deepInPoly(x, z, b.p)) continue; seen.add(bi); const q = b.pass || (b.pass = []); if (!q.some(e => e[0] === ax && e[1] === az && e[2] === bx && e[3] === bz)) q.push([ax, az, bx, bz, hw]); } } } }
 // Dachhöhe an einem Punkt (Flachdach oder Sattel-/Walmdach)
 function roofHeight(b, x, z) {
   const top = (b.base ?? 0) + b.h;
@@ -422,6 +422,20 @@ function centroidOf(p) { let x = 0, z = 0; for (const q of p) { x += q[0]; z += 
 function CITY_SCHOOLS() { const out = []; for (const a of CITY.areas || []) { if (a.k !== 'school') continue; let x0 = 1e9, x1 = -1e9, z0 = 1e9, z1 = -1e9; for (const [x, z] of a.p) { x0 = Math.min(x0, x); x1 = Math.max(x1, x); z0 = Math.min(z0, z); z1 = Math.max(z1, z); } out.push({ p: a.p, x0, x1, z0, z1 }); } return out; }
 // Waldstadion, frei nachgebaut ohne Namen und Werbung: Glasfassade, rotes Leuchtband, Membrandach, Ränge, Rasen, zwei Türme
 let STAD_MATS = null;
+// Kollision folgt dem Modell (Nachttest 13.11.2026): vorher stand der OSM-Grundriss als 3-m- bzw. 2-m-Klotz über dem ganzen
+// Stadion (Spielfeld nicht betretbar). markStadium läuft wie markLandmark vor registerTile: b.p wird der Ring der Glasfassade
+// (r 0,96–1,0) mit einem 8 m breiten Eingang auf der +z-Seite, das Modell lässt dort dieselbe Lücke (STAD_GAP).
+const STAD_GAP = rx => 4 / rx; // halber Öffnungswinkel
+function markStadium(b) {
+  if (!b || b._stad || !b.p || b.p.length < 4 || !(b.h >= 8)) return;
+  let x0 = 1e9, x1 = -1e9, z0 = 1e9, z1 = -1e9; for (const [x, z] of b.p) { x0 = Math.min(x0, x); x1 = Math.max(x1, x); z0 = Math.min(z0, z); z1 = Math.max(z1, z); }
+  const mx = (x0 + x1) / 2, mz = (z0 + z1) / 2, rx = (x1 - x0) / 2, rz = (z1 - z0) / 2; let s = 0; // Waldstadion (Niederrad) und FSV-Stadion am Bornheimer Hang
+  if (x1 - x0 > 200 && z1 - z0 > 200 && Math.hypot(mx + 4583, mz - 6771) < 80) s = 1; else if (x1 - x0 > 120 && z1 - z0 > 140 && Math.hypot(mx - 948, mz - 174) < 50) s = 0.55;
+  if (!s) return;
+  const gh = STAD_GAP(rx), n = 48, pt = (r, i) => { const a = gh + (Math.PI * 2 - 2 * gh) * i / n; return [mx + r * rx * Math.sin(a), mz + r * rz * Math.cos(a)]; };
+  const ring = []; for (let i = 0; i <= n; i++) ring.push(pt(1, i)); for (let i = n; i >= 0; i--) ring.push(pt(0.96, i));
+  b._stad = { mx, mz, rx, rz, s }; b.p0 = b.p; b.p = ring; b.h = 27 * s; b.r = 0; b.rh = 0; b.mh = 0;
+}
 function waldstadion(cx, cz, rx, rz, s = 1) { // s = Höhe (FSV-Stadion 0,55, ohne Türme)
   const g = new THREE.Group(); const y0 = TH(cx, cz);
   if (!STAD_MATS) { STAD_MATS = { glas: new THREE.MeshLambertMaterial({ color: 0x8fa3b4, emissive: 0xffd9a0, emissiveIntensity: 0.18, side: THREE.DoubleSide }), band: new THREE.MeshLambertMaterial({ color: 0xd8261c, emissive: 0xff2a1a, emissiveIntensity: 0.7, side: THREE.DoubleSide }),
@@ -438,9 +452,9 @@ function waldstadion(cx, cz, rx, rz, s = 1) { // s = Höhe (FSV-Stadion 0,55, oh
     STAD_MATS.dach.map = canvasTex(1024, 64, (c, w, h) => { c.fillStyle = '#eef0f2'; c.fillRect(0, 0, w, h); c.strokeStyle = '#a69a90'; c.lineWidth = 3; for (let x = 0; x < w; x += 64) { c.beginPath(); c.arc(x + 32, h, 34, Math.PI, 0); c.stroke(); } }, 1, 1);
     STAD_MATS.beton.color.setHex(0xc6c8ca);
     for (const m of Object.values(STAD_MATS)) m.userData.shared = true; }
-  const M = STAD_MATS; const ring = (r0, h, mat, y, open = true) => { const m = new THREE.Mesh(new THREE.CylinderGeometry(r0, r0, h, 48, 1, open), mat); m.scale.set(rx, 1, rz); m.position.y = y; return m; };
+  const M = STAD_MATS; const gh = STAD_GAP(rx), TL = Math.PI * 2 - 2 * gh; const ring = (r0, h, mat, y, open = true) => { const m = new THREE.Mesh(new THREE.CylinderGeometry(r0, r0, h, 48, 1, open, gh, TL), mat); m.scale.set(rx, 1, rz); m.position.y = y; return m; };
   g.add(ring(1, 20, M.glas, 10)); g.add(ring(1.01, 2.4, M.band, 21.5)); g.add(ring(1.0, 3, M.beton, 24));
-  const rg = new THREE.Mesh(new THREE.CylinderGeometry(0.78, 0.98, 18, 48, 1, true), s === 1 ? M.rang : M.rangFSV); rg.scale.set(rx, 1, rz); rg.position.y = 11; g.add(rg);
+  const rg = new THREE.Mesh(new THREE.CylinderGeometry(0.78, 0.98, 18, 48, 1, true, gh, TL), s === 1 ? M.rang : M.rangFSV); rg.scale.set(rx, 1, rz); rg.position.y = 11; g.add(rg);
   const dg = new THREE.RingGeometry(0.62, 1.03, 48, 1); dg.rotateX(-Math.PI / 2); const d = new THREE.Mesh(dg, M.dach); d.scale.set(rx, 1, rz); d.position.y = 27; d.castShadow = true; g.add(d);
   const pg = new THREE.PlaneGeometry(rx * 1.1, rz * 0.8); pg.rotateX(-Math.PI / 2); const p = new THREE.Mesh(pg, M.rasen); p.position.y = 0.3; p.receiveShadow = true; g.add(p);
   for (const s of [-1, 1]) { const tw = new THREE.Mesh(new THREE.BoxGeometry(7, 62, 7), M.turm || (M.turm = Object.assign(new THREE.MeshLambertMaterial({ map: canvasTex(64, 512, (c, w, h) => { c.fillStyle = '#c9cbcd'; c.fillRect(0, 0, w, h); for (let y = 30; y < h; y += 46) { c.fillStyle = '#3d4248'; c.fillRect(10, y, w - 20, 20); } }, 1, 1) }), { userData: { shared: true } }))); tw.position.set(s * (rx + 45), 31, s * rz * 0.3); tw.castShadow = true; g.add(tw); const k = new THREE.Mesh(new THREE.BoxGeometry(8, 6, 8), M.beton); k.position.set(s * (rx + 45), 64, s * rz * 0.3); g.add(k); }
@@ -1355,13 +1369,10 @@ function* buildCity() {
       { const kr = new THREE.Mesh(new THREE.BoxGeometry(rr * 1.18, 20, rr * 1.18), shLambert(0x8a5a4e)); kr.rotation.y = Math.PI / 4; kr.position.set(mx, TH(mx, mz) + 180, mz); kr.castShadow = true; scene.add(kr); } /* gestufte Krone */
       { const zy = new THREE.Mesh(new THREE.CylinderGeometry(rr * 0.62, rr * 0.66, 31, 24), shLambert(0x2a3340)); zy.position.set(mx, TH(mx, mz) + 190 + 15.5, mz); zy.castShadow = true; scene.add(zy); } // Glaszylinder unter der Spitze // Pyramidenspitze, 36 m, rotbraun wie der Granit (Foto 12.11.2026)
       const pm = new THREE.Mesh(new THREE.ConeGeometry(rr * 0.62, 36, 4), shLambert(0x7a4a40)); pm.rotation.y = Math.PI / 4; pm.position.set(mx, TH(mx, mz) + 221 + 18, mz); pm.castShadow = true; scene.add(pm); }
-    if (!b._stad && b.h >= 8 && b.p.length > 3) { let x0 = 1e9, x1 = -1e9, z0 = 1e9, z1 = -1e9; for (const [x, z] of b.p) { x0 = Math.min(x0, x); x1 = Math.max(x1, x); z0 = Math.min(z0, z); z1 = Math.max(z1, z); }
-      const mx = (x0 + x1) / 2, mz = (z0 + z1) / 2; // Waldstadion (Niederrad) und FSV-Stadion am Bornheimer Hang
-      if (x1 - x0 > 200 && z1 - z0 > 200 && Math.hypot(mx + 4583, mz - 6771) < 80) { b._stad = 1; b.h = 3; scene.add(waldstadion(mx, mz, (x1 - x0) / 2, (z1 - z0) / 2, 1)); }
-      else if (x1 - x0 > 120 && z1 - z0 > 140 && Math.hypot(mx - 948, mz - 174) < 50) { b._stad = 1; b.h = 2; scene.add(waldstadion(mx, mz, (x1 - x0) / 2, (z1 - z0) / 2, 0.55)); } }
+    if (b._stad) { const S = b._stad; scene.add(waldstadion(S.mx, S.mz, S.rx, S.rz, S.s)); } // Waldstadion und FSV-Stadion (markStadium)
     const shape = new THREE.Shape(b.p.map(([x, z]) => new THREE.Vector2(x, -z)));
     const ths = b.p.map(([x, z]) => TH(x, z)); const tBase = Math.min(...ths), tTop = Math.max(...ths); b.base = tTop; // Erdgeschoss auf dem höchsten Punkt
-    if (b.lm) continue; // Wahrzeichen (#73) baut wahrzeichen.js, Kollision bleibt über WORLD.buildings
+    if (b.lm || b._stad) continue; // Stadion: Modell aus waldstadion(), Wahrzeichen (#73) baut wahrzeichen.js, Kollision bleibt über WORLD.buildings
     const lift = b.mh >= 2.2 ? b.mh + (tTop - tBase) + 0.6 : 0; // aufgeständert: Körper erst ab der Unterkante
     const g = new THREE.ExtrudeGeometry(shape, { depth: b.h + (tTop - tBase) + 0.6 - lift, bevelEnabled: false });
     g.rotateX(-Math.PI / 2); g.translate(0, tBase - 0.6 + lift, 0);
@@ -2842,7 +2853,7 @@ async function loadTile(tx, tz) {
     const inf = WIDX.tiles[k];
     const [data, dem] = await Promise.all([inf[0] || inf[1] ? fetch(`data/tiles/${k}.json`).then(r => r.ok ? r.json() : {}) : Promise.resolve({}), inf[3] ? fetch(`data/dem/${k}.bin`).then(r => r.ok ? r.arrayBuffer() : null) : Promise.resolve(null)]);
     if (dem) { const u = new Uint16Array(dem); const f = new Float32Array(u.length); for (let i = 0; i < u.length; i++) f[i] = u[i] / 100 - 50; DEMT.set(k, f); DEMN.set(dkey(tx, tz), f); }
-    for (const b of data.buildings || []) markLandmark(b); // Wahrzeichen (#73): eigener Bau statt OSM-Klotz
+    for (const b of data.buildings || []) { markLandmark(b); markStadium(b); } // Wahrzeichen (#73): eigener Bau statt OSM-Klotz
     const t = { tx, tz, k, data, built: false }; TILES.set(k, t); registerTile(t);
   } catch (e) { console.warn('Kachel', k, e); TILES.set(k, { tx, tz, k, data: {}, built: false, rd: [], rp: [] }); }
   finally { loadingTiles.delete(k); }
