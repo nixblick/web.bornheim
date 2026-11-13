@@ -82,3 +82,16 @@
   #menu.mn .pmbar label:not(:first-child),#menu.mn .pmlines{display:none}
   #menu.mn .mn-foot{display:none}
 }
+/* Spielstände (spielstaende.js) */
+#menu.mn .mn-stand .mn-kicker{margin:14px 0 8px}
+#menu.mn .mn-standneu,#menu.mn .mn-standakt{display:flex;flex-wrap:wrap;gap:8px}
+#menu.mn .mn-standneu input{flex:1;min-width:180px;padding:10px 12px;border:1px solid var(--mn-line);border-radius:3px;background:#ffffff10;color:var(--mn-ivory);font-size:15px}
+#menu.mn .mn-stand button{width:auto;margin:0;padding:9px 14px;border-radius:3px;background:#ffffff10;color:var(--mn-ivory);font-size:13px;font-weight:600;letter-spacing:.03em}
+#menu.mn .mn-stand button:hover{background:#ffffff1f}
+#menu.mn .mn-stand #st_neu{background:var(--mn-amber);color:#111;font-weight:800}
+#menu.mn .mn-standakt{margin-top:8px}
+#menu.mn .mn-standzeile{flex-direction:row;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;padding:12px 14px;margin-bottom:8px}
+#menu.mn .mn-standzeile b{display:block;color:var(--mn-ivory);font-size:16px}
+#menu.mn .mn-standzeile span{font-size:13px;color:var(--mn-soft)}
+#menu.mn .mn-standknoepfe{display:flex;flex-wrap:wrap;gap:6px}
+#menu.mn .mn-standleer,#menu.mn .mn-standhinweis{font-size:13px;color:var(--mn-grey);margin:8px 0}
