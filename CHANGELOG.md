@@ -2,6 +2,8 @@
 
 ## 2026-11-13
 
+- **Spieltest: Rundum-Messung und Bug-Proben:** `tools/proben/wahrzeichen.json` misst je Wahrzeichen 32 Strahlen von außen: wo beginnt die Kollision, wo die sichtbare Wand (ohne Autos, Passanten, Nachbarhäuser); mehr als 3 Abweichungen über 1,5 m = rot. Stadion-Innenraum muss frei sein. Neu `tools/proben/bugs.json`: Rechtsverkehr (#99), HUD-Überlappung (#100), Ausgänge je Station (#97). Proben und Werkzeug kommen im Workflow immer aus dem Stand des Workflows (main oder `--ref`), der Spielcode aus `ref`.
+
 - **Feedback bleibt auf GitHub:** Der große Knopf im Feedback-Dialog legt jetzt ein GitHub-Issue an (Label bug/enhancement, Bild in der Zwischenablage). Teilen und E-Mail sind nur noch kleine Links „ohne GitHub-Konto“. Ungetestet, Test im Nachtfenster.
 - **U-Bahn: zweiter Ausgang (#97):** In der Station gab es nur eine Treppe nach oben. Jetzt hat jede Station mit mindestens zwei OSM-Eingängen (`entr`) am anderen Bahnsteigende eine zweite Treppe; sie führt zum Eingang, der am weitesten vom ersten Ausgang liegt (bei S-Tunnelstationen am Ende der S-Ebene). Die Minikarte zeigt alle Eingänge statt nur des ersten. Stationen mit einem Eingang bleiben bei einem. Ungetestet, Test im Nachtfenster.
 - **Kartenklick auf Ziel (#98):** Im Pausemenü traf ein Klick ein U-Bahn- oder Bushalt nur 12 px um den Punkt; ein Klick auf den Namen rechts daneben galt als „Springe hierher“ und setzte die Figur dorthin, ohne Fahrt. Jetzt zählt auch die Beschriftung zum Ziel, Trefferradius 16 px. Ungetestet, Test im Nachtfenster.
