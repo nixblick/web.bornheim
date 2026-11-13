@@ -2,7 +2,7 @@
 
 ## 2026-11-13
 
-- Pausemenü-Karte (#98): Ein alter Timer aus dem Schließen des Menüs sperrte die Maus, wenn das Menü binnen 1,3 s wieder offen war; der Klick auf die U-Bahn-Station ging dann als Schuss ins Spiel. Timer wird jetzt beim Öffnen abgebrochen, bei offenem Menü wird keine Sperre mehr gesetzt bzw. sofort gelöst. Probe `tools/proben/kartenklick.json` (Spieltest auf GitHub, rechnet den Stationspunkt auf der Karte selbst aus, Reiter Karte erst nach dem Menü-Hook, prüft Fahrtanzeige).
+- Pausemenü-Karte (#98): Ein alter Timer aus dem Schließen des Menüs sperrte die Maus, wenn das Menü binnen 1,3 s wieder offen war; der Klick auf die U-Bahn-Station ging dann als Schuss ins Spiel. Timer wird jetzt beim Öffnen abgebrochen, bei offenem Menü wird keine Sperre mehr gesetzt bzw. sofort gelöst. Probe `tools/proben/kartenklick.json` (Spieltest auf GitHub, rechnet den Stationspunkt auf der Karte selbst aus, Reiter Karte erst nach dem Menü-Hook, prüft Fahrtanzeige und Ankunft).
 
 - **Auto rollt erst ab 5 % von selbst los:** Gemessen über 12 m statt am Kippwinkel. Auf flach wirkender Wiese (2–4 %) bleibt das stehende Auto stehen, an echten Hängen rollt es an. Fahrprüfung „Hangabtrieb“ entsprechend: unter 6 % muss das Auto stehen bleiben, ab 6 % anrollen.
 - **Kein Zufallsruckeln mehr:** Die zufälligen „Unebenheiten“ in der Federung (auch auf ebener Fläche) sind entfernt; Federung reagiert nur noch auf Gelände, Bremsen und Kurven.

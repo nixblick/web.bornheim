@@ -13,9 +13,16 @@
  },
  {
   "n": "a_klick",
-  "wait": 45000,
+  "wait": 0,
   "js": "(async () => { const z = window.__ziel, cv = document.getElementById('pmap'); for (const t of ['mousedown', 'mouseup']) cv.dispatchEvent(new MouseEvent(t, { bubbles: true, clientX: z.cx, clientY: z.cy, button: 0 })); await new Promise(r => setTimeout(r, 300)); window.__fahrtA = !!document.getElementById('rbar'); return 'fahrt=' + window.__fahrtA + ' ' + 'menue=' + document.getElementById('menu').style.display; })()",
-  "expect": "window.__fahrtA && (Math.hypot(window.G.player.pos.x - window.__ziel.x, window.G.player.pos.z - window.__ziel.z) < 250 || !!window.G.INTERIORS.inside)"
+  "expect": "window.__fahrtA",
+  "shot": false
+ },
+ {
+  "n": "a_angekommen",
+  "wait": 45000,
+  "js": "'ziel=' + window.__ziel.id",
+  "expect": "(Math.hypot(window.G.player.pos.x - window.__ziel.x, window.G.player.pos.z - window.__ziel.z) < 250 || !!window.G.INTERIORS.inside)"
  },
  {
   "n": "zurueck_bornheim",
@@ -32,8 +39,15 @@
  },
  {
   "n": "b_klick",
-  "wait": 45000,
+  "wait": 1500,
   "js": "(async () => { const l = 'lock=' + !!document.pointerLockElement + ' lockSeen=' + window.__lockSeen; const z = window.__ziel, cv = document.getElementById('pmap'); for (const t of ['mousedown', 'mouseup']) cv.dispatchEvent(new MouseEvent(t, { bubbles: true, clientX: z.cx, clientY: z.cy, button: 0 })); await new Promise(r => setTimeout(r, 300)); window.__fahrtB = !!document.getElementById('rbar'); return 'fahrt=' + window.__fahrtB + ' ' + l; })()",
-  "expect": "window.__fahrtB && (Math.hypot(window.G.player.pos.x - window.__ziel.x, window.G.player.pos.z - window.__ziel.z) < 250 || !!window.G.INTERIORS.inside) && !window.__lockSeen"
+  "expect": "window.__fahrtB && !window.__lockSeen",
+  "shot": false
+ },
+ {
+  "n": "b_angekommen",
+  "wait": 45000,
+  "js": "'ziel=' + window.__ziel.id + ' lockSeen=' + window.__lockSeen",
+  "expect": "(Math.hypot(window.G.player.pos.x - window.__ziel.x, window.G.player.pos.z - window.__ziel.z) < 250 || !!window.G.INTERIORS.inside) && !window.__lockSeen"
  }
 ]
