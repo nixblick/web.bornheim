@@ -691,12 +691,12 @@ function drape(geo, lift, minLen = 2.5, tol = 0.1, maxLen = 40, withUV = false) 
 }
 // Zäune, Mauern, Hecken einer Kachel. Eigene Funktion, damit auch der Sparmodus (ohne buildDetails) sie baut:
 // sonst gab es dort weder Bild noch Kollision (Nachttest 12.11.2026).
-function buildFences() {
+function* buildFences() { // Generator: gibt je 3 Stücke den Hauptthread frei (#173)
   // --- Zäune, Mauern, Hecken ---
   const fenceRail = [], fencePost = [], wall = [], hedge = [], rwall = [];
   // Stücke bis 4 m, jedes auf dem Gelände: lange gerade Kästen lagen über Kuppen im Boden (Hindernis ohne Bild)
   const BSEG = barrierSegs(CITY); if (BUILD_TILE) barrierRegister(BUILD_TILE, BSEG);
-  for (const [ax, az, bx, bz, k] of BSEG) { const L = Math.hypot(bx - ax, bz - az), n = Math.ceil(L / 4), ang = Math.atan2(bx - ax, bz - az);
+  for (const [ax, az, bx, bz, k] of BSEG) { if (++YC % 3 === 0) yield; const L = Math.hypot(bx - ax, bz - az), n = Math.ceil(L / 4), ang = Math.atan2(bx - ax, bz - az);
     for (let j = 0; j < n; j++) { const px = ax + (bx - ax) * j / n, pz = az + (bz - az) * j / n, qx = ax + (bx - ax) * (j + 1) / n, qz = az + (bz - az) * (j + 1) / n, l = L / n, mx = (px + qx) / 2, mz = (pz + qz) / 2; const ty = TH(mx, mz), slope = Math.atan2(TH(px, pz) - TH(qx, qz), l);
       const box = (w, h, d, y, arr) => { const g = new THREE.BoxGeometry(w, h, d); g.rotateX(slope); g.rotateY(ang); g.translate(mx, ty + y, mz); arr.push(g); };
       if (k === 'fence') { box(0.05, 0.07, l, 1.2, fenceRail); box(0.05, 0.07, l, 0.65, fenceRail); box(0.05, 0.07, l, 0.15, fenceRail); for (const [x, z] of j === n - 1 ? [[px, pz], [qx, qz]] : [[px, pz]]) { const g = new THREE.BoxGeometry(0.09, 1.3, 0.09); g.translate(x, TH(x, z) + 0.65, z); fencePost.push(g); } }
@@ -727,14 +727,14 @@ function* buildDetails() {
     tri(A, B, C, [u0, v0], [u1, v0], [u1, v1]); tri(A, C, D, [u0, v0], [u1, v1], [u0, v1]); si++;
   }
   if (sv.length) { const tex = new THREE.CanvasTexture(atlas); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = ANISO; const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(sv, 3)); g.setAttribute('normal', new THREE.Float32BufferAttribute(sn, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(suv, 2)); { const mt = new THREE.MeshBasicMaterial({ map: tex, side: THREE.DoubleSide }); mt.userData.ownTex = true; scene.add(new THREE.Mesh(g, mt)); } }
-  buildFences(); // Zäune: Bild und Kollision aus einer Quelle, eigener Schritt (läuft auch im Sparmodus)
+  yield* buildFences(); // Zäune: Bild und Kollision aus einer Quelle, eigener Schritt (läuft auch im Sparmodus)
   const addMerged = (arr, mat, shadow = true) => { if (!arr.length) return null; const m = new THREE.Mesh(mergeGeometries(arr), mat); m.castShadow = shadow; m.receiveShadow = true; scene.add(m); return m; };
   // --- Schulhöfe ---
   const yard = []; for (const a of CITY.areas) { const shape = new THREE.Shape(a.p.map(([x, z]) => new THREE.Vector2(x, -z))); const geo = new THREE.ShapeGeometry(shape); geo.rotateX(-Math.PI / 2); yard.push(drape(geo, 0.06, 2.5, 0.05, 10)); }
   addMerged(yard, shLambert(0x8f8d88), false);
   // --- Balkone ---
   const slab = [], rail = [];
-  if (opts.quality !== 'niedrig') for (const b of CITY.buildings) { if (++YC % 10 === 0) yield; if (b.mh >= 2.2 || (b.k && b.k !== 'res') || b.h < 9 || Math.random() > 0.4) continue; let e = 0, best = 0; for (let i = 0; i < b.p.length; i++) { const l = edgeNormal(b.p, i).l; if (l > best) { best = l; e = i; } } if (best < 8) continue; const en = edgeNormal(b.p, e); const ux = en.dx / en.l, uz = en.dz / en.l; const floors = Math.min(5, Math.floor((b.h - 1) / 3.2)); const ang = Math.atan2(en.nx, en.nz);
+  if (opts.quality !== 'niedrig') for (const b of CITY.buildings) { if (++YC % 3 === 0) yield; if (b.mh >= 2.2 || (b.k && b.k !== 'res') || b.h < 9 || Math.random() > 0.4) continue; let e = 0, best = 0; for (let i = 0; i < b.p.length; i++) { const l = edgeNormal(b.p, i).l; if (l > best) { best = l; e = i; } } if (best < 8) continue; const en = edgeNormal(b.p, e); const ux = en.dx / en.l, uz = en.dz / en.l; const floors = Math.min(5, Math.floor((b.h - 1) / 3.2)); const ang = Math.atan2(en.nx, en.nz);
     for (let f = 1; f < floors; f++) for (let d = 3; d < en.l - 2; d += 5.5) { const x = en.ax + ux * d + en.nx * 0.6, z = en.az + uz * d + en.nz * 0.6; const y = (b.base || 0) + f * 3.2 + 0.1; const g = new THREE.BoxGeometry(2.2, 0.14, 1.2); g.rotateY(ang); g.translate(x, y, z); slab.push(g); const r = new THREE.BoxGeometry(2.2, 0.95, 0.05); r.rotateY(ang); r.translate(x + en.nx * 0.58, y + 0.55, z + en.nz * 0.58); rail.push(r); } }
   addMerged(slab, shLambert(0xd8d2c8)); addMerged(rail, shLambert(0x3b3f44), false);
   // --- Büsche ---
@@ -757,7 +757,7 @@ function* buildDetails() {
   // Stadtmöbel (Fahrradständer, Bänke, Poller, Mülleimer …) nie auf der Fahrbahn: OSM-Punkte liegen oft auf der Straßenlinie
   // (Rödelheim, André 12.11.2026). Einmal an den Rand schieben, höchstens 12 m, sonst weglassen
   for (const f of CITY.furniture) if (!f.off) { const [qx, qz] = pushOffRoads(f.x, f.z, 0.7); if (Number.isNaN(qx) || Math.hypot(qx - f.x, qz - f.z) > 12) f.skip = true; else { f.x = qx; f.z = qz; } f.off = true; }
-  for (const f of CITY.furniture) { if (++YC % 10 === 0) yield; if (f.skip || solidAt(f.x, f.z) >= 0) continue; const ty = f.k === 'fountain' ? TH(f.x, f.z) : footTH(f.x, f.z, f.k === 'bench' ? 0.8 : 0.3); const S = FOOT_SINK; const ne = nearestRoadDir(f.x, f.z); const ang = ne ? ne.ang : Math.random() * 6;
+  for (const f of CITY.furniture) { if (++YC % 3 === 0) yield; if (f.skip || solidAt(f.x, f.z) >= 0) continue; const ty = f.k === 'fountain' ? TH(f.x, f.z) : footTH(f.x, f.z, f.k === 'bench' ? 0.8 : 0.3); const S = FOOT_SINK; const ne = nearestRoadDir(f.x, f.z); const ang = ne ? ne.ang : Math.random() * 6;
     const bx = (w, h, d, y, arr, ox = 0, oz = 0) => { const g = new THREE.BoxGeometry(w, h, d); g.rotateY(ang); g.translate(f.x + ox, ty + y, f.z + oz); arr.push(g); };
     if (f.k === 'bench') { bx(1.6, 0.06, 0.45, 0.45, benchW); bx(1.6, 0.42, 0.05, 0.72, benchW, -Math.cos(ang) * 0.2, Math.sin(ang) * 0.2); bx(0.08, 0.45 + S, 0.4, 0.225 - S / 2, benchW, Math.sin(ang) * 0.7, Math.cos(ang) * 0.7); bx(0.08, 0.45 + S, 0.4, 0.225 - S / 2, benchW, -Math.sin(ang) * 0.7, -Math.cos(ang) * 0.7); }
     else if (f.k === 'waste_basket') { const g = new THREE.CylinderGeometry(0.2, 0.17, 1.0 + S, 8); g.translate(f.x, ty + (1.0 - S) / 2, f.z); bins.push(g); }
@@ -892,7 +892,7 @@ function* buildDetails() {
     for (const g of CITY.green) { if (g.k !== 'cemetery' || n > 2400) continue; let x0 = 1e9, x1 = -1e9, z0 = 1e9, z1 = -1e9; for (const [x, z] of g.p) { x0 = Math.min(x0, x); x1 = Math.max(x1, x); z0 = Math.min(z0, z); z1 = Math.max(z1, z); }
       const ang = (() => { let best = 0, bl2 = 0; for (let i = 0; i < g.p.length - 1; i++) { const dx = g.p[i + 1][0] - g.p[i][0], dz = g.p[i + 1][1] - g.p[i][1], l = dx * dx + dz * dz; if (l > bl2) { bl2 = l; best = Math.atan2(dx, dz); } } return best; })(); const ca = Math.cos(ang), sa = Math.sin(ang);
       const cx = (x0 + x1) / 2, cz = (z0 + z1) / 2, R = Math.hypot(x1 - x0, z1 - z0) / 2;
-      for (let v = -R, row = 0; v < R; v += 2.6, row++) { if (row % 6 === 5) continue; for (let u = -R, col = 0; u < R; u += 1.6, col++) { if (++YC % 4000 === 0) yield; if (col % 9 === 8 || n > 2400) continue; const x = cx + u * ca + v * sa, z = cz - u * sa + v * ca;
+      for (let v = -R, row = 0; v < R; v += 2.6, row++) { if (row % 6 === 5) continue; for (let u = -R, col = 0; u < R; u += 1.6, col++) { if (++YC % 500 === 0) yield; if (col % 9 === 8 || n > 2400) continue; const x = cx + u * ca + v * sa, z = cz - u * sa + v * ca;
           if (!pointInPoly(x, z, g.p) || solidAt(x, z) >= 0 || onOtherRoad(x, z, null, 1.0)) continue; let edge = 1e9; for (let i = 0; i < g.p.length - 1; i++) edge = Math.min(edge, distSegSq(x, z, g.p[i][0], g.p[i][1], g.p[i + 1][0], g.p[i + 1][1])); if (edge < 9) continue;
           if (rr() < 0.12) continue; n++; const y = TH(x, z); const r = rr(); const put = (geo, arr, dy, off = 0) => { geo.rotateY(ang); geo.translate(x + sa * off, y + dy, z + ca * off); arr.push(geo); };
           put(new THREE.BoxGeometry(1.0, 0.12, 1.9), beet, 0.06, 0.2); if (rr() < 0.6) put(new THREE.BoxGeometry(0.8, 0.08, 1.4), bl, 0.14, 0.25);
@@ -1049,7 +1049,7 @@ function* buildDetails2() {
   const quad = (T, A, B, C, D, nx, ny, nz) => { T.v.push(...A, ...B, ...C, ...A, ...C, ...D); for (let i = 0; i < 6; i++) T.n.push(nx, ny, nz); };
   const mk = (T, mat, shadow = false) => { if (!T.v.length) return null; const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(T.v, 3)); g.setAttribute('normal', new THREE.Float32BufferAttribute(T.n, 3)); const m = new THREE.Mesh(g, mat); m.castShadow = shadow; m.receiveShadow = true; scene.add(m); return m; };
   const cor = Q(), band = Q(), curbF = Q(), curbT = Q(); const roofBox = [], chim = [];
-  for (const b of CITY.buildings) { if (++YC % 10 === 0) yield; if (b.mh >= 2.2 || b.lm) continue;
+  for (const b of CITY.buildings) { if (++YC % 3 === 0) yield; if (b.mh >= 2.2 || b.lm) continue;
     const base = b.base ?? 0, top = base + b.h, kind = b.k || 'res'; const sgn = polyArea(b.p) > 0 ? 1 : -1;
     const lowQ = opts.quality === 'niedrig'; const doCor = !lowQ && (kind === 'res' || kind === 'public' || kind === 'church' || kind === 'house'); const doBand = !lowQ && (kind === 'res' || kind === 'public') && b.h >= 7;
     for (let i = 0; i < b.p.length; i++) { const [ax, az] = b.p[i], [bx, bz] = b.p[(i + 1) % b.p.length]; const dx = bx - ax, dz = bz - az, l = Math.hypot(dx, dz); if (l < 1.2) continue; const nx = dz / l * sgn, nz = -dx / l * sgn; const ex = dx / l * 0.3, ez = dz / l * 0.3;
@@ -1070,7 +1070,7 @@ function* buildDetails2() {
   if (roofBox.length) { const m = new THREE.Mesh(mergeGeometries(roofBox), shLambert(0x8f8b85)); m.castShadow = true; m.receiveShadow = true; scene.add(m); }
   if (chim.length) { const m = new THREE.Mesh(mergeGeometries(chim), shLambert(0x8a4b38)); m.castShadow = true; scene.add(m); }
   // Bordsteine: an beiden Fahrbahnrändern, unterbrochen an Einmündungen
-  for (const r of CITY.roads) { if (r.ped || r.w < 5) continue; if (++YC % 10 === 0) yield;
+  for (const r of CITY.roads) { if (r.ped || r.w < 5) continue; if (++YC % 3 === 0) yield;
     for (let i = 0; i < r.p.length - 1; i++) { const [ax, az] = r.p[i], [bx, bz] = r.p[i + 1]; const l = Math.hypot(bx - ax, bz - az); if (l < 0.5) continue; const nx = -(bz - az) / l, nz = (bx - ax) / l; const steps = Math.max(1, Math.ceil(l / 2));
       for (const sd of [-1, 1]) for (let k = 0; k < steps; k++) { const t0 = k / steps, t1 = (k + 1) / steps; const off = r.w / 2; const x0 = ax + (bx - ax) * t0 + nx * off * sd, z0 = az + (bz - az) * t0 + nz * off * sd, x1 = ax + (bx - ax) * t1 + nx * off * sd, z1 = az + (bz - az) * t1 + nz * off * sd;
         const mx = (x0 + x1) / 2, mz = (z0 + z1) / 2; if (onOtherRoad(mx, mz, r, 0.3)) continue;
@@ -1090,9 +1090,9 @@ const SCHILDER = [ // Nasenschilder nach Fotos (OSM-Punkte): [x, z, Text, Grund,
   { x: -1288, z: 239, t: 'zappbar', bg: '#0e0e10', fg: '#f2f2f2' }, { x: 248, z: -488, t: 'CARAVAN', bg: '#efe9dc', fg: '#e8501c' }, { x: -4153, z: 2492, t: 'FEUERWACHE 2', bg: '#c8102e', fg: '#ffffff' }, { x: 224, z: 148, t: 'KIRCHNERSCHULE', bg: '#efe9dc', fg: '#3a2a22' }, { x: -14, z: -175, t: 'DÖNERIA', bg: '#dff5ec', fg: '#d4165a' }, { x: 414, z: -509, t: "Moni's", bg: '#e8d8a0', fg: '#8a2a1a' }, { x: 68, z: -210, t: 'nahkauf', bg: '#d8101c', fg: '#ffffff' }, { x: 191, z: -449, t: 'BÄCKEREI', bg: '#f2c230', fg: '#5a2a10', brezel: 1 }];
 const WACHE_OHNE_NAMEN = [[-4153, 2492], [-4136, 2487]];
 const WACHEN = []; // Mittelpunkte der Feuerwachen (aus dem Gebäudebau), dort parkt der Kommandowagen
-function buildParked() {
+function* buildParked() { // Generator wie die übrigen Bauschritte (#173)
   const local = [];
-  for (const r of CITY.roads) { if (r.ped || r.mw || r.ry || r.w < 5 || r.w > 9.5) continue;
+  for (const r of CITY.roads) { if (++YC % 3 === 0) yield; if (r.ped || r.mw || r.ry || r.w < 5 || r.w > 9.5) continue;
     for (let i = 0; i < r.p.length - 1; i++) { const [ax, az] = r.p[i], [bx2, bz] = r.p[i + 1]; const l = Math.hypot(bx2 - ax, bz - az); if (l < 8) continue; const nx = -(bz - az) / l, nz = (bx2 - ax) / l; const hd = Math.atan2(bx2 - ax, bz - az);
       for (const sd of [-1, 1]) { if (Math.random() < 0.06) continue; for (let d = 4; d < l - 4; d += 5.4) { if (Math.random() < 0.14) continue; const off = r.w / 2 + 0.55; const x = ax + (bx2 - ax) * d / l + nx * off * sd, z = az + (bz - az) * d / l + nz * off * sd;
         const fx = Math.sin(hd) * 2.2, fz = Math.cos(hd) * 2.2; if (solidAt(x, z) >= 0 || solidAt(x + fx, z + fz) >= 0 || solidAt(x - fx, z - fz) >= 0 || solidAt(x + nx * sd, z + nz * sd) >= 0) continue;
@@ -1368,7 +1368,7 @@ function* buildCity() {
     { const [cx, cz] = centroidOf(b.p); if (b.h >= 10 && WOELL.some((p, i) => i && distSegSq(cx, cz, WOELL[i - 1][0], WOELL[i - 1][1], p[0], p[1]) < 625)) return 'zwanziger'; if (b.h >= 10 && hsh >= 6 && hsh < 8 && cz < -300 && cz > -900 && cx > -700 && cx < 900) return 'zwanziger'; if (b.h >= 11 && b.h <= 19 && hsh >= 8 && hsh < 10 && cz < 300 && cz > -1600 && cx > -1600 && cx < 1600) return 'abg'; } // Wöllstädter Straße und Bornheim-Nord; ABG-Häuser
     if (b.h >= 12 && hsh >= 2 && hsh < 6) { const [cx, cz] = centroidOf(b.p); if (cx > -800 && cx < 900 && cz > -900 && cz < 900) return 'gruender'; } // Bornheim: Gründerzeit wie an der Berger Straße
     if (b.r && b.rh > 0 && b.h <= 11.5) { const [cx, cz] = centroidOf(b.p); const alt = cx > -80 && cx < 460 && cz > -400 && cz < 220; /* Alt-Bornheim: Eulengasse, Turmstraße, Rendeler Straße */ if (alt && hsh < 7) return 'fw'; if (alt && hsh < 9) return 'schiefer'; if (!alt && hsh === 0) return 'schiefer'; } return hsh < 6 ? 'res' : hsh < 8 ? 'nk' : hsh < 10 ? 'nb' : 'zi'; };
-  for (const b of CITY.buildings) { if (++YC % 10 === 0) yield;
+  for (const b of CITY.buildings) { if (++YC % 3 === 0) yield;
     const kind = kindOf(b);
     if (kind === 'wache') WACHEN.push(centroidOf(b.p));
     if (!HECKE_DONE.v && CITY.buildings.length) { HECKE_DONE.v = 1; // Feuerdorn-Hecken mit roten Beeren an der Wöllstädter Straße (Foto Caravan)
@@ -1481,7 +1481,7 @@ function* buildCity() {
   const greenCol = { park: 0x6f9a52, grass: 0x7aa35a, garden: 0x6a9450, meadow: 0x86a85c, forest: 0x4e7d3a, allotments: 0x7f9a5a, dog_park: 0x7aa35a, cemetery: 0x6f9a52, recreation_ground: 0x72a052, playground: 0xd2bb8e, parking: 0x6d6d70, track: 0xb0563c };
   const sportCol = { soccer: 0x3f8a3a, tennis: 0xb0563c, basketball: 0x7a7f86, multi: 0x7a7f86, petanque: 0xc8b48a, table_tennis: 0x7aa35a, volleyball: 0xd2bb8e };
   const byCol = new Map();
-  for (const g of CITY.green) { if (++YC % 10 === 0) yield;
+  for (const g of CITY.green) { if (++YC % 3 === 0) yield;
     const shape = new THREE.Shape(g.p.map(([x, z]) => new THREE.Vector2(x, -z)));
     const lawn = RASEN_KINDS.has(g.k); let geo = new THREE.ShapeGeometry(shape); geo.rotateX(-Math.PI / 2); geo = drape(geo, g.k === 'pitch' || g.k === 'playground' ? 0.07 : 0.05, 2.5, 0.05, 10, lawn);
     const col = g.k === 'pitch' ? (sportCol[g.s] || 0x7a7f86) : (greenCol[g.k] || 0x6f9a52); const bk = lawn ? 'r' + col : col; /* Rasen: Bodentextur aus rasen.js (uv in Weltmetern) */
@@ -1491,7 +1491,7 @@ function* buildCity() {
   // Spielplatzgeräte und Sportplatz-Linien
   const propGeos = { red: [], blue: [], yellow: [], wood: [], white: [], steel: [] };
   const bx = (w, h, d, x, y, z, ry, bucket) => { const g = new THREE.BoxGeometry(w, h, d); if (ry) g.rotateY(ry); g.translate(x, y + TH(x, z), z); propGeos[bucket].push(g); };
-  for (const g of CITY.green) { if (++YC % 10 === 0) yield;
+  for (const g of CITY.green) { if (++YC % 3 === 0) yield;
     const ob = orientedBox(g.p); const cu = (ob.umin + ob.umax) / 2, cv = (ob.vmin + ob.vmax) / 2; const ang = Math.atan2(ob.ux, ob.uz) - Math.PI / 2; const [cx, cz] = ob.pt(cu, cv);
     const inside = (u, v) => { const [x, z] = ob.pt(u, v); return pointInPoly(x, z, g.p) && solidAt(x, z) < 0; };
     const L = ob.umax - ob.umin, W = ob.vmax - ob.vmin;
@@ -1575,7 +1575,7 @@ function* buildCity() {
   if (railLines.length) scene.add(new THREE.Mesh(mergeGeometries(railLines), shLambert(0x9a9a9a)));
   // Ampeln
   const sigSpots = [], sigLight = [];
-  for (const [sx0, sz0] of CITY.signals) { if (++YC % 10 === 0) yield; if (solidAt(sx0, sz0) >= 0) continue;
+  for (const [sx0, sz0] of CITY.signals) { if (++YC % 3 === 0) yield; if (solidAt(sx0, sz0) >= 0) continue;
     // StVO: je Zufahrt zwei Signalgeber, rechts und links der Fahrbahn
     let best = null, bd = 1e18; for (const r of CITY.roads) { if (r.ped) continue; for (let i = 0; i < r.p.length - 1; i++) { const [ax, az] = r.p[i], [bx, bz] = r.p[i + 1]; const d = distSegSq(sx0, sz0, ax, az, bx, bz); if (d < bd) { bd = d; best = { r, ax, az, bx, bz }; } } }
     let spots = [[sx0, sz0]]; if (best && bd < 400) { const dx = best.bx - best.ax, dz = best.bz - best.az, l = Math.hypot(dx, dz) || 1, L2 = l * l; const t = clamp(((sx0 - best.ax) * dx + (sz0 - best.az) * dz) / L2, 0, 1); const cx = best.ax + dx * t, cz = best.az + dz * t; const o = best.r.w / 2 + 0.8; spots = [[cx - dz / l * o, cz + dx / l * o], [cx + dz / l * o, cz - dx / l * o]]; }
@@ -1625,7 +1625,7 @@ function* buildCity() {
     lm.castShadow = false; lm.receiveShadow = false; lm.computeBoundingSphere(); leafMeshes.push(lm); scene.add(lm); applyTreeQuality(); } // Blätter werfen keinen Schatten, die Krone reicht
   // Laternen
   const lampG = LAMP_G || (LAMP_G = Object.assign(new THREE.CylinderGeometry(0.06, 0.08, 5, 5), { userData: { shared: true } })); const lamps = [];
-  for (const r of CITY.roads) { if (r.w < 5 || r.ped) continue; let acc = 8, side = 1; if (++YC % 10 === 0) yield; // Abstand über die ganze Straße, Seiten im Wechsel
+  for (const r of CITY.roads) { if (r.w < 5 || r.ped) continue; let acc = 8, side = 1; if (++YC % 3 === 0) yield; // Abstand über die ganze Straße, Seiten im Wechsel
     for (let i = 0; i < r.p.length - 1; i++) { const [ax, az] = r.p[i], [bx, bz] = r.p[i + 1]; const l = Math.hypot(bx - ax, bz - az) || 0.001; const dx = (bx - ax) / l, dz = (bz - az) / l; let d = acc;
       for (; d < l; d += 24) { const off = (r.w / 2 + 0.6) * side; const sx = ax + dx * d - dz * off, sz = az + dz * d + dx * off; side = -side; if (solidAt(sx, sz) < 0 && !onOtherRoad(sx, sz, r, 0.5) && deckAt(sx, sz, 1e9, 0) === null) lamps.push([sx, sz]); }
       acc = d - l; } }
@@ -2300,9 +2300,13 @@ const camYaw = { v: 0 }, camPitch = { v: 0.2 };
 const keys = {};
 const opts = { sens: 1, vol: 0.8, shadows: true, timeSpeed: 0.25, headlights: true, weather: 'auto', traffic: 1, quality: QUALITY, scale: 1, view: 700, bloom: 1, ao: true, dynlights: true, fps: false, fov: 65, camdist: 1, invy: false, shake: true, gyro: false, vibrate: true, peds: 1, police: true, god: false, ammo: false, dynres: true, lod: true, potato: false, fall: true, grip: 1, minimap: true, hud: true, tts: true, demos: true, firebrigade: true };
 const VERY_WEAK = /hd graphics (2000|2500|3000|4000|400|405|500|505|510)\b|intel.*(atom|celeron|pentium)|mali-[t4]|powervr|adreno \(tm\) [1-5]\d\d|llvmpipe|swiftshader/i.test(GPU);
+const OPTS_DEFAULT = Object.assign({}, opts); // Standardwerte vor dem Laden (Rücksetzen alter Sparmodus-Stände, #173)
 const POTATO = { quality: 'niedrig', potato: true, shadows: false, ao: false, bloom: 0, view: 250, scale: 0.7, peds: 0.4, traffic: 0.5, dynres: true, lod: true };
-function loadOpts() { try { Object.assign(opts, JSON.parse(localStorage.getItem('notgta.opts') || '{}')); } catch (e) {} if (!opts.zeitV2) { if (opts.timeSpeed === 1) opts.timeSpeed = 0.25; opts.zeitV2 = true; } /* alter Standard 1 Std./Min. war zu schnell (12.11.2026) */ if (WEAK_VIEW) { opts.view = Math.min(opts.view || 700, 425); opts.weakTuned = true; } if (VERY_WEAK && !opts.potatoTuned) { const q = opts.quality; Object.assign(opts, POTATO); if (opts.qualityManuell) opts.quality = q; opts.potatoTuned = true; } if (!opts.qualityManuell) opts.quality = VERY_WEAK ? 'niedrig' : QUALITY; applyOpts(); } // einmalig: kürzere Sichtweite auf schwacher GPU, danach frei änderbar
-function applyOpts() { camera.far = Math.max(1600, (opts.view || 700) + 200); /* 1600: Skyline und Messeturm aus wahrzeichen.js bis 1,6 km (13.11.2026); Nebel endet früher, Kacheln sind dort ohnehin nicht gebaut */ camera.updateProjectionMatrix(); const mm = document.getElementById('minimap'); if (mm) mm.style.display = opts.minimap === false ? 'none' : ''; const hd = document.getElementById('hud'); if (hd) hd.style.visibility = opts.hud === false ? 'hidden' : 'visible'; const fe = document.getElementById('fps'); if (fe) fe.style.display = opts.fps ? 'block' : 'none'; renderer.shadowMap.enabled = !!opts.shadows && opts.quality !== 'niedrig'; applyQuality(); scene.traverse(o => { if (o.material) { const ms = Array.isArray(o.material) ? o.material : [o.material]; for (const m of ms) m.needsUpdate = true; } }); world.speed = opts.timeSpeed / 60; SND.vol = opts.vol; if (SND.master) SND.master.gain.value = opts.vol; try { localStorage.setItem('notgta.opts', JSON.stringify(opts)); } catch (e) {} }
+const POTATO_KEYS = Object.keys(POTATO).filter(k => k !== 'quality');
+// Gespeichert wird nie ein automatischer Sparmodus: ohne potatoManuell stehen für Sparmodus-Werte die Standardwerte in localStorage (#173)
+function optsToSave() { const s = Object.assign({}, opts); if (!s.potatoManuell) for (const k of POTATO_KEYS) if (s[k] === POTATO[k]) s[k] = OPTS_DEFAULT[k]; return s; }
+function loadOpts() { try { Object.assign(opts, JSON.parse(localStorage.getItem('notgta.opts') || '{}')); } catch (e) {} if (!opts.zeitV2) { if (opts.timeSpeed === 1) opts.timeSpeed = 0.25; opts.zeitV2 = true; } /* alter Standard 1 Std./Min. war zu schnell (12.11.2026) */ if (WEAK_VIEW) { opts.view = Math.min(opts.view || 700, 425); opts.weakTuned = true; } /* #173: Sparmodus wie die Stufe. Nur ein vom Nutzer gesetzter Sparmodus (potatoManuell) bleibt; alte Stände mit potato ohne Markierung (automatisch gesetzt oder vor #173) gehen auf die Standardwerte zurück: Andrés Chrome lief mit Sichtweite 250, Skala 0,7 und ohne Schatten, obwohl die Stufe schon frei war (13.11.2026) */ if (opts.potato && !opts.potatoManuell) { for (const k of POTATO_KEYS) opts[k] = OPTS_DEFAULT[k]; } delete opts.potatoTuned; if (VERY_WEAK && !opts.potatoManuell) { const q = opts.quality; Object.assign(opts, POTATO); if (opts.qualityManuell) opts.quality = q; } /* sehr schwache GPU: Sparmodus nur zur Laufzeit, jeden Start neu */ if (!opts.qualityManuell) opts.quality = VERY_WEAK ? 'niedrig' : QUALITY; applyOpts(); } // einmalig: kürzere Sichtweite auf schwacher GPU, danach frei änderbar
+function applyOpts() { camera.far = Math.max(1600, (opts.view || 700) + 200); /* 1600: Skyline und Messeturm aus wahrzeichen.js bis 1,6 km (13.11.2026); Nebel endet früher, Kacheln sind dort ohnehin nicht gebaut */ camera.updateProjectionMatrix(); const mm = document.getElementById('minimap'); if (mm) mm.style.display = opts.minimap === false ? 'none' : ''; const hd = document.getElementById('hud'); if (hd) hd.style.visibility = opts.hud === false ? 'hidden' : 'visible'; const fe = document.getElementById('fps'); if (fe) fe.style.display = opts.fps ? 'block' : 'none'; renderer.shadowMap.enabled = !!opts.shadows && opts.quality !== 'niedrig'; applyQuality(); scene.traverse(o => { if (o.material) { const ms = Array.isArray(o.material) ? o.material : [o.material]; for (const m of ms) m.needsUpdate = true; } }); world.speed = opts.timeSpeed / 60; SND.vol = opts.vol; if (SND.master) SND.master.gain.value = opts.vol; try { localStorage.setItem('notgta.opts', JSON.stringify(optsToSave())); } catch (e) {} }
 function saveGame(quiet) {
   const c = player.car; const data = { v: 1, pos: POCKET ? [POCKET.anchor[0], TH(POCKET.anchor[0], POCKET.anchor[1]), POCKET.anchor[1]] : [player.pos.x, player.pos.y, player.pos.z] /* im Innenraum den Ausgang speichern, nicht den Taschenraum bei x=60000 */, yaw: camYaw.v, hp: Math.max(1, player.hp), inv: WPN.save(), story: STORY ? STORY.sid : null /* nur die Kennung: der Story-Zustand enthält Figuren und Fahrzeuge, die sich nicht speichern lassen ("Speichern fehlgeschlagen"); die Story speichert sich selbst */, money: player.money, score: player.score, wanted: player.wanted, female: player.female, hour: world.hour, car: c ? { x: c.position.x, z: c.position.z, h: c.userData.heading, col: c.userData.col ?? 0xffffff, type: c.userData.type } : null, when: Date.now() };
   try { localStorage.setItem('notgta.save', JSON.stringify(data)); showMsg(quiet ? 'AUTOMATISCH GESPEICHERT' : 'GESPEICHERT', 900, 'ok'); if (!quiet) sfx('click'); } catch (e) { console.warn('Speichern', e); showMsg('SPEICHERN FEHLGESCHLAGEN', 1500); }
@@ -2862,15 +2866,16 @@ function unregisterTile(t) {
   barrierDrop(t);
   DEMT.delete(t.k); DEMN.delete(dkey(t.tx, t.tz)); thK = NaN; thH = null; t.mm = null; t.data = null; t.rd = []; t.rp = []; t.bi = t.bar = null; TILES.delete(t.k);
 }
-const loadingTiles = new Set();
+const loadingTiles = new Set(); const LOAD_STAT = { ms: 0, n: 0 }; // registerTile & Co. je Kachel, summiert bis F3 abholt
 async function loadTile(tx, tz) {
   const k = tkey(tx, tz); if (TILES.has(k) || loadingTiles.has(k) || !WIDX.tiles[k]) return; loadingTiles.add(k);
   try {
     const inf = WIDX.tiles[k];
     const [data, dem] = await Promise.all([inf[0] || inf[1] ? fetch(`data/tiles/${k}.json`).then(r => r.ok ? r.json() : {}) : Promise.resolve({}), inf[3] ? fetch(`data/dem/${k}.bin`).then(r => r.ok ? r.arrayBuffer() : null) : Promise.resolve(null)]);
+    const l0 = performance.now(); // Arbeit nach dem Laden läuft außerhalb der Spielschleife (Promise): für F3 messen (#173)
     if (dem) { const u = new Uint16Array(dem); const f = new Float32Array(u.length); for (let i = 0; i < u.length; i++) f[i] = u[i] / 100 - 50; DEMT.set(k, f); DEMN.set(dkey(tx, tz), f); }
     for (const b of data.buildings || []) { markLandmark(b); markStadium(b); } // Wahrzeichen (#73): eigener Bau statt OSM-Klotz
-    const t = { tx, tz, k, data, built: false }; TILES.set(k, t); registerTile(t);
+    const t = { tx, tz, k, data, built: false }; TILES.set(k, t); registerTile(t); LOAD_STAT.ms += performance.now() - l0; LOAD_STAT.n++;
   } catch (e) { console.warn('Kachel', k, e); TILES.set(k, { tx, tz, k, data: {}, built: false, rd: [], rp: [] }); }
   finally { loadingTiles.delete(k); }
 }
@@ -2889,7 +2894,7 @@ function* buildTileGround(t) {
   const m = new THREE.Mesh(gg, GROUND_MAT); m.receiveShadow = true; scene.add(m); rayTargets.push(m);
 }
 let YC = 0; const BUILD_STEPS = ['ground', 'city', 'det', 'det2', 'park'];
-const STEP_FN = { ground: t => buildTileGround(t), city: () => buildCity(), det: () => buildDetails(), det2: () => buildDetails2(), park: function* () { buildParked(); }, fence: function* () { buildFences(); } };
+const STEP_FN = { ground: t => buildTileGround(t), city: () => buildCity(), det: () => buildDetails(), det2: () => buildDetails2(), park: () => buildParked(), fence: () => buildFences() };
 const _tileFrustum = new THREE.Frustum(), _tileProj = new THREE.Matrix4();
 function updateTileVis() {
   camera.updateMatrixWorld();
@@ -2910,14 +2915,15 @@ function makeUpgrade(t) { return { t, steps: ['det', 'det2', 'park'], gen: null,
 function runJob(j, budget) {
   const t0 = performance.now(); const d = j.t.data; const any = !!(d.buildings || d.roads || d.green);
   while (j.steps.length) { const st = j.steps[0]; if (!j.gen) j.gen = (st === 'ground' || any) ? STEP_FN[st](j.t) : null; let done = !j.gen; const a = performance.now();
-    while (!done) { BUILD_TILE = j.t; const res = withBuildSet(d, () => { try { done = j.gen.next().done; } finally { BUILD_TILE = null; } }, j.grp); res.owned.forEach((o, i) => { if (o.length) j.owned[i].push(...o); }); if (performance.now() - t0 > budget) break; }
+    while (!done) { BUILD_TILE = j.t; const s0 = performance.now(); const res = withBuildSet(d, () => { try { done = j.gen.next().done; } finally { BUILD_TILE = null; } }, j.grp); res.owned.forEach((o, i) => { if (o.length) j.owned[i].push(...o); }); const sl = performance.now() - s0; if (sl > BUILD_STAT.max) { BUILD_STAT.max = sl; BUILD_STAT.step = st; } if (performance.now() - t0 > budget) break; }
     j.t.prof[st] = (j.t.prof[st] || 0) + Math.round(performance.now() - a); if (done) { j.steps.shift(); j.gen = null; } if (performance.now() - t0 > budget) break; }
   if (j.steps.length) return false; if (j.upgrade) { j.t.lod = 'near'; j.t.ms = Object.values(j.t.prof).reduce((a, b) => a + b, 0); return true; } finishTile(j.t, j.grp, j.owned); return true;
 }
 function buildTileNow(t) { runJob(makeJob(t), Infinity); }
 let job = null; // Kachel, die gerade schrittweise gebaut wird
-let BUILD_BUDGET = 9, _smoothFt = 16.7;
-function stepJob() { const b = opts.potato ? 4 : (_smoothFt < 14 ? 13 : _smoothFt > 26 ? 4.5 : BUILD_BUDGET); if (runJob(job, b)) { job = null; refreshActive(); } }
+let BUILD_BUDGET = 8, _smoothFt = 16.7; // ms Hauptthread je Bild für den Kachelbau, höchstens 8 (#173)
+const BUILD_STAT = { ms: 0, max: 0, step: '' }; // Kachelbau im laufenden Bild (F3, G.PERF): Summe, längstes Stück ohne yield, dessen Schritt
+function stepJob() { const b = opts.potato ? 4 : (_smoothFt > 26 ? 4.5 : BUILD_BUDGET); const t0 = performance.now(); const done = runJob(job, b); if (done) { job = null; refreshActive(); } BUILD_STAT.ms += performance.now() - t0; }
 function cancelJob() { if (!job) return; const t = { built: true, grp: job.grp, owned: job.owned }; scene.add(job.grp); unbuildTile(t); job = null; }
 function unbuildTile(t) { barrierDrop(t);
   if (!t.built) return; scene.remove(t.grp); const L = OWN_LISTS();
@@ -2948,7 +2954,7 @@ function streamUpdate(dt, force = false) {
   let best = null, bd = 1e9; for (let a = -R_MESH; a <= R_MESH; a++) for (let b = -R_MESH; b <= R_MESH; b++) { const t = TILES.get(tkey(ptx + a, ptz + b)); if (!t || t.built || !neighborsReady(t.tx, t.tz)) continue; const d = a * a + b * b; if (d < bd) { bd = d; best = t; } }
   const lod = opts.lod !== false;
   if (!best && lod) { for (let a = -1; a <= 1 && !best; a++) for (let b = -1; b <= 1; b++) { const t = TILES.get(tkey(ptx + a, ptz + b)); if (t && t.built && t.lod === 'far') { best = t; break; } } if (best) { job = makeUpgrade(best); stepJob(); buildT = 0.05; return; } }
-  if (best) { const far = lod && Math.max(Math.abs(best.tx - ptx), Math.abs(best.tz - ptz)) >= 2; if (bd === 0) { buildTileNow(best); refreshActive(); } else { job = makeJob(best, far); stepJob(); } buildT = 0.05; }
+  if (best) { const far = lod && Math.max(Math.abs(best.tx - ptx), Math.abs(best.tz - ptz)) >= 2; if (bd === 0) { const t0 = performance.now(); buildTileNow(best); refreshActive(); BUILD_STAT.ms += performance.now() - t0; } /* Kachel unter dem Spieler am Stück: das Spiel steht ohnehin (hereReady); in Stücken hing die Probe wettbewerb (#173) */ else { job = makeJob(best, far); stepJob(); } buildT = 0.05; }
 }
 // Großer Hinweis mit Balken, solange der Boden unter dem Spieler noch nicht gebaut ist (Fortschritt: Kacheln im Umkreis)
 const buildEl = $('build');
@@ -2977,7 +2983,7 @@ function dynRes() {
   dynSet = renderer.getPixelRatio();
 }
 // Ein Klick: alles auf ganz sparsam für sehr schwache Rechner (z. B. Intel HD 400)
-{ const b = $('o_potatobtn'); if (b) b.onclick = () => { Object.assign(opts, POTATO); for (const [id, k] of Object.entries(OPT_BIND)) { const el = $(id); if (el) { if (el.type === 'checkbox') el.checked = !!opts[k]; else el.value = opts[k]; } } for (const [id, k] of [['o_quality', 'quality'], ['o_shadows', 'shadows'], ['o_traffic', 'traffic']]) { const el = $(id); if (el) { if (el.type === 'checkbox') el.checked = !!opts[k]; else el.value = opts[k]; } } opts.qualityManuell = true; applyOpts(); rebuildAllTiles(); updateOptLabels(); showMsg('SPARMODUS FÜR SEHR SCHWACHE RECHNER', 1400); }; }
+{ const b = $('o_potatobtn'); if (b) b.onclick = () => { Object.assign(opts, POTATO); opts.potatoManuell = true; for (const [id, k] of Object.entries(OPT_BIND)) { const el = $(id); if (el) { if (el.type === 'checkbox') el.checked = !!opts[k]; else el.value = opts[k]; } } for (const [id, k] of [['o_quality', 'quality'], ['o_shadows', 'shadows'], ['o_traffic', 'traffic']]) { const el = $(id); if (el) { if (el.type === 'checkbox') el.checked = !!opts[k]; else el.value = opts[k]; } } opts.qualityManuell = true; applyOpts(); rebuildAllTiles(); updateOptLabels(); showMsg('SPARMODUS FÜR SEHR SCHWACHE RECHNER', 1400); }; }
 // Ein Klick: alles auf sparsam für schwache Grafikkarten
 { const b = $('o_lowgpu'); if (b) b.onclick = () => { Object.assign(opts, { quality: 'niedrig', shadows: false, ao: false, bloom: 0, view: Math.min(opts.view || 700, 350), scale: 0.85, peds: Math.min(opts.peds ?? 1, 0.6), traffic: Math.min(opts.traffic ?? 1, 0.7), dynres: true, lod: true }); for (const [id, k] of Object.entries(OPT_BIND)) { const el = $(id); if (el) { if (el.type === 'checkbox') el.checked = !!opts[k]; else el.value = opts[k]; } } for (const [id, k] of [['o_quality', 'quality'], ['o_shadows', 'shadows'], ['o_traffic', 'traffic']]) { const el = $(id); if (el) { if (el.type === 'checkbox') el.checked = !!opts[k]; else el.value = opts[k]; } } opts.qualityManuell = true; applyOpts(); updateOptLabels(); showMsg('SPARMODUS AKTIV', 1200); }; }
 addEventListener('wheel', e => { if (mapOpen) { mapZoom = clamp(mapZoom * (e.deltaY > 0 ? 1.25 : 0.8), 600, 16000); drawBigMap(); } });
@@ -3001,7 +3007,7 @@ $('m_resume').onclick = () => { closeMenu(); if (started) lockMouse(); }; $('m_s
 for (const id of ['o_sens', 'o_vol', 'o_shadows', 'o_time']) $(id).oninput = () => { opts.sens = +$('o_sens').value; opts.vol = +$('o_vol').value; opts.shadows = $('o_shadows').checked; opts.timeSpeed = +$('o_time').value; applyOpts(); };
 $('o_hour').oninput = () => { world.hour = +$('o_hour').value; applyTime(); };
 const OPT_BIND = { o_mapnorth: 'mapNorth', o_potato: 'potato', o_dynres: 'dynres', o_lod: 'lod', o_ao: 'ao', o_dynlights: 'dynlights', o_scale: 'scale', o_view: 'view', o_bloom: 'bloom', o_fps: 'fps', o_fov: 'fov', o_camdist: 'camdist', o_invy: 'invy', o_shake: 'shake', o_gyro: 'gyro', o_vibrate: 'vibrate', o_peds: 'peds', o_police: 'police', o_god: 'god', o_ammo: 'ammo', o_fall: 'fall', o_grip: 'grip', o_minimap: 'minimap', o_hud: 'hud', o_tts: 'tts', o_demos: 'demos' };
-for (const [id, k] of Object.entries(OPT_BIND)) { const el = $(id); if (!el) continue; el.oninput = el.onchange = () => { opts[k] = el.type === 'checkbox' ? el.checked : +el.value; if (k === 'police' && !opts.police) player.wanted = 0; applyOpts(); updateOptLabels(); }; }
+for (const [id, k] of Object.entries(OPT_BIND)) { const el = $(id); if (!el) continue; el.oninput = el.onchange = () => { opts[k] = el.type === 'checkbox' ? el.checked : +el.value; if (k === 'potato') opts.potatoManuell = el.checked; /* #173: nur ein gesetzter Haken bleibt gespeichert */ if (k === 'police' && !opts.police) player.wanted = 0; applyOpts(); updateOptLabels(); }; }
 function updateOptLabels() { for (const el of document.querySelectorAll('#menu input[type=range]')) { const out = el.parentElement.querySelector('output'); if (out) out.textContent = el.dataset.pct ? Math.round(el.value * 100) + ' %' : el.value; } }
 // Pausemenü (André 12.11.2026): oben Themen-Reiter, links Einstellungen untereinander; ein Umschalter für beide Leisten
 const MENU_TAB = tab => { for (const b of document.querySelectorAll('#menu [data-tab]')) if (b.tagName === 'BUTTON') b.classList.toggle('on', b.dataset.tab === tab); for (const p of document.querySelectorAll('#menu .pane')) p.style.display = p.dataset.tab === tab ? 'block' : 'none'; if (tab === 'schnell') quickSync(); if (tab === 'karte') { pmCenter(); drawPMap(); } };
@@ -3329,7 +3335,7 @@ let cardT = null; function card(title, sub, sec = 4) { const el = $('card'); el.
 let breathEl = null, breathHint = false;
 function respawn() { player.dead = false; player.hp = 100; player.breath = 1; player.drowning = false; player.wanted = 0; msgEl.style.display = 'none'; for (const c of cars) if (c.userData.police && c !== player.car) c.userData.mode = 'parked'; }
 
-window.G = { STR, get PHONE() { return PHONE; }, barrierHit, HELI, get EULEN() { return EULEN; }, get VOKA() { return VOKA; }, get LAUF() { return LAUF; }, get RASEN() { return RASEN; }, makeMoto, makeAmbulance, updateBikeRacks, onMotorway, PROGRESS, INTERIORS, explode, makeBike, FX, puff, burst, smoke, LOW_GFX, WEAK_GPU, get canvasTexCount() { return _allCanvasTex.length; }, get ANISO() { return ANISO; }, get roadMat() { return roadMatRef; }, DEMN, DEMT, R_DATA, unregisterTile, SHOPS, TILES, WORLD, WIDX, streamUpdate, streamInit, buildTileNow, TS, WPN, DEMO, STORY, FIRE, X, card, hurtPlayer, composerRef: () => composer,  autoQuality, get QUALITY_AUTO() { return QUALITY_AUTO; }, groundH, footTH, FOOT_SINK, dentCar, deckAt, surfAt, signalPoles, treeSpots, lampSpots, pushOffRoads, onOtherRoad, floorAt, solidAtH, solidAt, roofHeight, camShake,  CHAR, CAR_TPL, playAnim, makeHuman, makeCar, makeGun, applyQuality,  staticParked, chunkStatic,  saveGame, loadGame, world, opts, pickups, weather, trams, scene, cars, peds, player, camera, camYaw, camPitch, keys, CITY, DEM, TH, renderer, sun, hemi, THREE, shoot, toggleCar, update, toggleCreative, creative, creativePlace, creativeSpawnerActive };
+window.G = { STR, BUILD_STAT, LOAD_STAT, VERY_WEAK, get PHONE() { return PHONE; }, barrierHit, HELI, get EULEN() { return EULEN; }, get VOKA() { return VOKA; }, get LAUF() { return LAUF; }, get RASEN() { return RASEN; }, makeMoto, makeAmbulance, updateBikeRacks, onMotorway, PROGRESS, INTERIORS, explode, makeBike, FX, puff, burst, smoke, LOW_GFX, WEAK_GPU, get canvasTexCount() { return _allCanvasTex.length; }, get ANISO() { return ANISO; }, get roadMat() { return roadMatRef; }, DEMN, DEMT, R_DATA, unregisterTile, SHOPS, TILES, WORLD, WIDX, streamUpdate, streamInit, buildTileNow, TS, WPN, DEMO, STORY, FIRE, X, card, hurtPlayer, composerRef: () => composer,  autoQuality, get QUALITY_AUTO() { return QUALITY_AUTO; }, groundH, footTH, FOOT_SINK, dentCar, deckAt, surfAt, signalPoles, treeSpots, lampSpots, pushOffRoads, onOtherRoad, floorAt, solidAtH, solidAt, roofHeight, camShake,  CHAR, CAR_TPL, playAnim, makeHuman, makeCar, makeGun, applyQuality,  staticParked, chunkStatic,  saveGame, loadGame, world, opts, pickups, weather, trams, scene, cars, peds, player, camera, camYaw, camPitch, keys, CITY, DEM, TH, renderer, sun, hemi, THREE, shoot, toggleCar, update, toggleCreative, creative, creativePlace, creativeSpawnerActive };
 try { initDebugOverlay(window.G); } catch (e) { console.warn('Debug-Overlay aus', e); } // F3 und G.PERF (#162), muss vor setAnimationLoop stehen
 let fpsN = 0, fpsT = 0;
 renderer.setAnimationLoop(() => {

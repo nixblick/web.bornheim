@@ -1,0 +1,25 @@
+[
+ {
+  "n": "sparmodus-vorbelegen",
+  "js": "localStorage.setItem('notgta.opts', JSON.stringify({ quality: 'hoch', qualityManuell: true, zeitV2: true, potato: true, potatoTuned: true, view: 250, scale: 0.7, bloom: 0, ao: false, shadows: false, peds: 0.4, traffic: 0.5, dynres: true, lod: true })); setTimeout(() => location.reload(), 200); 'neu laden'",
+  "wait": 1000,
+  "shot": false
+ },
+ {
+  "n": "sparmodus-zurueckgesetzt",
+  "wait": 20000,
+  "js": "new Promise(r => { const t0 = Date.now(); const f = () => { const G = window.G; if (G && G.opts) { let s = {}; try { s = JSON.parse(localStorage.getItem('notgta.opts') || '{}'); } catch (e) {} const b = [...document.querySelectorAll('button')].find(b => /Rein da/.test(b.textContent)); if ((!b || !document.body.innerText.includes('Frankfurt bereit')) && Date.now() - t0 < 90000) { setTimeout(f, 500); return; } if (b) b.click(); r(JSON.stringify({ gestartet: !!b,  veryWeak: G.VERY_WEAK, potato: G.opts.potato, view: G.opts.view, scale: G.opts.scale, shadows: G.opts.shadows, q: G.opts.quality, gespeichert: { potato: s.potato, view: s.view, scale: s.scale, shadows: s.shadows, peds: s.peds, manuell: s.potatoManuell } })); } else if (Date.now() - t0 > 55000) r('kein G'); else setTimeout(f, 500); }; f(); })",
+  "expect": "(() => { const G = window.G; const s = JSON.parse(localStorage.getItem('notgta.opts') || '{}'); const gespeichert = !s.potato && s.view !== 250 && s.scale !== 0.7 && s.shadows !== false && s.peds !== 0.4; const lauf = G.VERY_WEAK ? G.opts.potato === true : (G.opts.potato === false && G.opts.view >= 500 && G.opts.quality === 'hoch'); return gespeichert && lauf; })()"
+ },
+ {
+  "n": "sparmodus-kachelbau",
+  "tx": -220,
+  "tz": 432,
+  "pitch": 0.05,
+  "wait": 8000,
+  "x": -119,
+  "z": 342,
+  "js": "(async () => { const G = window.G, P = G.PERF; if (!P) return 'kein G.PERF'; await new Promise(r => setTimeout(r, 1500)); const s = await P.measure({ frames: 40, maxMs: 20000, groups: false }); const z = { veryWeak: G.VERY_WEAK, potato: G.opts.potato, bild: s.frameMs, cpu: s.cpuMs, kachelbau: s.buildMs, laengstesStueck: s.buildSliceMax, kachelLaden: s.loadTile, luecke: s.gapMs, overlay: s.overlayMs, langeBilder: s.longFrames, zuwachs: s.resPerS, kacheln: s.tiles, teil: s.partial }; window.__SPAR = z; return JSON.stringify(z); })()",
+  "expect": "window.__SPAR && window.__SPAR.kachelbau && window.__SPAR.kachelbau.n >= 20 && window.__SPAR.kachelbau.p95 <= 10"
+ }
+]
