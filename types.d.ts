@@ -127,6 +127,8 @@ export interface Ctx {
   disposeCar: any;
   listeners: any;
   mmHooks: any;
+  mapHooks: any;
+  WEG?: any;
   menuHooks: any;
   rallyLimit: any;
   creative: any;

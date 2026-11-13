@@ -1,6 +1,7 @@
 // Frischlufteulen im Spiel (#61, erster Kunde): Plakate an Litfaßsäulen (geteilt mit weiteren Kunden-Motiven, #81 Vokabaum), Eulen-Lauf und Eulen-Marathon mit Ziel an der Festhalle.
 // Daten nur aus https://frischlufteulen.de/api/spiel/strecken.json (einmal je Sitzung), nichts ausgedacht: ohne freigegebene Strecke keine Plakate und keine Mission.
 // Format je Strecke: { name, laenge_km, linie: [[lon, lat], …], link, marathon? }. Keine Nutzerdaten, keine fremden Marken.
+import { initWegweiser } from './wegweiser.js';
 /** @param {import('./types').Ctx} X */
 export function initEulen(X) {
   const { THREE, scene, player, TH, showMsg, canvasTex, card, sfx, burst, solidAt } = X;
@@ -55,7 +56,7 @@ export function initEulen(X) {
   function placeMarks() { for (const m of startMark || []) { const q = m.userData.route.pts[0]; if (q.off || Math.hypot(q[0] - player.pos.x, q[1] - player.pos.z) > 200) continue; offRoad(q); m.position.set(q[0], TH(q[0], q[1]) + 30, q[1]); } }
 
   // ---------- Lauf ----------
-  const ringMat = new THREE.MeshBasicMaterial({ color: 0x3ad17a, transparent: true, opacity: 0.8 }); let ring = null;
+  const WEG = X.WEG || (X.WEG = initWegweiser(X)); // Strahl, Kartenlinie, Richtung (wegweiser.js)
   function wps(r) { if (r.W) return r.W; const out = r.W = [r.pts[0]]; let acc = 0; for (let i = 1; i < r.pts.length; i++) { const a = r.pts[i - 1], b = r.pts[i]; acc += Math.hypot(b[0] - a[0], b[1] - a[1]); if (acc > (big(r) ? 900 : 300) || i === r.pts.length - 1) { out.push(b.slice()); acc = 0; } } return out; }
   // ---------- Wettbewerbe (#127, André 13.11.2026): Marathon und Megamarsch zu Fuß (gehen oder rennen) und als zweiter Wettbewerb nur mit dem Rad ----------
   // Etappen à ~10,5 km mit Speichern an der Etappengrenze (Verpflegung); je Etappe eine Zeit, Gesamtzeit = Summe. Fortsetzen startet an der Grenze.
@@ -86,15 +87,15 @@ export function initEulen(X) {
     if (go && mode === 'lauf' && !player.car) { const [x, z] = W[i - 1]; player.pos.set(x, TH(x, z), z); }
     if (mode === 'rad' && !(player.car && player.car.userData.bike && !player.car.userData.moto)) { const [x, z] = W[go ? i - 1 : 0]; if (!giveBike(x, z)) { showMsg('KEIN RAD VERFÜGBAR', 1500); return; } }
     run = { r, W, B, mode, i, stage, times: go ? sv.times.slice() : [], st0: performance.now(), grace: performance.now() + 3000, last: player.pos.clone(), test: !!opt.test };
-    if (!ring) { ring = new THREE.Mesh(new THREE.TorusGeometry(3, 0.25, 8, 32), ringMat); scene.add(ring); } ring.visible = true; if (r.marathon) buildFinish(r.ziel);
+    WEG.route({ pts: W, get i() { return run ? run.i : 1; }, off: 1, big: big(r), label: (mode === 'rad' ? '🚲 ' : '🦉 ') + kind(r) }); if (r.marathon) buildFinish(r.ziel);
     const et = B.length ? ` · Etappe ${stage + 1}/${B.length + 1}` : '';
     card((mode === 'rad' ? 'RAD-WETTBEWERB · ' : 'EULEN-') + kind(r).toUpperCase(), `${r.name} · ${r.info}${et} · ` + (mode === 'rad' ? 'nur mit dem Fahrrad, Absteigen macht ungültig' : 'zu Fuß, gehen oder rennen, ohne Auto, Rad oder Bahn') + (B.length ? ' · an jeder Etappengrenze wird gespeichert' : ''), 5); sfx('bell', 0.5); }
-  function stop(msg) { run = null; if (ring) ring.visible = false; const o = document.getElementById('obj'); if (o) o.textContent = ''; if (msg) showMsg(msg, 2600); }
+  function stop(msg) { run = null; WEG.route(null); const o = document.getElementById('obj'); if (o) o.textContent = ''; if (msg) showMsg(msg, 2600); }
   function runUpdate(dt) { const u = run;
     if (u.mode === 'lauf' && player.car) { stop('DISQUALIFIZIERT: NUR ZU FUSS'); return; }
     if (u.mode === 'rad' && performance.now() > u.grace && !(player.car && player.car.userData.bike && !player.car.userData.moto)) { stop('UNGÜLTIG: RAD-WETTBEWERB NUR AUF DEM FAHRRAD'); return; }
     const here = player.car ? player.car.position : player.pos; if (!u.test && here.distanceTo(u.last) > 60) { stop('DISQUALIFIZIERT: KEINE ABKÜRZUNG PER BAHN ODER SPRUNG'); return; } u.last.copy(here);
-    if (Math.hypot(u.W[u.i][0] - here.x, u.W[u.i][1] - here.z) < 200) offRoad(u.W[u.i]); const [x, z] = u.W[u.i]; ring.position.set(x, TH(x, z) + 3, z); ring.rotation.y += 0.03; const d = Math.hypot(here.x - x, here.z - z); const ms = performance.now() - u.st0;
+    if (Math.hypot(u.W[u.i][0] - here.x, u.W[u.i][1] - here.z) < 200) offRoad(u.W[u.i]); const [x, z] = u.W[u.i]; WEG.update(dt); const d = Math.hypot(here.x - x, here.z - z); const ms = performance.now() - u.st0;
     const o = document.getElementById('obj'); if (o) o.textContent = `${u.mode === 'rad' ? '🚲' : '🦉'} ${u.r.name}${u.B.length ? ` · Etappe ${u.stage + 1}/${u.B.length + 1}` : ''}: Wegpunkt ${u.i}/${u.W.length - 1} · ${Math.round(d)} m · ${fmt(ms)}`;
     if (d < (u.mode === 'rad' ? 9 : 7)) { u.i++; sfx('click', 0.6);
       if (u.B.includes(u.i - 1) || u.i >= u.W.length) { u.times.push(ms); u.st0 = performance.now(); u.stage++;
@@ -126,5 +127,5 @@ export function initEulen(X) {
     return null; });
   function update(dt) { t += dt; if (Math.floor(t) !== Math.floor(t - dt)) { updatePosters(); placeMarks(); } if (run) runUpdate(dt);
     if (finish) for (const [i, f] of finish.fans.entries()) f.position.y = 0.8 + Math.abs(Math.sin(t * 6 + i)) * 0.35; }
-  return { update, get posters() { return posters; }, get routes() { return routes; }, get run() { return run; }, get marks() { return startMark || []; }, wps, use, start, stop };
+  return { update, get posters() { return posters; }, get routes() { return routes; }, get run() { return run; }, get marks() { return startMark || []; }, weg: WEG, wps, use, start, stop };
 }
