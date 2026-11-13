@@ -1,0 +1,77 @@
+[
+ {
+  "n": "start_bornheim",
+  "x": -138,
+  "z": 372,
+  "wait": 8000,
+  "shot": false
+ },
+ {
+  "n": "liste",
+  "wait": 500,
+  "shot": false,
+  "js": "(() => { const G = window.G; return JSON.stringify(Object.values(G.NEBENJOBS.JOBS).map(j => j.name)); })()",
+  "expect": "Object.keys(window.G.NEBENJOBS.JOBS).length === 3"
+ },
+ {
+  "n": "pausenmenue_liste",
+  "wait": 1500,
+  "js": "(() => { const G = window.G; G.X.openMenu(); const t = document.getElementById('menu').textContent; G.X.closeMenu(); return JSON.stringify({ kurier: t.includes('Lastenrad-Kurier'), rettung: t.includes('Rettungsdienst-Schicht'), muell: t.includes('Müllabfuhr') }); })()",
+  "expect": "document.getElementById('menu').textContent.includes('Lastenrad-Kurier') && document.getElementById('menu').textContent.includes('Müllabfuhr')",
+  "shot": false
+ },
+ {
+  "n": "kurier_start",
+  "wait": 2500,
+  "js": "(async () => { const G = window.G, N = G.NEBENJOBS; window.__geld0 = G.player.money || 0; window.__fit0 = G.PROGRESS.P.fit || 0; window.__sch0 = N.stats.schichten; const ok = N.start('kurier'); await new Promise(r => setTimeout(r, 300)); const v = N.job && N.job.veh; if (v) { G.player.pos.set(v.position.x + 1, v.position.y, v.position.z); window.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyE' })); window.dispatchEvent(new KeyboardEvent('keyup', { code: 'KeyE' })); } return JSON.stringify({ ok, rad: !!(G.player.car && G.player.car.userData.bike), pts: N.job && N.job.auftrag && N.job.auftrag.pts.length }); })()",
+  "expect": "!!window.G.NEBENJOBS.job && window.G.NEBENJOBS.job.id === 'kurier' && !!window.G.player.car && window.G.player.car.userData.bike && window.G.NEBENJOBS.weg.beam.visible"
+ },
+ {
+  "n": "kurier_auftrag",
+  "wait": 2500,
+  "js": "(async () => { const G = window.G, N = G.NEBENJOBS, A = N.job.auftrag; for (const p of A.pts.slice()) { const c = G.player.car; c.position.set(p[0], G.TH(p[0], p[1]), p[1]); await new Promise(r => setTimeout(r, 800)); } return JSON.stringify({ geld: G.player.money - window.__geld0, fit: (G.PROGRESS.P.fit || 0) - window.__fit0, done: N.job ? N.job.done : -1 }); })()",
+  "expect": "window.G.player.money - window.__geld0 >= 35 && (window.G.PROGRESS.P.fit || 0) > window.__fit0"
+ },
+ {
+  "n": "kurier_feierabend",
+  "wait": 1500,
+  "shot": false,
+  "js": "(() => { const G = window.G; G.NEBENJOBS.stop(); G.X.exitCar(); return JSON.stringify({ schichten: G.NEBENJOBS.stats.schichten, st: G.PROGRESS.P.st.schicht }); })()",
+  "expect": "window.G.NEBENJOBS.stats.schichten === window.__sch0 + 1 && window.G.PROGRESS.P.st.schicht >= 1 && !window.G.NEBENJOBS.job"
+ },
+ {
+  "n": "rettung_start",
+  "x": -138,
+  "z": 372,
+  "wait": 2500,
+  "js": "(async () => { const G = window.G, N = G.NEBENJOBS; window.__geld0 = G.player.money || 0; const ok = N.start('rettung'); await new Promise(r => setTimeout(r, 300)); const v = N.job && N.job.veh; if (v) { G.player.pos.set(v.position.x + 1, v.position.y, v.position.z); window.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyE' })); window.dispatchEvent(new KeyboardEvent('keyup', { code: 'KeyE' })); } return JSON.stringify({ ok, rtw: !!(G.player.car && G.player.car.userData.ambulance) }); })()",
+  "expect": "!!window.G.NEBENJOBS.job && window.G.NEBENJOBS.job.id === 'rettung' && !!window.G.player.car && window.G.player.car.userData.ambulance"
+ },
+ {
+  "n": "rettung_auftrag",
+  "wait": 2500,
+  "js": "(async () => { const G = window.G, N = G.NEBENJOBS, A = N.job.auftrag; for (const p of A.pts.slice()) { const c = G.player.car; c.position.set(p[0], G.TH(p[0], p[1]), p[1]); await new Promise(r => setTimeout(r, 800)); } return JSON.stringify({ geld: G.player.money - window.__geld0, done: N.job ? N.job.done : -1 }); })()",
+  "expect": "window.G.player.money - window.__geld0 >= 120"
+ },
+ {
+  "n": "rettung_feierabend",
+  "wait": 1000,
+  "shot": false,
+  "js": "(() => { const G = window.G; G.NEBENJOBS.stop(); G.X.exitCar(); return String(G.NEBENJOBS.stats.schichten); })()",
+  "expect": "window.G.NEBENJOBS.stats.schichten === window.__sch0 + 2"
+ },
+ {
+  "n": "muell_start",
+  "x": -138,
+  "z": 372,
+  "wait": 2500,
+  "js": "(async () => { const G = window.G, N = G.NEBENJOBS; window.__geld0 = G.player.money || 0; const ok = N.start('muell'); await new Promise(r => setTimeout(r, 300)); const v = N.job && N.job.veh; if (v) { G.player.pos.set(v.position.x + 1, v.position.y, v.position.z); window.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyE' })); window.dispatchEvent(new KeyboardEvent('keyup', { code: 'KeyE' })); } return JSON.stringify({ ok, auto: !!G.player.car, tonnen: N.job && N.job.auftrag && N.job.auftrag.pts.length }); })()",
+  "expect": "!!window.G.NEBENJOBS.job && window.G.NEBENJOBS.job.id === 'muell' && !!window.G.player.car"
+ },
+ {
+  "n": "muell_route",
+  "wait": 2500,
+  "js": "(async () => { const G = window.G, N = G.NEBENJOBS, A = N.job.auftrag; for (const p of A.pts.slice()) { const c = G.player.car; c.userData.speed = 0; c.position.set(p[0], G.TH(p[0], p[1]), p[1]); await new Promise(r => setTimeout(r, 800)); } return JSON.stringify({ geld: G.player.money - window.__geld0, job: !!N.job }); })()",
+  "expect": "window.G.player.money - window.__geld0 >= 90 && !window.G.NEBENJOBS.job && window.G.NEBENJOBS.stats.schichten === window.__sch0 + 3"
+ }
+]
