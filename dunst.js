@@ -55,7 +55,7 @@ export function initDunst(X) {
   const { scene, camera, opts, world, sun } = X;
   function update() {
     const f = scene.fog; if (!installed || !f || !f.isFog) return;
-    if (opts.quality === 'niedrig' || opts.potato) { P.x = 0; return; }
+    if (opts.quality === 'niedrig' || opts.potato || opts.dunst === false) { P.x = 0; return; } // opts.dunst=false: Vergleich in der Probe
     const cp = camera.position; CAM.x = cp.x; CAM.y = cp.y; CAM.z = cp.z;
     const pp = X.player && X.player.pos; P.z = pp && X.TH ? X.TH(pp.x, pp.z) : 0; // Bezugsboden unter dem Spieler (Gelände in Metern)
     // Optische Tiefe ~2,6 am Boden bis fogFar (93 % Dunst) – wie der lineare Nebel; Wetter und Sichtweite stecken in near/far
