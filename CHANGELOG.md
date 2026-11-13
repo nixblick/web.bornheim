@@ -2,6 +2,8 @@
 
 ## 2026-11-13
 
+- Autos glänzen (#152, Technik nach Sunset): Lack mit Klarlackschicht ab „Hoch“, glatte Scheiben, Metallfelgen, matte Reifen, glänzende Leuchtengläser; „Mittel“ mit PBR ohne Klarlack, „Niedrig“ unverändert. Gilt für fahrende und geparkte Autos (Instanzen), Maße, Farben und Draw-Calls gleich. Neues Modul `autolack.js`. Spieltest 43419364002 grün (Vergleich main: 43419011886).
+
 - **Gräber und Haltestelle nachgebessert:** Mustergrabanlage dreht die Steinvorderseiten zum nächsten OSM-Weg (bis 60 m). Tramhalte mit neuem Haltestellenmodell (Gleis in 20 m) bekommen den alten blauen Halte-Mast nicht mehr. Glas der Wartehalle als Milchglas mit deutlichem weißen Punktraster (Foto Wasserpark). Spieltest per CI mit `graeber`.
 
 - **Doku privat:** `docs/vergleich-project-sunset.md` liegt nur noch lokal (gitignore), auf Andrés Wunsch. In der Git-Historie bleibt die frühere Fassung.
