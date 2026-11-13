@@ -76,7 +76,7 @@ function updateStreaks(dt) {
   // Scheinwerfer (weiß) und Rücklichter (rot) der Autos in der Nähe
   if (!streaks.userData.car) { const m = new THREE.InstancedMesh(streaks.geometry, streaks.material.clone(), 80); m.material.color.setHex(0xffffff); m.frustumCulled = false; m.count = 0; m.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(80 * 3), 3); scene.add(m); streaks.userData.car = m; }
   const cm = streaks.userData.car; cm.material.opacity = 1.3 * k; let m2 = 0; const col = new THREE.Color();
-  const near2 = cars.filter(c => c.visible !== false && (c.position.x - cx) ** 2 + (c.position.z - cz) ** 2 < 90 * 90 && c.userData.mode !== 'parked' && c.userData.mode !== 'wreck').slice(0, 20);
+  const near2 = cars.filter(c => (c.visible !== false || c.userData.inst) && (c.position.x - cx) ** 2 + (c.position.z - cz) ** 2 < 90 * 90 && c.userData.mode !== 'parked' && c.userData.mode !== 'wreck').slice(0, 20);
   for (const c of near2) { const u = c.userData, fx = Math.sin(u.heading), fz = Math.cos(u.heading), L = (u.dims ? u.dims.l : 4.2) / 2;
     for (const [end, cc] of [[1, 0xfff4dd], [-1, 0xff2010]]) { const ex = c.position.x + fx * L * end, ez = c.position.z + fz * L * end; const dist = Math.hypot(ex - cx, ez - cz); if (dist < 3) continue;
       // nur sichtbar, wenn die Lampe zur Kamera zeigt
@@ -1132,6 +1132,26 @@ function* buildParked() { // Generator wie die übrigen Bauschritte (#173)
 }
 const parkedTiles = []; let _parkedCamX = 1e9, _parkedCamZ = 1e9, _parkedCount = 0;
 function updateParkedLOD() { const cx = camera.position.x, cz = camera.position.z; if (_parkedCount === parkedTiles.length && (cx - _parkedCamX) ** 2 + (cz - _parkedCamZ) ** 2 < 16) return; _parkedCamX = cx; _parkedCamZ = cz; _parkedCount = parkedTiles.length; for (const t of parkedTiles) { const dx = Math.max(t.x0 - cx, 0, cx - (t.x0 + 100)), dz = Math.max(t.z0 - cz, 0, cz - (t.z0 + 100)); const near = dx * dx + dz * dz < 90 * 90; for (const m of t.det) m.visible = near; t.low.visible = !near || !t.det.length; } }
+// Ferne fahrende KI-Autos als Instanzen (#173): je Modell Lack + Rest (Geometrie der Parkautos) + nachts Leuchten, statt ~10 Draw-Calls je Auto.
+// Das echte Auto bleibt in cars (Fahren, Kollision, Einsteigen, Schaden unverändert) und wird nur nicht gezeichnet. Nah (< CAR_INST_NEAR), mit Delle, Polizei, Rad, Bus bleibt das Modell.
+const CAR_INST_NEAR = 60; let CAR_INST = null; const CAR_INST_STAT = { n: 0 };
+function carInstInit() { if (!PARK_TG || !PARK_LOW) return null; const I = {}; const o3 = new THREE.Object3D();
+  const toNI = g => { const gg = g.index ? g.toNonIndexed() : g; for (const k of Object.keys(gg.attributes)) if (!['position', 'normal'].includes(k)) gg.deleteAttribute(k); return gg; };
+  const litMat = new THREE.MeshBasicMaterial({ vertexColors: true, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 }); litMat.userData.shared = true;
+  for (const type of Object.keys(PARK_TG)) { const G = PARK_TG[type], T = CAR_TPL[type]; if (!T || !G.body || !G.rest) continue; const lit = [];
+    T.root.updateMatrixWorld(true); T.root.traverse(m => { if (!m.isMesh) return; const mn = m.material.name; if (mn !== 'Headlights' && mn !== 'WhiteLights' && mn !== 'TailLights') return; const g = toNI(m.geometry.clone().applyMatrix4(m.matrixWorld)); const n = g.attributes.position.count, a = new Float32Array(n * 3), c = new THREE.Color(mn === 'TailLights' ? 0xff2a1a : 0xfff0c8); for (let i = 0; i < n; i++) { a[i * 3] = c.r; a[i * 3 + 1] = c.g; a[i * 3 + 2] = c.b; } g.setAttribute('color', new THREE.BufferAttribute(a, 3)); lit.push(g); });
+    const litG = lit.length ? mergeGeometries(lit) : null; if (litG) litG.userData.shared = true;
+    const mk = (geo, mat, shadow) => { const im = new THREE.InstancedMesh(geo, mat, 48); im.count = 0; im.visible = false; im.frustumCulled = false; im.castShadow = shadow; im.receiveShadow = false; im.userData.noChunk = true; im.userData.carInst = true; scene.add(im); return im; };
+    I[type] = { body: mk(G.body, PARK_LOW.bodyMat, true), rest: mk(G.rest, G.restMat, true), lit: litG ? mk(litG, litMat, false) : null, n: 0 }; I[type].body.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(48 * 3), 3); }
+  I._o = o3; I._c = new THREE.Color(); return I; }
+function carInstBegin() { if (!CAR_INST) CAR_INST = carInstInit(); if (!CAR_INST) return; CAR_INST_STAT.n = 0; for (const k in CAR_INST) { const e = CAR_INST[k]; if (!e || !e.body) continue; if (e.n || e.body.count) { e.body.count = e.rest.count = 0; e.body.visible = e.rest.visible = false; if (e.lit) { e.lit.count = 0; e.lit.visible = false; } } e.n = 0; } }
+// true: dieses Auto wird diesmal als Instanz gezeichnet
+function carInstTake(c, dc) { if (!CAR_INST || dc < CAR_INST_NEAR || dc >= CAR_VIS || c === player.car) return false; const u = c.userData;
+  if (u.mode !== 'ai' || u.police || u.bike || u.dents || u.wreckT || u.ambulance || u.cannon || u.heli) return false; const e = CAR_INST[u.type]; if (!e || e.n >= 48) return false;
+  c.updateMatrix(); const i = e.n++; e.body.setMatrixAt(i, c.matrix); e.rest.setMatrixAt(i, c.matrix); e.body.setColorAt(i, CAR_INST._c.setHex(u.col ?? 0xffffff).convertSRGBToLinear());
+  e.body.count = e.rest.count = e.n; e.body.visible = e.rest.visible = true; e.body.instanceMatrix.needsUpdate = e.rest.instanceMatrix.needsUpdate = e.body.instanceColor.needsUpdate = true;
+  if (e.lit) { if (world.night) { e.lit.setMatrixAt(i, c.matrix); e.lit.count = e.n; e.lit.visible = true; e.lit.instanceMatrix.needsUpdate = true; } }
+  CAR_INST_STAT.n++; return true; }
 // Geparkte Autos sind nur Instanzen; wo Explosion, Feuer, Schläge oder Schüsse sie treffen, werden sie zu echten Autos (mit Schaden, Brand, Wrack)
 function wakeParked(pos, r) { const out = []; for (const sp of staticParked) { if (!sp.active) continue; if ((sp.x - pos.x) ** 2 + (sp.z - pos.z) ** 2 < r * r) out.push(activateParked(sp)); } return out; }
 function wakeParkedRay(o, d, range) { const hits = []; for (const sp of staticParked) { if (!sp.active) continue; const rx = sp.x - o.x, rz = sp.z - o.z; const dl = Math.hypot(d.x, d.z) || 1; const along = (rx * d.x + rz * d.z) / dl; if (along < 0 || along > range) continue; const ry = TH(sp.x, sp.z) + 0.8 - (o.y + d.y / dl * along); const lat = Math.abs(rx * d.z - rz * d.x) / dl; if (lat < 2.4 && Math.abs(ry) < 2.5) hits.push([along, sp]); } hits.sort((a, b) => a[0] - b[0]); return hits.slice(0, 3).map(h => activateParked(h[1])); }
@@ -3189,9 +3209,10 @@ function update(dt) {
     sun.position.set(sx + world.sunDir.x, world.sunDir.y + sy, sz + world.sunDir.z); sun.target.position.set(sx, sy, sz);
     renderer.shadowMap.autoUpdate = false; renderer.shadowMap.needsUpdate = moved || shadowSnap.n % (WEAK_GPU ? 4 : 2) === 0; } updateSky(dt); updateParkedLOD(); updateTileVis();
   // KI-Autos
+  carInstBegin();
   for (const c of cars) {
     const u = c.userData;
-    const dc = c.position.distanceTo(player.pos); c.visible = dc < CAR_VIS;
+    const dc = c.position.distanceTo(player.pos); u.inst = carInstTake(c, dc); c.visible = dc < CAR_VIS && !u.inst; /* u.inst: unsichtbar, aber da (Treffer, Lichtstreifen) */
     if (u.shove && c !== player.car) shoveCar(c, dt);
     if (u.mode === 'ai') { const d = dc; if (d > 350) continue;
       // Hindernis voraus? (Spieler, Passanten, andere Autos innerhalb 9 m im Fahrkegel)
@@ -3201,7 +3222,7 @@ function update(dt) {
       if (!player.car && ahead(player.pos.x, player.pos.z, 1.6)) block = true;
       if (!block && u.speed > 0.2 && barrierHit(c.position.x + fx * 4, c.position.z + fz * 4, 0.9)) block = true; // vor Bauzaun halten
       if (u.type === 'bus') { if ((u.haltT || 0) > 0) { u.haltT -= dt; block = true; } else if ((u.haltT || 0) > -6) u.haltT = (u.haltT || 0) - dt; else for (const st of (u.road.s ? u.road.s.map(q => ({ x: q[0], z: q[1], k: 'bus' })) : CITY.stops)) { if (st.k !== 'bus') continue; const dd = (st.x - c.position.x) ** 2 + (st.z - c.position.z) ** 2; if (dd < 64) { u.haltT = 8; block = true; break; } } } // Bus hält an der Haltestelle
-      if (!block) for (const o of cars) { if (o !== c && o.visible && Math.abs(o.position.y - c.position.y) < 2.5 && ahead(o.position.x, o.position.z, 1.8)) { block = true; break; } }
+      if (!block) for (const o of cars) { if (o !== c && (o.visible || o.userData.inst) && Math.abs(o.position.y - c.position.y) < 2.5 && ahead(o.position.x, o.position.z, 1.8)) { block = true; break; } }
       if (!block) for (const p of peds) { if (p.visible && p.userData.state !== 'dead' && ahead(p.position.x, p.position.z, 1.4)) { block = true; break; } }
       if (!block) for (const sg of signalsNear(c.position.x, c.position.z)) { const rx = sg[0] - c.position.x, rz = sg[1] - c.position.z; const along = rx * fx + rz * fz; if (along > 1 && along < 7 + u.speed * 0.6 && Math.abs(rx * fz - rz * fx) < 7 && signalRed(u.heading, worldT)) { block = true; break; } }
       u.isCar = true; u.speed = block ? Math.max(0, u.speed - 18 * dt) : Math.min(u.speed + (u.bike && !u.moto ? 2.2 : 6) * dt, yieldS ? 2.5 : (u.maxv || 9)); if (yieldS && u.speed > 2.5) u.speed = Math.max(2.5, u.speed - 8 * dt);
@@ -3341,7 +3362,7 @@ let cardT = null; function card(title, sub, sec = 4) { const el = $('card'); el.
 let breathEl = null, breathHint = false;
 function respawn() { player.dead = false; player.hp = 100; player.breath = 1; player.drowning = false; player.wanted = 0; msgEl.style.display = 'none'; for (const c of cars) if (c.userData.police && c !== player.car) c.userData.mode = 'parked'; }
 
-window.G = { STR, BUILD_STAT, LOAD_STAT, VERY_WEAK, IGPU, isIGPU, optsToSave, get PHONE() { return PHONE; }, barrierHit, HELI, get EULEN() { return EULEN; }, get VOKA() { return VOKA; }, get LAUF() { return LAUF; }, get NEBENJOBS() { return NEBENJOBS; }, get RASEN() { return RASEN; }, get ZIVIL() { return ZIVIL; }, makeMoto, makeAmbulance, updateBikeRacks, onMotorway, PROGRESS, INTERIORS, explode, makeBike, FX, puff, burst, smoke, LOW_GFX, WEAK_GPU, get canvasTexCount() { return _allCanvasTex.length; }, get ANISO() { return ANISO; }, get roadMat() { return roadMatRef; }, DEMN, DEMT, R_DATA, unregisterTile, SHOPS, TILES, WORLD, WIDX, streamUpdate, streamInit, buildTileNow, TS, WPN, DEMO, STORY, FIRE, X, card, hurtPlayer, composerRef: () => composer,  autoQuality, get QUALITY_AUTO() { return QUALITY_AUTO; }, groundH, footTH, FOOT_SINK, dentCar, deckAt, surfAt, signalPoles, treeSpots, lampSpots, pushOffRoads, onOtherRoad, floorAt, solidAtH, solidAt, roofHeight, camShake,  CHAR, CAR_TPL, playAnim, makeHuman, makeCar, makeGun, applyQuality,  staticParked, chunkStatic,  saveGame, loadGame, world, opts, pickups, weather, trams, scene, cars, peds, player, camera, camYaw, camPitch, keys, CITY, DEM, TH, renderer, sun, hemi, THREE, shoot, toggleCar, update, toggleCreative, creative, creativePlace, creativeSpawnerActive };
+window.G = { STR, BUILD_STAT, LOAD_STAT, VERY_WEAK, CAR_INST_STAT, get CAR_INST() { return CAR_INST; }, IGPU, isIGPU, optsToSave, get PHONE() { return PHONE; }, barrierHit, HELI, get EULEN() { return EULEN; }, get VOKA() { return VOKA; }, get LAUF() { return LAUF; }, get NEBENJOBS() { return NEBENJOBS; }, get RASEN() { return RASEN; }, get ZIVIL() { return ZIVIL; }, makeMoto, makeAmbulance, updateBikeRacks, onMotorway, PROGRESS, INTERIORS, explode, makeBike, FX, puff, burst, smoke, LOW_GFX, WEAK_GPU, get canvasTexCount() { return _allCanvasTex.length; }, get ANISO() { return ANISO; }, get roadMat() { return roadMatRef; }, DEMN, DEMT, R_DATA, unregisterTile, SHOPS, TILES, WORLD, WIDX, streamUpdate, streamInit, buildTileNow, TS, WPN, DEMO, STORY, FIRE, X, card, hurtPlayer, composerRef: () => composer,  autoQuality, get QUALITY_AUTO() { return QUALITY_AUTO; }, groundH, footTH, FOOT_SINK, dentCar, deckAt, surfAt, signalPoles, treeSpots, lampSpots, pushOffRoads, onOtherRoad, floorAt, solidAtH, solidAt, roofHeight, camShake,  CHAR, CAR_TPL, playAnim, makeHuman, makeCar, makeGun, applyQuality,  staticParked, chunkStatic,  saveGame, loadGame, world, opts, pickups, weather, trams, scene, cars, peds, player, camera, camYaw, camPitch, keys, CITY, DEM, TH, renderer, sun, hemi, THREE, shoot, toggleCar, update, toggleCreative, creative, creativePlace, creativeSpawnerActive };
 try { initDebugOverlay(window.G); } catch (e) { console.warn('Debug-Overlay aus', e); } // F3 und G.PERF (#162), muss vor setAnimationLoop stehen
 let fpsN = 0, fpsT = 0;
 renderer.setAnimationLoop(() => {
