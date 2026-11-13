@@ -12,6 +12,9 @@ export function missionList(X, S, close, toast, o = {}) {
   if (V && V.mission) row('Läuft', 'Vokabaum', obj || 'Mission läuft', '', null);
   if (ST && ST.busy) row('Läuft', 'Story', obj || 'Kapitel läuft', '', null);
   if (L && !L.run) row('Fitness', 'Laufrunde', '1–3 km zu Fuß mit einem Passanten, bringt Fitness und EP.', 'Laufrunde starten', foot(() => { if (L.force()) close(); else toast('Gerade keine Runde möglich', 'error'); }));
+  const NJ = S.NEBENJOBS; // Zivile Nebenjobs (#148, nebenjobs.js)
+  if (NJ && NJ.job) row('Läuft', NJ.job.J.name, `${NJ.job.done}/${NJ.job.J.n} erledigt`, 'Feierabend', () => { NJ.stop(); close(); });
+  else if (NJ) for (const [id, J] of Object.entries(NJ.JOBS)) row('Nebenjob', J.name, `${J.info} ${J.geld} € je Auftrag.`, 'Schicht starten', () => { if (NJ.start(id)) close(); else toast('Gerade nicht möglich', 'error'); });
   const sv = resumable();
   if (E && !E.run) for (const r of (E.routes || []).slice(0, 12)) { const big = r.marathon || r.mega, goes = big && sv && sv.name === r.name; row(big ? (r.mega ? 'Megamarsch' : 'Marathon') : 'Frischlufteulen', r.name, (goes ? `Fortsetzen ab Wegpunkt ${sv.i + 1} · ` : '') + (r.info || (r.km_gebiet + ' km')), goes ? 'Fortsetzen' : 'Lauf starten', foot(() => { E.start(r, !!goes, 'lauf'); close(); })); }
   if (V && !V.mission && V.force) row('Hilfe', 'Vokabaum', 'Ein Passant braucht Hilfe mit Vokabeln.', 'Mission starten', () => { V.force(); close(); });
