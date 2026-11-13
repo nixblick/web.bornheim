@@ -2252,10 +2252,13 @@ function advanceAlongRoad(u, pos, dist, offset) {
     if (step >= remain) { u.seg = j;
       // Kreuzung: Abbiegen, Einbahnstraßen beachten; am Ende einer Einbahnstraße muss abgebogen werden
       const atEnd = (j === 0 || j === r.p.length - 1);
-      if (!u.line && (Math.random() < 0.3 || (atEnd && (r.o || u.isCar)) || u.goal)) { const opts = []; let ends = 0;
-        for (const [q, k] of nodesNear(bx, bz)) { if (q === r) continue; if (u.mode === 'tram' ? q.w !== undefined : (q.w === undefined || (u.isCar ? q.w < 5 || q.ped : (q.mw || q.ry)) /* Autos nicht in Fußgängerzonen (Zeil, Nordwestzentrum) */)) continue;
+      const tram = u.mode === 'tram'; // Tram wechselt nur am Gleisende, nur auf Tramgleise (oder die eigene Gleisart) und nimmt die geradeste Fortsetzung
+      if (!u.line && (tram ? atEnd : (Math.random() < 0.3 || (atEnd && (r.o || u.isCar)) || u.goal))) { const opts = []; let ends = 0;
+        for (const [q, k] of nodesNear(bx, bz)) { if (q === r) continue; if (tram ? (q.w !== undefined || (q.k !== 'tram' && q.k !== r.k)) : (q.w === undefined || (u.isCar ? q.w < 5 || q.ped : (q.mw || q.ry)) /* Autos nicht in Fußgängerzonen (Zeil, Nordwestzentrum) */)) continue;
           for (const d of [1, -1]) { if (k + d < 0 || k + d >= q.p.length) continue; ends++; if (u.isCar && !u.police && q.o && q.o !== d) continue; opts.push([q, k, d]); } }
         if (u.isCar && ends >= 2) { u.sigX = bx; u.sigZ = bz; } // echte Kreuzung (mindestens drei Straßenenden): ihre Ampeln gelten für die Zufahrt, nicht mehr für die Ausfahrt (siehe KI-Schleife)
+        if (tram) { let bo = null, bt = 1.05; for (const o of opts) { const q2 = o[0].p[o[1] + o[2]]; const tn = Math.abs(((Math.atan2(q2[0] - bx, q2[1] - bz) - u.heading + Math.PI) % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI) - Math.PI); if (tn < bt) { bt = tn; bo = o; } }
+          if (bo) { u.road = bo[0]; u.seg = bo[1]; u.dir = bo[2]; } else { u.dir *= -1; u.speed = 0; u.stopT = 6; } /* keine Fortsetzung unter 60 Grad: Endhaltestelle, 6 s halten und zurück statt in voller Fahrt umzuspringen */ return; }
         if (opts.length) { let choice = pick(opts); if (u.goal) { let best = 1e9; for (const o of opts) { const [q, k, d] = o; const q2 = q.p[k + d]; const dd = Math.hypot(q2[0] - u.goal.x, q2[1] - u.goal.z); if (dd < best) { best = dd; choice = o; } } } const [nr, k, d] = choice; const [nx2, nz2] = nr.p[k + d]; const nh = Math.atan2(nx2 - bx, nz2 - bz); const turn = ((nh - u.heading + Math.PI) % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI) - Math.PI; if (Math.abs(turn) > 0.5) { u.blink = turn > 0 ? 0 : 1; u.blinkT = 2.5; } u.road = nr; u.seg = k; u.dir = d; return; } }
     }
   }
@@ -2327,7 +2330,8 @@ function makeTram() {
   g.userData = { speed: 0, heading: 0, hp: 1000, mode: 'tram', road: null, seg: 0, dir: 1, isCar: false, stopT: 0 }; return g;
 }
 function spawnTrams(n) {
-  const lines = CITY.rails.filter(r => r.p.length >= 4 && r.k !== 'platform').sort((a, b) => b.p.length - a.p.length).slice(0, 12); if (!lines.length) return;
+  const all = CITY.rails.filter(r => r.p.length >= 4 && r.k !== 'platform'), tr = all.filter(r => r.k === 'tram'); // Straßenbahn auf Tramgleise, ersatzweise Stadtbahn, nie auf Eisenbahn oder U-Bahn
+  const lines = (tr.length ? tr : all.filter(r => r.k !== 'rail' && r.k !== 'subway')).sort((a, b) => b.p.length - a.p.length).slice(0, 12); if (!lines.length) return;
   for (let i = 0; i < n; i++) { const r = lines[i % lines.length]; const t = makeTram(); const seg = Math.floor(Math.random() * (r.p.length - 1)); const [ax, az] = r.p[seg]; t.position.set(ax, TH(ax, az), az); Object.assign(t.userData, { road: r, seg, dir: Math.random() < 0.5 ? 1 : -1, speed: 6 }); scene.add(t); trams.push(t); shootables.push(t); }
 }
 function updateTrams(dt) {
@@ -3323,7 +3327,7 @@ function update(dt) {
       u.stuckT = block && u.speed < 0.5 ? (u.stuckT || 0) + dt : 0; if (u.stuckT > rnd(2.5, 6) && d < 80) { u.stuckT = -rnd(4, 10); sfx('horn', clamp(1 - d / 80, 0.1, 0.8)); }
       u.jamT = block ? (u.jamT || 0) + dt : 0; if (u.jamT > 12 && d > 130) { u.jamT = 0; u.respawn = true; } // Dauerstau außer Sicht löst sich auf statt für immer zu stehen
       // steht ein Fahrzeug dauerhaft in der Spur (Streifenwagen nach der Fahndung, abgestelltes Spielerauto, Wrack): nach 6 s zur Fahrbahnmitte hin vorbeifahren, nie auf die Gegenspur; in schmalen Straßen stattdessen hinter der Kamera umsetzen
-      if (u.passT > 0) { u.passT -= dt; if (u.passT <= 0) u.passO = null; } else if (blk && u.jamT > 6) { const bu = blk.userData; if ((bu.mode === 'parked' || bu.mode === 'wreck' || bu.mode === 'player') && Math.abs(bu.speed || 0) < 0.5) { if (u.road.w >= 6) { u.passT = 5; u.passO = blk; } else if (d > 60) { const ce = camera.matrixWorld.elements; if ((c.position.x - camera.position.x) * ce[8] + (c.position.z - camera.position.z) * ce[10] > 0) { u.jamT = 0; u.respawn = true; } } } }
+      if (u.passT > 0) { u.passT -= dt; if (u.passT <= 0) u.passO = null; } else if (blk && blk !== player.car && u.jamT > 6) { const bu = blk.userData; if ((bu.mode === 'parked' || bu.mode === 'wreck' || bu.mode === 'player') && Math.abs(bu.speed || 0) < 0.5) { if (u.road.w >= 6) { u.passT = 5; u.passO = blk; } else if (d > 60) { const ce = camera.matrixWorld.elements; if ((c.position.x - camera.position.x) * ce[8] + (c.position.z - camera.position.z) * ce[10] > 0) { u.jamT = 0; u.respawn = true; } } } }
       if (u.passT > 0 || u.passA) u.passA = clamp((u.passA || 0) + (u.passT > 0 ? dt : -dt) * 1.2, 0, 1); // Versatz weich hin und zurück, kein Seitensprung
       // Rechtsverkehr: die Normale in advanceAlongRoad dreht sich mit der Fahrtrichtung schon um, ein zusätzliches *u.dir hob das auf und ließ Gegenverkehr auf derselben Spur fahren (Frontalstaus)
       if (u.speed > 0.05) { const lk = yieldS ? Math.max(0.42, laneK(u)) : u.passA ? laneK(u) - (laneK(u) - 0.05) * u.passA : laneK(u); const k = sideGuard(u, c.position, u.road.w * lk, 0, 1); /* Versatz +W = rechts (Normale (-dz,dx) zeigt bei x Ost/z Süd nach rechts; Rechtsverkehr, #99) ohne u.dir: die Normale dreht schon mit der Fahrtrichtung */ advanceAlongRoad(u, c.position, u.speed * dt, u.road.w * lk * k); }
