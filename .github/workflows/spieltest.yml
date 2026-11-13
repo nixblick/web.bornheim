@@ -27,10 +27,8 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: ${{ inputs.ref || github.event.pull_request.head.sha || github.ref }}
-      - name: Fehlende Proben von main ergänzen (ältere Zweige)
-        run: |
-          git fetch -q --depth 1 origin main
-          for f in $(git ls-tree -r --name-only FETCH_HEAD tools/proben); do [ -e "$f" ] || git checkout FETCH_HEAD -- "$f"; done
+      - name: Proben aus dem Stand des Workflows (main oder --ref), Spielcode aus ref
+        run: git fetch -q --depth 1 origin "$GITHUB_SHA" && git rm -rq --ignore-unmatch tools/proben && git checkout FETCH_HEAD -- tools/proben
       - id: l
         env:
           WAHL: ${{ inputs.proben }}
@@ -53,10 +51,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - name: Fehlende Proben und Werkzeug von main ergänzen (ältere Zweige)
-        run: |
-          git fetch -q --depth 1 origin main
-          for f in $(git ls-tree -r --name-only FETCH_HEAD tools/probe.mjs tools/proben); do [ -e "$f" ] || git checkout FETCH_HEAD -- "$f"; done
+      - name: Proben und Werkzeug aus dem Stand des Workflows (main oder --ref), Spielcode aus ref
+        run: git fetch -q --depth 1 origin "$GITHUB_SHA" && git rm -rq --ignore-unmatch tools/proben && git checkout FETCH_HEAD -- tools/probe.mjs tools/proben
       - name: Probe ${{ matrix.probe }}
         run: node tools/probe.mjs "tools/proben/${{ matrix.probe }}.json" "out/${{ matrix.probe }}" "$(command -v google-chrome)"
       - name: Stand
