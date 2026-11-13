@@ -56,8 +56,9 @@ export function initDemo(X, W) {
   const stickMat = new THREE.MeshLambertMaterial({ color: 0x8a6a45 }); const signGeo = new THREE.PlaneGeometry(0.78, 0.52), stickGeo = new THREE.BoxGeometry(0.03, 1.15, 0.03);
   function addSign(h, text) { const g = new THREE.Group(); const st = new THREE.Mesh(stickGeo, stickMat); st.position.y = 1.75; g.add(st); const m = new THREE.MeshLambertMaterial({ map: signTex(text || pick(SLOGANS), pick(['#f2ead8', '#ffe14d', '#b6f08a', '#ffffff', '#ffb0c8', '#202020'])) });
     const a = new THREE.Mesh(signGeo, m); a.position.set(0, 2.42, 0.02); const b = new THREE.Mesh(signGeo, m); b.position.set(0, 2.42, -0.02); b.rotation.y = Math.PI; g.add(a, b); g.position.set(0.22, 0, 0.12); h.add(g); h.userData.sign = g; }
+  const bannerGeo = new THREE.PlaneGeometry(1, 0.85); // geteilt; Textur und Material je Demo, endDemo gibt beide frei (#120)
   function bannerMesh(text) { const t = canvasTex(1024, 128, (ctx, w, h) => { ctx.fillStyle = '#f4efe2'; ctx.fillRect(0, 0, w, h); ctx.fillStyle = '#c81e3a'; ctx.fillRect(0, 0, w, 14); ctx.fillRect(0, h - 14, w, 14); ctx.fillStyle = '#151515'; ctx.font = '900 76px system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(text, w / 2, h / 2 + 4); });
-    const m = new THREE.MeshLambertMaterial({ map: t, side: THREE.FrontSide }); const g = new THREE.Group(); const a = new THREE.Mesh(new THREE.PlaneGeometry(1, 0.85), m); const b = a.clone(); b.rotation.y = Math.PI; g.add(a, b); scene.add(g); return g; }
+    const m = new THREE.MeshLambertMaterial({ map: t, side: THREE.FrontSide }); const g = new THREE.Group(); const a = new THREE.Mesh(bannerGeo, m); const b = a.clone(); b.rotation.y = Math.PI; g.add(a, b); scene.add(g); return g; }
 
   // ---------- Figuren ----------
   const YOUNG = ['woman_casual', 'woman_tanktop', 'woman_jacket', 'man', 'hero_man', 'hero_woman'].filter(n => X.CHAR[n]);
@@ -149,10 +150,10 @@ export function initDemo(X, W) {
     const nBlack = o.peaceful ? 0 : (o.black ?? Math.round(n * 0.1));
     for (let i = d.members.length; i < n; i++) { const a = rnd(0, 6.28), r = rnd(1, 6); const [qx, qz] = freeSpot(x + Math.cos(a) * r, z + Math.sin(a) * r, 1.5); const h = makeMember(qx, qz, { slogans: o.slogans, signs: o.slogans ? 0.6 : undefined, black: i < nBlack + (o.members || []).length && i >= (o.members || []).length, student: o.student }); h.userData.demo = d; d.members.push(h); }
     d.student = !!o.student; d.mob = !!o.mob;
-    d.banner = bannerMesh(d.theme); demos.push(d); emit('demoStart', new V3(x, 0, z), { demo: d }); return d;
+    d.banner = o.noBanner ? null : bannerMesh(d.theme); demos.push(d); emit('demoStart', new V3(x, 0, z), { demo: d }); return d;
   }
   function leaveDemo(h) { const u = h.userData; const d = u.demo; if (!d) return; d.members.splice(d.members.indexOf(h), 1); u.demo = null; }
-  function endDemo(d, result) { if (d.result) return; d.result = result; d.endT = 0; for (const h of [...d.members]) { const u = h.userData; leaveDemo(h); if (u.state === 'demo') { u.state = 'flee'; u.fleeT = rnd(6, 12); } } if (d.banner) { scene.remove(d.banner); d.banner = null; } if (d.onEnd) d.onEnd(result, d); emit('demoEnd', new V3(d.cx, 0, d.cz), { demo: d, result }); }
+  function endDemo(d, result) { if (d.result) return; d.result = result; d.endT = 0; for (const h of [...d.members]) { const u = h.userData; leaveDemo(h); if (u.state === 'demo') { u.state = 'flee'; u.fleeT = rnd(6, 12); } } if (d.banner) { const bm = d.banner.children[0].material; if (bm.map) bm.map.dispose(); bm.dispose(); scene.remove(d.banner); d.banner = null; } if (d.onEnd) d.onEnd(result, d); emit('demoEnd', new V3(d.cx, 0, d.cz), { demo: d, result }); }
   function frontS(d) { return d.leadPlayer ? d.trail[d.trail.length - 1].s : d.s; }
   function slotOf(d, i) {
     const cols = d.leadPlayer ? 4 : 5; const row = Math.floor(i / cols), col = i % cols; const h = d.members[i].userData;
@@ -370,7 +371,7 @@ export function initDemo(X, W) {
 
   function spawnSquad(pos) { // Kreativmodus: Einsatzhundertschaft mit Wanne
     const near = demos.find(d => !d.result && Math.hypot(pos.x - d.cx, pos.z - d.cz) < 90); if (near) { copsNeeded(near, near.pol.cops.length + 6); if (near.pol.stage < 1) setStage(near, 1); return near; }
-    const d = spawnDemo({ x: pos.x, z: pos.z, n: 0, noPolice: false, maxStage: 1 }); d.members.length = 0; d.state = 'guard'; d.banner.visible = false; d.guard = true; d.pol.stage = 1; copsNeeded(d, 6); for (const c of d.pol.cops) { c.position.set(pos.x + rnd(-3, 3), 0, pos.z + rnd(-3, 3)); c.userData.task = 'escort'; } policeCar(d, 0, 1, true); return d; }
+    const d = spawnDemo({ x: pos.x, z: pos.z, n: 0, noPolice: false, maxStage: 1, noBanner: true }); d.members.length = 0; d.state = 'guard'; d.guard = true; d.pol.stage = 1; copsNeeded(d, 6); for (const c of d.pol.cops) { c.position.set(pos.x + rnd(-3, 3), 0, pos.z + rnd(-3, 3)); c.userData.task = 'escort'; } policeCar(d, 0, 1, true); return d; }
   // Wachen ohne Demo bleiben stehen; endDemo erst, wenn der Spieler weit weg ist
   const _origUpdate = update;
   function update2(dt) { for (const d of demos) if (d.guard && !d.result) { d.age = 0; d.members.length = 0; d.cx = d.cx; } _origUpdate(dt); for (const d of demos) if (d.guard && !d.result && Math.hypot(player.pos.x - d.cx, player.pos.z - d.cz) > 250) endDemo(d, 'faded'); }
