@@ -1,0 +1,9 @@
+{
+  "compilerOptions": {
+    "checkJs": true, "allowJs": true, "noEmit": true, "strict": false,
+    "target": "es2022", "module": "es2022", "moduleResolution": "bundler",
+    "lib": ["es2022", "dom", "dom.iterable"], "skipLibCheck": true, "types": []
+  },
+  "include": ["types.d.ts", "*.js"],
+  "exclude": ["game.js", "feedback.js", "sw.js", "touch.js", "vendor", "tools", "node_modules"]
+}

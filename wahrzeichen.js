@@ -96,6 +96,7 @@ export function markLandmark(b) {
     return; }
 }
 
+/** @param {import('./types').Ctx} X */
 export function initWahrzeichen(X) {
   const { THREE, scene, player, TH, canvasTex, world } = X;
   const built = new Map(); let scanT = 0; let lastNight = null;

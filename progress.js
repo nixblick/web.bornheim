@@ -6,6 +6,7 @@ export const KEYS_HELP = [
   ['1–0, Mausrad', 'Waffe wählen'], ['Q', 'letzte Waffe'], ['R', 'nachladen'], ['G', 'Leute sammeln / Sprechchor'], ['V', 'filmen'], ['X', 'Dialog weiter'],
   ['M', 'große Karte'], ['N', 'Minikarte nach Norden'], ['C', 'Kreativmodus'], ['Tab', 'Statistik, Fortschritt, Befehle'], ['F6 / F9', 'speichern / laden'], ['Esc', 'Menü'], ['F1', 'Hilfe: was geht wo'],
 ];
+/** @param {import('./types').Ctx} X */
 export function initProgress(X) {
   const { player, sfx, showMsg } = X; const $ = id => document.getElementById(id);
   if (!X.emit) X.emit = (ev, pos, data) => { for (const f of X.listeners) f(ev, pos, data || {}); };
@@ -32,10 +33,12 @@ export function initProgress(X) {
   const hud = $('hud'); const zoneEl = document.createElement('div'); zoneEl.id = 'zone'; const lvlEl = document.createElement('div'); lvlEl.id = 'lvl'; if (hud) { hud.appendChild(zoneEl); (hud.querySelector('.tl') || hud).appendChild(lvlEl); /* im Fluss unter Waffe statt fest bei 84 px, sonst überlagerten sich Stufe und Waffe (#100) */ }
   let xpT = 0, xpSum = 0, banT = 0;
   function gain(n, why) {
+    // @ts-ignore -- Baseline #119: DOM-/Zahl-String-Typen, kein X-Fehler
     if (n <= 0) return; P.xp += n; xpSum += n; xpf.textContent = `+${xpSum} EP${why ? ' · ' + why : ''}`; xpf.style.opacity = 1; xpT = 2.2;
     while (P.xp >= need(P.lvl)) { P.xp -= need(P.lvl); P.lvl++; perks(); banner('STUFE ' + P.lvl, 'Aufgestiegen', `Auto ${Math.round((1 - X.perks.car) * 100)} % robuster · Läden ${Math.round((1 - X.perks.shop) * 100)} % billiger · ${Math.round((X.perks.run - 1) * 100)} % schneller rennen`); sfx('bell', 0.6); }
     drawLvl(); save();
   }
+  // @ts-ignore -- Baseline #119: DOM-/Zahl-String-Typen, kein X-Fehler
   function banner(big, small, sub) { ban.innerHTML = `<small>${small}</small><b>${big}</b>${sub ? '<i>' + sub + '</i>' : ''}`; ban.style.opacity = 1; banT = 4; }
   function drawLvl() { lvlEl.innerHTML = `Stufe ${P.lvl}<i><b style="width:${Math.round(P.xp / need(P.lvl) * 100)}%"></b></i>`; }
   drawLvl();
@@ -74,7 +77,9 @@ export function initProgress(X) {
   // ---------- Takt ----------
   let lx = null, lz = null;
   function update(dt) {
+    // @ts-ignore -- Baseline #119: DOM-/Zahl-String-Typen, kein X-Fehler
     if (xpT > 0) { xpT -= dt; if (xpT <= 0) { xpf.style.opacity = 0; xpSum = 0; } }
+    // @ts-ignore -- Baseline #119: DOM-/Zahl-String-Typen, kein X-Fehler
     if (banT > 0) { banT -= dt; if (banT <= 0) ban.style.opacity = 0; }
     P.st.time += dt;
     const inside = X.inPocket && X.inPocket(player.pos.x, player.pos.z);
