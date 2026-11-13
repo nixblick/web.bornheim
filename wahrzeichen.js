@@ -20,6 +20,10 @@ const LIST = [
   // https://de.wikipedia.org/wiki/Paulskirche_(Frankfurt_am_Main) – Ellipse ca. 40 × 30 m, Traufe 28 m, quadratischer Turm an der Südseite,
   // flaches Kupferdach (Wiederaufbau 1948), roter Mainsandstein
   { id: 'pauls', n: 'Paulskirche', c: [-2066, 2031], h: 28, t: [-2066, 2200], r: 900 },
+  // https://de.wikipedia.org/wiki/Eschenheimer_Turm (#92) – „bis zur Oberkante des Turmknaufes 48 m hoch“, Rundturm 10,20–10,28 m
+  // Durchmesser, auskragender Wehrgang in 31 m Höhe, vier gleiche Scharwachttürmchen, steiler Helm. OSM (data/tiles/-5_2.json) hatte h 16.
+  // Ohne Quelle und daher geschätzt: Auskragung des Wehrgangs, Maße der Türmchen, Steinfarbe (der Artikel nennt keine).
+  { id: 'eschenheim', n: 'Eschenheimer Turm', c: [-2138, 1389], h: 31, t: null, r: 900 },
   // Hochhäuser: https://de.wikipedia.org/wiki/Liste_der_Hochh%C3%A4user_in_Frankfurt_am_Main (Höhen) und die Artikel je Turm
   // Commerzbank Tower: dreieckig mit gerundeten Ecken, Himmelsgärten, 259 m, Antenne bis 300 m
   { id: 'coba', n: 'Commerzbank Tower', c: [-2518, 2025], h: 259, t: null, r: 1800 },
@@ -74,6 +78,7 @@ function core(e, W, D) {
   if (e.id === 'pauls') { const rx = Math.min(20, W / 2), rz = 15, z0 = -D / 2 + rz + 0.5, tz = Math.min(D / 2 - 5, z0 + rz + 3);
     const inside = (x, z) => ((x / rx) ** 2 + ((z - z0) / rz) ** 2 <= 1) || (Math.abs(x) <= 5.5 && Math.abs(z - tz) <= 5.5);
     return [star(inside, 0, Math.max(z0, tz - 5), 60), 28]; }
+  if (e.id === 'eschenheim') return [ring(5.1, 5.1), 31]; // Rundturm bis zum Wehrgang wie mk()
   if (e.id === 'coba') return [tri(r * 1.12, Math.PI / 6), H];
   if (e.id === 'trianon') return [tri(r * 1.1, Math.PI / 6), H - 22];
   if (e.id === 'main') { const rr = Math.min(r, D / 2) * 0.95, zc = D / 2 - rr, hw = W * 0.45, z0 = -D / 2 - 2, z1 = zc - rr + 4; // Glaszylinder und Steinturm wie mk()
@@ -169,6 +174,15 @@ export function initWahrzeichen(X) {
       const tz = Math.min(D / 2 - 5, z0 + rz + 3); add(box(11, 40, 11), [fac, fac, stein, stein, fac, fac], 0, 19, tz);
       add(box(12, 1.2, 12), stein, 0, 39.6, tz); add(new THREE.CylinderGeometry(4.3, 4.6, 7, 8), stein, 0, 43.7, tz);
       add(new THREE.LatheGeometry([[4.8, 0], [4.4, 2.5], [3, 4.8], [0.8, 6.3], [0.3, 9], [0, 9.2]].map(([r, h]) => new THREE.Vector2(r, h)), 8), kupfer, 0, 47.2, tz);
+    } else if (e.id === 'eschenheim') { // Rundturm 10,2 m, Wehrgang 31 m, Helm bis Knauf 48 m (Wikipedia)
+      const stein = M(0x9a8f80), schiefer = M(0x3f4652), gold = M(0xd4b04a);
+      add(new THREE.CylinderGeometry(5.1, 5.1, 32, 20), stein, 0, 15, 0); // 1 m in den Boden, oben 31 m
+      add(new THREE.CylinderGeometry(5.8, 5.6, 2.2, 20), stein, 0, 32.1, 0); // auskragender Wehrgang
+      add(new THREE.CylinderGeometry(4.6, 4.6, 3, 16), stein, 0, 34.7, 0);
+      add(new THREE.ConeGeometry(4.8, 11.6, 16), schiefer, 0, 42, 0); // Helm 36,2–47,8 m
+      add(new THREE.SphereGeometry(0.35, 8, 6), gold, 0, 47.75, 0); // Knauf, Oberkante 48,1 m
+      for (let i = 0; i < 4; i++) { const a = Math.PI / 4 + i * Math.PI / 2, x = Math.sin(a) * 5.2, z = Math.cos(a) * 5.2; // vier Scharwachttürmchen
+        add(new THREE.CylinderGeometry(1.1, 1.1, 3.4, 8), stein, x, 34.9, z); add(new THREE.ConeGeometry(1.3, 4.2, 8), schiefer, x, 38.7, z); }
     } else { // Hochhäuser
       const glas = (base, band, rx, ry) => T(256, 256, (c, w, h) => { c.fillStyle = base; c.fillRect(0, 0, w, h); c.fillStyle = band; for (let y = 0; y < h; y += 16) c.fillRect(0, y, w, 4); c.fillStyle = 'rgba(255,255,255,0.10)'; for (let x = 0; x < w; x += 16) c.fillRect(x, 0, 2, h); c.fillStyle = 'rgba(255,236,190,0.35)'; for (let i = 0; i < 60; i++) c.fillRect(((i * 97) % 16) * 16 + 3, ((i * 53) % 16) * 16 + 5, 10, 9); }, rx, ry);
       const H = e.h, r = Math.min(W, D) / 2;
