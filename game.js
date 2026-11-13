@@ -275,7 +275,10 @@ function surfH(x, z) { const g = meshGroundH(x, z), b = bandH(x, z); return b !=
 // Geländenetz; ohne Grenze steckten Bänke und Bäume dort bis 4 m tief (Probe gelaende, Lauf 43470519653)
 // Bänke: Sitzhöhe zählt, hier weiter tiefstes TH (Probe: auf Oberfläche gesetzt steckten sie am Bornheimer Hang bis 80 cm)
 function thMin(x, z, r) { let t = TH(x, z); for (const [a, b] of [[r, r], [r, -r], [-r, r], [-r, -r]]) t = Math.min(t, TH(x + a, z + b)); return t; }
-function footTH(x, z, r) { let m = surfH(x, z), t = TH(x, z); for (const [a, b] of [[r, r], [r, -r], [-r, r], [-r, -r]]) { m = Math.min(m, surfH(x + a, z + b)); t = Math.min(t, TH(x + a, z + b)); } return Math.max(m, t - 0.3); }
+// Ausnahme Ufer (13.11.2026, Probe gelaende Mainufer: 55 von 85 schwebenden Teilen, bis 2,2 m): liegt ein Gitterpunkt des Geländenetzes
+// im Umkreis im Wasser, zieht groundH ihn auf Gewässergrund und das Netz fällt zur Uferböschung ab; dort gilt die Untergrenze nicht
+function nearWater(x, z) { const s = DEM.step * groundMul(); for (const [a, b] of [[0, 0], [s, 0], [-s, 0], [0, s], [0, -s], [s, s], [s, -s], [-s, s], [-s, -s]]) if (waterAt(x + a, z + b, TH(x + a, z + b)) !== null) return true; return false; }
+function footTH(x, z, r) { let m = surfH(x, z), t = TH(x, z); for (const [a, b] of [[r, r], [r, -r], [-r, r], [-r, -r]]) { m = Math.min(m, surfH(x + a, z + b)); t = Math.min(t, TH(x + a, z + b)); } return m < t - 0.3 && nearWater(x, z) ? m : Math.max(m, t - 0.3); }
 function TH(x, z) {
   let tx = Math.floor(x / TS), tz = Math.floor(z / TS); const k = dkey(tx, tz); let H; if (k === thK) H = thH; else { H = DEMN.get(k); if (H) { thK = k; thH = H; } }
   if (!H) {
