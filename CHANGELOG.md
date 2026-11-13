@@ -2,6 +2,8 @@
 
 ## 2026-11-13
 
+- Licht-Pfützen unter den Straßenlaternen (#152, Technik aus Sunset): Shader statt Additiv-Kreis, geformter Abfall, Farbe je Laterne (Natrium warm / LED neutral), Einblenden in der Dämmerung, Ausblenden in der Ferne, bei Regen heller. Weiter ein InstancedMesh je Kachel, auch in der Sparstufe. Neue Datei `lichtpfuetzen.js`. Spieltest 43419267585 grün (Vergleich main: 43419280099).
+
 - **Gräber und Haltestelle nachgebessert:** Mustergrabanlage dreht die Steinvorderseiten zum nächsten OSM-Weg (bis 60 m). Tramhalte mit neuem Haltestellenmodell (Gleis in 20 m) bekommen den alten blauen Halte-Mast nicht mehr. Glas der Wartehalle als Milchglas mit deutlichem weißen Punktraster (Foto Wasserpark). Spieltest per CI mit `graeber`.
 
 - **Doku privat:** `docs/vergleich-project-sunset.md` liegt nur noch lokal (gitignore), auf Andrés Wunsch. In der Git-Historie bleibt die frühere Fassung.
