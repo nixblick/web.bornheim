@@ -11,7 +11,27 @@ export function initDebugOverlay(G) {
   const ext = gl.getExtension('EXT_disjoint_timer_query_webgl2');
   let active = 0; // Zahl der Nutzer (Overlay, Messung); > 0 = Zähler laufen
   let groups = false; // Gruppen-Zählung (kostet etwas mehr je Draw-Call)
-  const ft = [], cpu = [], gpu = []; let lastT = 0; const MAXN = 600;
+  const ft = [], cpu = [], gpu = [], bld = [], ovl = []; let lastT = 0; const MAXN = 600;
+  // #173: Zeit außerhalb update+render sichtbar machen. Lange Bilder/Aufgaben des Browsers (long-animation-frame, sonst longtask) je Quelle,
+  // Arbeit nach dem Kachelladen (Promise, außerhalb der Schleife), Zuwachs an Shadern/Geometrien/Texturen je Sekunde, Eigenkosten des Overlays
+  const LAF = []; // { t, dur, script, src } der letzten 5 s
+  let lafType = null, po = null, buildMax = 0, buildStep = '', loadMs = 0, loadN = 0, lastRes = null, resDelta = null, resT = 0;
+  function observe(on) {
+    if (!on) { if (po) po.disconnect(); po = null; return; } if (po || typeof PerformanceObserver === 'undefined') return;
+    const types = PerformanceObserver.supportedEntryTypes || []; lafType = types.includes('long-animation-frame') ? 'long-animation-frame' : types.includes('longtask') ? 'longtask' : null; if (!lafType) return;
+    po = new PerformanceObserver(list => { for (const e of /** @type {any[]} */ (list.getEntries())) {
+      let script = 0; const src = new Map();
+      if (e.scripts) for (const s of e.scripts) { script += s.duration; const k = `${s.invoker || s.invokerType || '?'}${s.sourceFunctionName ? ' ' + s.sourceFunctionName : ''} (${String(s.sourceURL || '').split('/').pop().split('?')[0]}${s.sourceCharPosition >= 0 ? ':' + s.sourceCharPosition : ''})`; src.set(k, (src.get(k) || 0) + s.duration); }
+      else { script = e.duration; const a = e.attribution && e.attribution[0]; src.set(a ? `${a.containerType || ''} ${a.containerName || a.name || ''}`.trim() || 'longtask' : 'longtask', e.duration); }
+      LAF.push({ t: e.startTime, dur: e.duration, script, render: e.renderStart ? Math.max(0, e.startTime + e.duration - e.renderStart) : 0, style: e.styleAndLayoutStart ? Math.max(0, e.startTime + e.duration - e.styleAndLayoutStart) : 0, block: e.blockingDuration || 0, src }); } });
+    try { po.observe({ type: lafType, buffered: false }); } catch (x) { po = null; }
+  }
+  function lafStat() { const now = performance.now(); while (LAF.length && LAF[0].t < now - 5000) LAF.shift(); if (!lafType) return null;
+    let dur = 0, script = 0, render = 0, block = 0; const src = new Map(); for (const e of LAF) { dur += e.dur; script += e.script; render += e.render; block += e.block; for (const [k, v] of e.src) src.set(k, (src.get(k) || 0) + v); }
+    const top = [...src].sort((a, b) => b[1] - a[1]).slice(0, 3).map(([k, v]) => [k, Math.round(v / 5)]);
+    return { type: lafType, n: LAF.length, msPerS: Math.round(dur / 5), scriptPerS: Math.round(script / 5), renderPerS: Math.round(render / 5), blockPerS: Math.round(block / 5), top }; }
+  function resStep() { const now = performance.now(); if (now - resT < 1000) return; const m = renderer.info.memory, r = { programs: (renderer.info.programs || []).length, geometries: m.geometries, textures: m.textures };
+    if (lastRes) resDelta = { programs: r.programs - lastRes.programs, geometries: r.geometries - lastRes.geometries, textures: r.textures - lastRes.textures, s: +((now - resT) / 1000).toFixed(1) }; lastRes = r; resT = now; }
   let byGroup = new Map(), byKey = new Map(), frameInfo = null;
   const pending = []; // offene GPU-Abfragen
   const push = (a, v) => { a.push(v); if (a.length > MAXN) a.shift(); };
@@ -59,6 +79,8 @@ export function initDebugOverlay(G) {
   function endFrame(q, t0, t1) {
     if (q) { gl.endQuery(ext.TIME_ELAPSED_EXT); pending.push(q); }
     if (lastT) push(ft, t0 - lastT); lastT = t0; push(cpu, t1 - t0);
+    const B = G.BUILD_STAT; if (B) { push(bld, B.ms); if (B.max > buildMax) { buildMax = B.max; buildStep = B.step; } B.ms = 0; B.max = 0; }
+    const L = G.LOAD_STAT; if (L) { loadMs += L.ms; loadN += L.n; L.ms = 0; L.n = 0; } resStep();
     const r = renderer.info.render, m = renderer.info.memory;
     frameInfo = /** @type {any} */ ({ calls: r.calls, triangles: r.triangles, points: r.points, lines: r.lines, geometries: m.geometries, textures: m.textures, programs: (renderer.info.programs || []).length });
     if (groups) frameInfo.groups = Object.fromEntries(byGroup), frameInfo.keys = Object.fromEntries(byKey);
@@ -68,16 +90,16 @@ export function initDebugOverlay(G) {
   const setLoop = renderer.setAnimationLoop.bind(renderer);
   renderer.setAnimationLoop = cb => setLoop(cb ? (t, f) => {
     if (!active) { cb(t, f); return; }
-    const q = beginFrame(); const t0 = performance.now(); cb(t, f); const t1 = performance.now(); endFrame(q, t0, t1); if (el) draw();
+    const s0 = performance.now(); const q = beginFrame(); const t0 = performance.now(); cb(t, f); const t1 = performance.now(); endFrame(q, t0, t1); if (el) draw(); push(ovl, performance.now() - s0 - (t1 - t0));
   } : null);
 
   function start(withGroups) {
-    if (!active++) { renderer.info.autoReset = false; ft.length = cpu.length = gpu.length = 0; lastT = 0; }
+    if (!active++) { renderer.info.autoReset = false; ft.length = cpu.length = gpu.length = bld.length = ovl.length = 0; lastT = 0; buildMax = 0; loadMs = loadN = 0; LAF.length = 0; observe(true); }
     if (withGroups && !groups) { groups = true; renderer.renderBufferDirect = counted; }
   }
   function stop(withGroups) {
     if (withGroups && groups && !(el && elGroups)) { groups = false; renderer.renderBufferDirect = orig; }
-    if (active > 0 && !--active) { renderer.info.autoReset = true; groups = false; renderer.renderBufferDirect = orig; }
+    if (active > 0 && !--active) { renderer.info.autoReset = true; groups = false; renderer.renderBufferDirect = orig; observe(false); }
   }
   const stat = a => { if (!a.length) return null; const s = [...a].sort((x, y) => x - y); return { mean: +(a.reduce((x, y) => x + y, 0) / a.length).toFixed(2), p95: +s[Math.min(s.length - 1, Math.floor(s.length * 0.95))].toFixed(2), n: a.length }; };
   function snapshot() {
@@ -87,6 +109,8 @@ export function initDebugOverlay(G) {
     return { calls: f.calls, triangles: f.triangles, geometries: f.geometries, textures: f.textures, programs: f.programs,
       frameMs: stat(ft), cpuMs: stat(cpu), gpuMs: ext ? stat(gpu) : 'nicht messbar (EXT_disjoint_timer_query_webgl2 fehlt)',
       groups: f.groups || null, top, quality: G.opts.quality, scale: G.opts.scale || 1, pixelRatio: renderer.getPixelRatio(), buffer: [size.x, size.y],
+      buildMs: stat(bld), buildSliceMax: { ms: +buildMax.toFixed(1), step: buildStep }, loadTile: { ms: Math.round(loadMs), n: loadN }, overlayMs: stat(ovl),
+      gapMs: (() => { const a = stat(ft), c = stat(cpu); return a && c ? +(a.mean - c.mean).toFixed(1) : null; })(), longFrames: lafStat(), resPerS: resDelta,
       tiles: [...G.TILES.values()].filter(t => t.built).length, lowGfx: !!G.LOW_GFX, weakGpu: !!G.WEAK_GPU, view: G.opts.view || 700 };
   }
 
@@ -94,6 +118,7 @@ export function initDebugOverlay(G) {
   async function measure({ frames = 60, maxMs = 30000, groups: wg = true } = {}) {
     const dyn = G.opts.dynres; G.opts.dynres = false; start(wg);
     try { const t0 = performance.now(); ft.length = cpu.length = gpu.length = 0; lastT = 0;
+      buildMax = 0; loadMs = loadN = 0; bld.length = ovl.length = 0;
       while (cpu.length < frames && performance.now() - t0 < maxMs) await new Promise(r => setTimeout(r, 50));
       await new Promise(r => setTimeout(r, 200)); // letzte GPU-Abfragen einsammeln
       const s = snapshot(); s.partial = cpu.length < frames; return s;
@@ -114,7 +139,12 @@ export function initDebugOverlay(G) {
   function drawNow() {
     const s = snapshot(); const f = v => v == null ? '–' : typeof v === 'string' ? v : `${v.mean} / ${v.p95} ms`;
     let h = `<b>F3 Leistung</b> (${s.quality}, Skala ${s.scale}, ${s.buffer[0]}×${s.buffer[1]})<br>Draw-Calls ${s.calls} · Dreiecke ${(s.triangles / 1000).toFixed(0)}k · Geo ${s.geometries} · Tex ${s.textures} · Shader ${s.programs}<br>`
-      + `Bild Ø/95 %: ${f(s.frameMs)}<br>CPU (update+render): ${f(s.cpuMs)}<br>GPU: ${f(s.gpuMs)}<br><i>F4: halbe Auflösung an/aus</i>`;
+      + `Bild Ø/95 %: ${f(s.frameMs)}<br>CPU (update+render): ${f(s.cpuMs)}<br>GPU: ${f(s.gpuMs)}<br>`
+      + `Lücke außerhalb Schleife Ø: ${s.gapMs == null ? '–' : s.gapMs + ' ms'}<br>Kachelbau je Bild: ${f(s.buildMs)} · längstes Stück ${s.buildSliceMax.ms} ms (${s.buildSliceMax.step || '–'})<br>`
+      + `Kachel laden (außerhalb): ${s.loadTile.ms} ms / ${s.loadTile.n} Kacheln · Overlay: ${f(s.overlayMs)}<br>`
+      + (s.resPerS ? `Zuwachs je ${s.resPerS.s} s: Shader ${s.resPerS.programs} · Geo ${s.resPerS.geometries} · Tex ${s.resPerS.textures}<br>` : '')
+      + (s.longFrames ? `Lange Bilder (${s.longFrames.type}, 5 s): ${s.longFrames.n} · ${s.longFrames.msPerS} ms/s, Skript ${s.longFrames.scriptPerS}, Zeichnen ${s.longFrames.renderPerS}<br>` + s.longFrames.top.map(([k, v]) => `&nbsp; ${k.replace(/</g, '&lt;')}: ${v} ms/s`).join('<br>') + (s.longFrames.top.length ? '<br>' : '') : 'Lange Bilder: nicht messbar<br>')
+      + `<i>F4: halbe Auflösung an/aus</i>`;
     if (s.groups) h += '<br>' + Object.entries(s.groups).sort((a, b) => b[1] - a[1]).map(([k, v]) => `${k}: ${v}`).join('<br>');
     el.innerHTML = h;
   }
