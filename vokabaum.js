@@ -55,5 +55,8 @@ export function initVokabaum(X) {
     scanT -= dt; if (scanT <= 0) { scanT = 2; if (Math.random() < 0.25) tryOffer(); } }
   // Testhilfe: G.VOKA.force('en') setzt die Stunden-Sperre zurück und startet sofort; G.VOKA.mission zeigt die richtige Antwort
   function force(lang) { lastHour = null; release(false); return start(lang); }
-  return { update, force, tryOffer, start, get mission() { return mission; }, get ped() { return ped; }, get last() { return last; }, get data() { return DATA; }, get lastHour() { return lastHour; } };
+  // Start aus Handy und Pausenmenü: gleiche Sperren wie beim Passanten (einmal je Stunde, zu Fuß, keine Fahndung)
+  const ready = () => !mission && !blocked() && hoursSince(world.hour) >= 1;
+  function request(lang) { if (!ready()) return false; release(false); return start(lang); }
+  return { update, force, request, get ready() { return ready(); }, tryOffer, start, get mission() { return mission; }, get ped() { return ped; }, get last() { return last; }, get data() { return DATA; }, get lastHour() { return lastHour; } };
 }

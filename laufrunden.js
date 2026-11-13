@@ -15,7 +15,7 @@ export function initLaufrunden(X) {
   const WEG = X.WEG || (X.WEG = initWegweiser(X));
 
   const hoursSince = h => lastHour === null ? 99 : (h - lastHour + 24) % 24;
-  const blocked = () => player.car || player.dead || player.wanted > 0 || (X.inPocket && X.inPocket(player.pos.x, player.pos.z)) || (X.creative && X.creative.on) || (X.VOKA_BUSY && X.VOKA_BUSY());
+  const blocked = () => player.car || player.dead || player.wanted > 0 || (X.inPocket && X.inPocket(player.pos.x, player.pos.z)) || (X.creative && X.creative.on) || (X.VOKA_BUSY && X.VOKA_BUSY()) || (!run && !!WEG.cur);
   const okPed = p => { const u = p.userData; return p.visible && u.state === 'walk' && !u.cop && !u.demo && !u.follow && !u.medic && !u.ff && !u.keep && !u.car && !u.vokabaum; };
   function release(cool) { if (ped) { const u = ped.userData; u.keep = false; u.laufrunde = false; if (u.lrSpeed !== undefined) { u.speed = u.lrSpeed; delete u.lrSpeed; } } ped = null; mark.visible = false; if (cool) lastHour = world.hour; }
   function offer(p) { ped = p; const u = p.userData; u.keep = true; u.laufrunde = true; u.lrSpeed = u.speed; u.speed = 0; offerT = 90; mark.visible = true; }
@@ -32,7 +32,7 @@ export function initLaufrunden(X) {
     pts.push([x0, z0]); let len = 0, px = x0, pz = z0; for (const [x, z] of pts) { len += Math.hypot(x - px, z - pz); px = x; pz = z; }
     return { pts, len, x0, z0 }; }
 
-  function start() { if (!ped) return false; const p = plan(player.pos.x, player.pos.z); if (p.pts.length < 4) { showMsg('KEINE RUNDE GEFUNDEN', 1500); release(true); return false; }
+  function start() { if (!ped || !WEG.frei()) return false; const p = plan(player.pos.x, player.pos.z); if (p.pts.length < 4) { showMsg('KEINE RUNDE GEFUNDEN', 1500); release(true); return false; }
     run = { ...p, i: 0, t0: performance.now(), buddy: ped }; mark.visible = false; WEG.route({ pts: p.pts, get i() { return run ? run.i : 0; }, from: [p.x0, p.z0], label: '🏃 Laufrunde' }); sfx('bell', 0.5);
     card('LAUFRUNDE', `${(p.len / 1000).toFixed(1)} km · ${p.pts.length} Wegpunkte · zu Fuß (gehen oder rennen), dem grünen Strahl folgen`, 5); return true; }
   function abort(msg) { run = null; WEG.route(null); release(true); if (msg) showMsg(msg, 1600); }
@@ -53,6 +53,6 @@ export function initLaufrunden(X) {
     if (ped) { const u = ped.userData; offerT -= dt; if (!peds.includes(ped) || u.state !== 'walk' || offerT <= 0 || blocked() || ped.position.distanceTo(player.pos) > 60) { release(true); return; } mark.position.set(ped.position.x, ped.position.y + 2.3 + Math.sin(performance.now() / 250) * 0.08, ped.position.z); }
     scanT -= dt; if (scanT <= 0) { scanT = 2; if (Math.random() < 0.2) tryOffer(); } }
   // Testhilfe: G.LAUF.force() setzt die Stunden-Sperre zurück, sucht einen Passanten und startet
-  function force() { lastHour = null; release(false); tryOffer(); if (!ped) { let best = null, bd = 1e9; for (const p of peds) { if (!okPed(p)) continue; const d = p.position.distanceTo(player.pos); if (d < bd) { bd = d; best = p; } } if (best && bd < 120) offer(best); } return start(); }
-  return { update, force, tryOffer, start, get run() { return run; }, get ped() { return ped; }, weg: WEG };
+  function force() { if (!WEG.frei()) return false; lastHour = null; release(false); tryOffer(); if (!ped) { let best = null, bd = 1e9; for (const p of peds) { if (!okPed(p)) continue; const d = p.position.distanceTo(player.pos); if (d < bd) { bd = d; best = p; } } if (best && bd < 120) offer(best); } return start(); }
+  return { update, force, tryOffer, start, stop: () => { if (run) abort('LAUFRUNDE ABGEBROCHEN'); }, get run() { return run; }, get ped() { return ped; }, weg: WEG };
 }

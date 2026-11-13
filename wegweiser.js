@@ -27,6 +27,8 @@ export function initWegweiser(X) {
   // Richtung relativ zur Blickrichtung wie auf der Minikarte (rotate(yaw + π) legt vorwärts nach oben), als Drehung im Uhrzeigersinn
   const relAngle = (dx, dz) => { const t = camYaw.v + Math.PI, x = dx * Math.cos(t) - dz * Math.sin(t), y = dx * Math.sin(t) + dz * Math.cos(t); return Math.atan2(x, -y); };
 
+  // Eine Regel für Laufrunde, Eulen-Lauf und Nebenjob: nur eine Strecke zugleich. frei() sagt sonst, was noch läuft.
+  function frei() { if (!cur) return true; X.showMsg('LÄUFT NOCH: ' + String(cur.label || 'STRECKE').toUpperCase() + ' · ERST BEENDEN', 1800); return false; }
   function route(r) { cur = r; placeT = 0; beam.visible = !!r; hud.style.display = r ? 'flex' : 'none'; if (!r) lastTxt = ''; }
   // Nicht unter #obj (Willkommen/Auftrag, kann zweizeilig sein) rutschen: Oberkante dynamisch darunter (13.11.2026)
   const objEl = document.getElementById('obj'); let topPx = 84;
@@ -50,5 +52,5 @@ export function initWegweiser(X) {
   X.mmHooks.push((ctx, P, R) => { if (cur) { draw(ctx, P, R); drawn.mm++; } });
   if (X.mapHooks) X.mapHooks.push((ctx, P) => { if (cur) { draw(ctx, P, 0); drawn.map++; } });
 
-  return { route, update, beam, hud, drawn, get cur() { return cur; } };
+  return { route, frei, update, beam, hud, drawn, get cur() { return cur; } };
 }
