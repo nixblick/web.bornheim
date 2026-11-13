@@ -134,14 +134,14 @@
  {
   "n": "eschenheim_hoehe",
   "x": -2138,
-  "z": 1539,
+  "z": 1479,
   "tx": -2138,
   "tz": 1389,
-  "pitch": 0.1,
+  "pitch": 0.35,
   "wait": 6000,
   "js": "(async () => { window.__last = await (async () => { const G = window.G, T = G.THREE; await new Promise(r => setTimeout(r, 2500)); const g = G.scene.children.find(o => o.isGroup && o.userData.mats && Math.hypot(o.position.x - (-2138), o.position.z - (1389)) < 60); if (!g) return 'kein Modell'; const bb = new T.Box3().setFromObject(g); return JSON.stringify({ hoehe_m: +(bb.max.y - g.position.y).toFixed(1) }); })(); return window.__last; })()",
   "expect": "(() => { try { const h = JSON.parse(window.__last).hoehe_m; return h >= 47 && h <= 49; } catch (e) { return false; } })()",
-  "y": 60
+  "y": 70
  },
  {
   "n": "dom_hoehe",
