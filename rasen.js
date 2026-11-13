@@ -115,7 +115,7 @@ export function initRasen(X) {
       const hgt = (e.meadow ? 0.32 + patch * 0.3 : 0.12 + patch * 0.14) * sc, wid = (e.meadow ? 0.55 : 0.5) * sc, co = Math.cos(a) * wid, si = Math.sin(a) * wid, o = k * 16;
       M[o] = co; M[o + 2] = -si; M[o + 5] = hgt; M[o + 8] = si; M[o + 10] = co; M[o + 12] = x; M[o + 13] = y; M[o + 14] = z; M[o + 15] = 1;
       // Tönung zur Flächenfarbe hin (Sunset-Halme sind dunkler als Bornheims Rasen), dazu Helligkeit und Trockenflecken
-      tc.setHex(e.col); const dry = (1 - patch) * 0.25; C[k * 3] = (0.55 + tc.r * 1.2) * lv * (1 + dry * 0.5); C[k * 3 + 1] = (0.55 + tc.g * 0.9) * lv * (1 + dry * 0.15); C[k * 3 + 2] = (0.55 + tc.b * 1.0) * lv * (1 - dry * 0.25); k++; }
+      tc.setHex(e.col); const dry = (1 - patch) * 0.25, B = 1.7; /* Spieltest 43419847797: Halme ohne Aufhellung deutlich dunkler als der Boden */ C[k * 3] = B * (0.55 + tc.r * 1.2) * lv * (1 + dry * 0.5); C[k * 3 + 1] = B * (0.55 + tc.g * 0.9) * lv * (1 + dry * 0.15); C[k * 3 + 2] = B * (0.55 + tc.b * 1.0) * lv * (1 - dry * 0.25); k++; }
     out.m = M.subarray(0, k * 16); out.c = C.subarray(0, k * 3); out.n = k; return out;
   }
   function assemble() { let n = 0; for (const c of cells.values()) n += c.n; ensureMesh(n); n = Math.min(n, cap); let o = 0; const M = mesh.instanceMatrix.array, C = mesh.instanceColor.array;

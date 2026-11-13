@@ -2,6 +2,8 @@
 
 ## 2026-11-13
 
+- **Rasen wie in Sunset (`rasen.js`, Zweig `gfx-rasen`):** Auf echten OSM-Rasenflächen (Park, Wiese, Garten, Friedhof u. a.) wachsen ab „Mittel“ Halmbüschel aus drei gekreuzten Karten nur rund um die Kamera (Mittel 26 m, Hoch 38 m, Ultra 48 m), zum Rand flach ausgeblendet, mit Wind im Vertex-Shader; nicht auf Wegen, Häusern, Wasser, Brücken. Stadtrasen kurz, Wiesen höher, Farben bleiben die der Flächen. Alle Stufen bekommen eine Rasen-Bodentextur (6 m je Bild); Niedrig/Sparmodus/schwache GPU ohne Halme. Spieltest `gfx-rasen` Lauf 43419847797 grün (Günthersburgpark Tag/Nacht). Danach Halme 1,7× aufgehellt (zu dunkel gegen den Boden), ungetestet.
+
 - **Gräber und Haltestelle nachgebessert:** Mustergrabanlage dreht die Steinvorderseiten zum nächsten OSM-Weg (bis 60 m). Tramhalte mit neuem Haltestellenmodell (Gleis in 20 m) bekommen den alten blauen Halte-Mast nicht mehr. Glas der Wartehalle als Milchglas mit deutlichem weißen Punktraster (Foto Wasserpark). Spieltest per CI mit `graeber`.
 
 - **Doku privat:** `docs/vergleich-project-sunset.md` liegt nur noch lokal (gitignore), auf Andrés Wunsch. In der Git-Historie bleibt die frühere Fassung.
