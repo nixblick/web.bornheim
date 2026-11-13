@@ -206,6 +206,7 @@ const TILES = new Map(); const tkey = (tx, tz) => tx + '_' + tz;
 function detectGPU() { try { const gl = renderer.getContext(); const ext = gl.getExtension('WEBGL_debug_renderer_info'); const s = String(ext ? gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER)); try { localStorage.setItem('notgta.gpu', s); } catch (e) {} return s; } catch (e) { return ''; } }
 function autoQuality(gpu) { const g = gpu.toLowerCase();
   if (/swiftshader|llvmpipe|software|basic render/.test(g)) return 'niedrig';
+  if (/intel/.test(g) && !/\barc\b/.test(g)) return 'mittel'; /* #173: integrierte Intel-GPU (UHD, Iris Xe, „Mesa Intel(R) Graphics“ RPL/ADL/TGL) immer „Mittel“, auch in Hybrid-Kennungen; Hoch lief in Andrés Chrome mit 150 ms CPU / 127 ms GPU je Bild */
   if (/rtx\s*(30[6-9]0|40[6-9]0|50\d0)|rx\s*(6[7-9]|7[7-9]|9[0-9])\d\d|apple m[2-9] (pro|max|ultra)/.test(g)) return 'ultra';
   if (/nvidia|geforce|rtx|gtx|radeon rx|radeon pro|apple m\d/.test(g)) return 'hoch';
   return 'mittel'; }
@@ -2969,7 +2970,7 @@ async function streamInit(sx = player.pos.x, sz = player.pos.z) {
  const ptx = Math.floor(sx / TS), ptz = Math.floor(sz / TS); const el = $('loading');
   const need = []; for (let a = -R_DATA; a <= R_DATA; a++) for (let b = -R_DATA; b <= R_DATA; b++) if (WIDX.tiles[tkey(ptx + a, ptz + b)]) need.push([ptx + a, ptz + b]);
   for (let i = 0; i < need.length; i += 8) { await Promise.all(need.slice(i, i + 8).map(([tx, tz]) => loadTile(tx, tz))); const k = Math.min(need.length, i + 8); setLoading(`Lade Frankfurt … ${k} / ${need.length} Kacheln`, 0.3 + 0.5 * k / need.length); }
-  let n = 0; for (let a = -1; a <= 1; a++) for (let b = -1; b <= 1; b++) { const t = TILES.get(tkey(ptx + a, ptz + b)); /* Rest baut sich beim Spielen */ if (t && !t.built) { setLoading(`Baue Stadt … ${n + 1} / 9`, 0.8 + 0.2 * n / 9); await new Promise(r => setTimeout(r, 0)); buildTileNow(t); n++; await new Promise(r => setTimeout(r, 0)); } }
+  let n = 0; for (let a = -1; a <= 1; a++) for (let b = -1; b <= 1; b++) { const t = TILES.get(tkey(ptx + a, ptz + b)); /* Rest baut sich beim Spielen */ if (t && !t.built) { setLoading(`Baue Stadt … ${n + 1} / 9`, 0.8 + 0.2 * n / 9); await new Promise(r => setTimeout(r, 0)); /* in der Pause kann das Spiel die Kachel entladen haben (data = null, Probe gelaende 13.11.) */ if (TILES.get(t.k) !== t || !t.data || t.built) continue; buildTileNow(t); n++; await new Promise(r => setTimeout(r, 0)); } }
   refreshActive();
 }
 // Automatische Auflösung: hält die Bildrate auf schwachen Grafikkarten, indem weniger Pixel gerendert werden
@@ -3005,7 +3006,7 @@ function importSave(file) { const fr = new FileReader(); fr.onload = () => { try
 $('m_export').onclick = exportSave; $('m_import').onclick = $('s_import').onclick = () => $('importfile').click(); $('importfile').onchange = e => { if (e.target.files[0]) importSave(e.target.files[0]); e.target.value = ''; };
 $('m_home').onclick = () => { if (!started || confirm('Zur Startseite? Nicht gespeicherter Fortschritt geht verloren.')) location.href = './'; };
 $('s_opts').onclick = openMenu;
-{ const N = { niedrig: 'Niedrig', mittel: 'Mittel', hoch: 'Hoch', ultra: 'Ultra' }; const sug = autoQuality(GPU); $('gpuinfo').textContent = (QUALITY_AUTO ? 'Grafikstufe: ' + N[QUALITY] + ' (automatisch, ändern unter Einstellungen › Grafik)' : 'Grafikstufe: ' + (N[QUALITY] || QUALITY) + ' (von dir gewählt, ändern unter Einstellungen › Grafik)') + (GPU ? ' · ' + GPU.replace(/ANGLE \((.*)\)/, '$1').slice(0, 70) : ''); }
+{ const N = { niedrig: 'Niedrig', mittel: 'Mittel', hoch: 'Hoch', ultra: 'Ultra' }; const sug = autoQuality(GPU); $('gpuinfo').textContent = (QUALITY_AUTO ? 'Grafikstufe: ' + N[QUALITY] + ' (automatisch, ändern unter Einstellungen › Grafik)' : 'Grafikstufe: ' + (N[QUALITY] || QUALITY) + ' (von dir gewählt, ändern unter Einstellungen › Grafik)') + (GPU ? ' · ' + GPU.replace(/ANGLE \((.*)\)/, '$1').slice(0, 70) : '') + (/intel/i.test(GPU) && !/\barc\b/i.test(GPU) ? ' · Integrierte Grafik: „Mittel“ empfohlen; Hoch/Ultra kosten hier viel Bildrate' : ''); }
 // Handy-Hinweis kommt jetzt aus play.html, bevor überhaupt etwas geladen wird
 $('m_resume').onclick = () => { closeMenu(); if (started) lockMouse(); }; $('m_save').onclick = () => { saveGame(); closeMenu(); }; $('m_load').onclick = () => { if (confirm('Letzten Spielstand laden? Nicht gespeicherter Fortschritt geht verloren.')) { loadGame(); closeMenu(); } }; $('m_restart').onclick = () => { if (confirm('Neu starten? Nicht gespeicherter Fortschritt geht verloren.')) location.reload(); };
 for (const id of ['o_sens', 'o_vol', 'o_shadows', 'o_time']) $(id).oninput = () => { opts.sens = +$('o_sens').value; opts.vol = +$('o_vol').value; opts.shadows = $('o_shadows').checked; opts.timeSpeed = +$('o_time').value; applyOpts(); };
