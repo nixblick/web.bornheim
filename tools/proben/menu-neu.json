@@ -1,0 +1,59 @@
+[
+ {
+  "n": "mn_1_uebersicht",
+  "x": -138,
+  "z": 372,
+  "wait": 9000,
+  "js": "(() => { const G = window.G; if (G.player.car) G.toggleCar(); dispatchEvent(new KeyboardEvent('keydown', { code: 'Escape', key: 'Escape' })); return document.querySelector('#menu .mn-board').textContent.slice(0, 200); })()",
+  "expect": "document.getElementById('menu').style.display === 'flex' && document.querySelector('#menu .pane[data-tab=uebersicht]').style.display === 'block' && document.querySelectorAll('#menu .mn-nav button').length === 5 && !!document.getElementById('m_save') && !!document.getElementById('m_creative') && !!document.getElementById('m_home')"
+ },
+ {
+  "n": "mn_2_karte",
+  "wait": 1500,
+  "js": "(() => { window.G.X.menuTab('karte'); return document.querySelector('#menu .mn-nav .on').textContent; })()",
+  "expect": "document.querySelector('#menu .pane[data-tab=karte]').style.display === 'block'"
+ },
+ {
+  "n": "mn_3_missionen",
+  "wait": 1500,
+  "js": "(() => { window.G.X.menuTab('story'); return document.querySelector('#menu .mn-nav .on').textContent; })()",
+  "expect": "document.querySelector('#menu .pane[data-tab=story]').style.display === 'block'"
+ },
+ {
+  "n": "mn_4_statistik",
+  "wait": 1500,
+  "js": "(() => { window.G.X.menuTab('fortschritt'); return document.querySelector('#menu .mn-nav .on').textContent; })()",
+  "expect": "document.querySelector('#menu .pane[data-tab=fortschritt]').style.display === 'block'"
+ },
+ {
+  "n": "mn_5_einstellungen",
+  "wait": 1200,
+  "js": "(() => { document.querySelector('#menu .mn-nav [data-main=einst]').click(); return document.querySelector('#menu .mn-nav .on').dataset.main; })()",
+  "expect": "document.querySelector('#menu .mn-nav .on').dataset.main === 'einst' && document.querySelector('#menu .pane[data-tab=schnell]').style.display === 'block' && document.querySelector('#menu .mn-sub').style.display === 'flex'"
+ },
+ {
+  "n": "mn_6_grafik",
+  "wait": 1200,
+  "js": "(() => { document.querySelector('#menu .mn-sub [data-tab=grafik]').click(); return 'ok'; })()",
+  "expect": "document.querySelector('#menu .pane[data-tab=grafik]').style.display === 'block' && document.querySelector('#menu .mn-nav .on').dataset.main === 'einst'"
+ },
+ {
+  "n": "mn_7_f1_hilfe",
+  "wait": 1200,
+  "js": "(() => { window.G.X.closeMenu(); dispatchEvent(new KeyboardEvent('keydown', { code: 'F1', key: 'F1' })); return 'ok'; })()",
+  "expect": "document.querySelector('#menu .pane[data-tab=hilfe]').style.display === 'block' && document.querySelector('#menu .mn-nav .on').dataset.main === 'einst'"
+ },
+ {
+  "n": "mn_8_handybreite",
+  "wait": 1500,
+  "js": "(() => { window.G.X.menuTab('uebersicht'); const m = document.getElementById('menu'); m.style.right = 'auto'; m.style.width = '400px'; return 'ok'; })()",
+  "expect": "document.getElementById('menu').scrollWidth <= 400 && document.querySelector('#menu .mn-nav').scrollWidth <= document.querySelector('#menu .mn-nav').clientWidth + 1"
+ },
+ {
+  "n": "mn_9_zurueck",
+  "wait": 800,
+  "shot": false,
+  "js": "(() => { const m = document.getElementById('menu'); m.style.width = ''; m.style.right = ''; document.querySelector('#menu .mn-nav [data-main=karte]').click(); return 'ok'; })()",
+  "expect": "document.querySelector('#menu .pane[data-tab=karte]').style.display === 'block'"
+ }
+]

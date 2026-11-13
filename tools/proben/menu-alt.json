@@ -1,0 +1,40 @@
+[
+ {
+  "n": "alt_1_start",
+  "x": -138,
+  "z": 372,
+  "wait": 9000,
+  "js": "(() => { const G = window.G; if (G.player.car) G.toggleCar(); dispatchEvent(new KeyboardEvent('keydown', { code: 'Escape', key: 'Escape' })); return document.getElementById('menu').style.display; })()",
+  "expect": "document.getElementById('menu').style.display === 'flex'"
+ },
+ {
+  "n": "alt_2_karte",
+  "wait": 1500,
+  "js": "(() => { window.G.X.menuTab('karte'); return 'ok'; })()"
+ },
+ {
+  "n": "alt_3_story",
+  "wait": 1500,
+  "js": "(() => { window.G.X.menuTab('story'); return 'ok'; })()"
+ },
+ {
+  "n": "alt_4_statistik",
+  "wait": 1500,
+  "js": "(() => { window.G.X.menuTab('fortschritt'); return 'ok'; })()"
+ },
+ {
+  "n": "alt_5_grafik",
+  "wait": 1500,
+  "js": "(() => { window.G.X.menuTab('grafik'); return 'ok'; })()"
+ },
+ {
+  "n": "alt_6_hilfe",
+  "wait": 1500,
+  "js": "(() => { window.G.X.menuTab('hilfe'); return 'ok'; })()"
+ },
+ {
+  "n": "alt_8_handybreite",
+  "wait": 1500,
+  "js": "(() => { window.G.X.menuTab('schnell'); const m = document.getElementById('menu'); m.style.right = 'auto'; m.style.width = '400px'; return 'ok'; })()"
+ }
+]
