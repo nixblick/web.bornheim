@@ -20,12 +20,16 @@ permissions:
 
 jobs:
   typen:
-    # Typprüfung schon im PR, nicht erst beim Ausrollen (#119); gleicher Befehl wie in pages.yml
+    # Startcheck und Typprüfung schon im PR, nicht erst beim Ausrollen (#119); gleiche Befehle wie in pages.yml
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: ${{ inputs.ref || github.event.pull_request.head.sha || github.ref }}
+      - name: Startcheck (Syntaxfehler und nirgends definierte Namen, auch in game.js)
+        run: |
+          npm i --no-save --no-package-lock eslint@9.15.0 globals@15.12.0
+          npx eslint --config eslint.config.mjs *.js
       - run: npx -y -p typescript@5 tsc -p jsconfig.json
 
   liste:
@@ -46,7 +50,9 @@ jobs:
           printf '%s\n' "$@" | sed 's/\.json$//' | jq -R . | jq -sc . | sed 's/^/proben=/' >> "$GITHUB_OUTPUT"
 
   probe:
-    needs: liste
+    needs: [liste, typen]
+    # Im PR starten die teuren Chrome-Proben nur, wenn Startcheck und Typprüfung grün sind; Handstarts (alter Stand) bleiben möglich
+    if: ${{ !cancelled() && needs.liste.result == 'success' && (github.event_name != 'pull_request' || needs.typen.result == 'success') }}
     runs-on: ubuntu-latest
     timeout-minutes: 40
     strategy:

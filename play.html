@@ -3,6 +3,13 @@
 <head>
 <meta charset="utf-8">
 <title>Bornheim – Spielen</title>
+<!-- Importmap vor den Vorlade-Links (sonst gilt sie in älteren Browsern nicht); three.js und das Spiel laden so gleichzeitig statt nacheinander -->
+<script type="importmap">{"imports":{
+  "three":"./vendor/three/build/three.module.js",
+  "three/addons/":"./vendor/three/examples/jsm/"
+}}</script>
+<link rel="modulepreload" href="./vendor/three/build/three.module.js">
+<link rel='modulepreload' href='game.js?v=2'>
 <meta name="description" content="Open-World-Spiel im Browser: ganz Frankfurt am Main.">
 <meta name="theme-color" content="#0b0d12">
 <link rel="icon" href="assets/site/icon.svg" type="image/svg+xml">
@@ -237,10 +244,6 @@
   <div id="mode"></div>
   <div id="hotbar"></div>
 </div>
-<script type="importmap">{"imports":{
-  "three":"./vendor/three/build/three.module.js",
-  "three/addons/":"./vendor/three/examples/jsm/"
-}}</script>
 <script>
 // Vor dem Laden: Handy? WebGL 2 da? Fehler beim Start sichtbar machen statt ewig „Lade Stadt …“
 (function () {
