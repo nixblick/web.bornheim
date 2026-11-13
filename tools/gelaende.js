@@ -2,9 +2,11 @@
 // Im Spiel laden: await import('/tools/gelaende.js?' + Date.now()); const r = await T.gelaende(x, z, 250); r
 // 1. Knick: jede Straße im Umkreis wird nach Bogenlänge alle 4 m abgetastet (Höhe TH wie der Fahrbahn-Streifen,
 //    der TH alle ≤ 3 m übernimmt), Knick = |h[i-1] - 2 h[i] + h[i+1]| in cm. Brücken (r.el) bleiben draußen.
-// 2. Möbel: Fuß = Höhe, mit der game.js/graeber.js das Teil setzt (TH bzw. Gruppenposition). Strahl von 0,4 m über
-//    dem Fuß senkrecht nach unten gegen flache, nicht instanzierte Kachel-Meshes (Gelände, Fahrbahn, Gehweg, Wege).
-//    Abstand > 0 = schwebt, < 0 = steckt (nur bis -0,4 m erkennbar, darunter „ohne Treffer“ oder tieferer Boden).
+// 2. Möbel: Fuß = Unterkante, mit der game.js/graeber.js das Teil setzt (footTH − FOOT_SINK bzw. Gruppenposition).
+//    Strahl von 1 m über dem höheren der beiden Füße (alt: TH, neu: Unterkante) senkrecht nach unten gegen flache, nicht
+//    instanzierte Kachel-Meshes; der erste Treffer ist die oberste Fläche (vorher: Start 0,4 m über TH, ein tiefer
+//    steckender Fuß traf die nächsttiefere Fläche und zählte fälschlich als schwebend). Abstand > 0 = schwebt, < 0 = steckt.
+//    Je Klasse stehen die Werte für die neue Unterkante, unter `vorher` dieselbe Messung für den alten Fuß auf TH.
 const G = window.G;
 const near = (x, z, cx, cz, R) => (x - cx) ** 2 + (z - cz) ** 2 < R * R;
 
@@ -37,23 +39,24 @@ function flaechen(cx, cz, R) {
 function art(o) { const m = Array.isArray(o.material) ? o.material[0] : o.material; if (m === G.roadMat) return 'Fahrbahn'; if (m && m.polygonOffset && m.polygonOffsetFactor === 1) return 'Gehweg/Weg'; if (m && m.vertexColors && !m.map) return 'Gelände'; return 'sonstige Fläche'; }
 
 function moebel(cx, cz, R, deadline, max = 150) {
-  const T3 = G.THREE, rc = new T3.Raycaster(), dn = new T3.Vector3(0, -1, 0), o3 = new T3.Vector3(); rc.far = 3;
+  const T3 = G.THREE, rc = new T3.Raycaster(), dn = new T3.Vector3(0, -1, 0), o3 = new T3.Vector3(); rc.far = 4;
   const targets = flaechen(cx, cz, R + 10);
+  const S = G.FOOT_SINK || 0, FT = (x, z, r) => (G.footTH ? G.footTH(x, z, r) : G.TH(x, z)) - S;
   const klassen = {
-    Laternen: G.lampSpots.filter(([x, z]) => near(x, z, cx, cz, R)).map(([x, z]) => [x, z, G.TH(x, z)]),
-    Baeume: G.treeSpots.filter(([x, z]) => near(x, z, cx, cz, R)).map(([x, z]) => [x, z, G.TH(x, z)]),
+    Laternen: G.lampSpots.filter(([x, z]) => near(x, z, cx, cz, R)).map(([x, z]) => [x, z, G.TH(x, z), FT(x, z, 0.15)]),
+    Baeume: G.treeSpots.filter(([x, z]) => near(x, z, cx, cz, R)).map(([x, z]) => [x, z, G.TH(x, z), FT(x, z, 0.25)]),
     Baenke: [], Graeber: [] };
-  for (const [, t] of G.TILES) if (t.built && t.data && t.data.furniture) for (const f of t.data.furniture) if (f.k === 'bench' && !f.skip && f.off && near(f.x, f.z, cx, cz, R) && G.solidAt(f.x, f.z) < 0) klassen.Baenke.push([f.x, f.z, G.TH(f.x, f.z)]);
-  if (window.GRAEBER) for (const [k, x, z] of window.GRAEBER.list) if (/^a/.test(String(k)) && near(x, z, cx, cz, R)) klassen.Graeber.push([x, z, G.TH(x, z)]);
+  for (const [, t] of G.TILES) if (t.built && t.data && t.data.furniture) for (const f of t.data.furniture) if (f.k === 'bench' && !f.skip && f.off && near(f.x, f.z, cx, cz, R) && G.solidAt(f.x, f.z) < 0) klassen.Baenke.push([f.x, f.z, G.TH(f.x, f.z), FT(f.x, f.z, 0.8)]);
+  if (window.GRAEBER) for (const [k, x, z] of window.GRAEBER.list) if (/^a/.test(String(k)) && near(x, z, cx, cz, R)) klassen.Graeber.push([x, z, G.TH(x, z), G.TH(x, z)]);
   const res = {}; let zeitUm = false;
   for (const [name, all] of Object.entries(klassen)) {
     const pts = all.sort((a, b) => ((a[0] - cx) ** 2 + (a[1] - cz) ** 2) - ((b[0] - cx) ** 2 + (b[1] - cz) ** 2)).slice(0, max);
-    const r = { gesamt: all.length, geprueft: 0, schwebend_5cm: 0, versunken_30cm: 0, ohne_treffer: 0, max_schwebt_cm: 0, max_steckt_cm: 0, flaeche: {}, schlimmste: [] };
-    for (const [x, z, foot] of pts) { if (performance.now() > deadline) { zeitUm = true; break; } r.geprueft++;
-      rc.set(o3.set(x, foot + 0.4, z), dn); const hit = rc.intersectObjects(targets, false).find(h => h.face && h.face.normal.y > 0.5);
+    const r = { gesamt: all.length, geprueft: 0, schwebend_5cm: 0, versunken_30cm: 0, ohne_treffer: 0, max_schwebt_cm: 0, max_steckt_cm: 0, flaeche: {}, schlimmste: [], vorher: { schwebend_5cm: 0, versunken_30cm: 0, max_schwebt_cm: 0 } };
+    for (const [x, z, alt, foot] of pts) { if (performance.now() > deadline) { zeitUm = true; break; } r.geprueft++;
+      rc.set(o3.set(x, Math.max(alt, foot) + 1, z), dn); const hit = rc.intersectObjects(targets, false).find(h => h.face && h.face.normal.y > 0.5);
       if (!hit) { r.ohne_treffer++; continue; }
-      const d = (foot - hit.point.y) * 100; const a = art(hit.object); r.flaeche[a] = (r.flaeche[a] || 0) + 1;
-      if (d > 5) r.schwebend_5cm++; if (d < -30) r.versunken_30cm++; r.max_schwebt_cm = Math.max(r.max_schwebt_cm, +d.toFixed(1)); r.max_steckt_cm = Math.max(r.max_steckt_cm, +(-d).toFixed(1));
+      const d = (foot - hit.point.y) * 100, dv = (alt - hit.point.y) * 100; if (dv > 5) r.vorher.schwebend_5cm++; if (dv < -30) r.vorher.versunken_30cm++; r.vorher.max_schwebt_cm = Math.max(r.vorher.max_schwebt_cm, +dv.toFixed(1)); const a = art(hit.object); r.flaeche[a] = (r.flaeche[a] || 0) + 1;
+      if (d > 5) r.schwebend_5cm++; if (d + S * 100 < -30) r.versunken_30cm++; /* gewollt: Unterkante S tiefer */ r.max_schwebt_cm = Math.max(r.max_schwebt_cm, +d.toFixed(1)); r.max_steckt_cm = Math.max(r.max_steckt_cm, +(-d).toFixed(1));
       r.schlimmste.push({ d: +d.toFixed(1), x: +x.toFixed(1), z: +z.toFixed(1), a }); }
     r.schlimmste = r.schlimmste.sort((p, q) => Math.abs(q.d) - Math.abs(p.d)).slice(0, 3); res[name] = r; }
   return { flaechen_meshes: targets.length, zeitUm, ...res };
