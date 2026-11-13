@@ -2,6 +2,8 @@
 
 ## 2026-11-13
 
+- **Spieltest auf GitHub (Actions):** Workflow „Spieltest“ fährt `tools/probe.mjs` auf einem GitHub-Rechner (Headless-Chrome, SwiftShader), je Probendatei ein paralleler Job, Bilder als Artefakt. Start von Hand mit Zweig und Proben oder automatisch bei jedem PR. Tests laufen damit tagsüber ohne Last auf dem Notebook. Neue Probe `tools/proben/wahrzeichen.json` (neun Wahrzeichen aus 70 m, Kollision im Kern, Stadion-Innenraum).
+
 - **U-Bahn-Ausstieg am nächsten Eingang:** Nach einer Fahrt kommt man am Eingang heraus, der dem Stationspunkt am nächsten liegt, nicht am ersten aus OSM. Nachgemessen in `data/metro.json`: 9 Stationen lagen über 100 m daneben, Hauptwache 174 m → 24 m, Dornbusch 177 m → 51 m, Alte Oper 136 m → 63 m. Ungetestet, Test im Nachtfenster: `node tools/probe.mjs tools/proben/ausstieg.json <ordner>`.
 - **Probewerkzeug `tools/probe.mjs`:** Fertige Probe für Nachtrunden (Schritte als JSON unter `tools/proben/`, eigener Server und Chrome auf freien Ports, `stand.txt`, harte 20 min, Exit 0/1/2), Regel in CLAUDE.md. Anlass: Runde 5 der Nacht 12./13.11. baute bis 06:16 nur an ihrem Testskript. Ungetestet (nur `node --check`), erster Lauf im Nachtfenster.
 - **Vokabaum-Plakate (#81):** Litfaßsäulen an Bushalten zeigen jetzt je ein Kunden-Motiv. Vokabaum (gezeichneter Baum, „Vokabaum – Vokabeln lernen, Wald wachsen lassen“, vokabaum.hinjas.de) immer, Frischlufteulen weiter nur, wenn der Eulen-Endpunkt Strecken liefert, dann abwechselnd. F am Vokabaum-Plakat zeigt den Link mit ?von=bornheim. Nachttest: 4 Säulen mit Vokabaum-Motiv lokal gesehen (Eulen-Endpunkt lokal ohne Strecken)
