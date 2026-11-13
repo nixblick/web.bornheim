@@ -41,13 +41,13 @@
   "n": "mn_8_schmal",
   "wait": 1500,
   "js": "(() => { window.G.X.menuTab('karte'); const m = document.getElementById('menu'); m.style.right = 'auto'; m.style.width = '400px'; return 'ok'; })()",
-  "expect": "document.getElementById('menu').scrollWidth <= 400 && document.querySelector('#menu .mn-nav').scrollWidth <= document.querySelector('#menu .mn-nav').clientWidth + 1 && document.getElementById('pmap').width > 200 && [...document.querySelectorAll('#menu .mn-nav button')].every(b => b.scrollWidth <= b.clientWidth + 1)"
+  "expect": "document.getElementById('menu').scrollWidth <= 400 && document.querySelector('#menu .mn-nav').scrollWidth <= document.querySelector('#menu .mn-nav').clientWidth + 1 && document.getElementById('pmap').clientWidth > 200 && [...document.querySelectorAll('#menu .mn-nav button')].every(b => b.scrollWidth <= b.clientWidth + 1)"
  },
  {
   "n": "mn_9_mittel",
   "wait": 1500,
   "js": "(() => { const m = document.getElementById('menu'); m.style.width = '1000px'; return 'ok'; })()",
-  "expect": "document.querySelector('#menu .mn-status').offsetWidth > 200 && document.getElementById('pmap').width > 400"
+  "expect": "document.querySelector('#menu .mn-status').offsetWidth > 200 && document.getElementById('pmap').clientWidth > 400"
  },
  {
   "n": "mn_10_laufrunde_aus_menue",

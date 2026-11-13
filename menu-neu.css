@@ -73,7 +73,7 @@
   #menu.mn .mn-title{padding-bottom:0}#menu.mn .mn-title b{font-size:20px}
   #menu.mn .mn-resume{margin:0 0 0 auto}
   #menu.mn .mn-nav{order:3;flex-basis:100%;gap:0}
-  #menu.mn .mn-nav button{flex:1 1 0;min-width:0;padding:10px 2px;font-size:11px;letter-spacing:.04em;overflow:hidden;text-overflow:ellipsis}
+  #menu.mn .mn-nav{justify-content:space-between}#menu.mn .mn-nav button{flex:0 1 auto;min-width:0;padding:10px 4px;font-size:11px;letter-spacing:.02em}
   #menu.mn .opts{padding:12px 14px}
   #menu.mn[data-main=karte] .opts{display:flex;flex-direction:column;overflow:auto}
   #menu.mn .mn-status{order:-1;flex:none;overflow:visible}

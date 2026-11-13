@@ -121,7 +121,7 @@ export function initMenuNeu(X, S) {
   X.menuHooks.push(() => {
     try { board(); missions(); } catch (e) { console.warn('Pausenmenü', e); }
     if (X.menuTab) X.menuTab('karte'); sync();
-    requestAnimationFrame(() => { const c = $('m_creative'); if (c) c.textContent = noEmoji(c.textContent).replace(/\s*\(C\)$/, '') + ' (C)'; redraw(); });
+    requestAnimationFrame(() => { for (const b of acts.querySelectorAll('button')) { const t = noEmoji(b.textContent); if (t !== b.textContent) b.textContent = t; } redraw(); });
   });
   sync();
   return { board, pane: status };
