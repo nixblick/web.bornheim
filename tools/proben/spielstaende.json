@@ -11,7 +11,7 @@
   "n": "st_2_zwei_plaetze",
   "wait": 1500,
   "js": "(async () => { const G = window.G, $ = s => document.querySelector(s); $('#st_name').value = 'Probe A'; $('#st_neu').click(); await new Promise(r => setTimeout(r, 300)); G.player.money = 999; $('#st_name').value = 'Probe B'; $('#st_neu').click(); await new Promise(r => setTimeout(r, 300)); return JSON.stringify({ zeilen: [...document.querySelectorAll('#st_liste .mn-standzeile b')].map(b => b.textContent), idx: JSON.parse(localStorage.getItem('notgta.slots')).map(s => [s.name, s.geld]) }); })()",
-  "expect": "document.querySelectorAll('#st_liste .mn-standzeile').length === 2 && JSON.parse(localStorage.getItem('notgta.slots')).map(s => s.name + s.geld).join() === 'Probe B999,Probe A150'"
+  "expect": "document.querySelectorAll('#st_liste .mn-standzeile').length === 2 && JSON.parse(localStorage.getItem('notgta.slots')).map(s => s.name + s.geld).join() === 'Probe B999,Probe A150' && (b => b._v === '2' && typeof b['notgta.save'] === 'string')(JSON.parse(localStorage.getItem('notgta.slot.' + JSON.parse(localStorage.getItem('notgta.slots'))[0].id)))"
  },
  {
   "n": "st_3_laden_a",
