@@ -191,7 +191,7 @@ export function initWahrzeichen(X) {
   // Wahrzeichen nehmen nicht am Nebel teil, sondern bekommen einen eigenen, weiteren Dunst: Farbe gleitet bis FERN zur Nebelfarbe.
   const FERN = 2200, _fc = new THREE.Color();
   function haze() { const f = scene.fog; if (!f) return; const cam = X.camera; if (!cam) return;
-    for (const g of built.values()) { const d = Math.hypot(cam.position.x - g.position.x, cam.position.z - g.position.z); const near = Math.max(60, f.near);
+    for (const g of [...built.values(), ...(X.FAR_HAZE || []).map(h => (h.position = h.position || { x: h.x, z: h.z }, h.userData = h.userData || { mats: h.mats }, h))]) { const d = Math.hypot(cam.position.x - g.position.x, cam.position.z - g.position.z); const near = Math.max(60, f.near);
       const k = Math.min(0.85, Math.max(0, (d - near) / (Math.max(FERN, f.far * 3) - near)));
       if (g.userData.k !== undefined && Math.abs(g.userData.k - k) < 0.01 && g.userData.fc === f.color.getHex()) continue; g.userData.k = k; g.userData.fc = f.color.getHex(); _fc.copy(f.color);
       for (const m of g.userData.mats) { if (m.userData.c0) m.color.copy(m.userData.c0).lerp(_fc, k); if (m.userData.e0) m.emissive.copy(m.userData.e0).lerp(_fc, k); } } }
