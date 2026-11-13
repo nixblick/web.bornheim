@@ -62,7 +62,8 @@ export function initDunst(X) {
     P.w = Math.max(0, f.near * 0.6); P.x = 2.6 / Math.max(60, f.far - P.w);
     const sd = world.sunDir; if (sd) { const l = Math.hypot(sd.x, sd.y, sd.z) || 1; SDIR.x = sd.x / l; SDIR.y = sd.y / l; SDIR.z = sd.z / l; }
     // Sonnenglanz im Dunst: Lichtfarbe der Sonne, nur über dem Horizont, gedämpft
-    const up = Math.max(0, Math.min(1, SDIR.y * 4)) * (world.night ? 0 : 1); const s = Math.min(1.2, sun.intensity) * 0.35 * up;
+    const day = world.hour > 6.5 && world.hour < 19.8 && !world.night; // nachts trägt sun das Mondlicht: kein Glanz
+    const up = day ? Math.max(0, Math.min(1, SDIR.y * 4)) : 0; const s = Math.min(1.2, sun.intensity) * 0.25 * up;
     SUN.x = sun.color.r * s; SUN.y = sun.color.g * s; SUN.z = sun.color.b * s;
   }
   return { update };
