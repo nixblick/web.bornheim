@@ -22,7 +22,7 @@
    "expect": "document.getElementById('menu').style.display === 'flex' && document.querySelector('#menu .pane[data-tab=karte]').style.display === 'block'" },
  { "n": "menu_esc", "wait": 1500,
    "js": "(() => { window.G.X.closeMenu(); dispatchEvent(new KeyboardEvent('keydown', { code: 'Escape', key: 'Escape' })); return document.getElementById('menu').style.display; })()",
-   "expect": "document.getElementById('menu').style.display === 'flex' && !document.getElementById('menu').classList.contains('sun') && document.querySelector('#menu .pane[data-tab=schnell]').style.display === 'block'" },
+   "expect": "document.getElementById('menu').style.display === 'flex' && document.getElementById('menu').classList.contains('mn') && document.querySelector('#menu .pane[data-tab=uebersicht]').style.display === 'block' && /Laufrunde/.test(document.querySelector('#menu .mn-board').textContent)" },
  { "n": "menu_grafik", "wait": 800,
    "js": "(() => { document.querySelector('#menu button[data-tab=grafik]').click(); return document.querySelector('#menu .pane[data-tab=grafik]').style.display; })()",
    "expect": "document.querySelector('#menu .pane[data-tab=grafik]').style.display === 'block' && !!document.getElementById('o_quality')" },
