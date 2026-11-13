@@ -97,15 +97,15 @@ float sf(vec2 p){return .5*sn(p)+.25*sn(p*2.03+7.)+.125*sn(p*4.01+3.)+.0625*sn(p
       sh.fragmentShader = 'varying vec3 vSW;\nuniform float uWet, uPud, uT, uRing;\n' + NOISE + '\n' + sh.fragmentShader
         .replace('#include <map_fragment>', `#include <map_fragment>
 float sMac = sf(vSW.xz * 0.019); diffuseColor.rgb *= 0.86 + sMac * 0.28; // großflächige Hell/Dunkel-Wolken gegen die 8-m-Wiederholung
-float sPm = 0.0; ${pfuetzen ? 'if (uPud > 0.01) { float sp = sf(vSW.xz * 0.11 + 13.0) * 0.7 + sMac * 0.3; float th = 0.78 - uPud * 0.3; sPm = smoothstep(th, th + 0.035, sp); }' : ''}
+float sPm = 0.0; ${pfuetzen ? 'if (uPud > 0.01) { float sp = sf(vSW.xz * 0.11 + 13.0) * 0.7 + sMac * 0.3; float th = 0.8 - uPud * 0.18; sPm = smoothstep(th, th + 0.035, sp); }' : ''}
 diffuseColor.rgb *= mix(1.0, 0.45, sPm);`)
         .replace('#include <roughnessmap_fragment>', '#include <roughnessmap_fragment>\nroughnessFactor = mix(roughnessFactor, 0.035, sPm);')
         .replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>
 if (sPm > 0.0) { normal = normalize(mix(normal, nonPerturbedNormal, sPm));
-  if (uRing > 0.5) { vec2 g = vSW.xz * 1.6; vec2 ci = floor(g); vec2 rr = vec2(0.0);
+  if (uRing > 0.5) { vec2 g = vSW.xz * 3.0; vec2 ci = floor(g); vec2 rr = vec2(0.0);
     for (int k = 0; k < 2; k++) { vec2 cc = ci + vec2(float(k), 0.0) * 0.0; float h = sh(cc + float(k) * 3.1); float ph = fract(uT * 0.9 + h); vec2 o = vec2(sh(cc + 5.2 + float(k)), sh(cc + 9.7 + float(k))) * 0.6 + 0.2; vec2 dv = fract(g) - o; float d = length(dv);
-      float ring = smoothstep(0.035, 0.0, abs(d - ph * 0.42)) * (1.0 - ph); rr += dv / max(d, 1e-3) * ring; }
-    normal = normalize(normal + (viewMatrix * vec4(rr.x, 0.0, rr.y, 0.0)).xyz * 0.9 * sPm); } }`); };
+      float ring = smoothstep(0.035, 0.0, abs(d - ph * 0.3)) * (1.0 - ph) * step(0.5, sh(cc + floor(uT * 0.9 + h) * 1.7)); rr += dv / max(d, 1e-3) * ring; }
+    normal = normalize(normal + (viewMatrix * vec4(rr.x, 0.0, rr.y, 0.0)).xyz * 0.3 * sPm); } }`); };
     mat.needsUpdate = true; return mat;
   }
 
@@ -162,6 +162,7 @@ if (sPm > 0.0) { normal = normalize(mix(normal, nonPerturbedNormal, sPm));
         const nr = X.nearestRoadDir && X.nearestRoadDir(x, z, 7); if (!nr || nr.w < 5) continue; const ux = Math.sin(nr.ang), uz = Math.cos(nr.ang), qx = -uz, qz = ux; // ux: entlang der Straße
         for (const e of [-2, 2]) for (let s = -nr.w / 2 + 0.4; s < nr.w / 2 - 0.3; s += 0.7) { const bx = nr.x + ux * e + qx * s, bz = nr.z + uz * e + qz * s; const y = X.TH(bx, bz); B.quad(bx, bz, ux, uz, 0.5, 0.5, UVL, () => y, 0.065); } }
     }
+    STAT.mark += B.p.length / 18; STAT.markCalls++;
     return B.mesh(markMat(markTex));
   }
   /** Zebrastreifen gibt es in Frankfurt an Ampeln nicht: game.js fragt vor jedem Zebra hier nach. */
@@ -169,7 +170,7 @@ if (sPm > 0.0) { normal = normalize(mix(normal, nonPerturbedNormal, sPm));
 
   // ---------- Kleinteile ----------
   const AT = i => { const u = (i % 4) / 4, v = 1 - Math.floor(i / 4) / 2; return [u + 0.002, v - 0.498, u + 0.248, v - 0.002]; }; // Atlas-Zelle (flipY: Zeile 0 oben)
-  const STUECK = [];
+  const STUECK = []; const STAT = { mark: 0, markCalls: 0 };
   /** Kanaldeckel, Abläufe und (ab Mittel) Flicken, Öl, Risse, Aufgrabungen, Bremsspuren, Spurabrieb; ab Mittel in 125-m-Stücken mit Abstandsgrenze. */
   function kleinteile(roads, signals, add) {
     const L = low(), H = hi(), C = 125, bufs = new Map(); let sd = 17; const rr = () => (sd = (sd * 16807) % 2147483647) / 2147483647;
@@ -225,5 +226,5 @@ if (sPm > 0.0) { normal = normalize(mix(normal, nonPerturbedNormal, sPm));
     for (let i = STUECK.length - 1; i >= 0; i--) { const s = STUECK[i]; let o = s.m, inScene = false; while (o) { if (o.isScene) { inScene = true; break; } o = o.parent; }
       s.age = inScene ? 0 : (s.age || 0) + 1; if (s.age > 20) { STUECK.splice(i, 1); continue; } s.m.visible = Math.hypot(c.position.x - s.x, c.position.z - s.z) < D; } }
 
-  return { sorte, belagMat, nass, markierung, anAmpel, kleinteile, ecken, update, get belagOk() { return belagOk; }, U, get stuecke() { return STUECK.length; } };
+  return { sorte, belagMat, nass, markierung, anAmpel, kleinteile, ecken, update, get belagOk() { return belagOk; }, U, get stuecke() { return STUECK.length; }, STAT };
 }
