@@ -151,6 +151,10 @@ export interface Ctx {
   // Laufrunden (#128): von game.js nach initVokabaum gesetzt
   VOKA_BUSY?: () => boolean;
   PROGRESS_GAIN?: (n: number, why?: string) => void;
+  // Handy und Pausenmenü (#150, phone.js/menu.js)
+  openMenu?: () => void;
+  menuTab?: (tab: string) => void;
+  started?: boolean;
   // per Object.assign nach initWeapons… (game.js)
   wachen: any;
   nearestRoadDir: any;
