@@ -14,12 +14,12 @@ export function asphaltRisse(ctx, w, h, rnd) {
   for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
     const u = x / w, v = y / h;
     let m = 0; for (const [a, b, ph] of f) m += Math.sin((u * a + v * b) * 6.2832 + ph); m /= 3; // tileable Maske
-    if (m < 0.12) continue;
+    if (m < 0.35) continue;
     const gx = u * N, gy = v * N, cx = Math.floor(gx), cy = Math.floor(gy); let d1 = 9, d2 = 9;
     for (let oy = -1; oy <= 1; oy++) for (let ox = -1; ox <= 1; ox++) { const ix = cx + ox, iy = cy + oy; const p = P[((iy + N) % N) * N + ((ix + N) % N)];
       const px = p[0] + (ix - ((ix + N) % N)), py = p[1] + (iy - ((iy + N) % N)); const dd = Math.hypot(gx - px, gy - py); if (dd < d1) { d2 = d1; d1 = dd; } else if (dd < d2) d2 = dd; }
-    const e = d2 - d1, tw = 0.035 * Math.min(1, (m - 0.12) * 4); if (e > tw) continue;
-    const k = 1 - e / tw, o = (y * w + x) * 4, dk = 0.55 * k; d[o] = d[o] * (1 - dk) + 22 * dk; d[o + 1] = d[o + 1] * (1 - dk) + 22 * dk; d[o + 2] = d[o + 2] * (1 - dk) + 21 * dk;
+    const e = d2 - d1, tw = 0.022 * Math.min(1, (m - 0.35) * 4); if (e > tw) continue;
+    const k = 1 - e / tw, o = (y * w + x) * 4, dk = 0.4 * k * k; d[o] = d[o] * (1 - dk) + 22 * dk; d[o + 1] = d[o + 1] * (1 - dk) + 22 * dk; d[o + 2] = d[o + 2] * (1 - dk) + 21 * dk;
   }
   ctx.putImageData(img, 0, 0);
 }
@@ -115,8 +115,8 @@ if (sPm > 0.0) { normal = normalize(mix(normal, nonPerturbedNormal, sPm));
   function belagMat(so, normalMap) { if (MATS[so]) return MATS[so]; const T = texs();
     const m = new THREE.MeshStandardMaterial({ map: so === 1 ? T.neu : so === 2 ? T.sett : T.paving, normalMap: so === 1 ? normalMap : null, color: 0xffffff, roughness: so === 1 ? 0.9 : 0.82, metalness: 0 });
     m.userData.shared = true; m.userData.sorte = so; nass(m); return (MATS[so] = m); }
-  function markMat(markTex) { if (MATS.mark) return MATS.mark; const m = new THREE.MeshLambertMaterial({ map: markTex, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -2 }); m.userData.shared = true; return (MATS.mark = m); }
-  function atlasMat() { if (MATS.atlas) return MATS.atlas; const m = new THREE.MeshLambertMaterial({ map: texs().atlas, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -3 }); m.userData.shared = true; return (MATS.atlas = m); }
+  function markMat(markTex) { if (MATS.mark) return MATS.mark; const m = new THREE.MeshLambertMaterial({ map: markTex, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -2, side: THREE.DoubleSide }); m.userData.shared = true; return (MATS.mark = m); }
+  function atlasMat() { if (MATS.atlas) return MATS.atlas; const m = new THREE.MeshLambertMaterial({ map: texs().atlas, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -3, side: THREE.DoubleSide }); m.userData.shared = true; return (MATS.atlas = m); }
   function eckMat() { if (MATS.eck) return MATS.eck; const m = new THREE.MeshLambertMaterial({ vertexColors: true }); m.userData.shared = true; return (MATS.eck = m); }
 
   // ---------- Geometrie-Helfer ----------
@@ -226,5 +226,5 @@ if (sPm > 0.0) { normal = normalize(mix(normal, nonPerturbedNormal, sPm));
     for (let i = STUECK.length - 1; i >= 0; i--) { const s = STUECK[i]; let o = s.m, inScene = false; while (o) { if (o.isScene) { inScene = true; break; } o = o.parent; }
       s.age = inScene ? 0 : (s.age || 0) + 1; if (s.age > 20) { STUECK.splice(i, 1); continue; } s.m.visible = Math.hypot(c.position.x - s.x, c.position.z - s.z) < D; } }
 
-  return { sorte, belagMat, nass, markierung, anAmpel, kleinteile, ecken, update, get belagOk() { return belagOk; }, U, get stuecke() { return STUECK.length; }, STAT };
+  return { sorte, belagMat, nass, markierung, anAmpel, kleinteile, ecken, update, get belagOk() { return belagOk; }, U, get stuecke() { return STUECK.length; }, STAT, get dbg() { return { q: q(), LOW: !!X.LOW, potato: !!(X.opts && X.opts.potato), low: low() }; } };
 }
