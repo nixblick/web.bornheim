@@ -69,7 +69,7 @@ export function initFire(X, W, D) {
     for (let i = 0; i < n; i++) { const [ax, az] = pts[i], [bx, bz] = pts[(i + 1) % n]; if (solidAt((ax + bx) / 2, (az + bz) / 2) >= 0) continue; const L = Math.hypot(bx - ax, bz - az); const m = new THREE.Mesh(new THREE.PlaneGeometry(L, 0.08), mat); m.position.set((ax + bx) / 2, (TH(ax, az) + TH(bx, bz)) / 2 + 0.92, (az + bz) / 2); m.rotation.y = Math.atan2(-(bz - az), bx - ax); g.add(m); }
     scene.add(g); return g; }
   function dispatch(f) {
-    const p = fireAt(f); let best = null; { let wd = 1500, w0 = null; for (const w of X.wachen || []) { const d = Math.hypot(w[0] - p.x, w[1] - p.z); if (d < wd) { wd = d; w0 = w; } } if (w0) { const q = X.nearestRoadDir(w0[0], w0[1], 60); if (q) best = { x: q.x, z: q.z, heading: q.ang }; } } /* aus der nächsten Wache ausrücken (André 12.11.2026, FRW 2) */ for (let k = 0; k < 40 && !best; k++) { const q = X.randomRoadPoint(pick(X.roadsDrivable)); const dd = Math.hypot(q.x - p.x, q.z - p.z); if (dd > 110 && dd < 220) { best = q; break; } } if (!best) return null;
+    const p = fireAt(f); let best = null; { let wd = 1500, w0 = null; for (const w of X.wachen || []) { const d = Math.hypot(w[0] - p.x, w[1] - p.z); if (d < wd) { wd = d; w0 = w; } } if (w0) { const q = X.nearestRoadDir(w0[0], w0[1], 60); if (q) best = { x: q.x, z: q.z, heading: q.ang }; } } /* aus der nächsten Wache ausrücken (André 12.11.2026, FRW 2) */ for (let k = 0; k < 40 && !best && X.roadsDrivable.length; k++) { const q = X.randomRoadPoint(pick(X.roadsDrivable)); const dd = Math.hypot(q.x - p.x, q.z - p.z); if (dd > 110 && dd < 220) { best = q; break; } } if (!best) return null;
     const c = D.spawnCannon(best.x, best.z, best.heading, 'fireAI', 'fire'); const b = { truck: c, fire: f, crew: [], state: 'drive', t: 0, retreatT: 0, attacks: 0 }; c.userData.brigade = b; f.brig = b; brigades.push(b);
     D.post('feuerwehr', `Einsatz: Brand ${X.streetAt(p.x, p.z) ? 'in der ' + X.streetAt(p.x, p.z) : 'in Bornheim'}. Bitte Rettungswege freihalten.`, Math.round(rnd(80, 400))); emit('brigadeDispatched', p, { brigade: b }); return b;
   }
@@ -101,7 +101,7 @@ export function initFire(X, W, D) {
         if (b.retreatT <= 0 && b.fire.I > 0.35) { D.aimTurret(c, fp.x, fp.y + 1, fp.z, dt); u.burstT = 1; D.cannonSpray(c, dt); }
       }
       else if (b.state === 'leave' && !b.crew.length && (() => { const nx = fires.find(f => !f.brig && !f.ground && f.t > 2 && fireAt(f).distanceTo(c.position) < 250); if (nx) { b.fire = nx; nx.brig = b; b.state = 'drive'; b.path = null; b.t = 0; b.doneT = 0; b.leaveT = 0; b.away = null; return true; } return false; })()) {}
-      else if (b.state === 'leave') { const away = b.away || (b.away = (() => { for (let k = 0; k < 30; k++) { const q = X.randomRoadPoint(pick(X.roadsDrivable)); if (Math.hypot(q.x - c.position.x, q.z - c.position.z) > 200) return [q.x, q.z]; } return [c.position.x + 300, c.position.z]; })()); if (!b.lpath) { b.lpath = D.route(c.position.x, c.position.z, away[0], away[1]) || [away]; b.lpi = 0; } while (b.lpi < b.lpath.length - 1 && Math.hypot(b.lpath[b.lpi][0] - c.position.x, b.lpath[b.lpi][1] - c.position.z) < 7) b.lpi++; D.driveTo(c, b.lpath[b.lpi][0], b.lpath[b.lpi][1], dt, 11); b.leaveT = (b.leaveT || 0) + dt; if (c.position.distanceTo(player.pos) > 150 || (b.leaveT > 20 && c.position.distanceTo(player.pos) > 30) || b.leaveT > 60) { D.removeCar(c); brigades.splice(i, 1); } }
+      else if (b.state === 'leave') { const away = b.away || (b.away = (() => { for (let k = 0; k < 30 && X.roadsDrivable.length; k++) { const q = X.randomRoadPoint(pick(X.roadsDrivable)); if (Math.hypot(q.x - c.position.x, q.z - c.position.z) > 200) return [q.x, q.z]; } return [c.position.x + 300, c.position.z]; })()); if (!b.lpath) { b.lpath = D.route(c.position.x, c.position.z, away[0], away[1]) || [away]; b.lpi = 0; } while (b.lpi < b.lpath.length - 1 && Math.hypot(b.lpath[b.lpi][0] - c.position.x, b.lpath[b.lpi][1] - c.position.z) < 7) b.lpi++; D.driveTo(c, b.lpath[b.lpi][0], b.lpath[b.lpi][1], dt, 11); b.leaveT = (b.leaveT || 0) + dt; if (c.position.distanceTo(player.pos) > 150 || (b.leaveT > 20 && c.position.distanceTo(player.pos) > 30) || b.leaveT > 60) { D.removeCar(c); brigades.splice(i, 1); } }
     }
   }
   // ---------- Rettungsdienst (RTW & Sanitäter) ----------
@@ -121,7 +121,7 @@ export function initFire(X, W, D) {
   }
   function dispatchMedic(target) {
     const p = target.position; let best = null;
-    for (let k = 0; k < 40; k++) { const q = X.randomRoadPoint(pick(X.roadsDrivable)); const dd = Math.hypot(q.x - p.x, q.z - p.z); if (dd > 85 && dd < 190) { best = q; break; } }
+    for (let k = 0; k < 40 && X.roadsDrivable.length; k++) { const q = X.randomRoadPoint(pick(X.roadsDrivable)); const dd = Math.hypot(q.x - p.x, q.z - p.z); if (dd > 85 && dd < 190) { best = q; break; } }
     if (!best || !X.makeAmbulance) return null;
     const c = X.makeAmbulance(); const [fx, fz] = D.freeSpot(best.x, best.z, 2.5);
     c.position.set(fx, TH(fx, fz), fz); c.userData.heading = best.heading; c.rotation.y = best.heading; c.userData.mode = 'medicAI'; c.userData.siren = true;
@@ -164,7 +164,7 @@ export function initFire(X, W, D) {
         });
         if (near || m.t > 42) { m.treatT += dt; if (m.treatT > 4.2) { revivePed(m.target); m.target = null; } }
       } else if (m.state === 'leave') {
-        const away = m.away || (m.away = (() => { for (let k = 0; k < 30; k++) { const q = X.randomRoadPoint(pick(X.roadsDrivable)); if (Math.hypot(q.x - c.position.x, q.z - c.position.z) > 180) return [q.x, q.z]; } return [c.position.x + 250, c.position.z]; })());
+        const away = m.away || (m.away = (() => { for (let k = 0; k < 30 && X.roadsDrivable.length; k++) { const q = X.randomRoadPoint(pick(X.roadsDrivable)); if (Math.hypot(q.x - c.position.x, q.z - c.position.z) > 180) return [q.x, q.z]; } return [c.position.x + 250, c.position.z]; })());
         if (!m.lpath) { m.lpath = D.route(c.position.x, c.position.z, away[0], away[1]) || [away]; m.lpi = 0; }
         while (m.lpi < m.lpath.length - 1 && Math.hypot(m.lpath[m.lpi][0] - c.position.x, m.lpath[m.lpi][1] - c.position.z) < 7) m.lpi++;
         D.driveTo(c, m.lpath[m.lpi][0], m.lpath[m.lpi][1], dt, 12); m.leaveT = (m.leaveT || 0) + dt;

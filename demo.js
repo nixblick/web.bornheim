@@ -315,14 +315,15 @@ export function initDemo(X, W) {
     if (opts.demos !== false && !X.creative.on && demos.filter(d => !d.result).length < 2 && !X.storyBusy()) { spontT -= dt; if (spontT <= 0) { spontT = rnd(120, 240); /* mehr Demos in der Stadt (André 12.11.2026) */ if (world.hour > 9 && world.hour < 21) spontaneous(); } }
   }
   function arrive(d) { // Neue Leute kommen aus einer Seitenstraße dazu
-    const a = rnd(0, 6.28); const r = rnd(35, 55); let [x, z] = [d.cx + Math.cos(a) * r, d.cz + Math.sin(a) * r]; if (solidAt(x, z) >= 0) { const rp = X.randomRoadPoint(pick(pedRoads())); if (Math.hypot(rp.x - d.cx, rp.z - d.cz) > 120) return; x = rp.x; z = rp.z; }
+    const a = rnd(0, 6.28); const r = rnd(35, 55); let [x, z] = [d.cx + Math.cos(a) * r, d.cz + Math.sin(a) * r]; if (solidAt(x, z) >= 0) { const rs = pedRoads(); if (!rs.length) return; const rp = X.randomRoadPoint(pick(rs)); if (Math.hypot(rp.x - d.cx, rp.z - d.cz) > 120) return; x = rp.x; z = rp.z; }
     const h = makeMember(x, z, { slogans: d.slogans, signs: d.slogans ? 0.6 : undefined, black: !d.peaceful && Math.random() < (d.mob ? 0.2 : 0.08), student: d.student && Math.random() < 0.8 }); h.userData.demo = d; d.members.push(h); }
   function updateArrested(dt) { for (let i = peds.length - 1; i >= 0; i--) { const h = peds[i], u = h.userData; if (u.state !== 'arrested') continue; u.arrT += dt; if (u.mixer && !u.lod) { u.mixer.update(dt); } if (u.arrT > 9 && h.position.distanceTo(player.pos) > 12) removePed(h); else if (u.arrT > 30) removePed(h); } }
 
   // ---------- Spontane Demo und Leute sammeln (Taste G) ----------
   function spontaneous(at, o = {}) { /* o.noPolice: Kreativmodus, nur Leute (André 12.11.2026) */
-    let p = at; if (!p) { for (let k = 0; k < 30; k++) { const rp = X.randomRoadPoint(pick(pedRoads().filter(r => r.w >= 6))); const dd = Math.hypot(rp.x - player.pos.x, rp.z - player.pos.z); if (dd > 90 && dd < 200) { p = [rp.x, rp.z]; break; } } } if (!p) return null;
-    let goal = null; for (let k = 0; k < 30; k++) { const rp = X.randomRoadPoint(pick(pedRoads().filter(r => r.w >= 7))); const dd = Math.hypot(rp.x - p[0], rp.z - p[1]); if (dd > 260 && dd < 520) { goal = [rp.x, rp.z]; break; } }
+    const breit = pedRoads().filter(r => r.w >= 7); if (!at && !breit.length) return null; // keine breite Straße geladen: pick() wäre undefined (Absturz in randomRoadPoint)
+    let p = at; if (!p) { const rs = pedRoads().filter(r => r.w >= 6); for (let k = 0; k < 30; k++) { const rp = X.randomRoadPoint(pick(rs)); const dd = Math.hypot(rp.x - player.pos.x, rp.z - player.pos.z); if (dd > 90 && dd < 200) { p = [rp.x, rp.z]; break; } } } if (!p) return null;
+    let goal = null; for (let k = 0; k < 30 && breit.length; k++) { const rp = X.randomRoadPoint(pick(breit)); const dd = Math.hypot(rp.x - p[0], rp.z - p[1]); if (dd > 260 && dd < 520) { goal = [rp.x, rp.z]; break; } }
     const th = o.thema === false ? null : pick(THEMEN); const d = spawnDemo(Object.assign({ x: p[0], z: p[1], n: 6, gather: true, max: 30, noPolice: !!o.noPolice }, th ? { banner: th.b, slogans: th.s, chants: th.c, peaceful: true, maxStage: 1, student: !!th.st, tension: 0 } : {})); d.goal = goal; d.joinT = 1; d.energy = 0.7; const st = X.streetAt(p[0], p[1]);
     post('kollektiv', th ? `${th.st ? 'Schüler:innen-Demo' : 'Spontandemo'} „${th.b}“ ${st ? 'in der ' + st : 'in Frankfurt'}! Kommt alle, friedlich und laut.` : `Spontandemo ${st ? 'in der ' + st : 'in Bornheim'}! ${world.hour > 11 && world.hour < 19 ? '38 Grad und die Stadt baut Parkplätze. ' : ''}Kommt alle! #Hitzefrei`, Math.round(rnd(300, 1200))); return d;
   }
