@@ -3,7 +3,7 @@
 // Steuerung: W/S neigen (vor/zurück), A/D drehen, Leertaste steigen, Shift sinken, E aussteigen (nur gelandet).
 /** @param {import('./types').Ctx} X */
 export function initHeli(X) {
-  const { plyer, THREE, scene, cars, player } = X;
+  const { THREE, scene, cars, player } = X;
   const BGU = [-35, -1767]; // Hauptgebäude der BG Unfallklinik Frankfurt (Friedberger Landstraße 430)
   const STOP = [-250, -1710]; // Haltestelle „Unfallklinik“: von hier kommt man zu Fuß
   let site = null; // { b, pad:[x,z,y], ground:[x,z], roofSpot:[x,z,y] }
