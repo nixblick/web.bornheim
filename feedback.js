@@ -1,4 +1,4 @@
-// Feedback: öffnet ein vorausgefülltes GitHub-Issue (oder eine E-Mail) mit Beschreibung und Spielzustand.
+// Feedback: öffnet ein vorausgefülltes GitHub-Issue (Hauptweg; E-Mail/Teilen nur ohne GitHub-Konto) mit Beschreibung und Spielzustand.
 // Keine Daten gehen ohne Klick des Spielers raus; das Issue legt der Spieler selbst auf GitHub an.
 const REPO = 'https://github.com/nixblick/web.bornheim';
 const MAIL = 'service@creavisions.de';
@@ -37,9 +37,9 @@ el.innerHTML = `<div class="box"><h3>Fehler melden oder Idee schicken</h3>
 <textarea id="fb_text" placeholder="Was hast du gemacht, was ist passiert, was hättest du erwartet?"></textarea>
 <div id="fb_shotrow" style="display:none;gap:10px;align-items:center;margin:2px 0 8px"><img id="fb_shot" alt="Bildschirmfoto" style="width:120px;border-radius:6px;border:1px solid #444"><label><input type="checkbox" id="fb_useshot" checked> Bildschirmfoto mitschicken</label></div>
 <label><input type="checkbox" id="fb_info" checked> Technische Infos anhängen (Browser, Grafik, Position, letzte Fehlermeldungen)</label>
-<div class="row"><button class="y" id="fb_share">Teilen (WhatsApp, Mail …)</button><button class="y" id="fb_mail">Per E-Mail schicken</button><button id="fb_close">Abbrechen</button></div>
+<div class="row"><button class="y" id="fb_gh">Auf GitHub melden</button><button id="fb_close">Abbrechen</button></div>
 <p id="fb_hint"></p>
-<p style="margin-top:12px">Mit GitHub-Konto: <a href="#" id="fb_gh" style="color:#ffd84a">als Issue melden</a> (Bild liegt dann in der Zwischenablage, im Issue mit Strg+V einfügen).</p></div>`;
+<p style="margin-top:12px">Das Bild liegt danach in der Zwischenablage, im Issue mit Strg+V einfügen. Ohne GitHub-Konto: <a href="#" id="fb_share" style="color:#ffd84a">teilen</a> oder <a href="#" id="fb_mail" style="color:#ffd84a">per E-Mail</a>.</p></div>`;
 document.body.appendChild(el);
 const $ = id => document.getElementById(id);
 function info() {
@@ -71,17 +71,17 @@ function takeShot() {
 }
 const shotFile = () => shotBlob && $('fb_useshot').checked ? new File([shotBlob], 'bornheim-bildschirmfoto.jpg', { type: 'image/jpeg' }) : null;
 const canShareFiles = () => { try { return !!navigator.canShare && navigator.canShare({ files: [new File([''], 'x.jpg', { type: 'image/jpeg' })] }); } catch (e) { return false; } };
-export function openFeedback() { if (document.pointerLockElement) { wasLocked = true; document.exitPointerLock(); } takeShot(); $('fb_hint').textContent = ''; $('fb_share').style.display = navigator.share ? '' : 'none'; $('fb_mail').className = navigator.share ? '' : 'y'; el.style.display = 'flex'; setTimeout(() => $('fb_title').focus(), 50); }
+export function openFeedback() { if (document.pointerLockElement) { wasLocked = true; document.exitPointerLock(); } takeShot(); $('fb_hint').textContent = ''; $('fb_share').style.display = navigator.share ? '' : 'none'; /* GitHub ist der Hauptweg, Mail nur Ausweich (André 13.11.2026) */ el.style.display = 'flex'; setTimeout(() => $('fb_title').focus(), 50); }
 function close() { el.style.display = 'none'; }
 $('fb_close').onclick = close; el.addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Escape') close(); }); el.addEventListener('keyup', e => e.stopPropagation());
 function download(f) { const a = document.createElement('a'); a.href = URL.createObjectURL(f); a.download = f.name; document.body.appendChild(a); a.click(); a.remove(); }
-$('fb_share').onclick = async () => {
+$('fb_share').onclick = async ev => { ev.preventDefault();
   const c = compose(), f = shotFile(), data = { title: 'Bornheim: ' + c.title, text: `Bornheim-Spiel: ${c.title}\n\n${c.body.slice(0, 3000)}\n\n(bitte an ${MAIL})` };
   if (f && canShareFiles()) data.files = [f];
   try { await navigator.share(data); close(); }
   catch (e) { if (e.name !== 'AbortError') $('fb_hint').textContent = 'Teilen ging nicht – bitte „Per E-Mail schicken“ nehmen.'; }
 };
-$('fb_mail').onclick = () => {
+$('fb_mail').onclick = ev => { ev.preventDefault();
   const c = compose(), f = shotFile(); let body = c.body.slice(0, 1800);
   if (f) { download(f); body = 'Das Bildschirmfoto ist gerade heruntergeladen worden (bornheim-bildschirmfoto.jpg) – bitte an diese Mail anhängen.\n\n' + body; }
   location.href = `mailto:${MAIL}?subject=${encodeURIComponent('Bornheim: ' + c.title)}&body=${encodeURIComponent(body)}`;
