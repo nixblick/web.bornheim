@@ -1,5 +1,10 @@
 # Changelog
 
+## 2026-11-14
+
+- **Ampeln, Vokabaum und Autosave (Audit 3):** KI-Autos und Busse ignorieren die Ampeln an der Ausfahrt jetzt nach jeder Kreuzung, auch wenn sie geradeaus fahren (bisher nur bei etwa 30 % der Knoten). Wird die Vokabaum-Mission im Handy gestartet, bleibt die Maus beim Schließen des Handys frei, damit die Antwortknöpfe anklickbar sind. Nach „Neues Spiel“ überschreibt das automatische Speichern einen vorhandenen Spielstand nicht mehr still; das passiert erst nach bewusstem Speichern (F6, Menü, Handy, Spielstand-Platz) oder Laden.
+- **Kleinigkeiten:** Offline-Start behält ui-sunset.css, Minikarte rechnet nur noch wenn sichtbar, Himmel schaltet nach Effekt-Ausfall auf die Sparstufe, Einkaufswagen am Supermarkt stehen nicht mehr in der Vordachstütze, Hilfetexte nennen Handy auf H und Menüpunkt "Missionen", Spielstand-Plätze melden Speicherfehler.
+
 ## 2026-11-13
 
 - **Die Figur kann wieder sterben:** Ohne Fahndung wurden die Lebenspunkte nach dem Begrenzen auf 0 sofort wieder hochgezählt, bevor der Tod geprüft wurde; Ertrinken, Sturz oder Feuer blieben ohne Folgen. Die Heilung greift jetzt erst über 0. Gefunden beim Polizei-Paket der Audit-Runde 2.
