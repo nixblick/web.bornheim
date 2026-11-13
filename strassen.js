@@ -136,7 +136,7 @@ if (sPm > 0.0) { normal = normalize(mix(normal, nonPerturbedNormal, sPm));
     for (const r of roads) { if (r.ped || r.w < 5) continue; const lanes = Math.max(1, r.l || (r.w >= 8 ? 2 : 1)), one = !!r.o;
       // Linien quer zur Fahrbahn: [Versatz, Art] mit Art 'L' Leitlinie, 'S' durchgezogen, 'M' Mitte (Sperrlinie vor Ampeln)
       /** @type {[number, string][]} */ const lines = [];
-      if (L) { if (r.w >= 8) lines.push([0, 'M']); }
+      if (L) { if (r.w >= 8 && !one) lines.push([0, 'M']); }
       else {
         if (!one && (lanes >= 2 || r.w >= 8)) { const per = Math.max(1, Math.floor(lanes / 2)); lines.push([0, lanes >= 4 ? 'S' : 'M']); const lw = (r.w / 2 - 0.5) / per; for (let k = 1; k < per; k++) for (const sg of [-1, 1]) lines.push([sg * k * lw, 'L']); }
         if (one && lanes >= 2) { const lw = (r.w - 1) / lanes; for (let k = 1; k < lanes; k++) lines.push([-r.w / 2 + 0.5 + k * lw, 'L']); }
