@@ -81,7 +81,7 @@ export function initPhone(X, S) {
   // ---------- Öffnen / Schließen ----------
   let tick = 0;
   function show(id) { if (!X.started || open) return false; if (X.menuOpen()) X.closeMenu(); open = true; for (const k in X.keys) X.keys[k] = false; /* gehaltene Taste läuft sonst weiter */ root.style.display = 'block'; /** @type {any} */ (window).__noAutoMenu = true; try { document.exitPointerLock(); } catch (e) {} home(); if (id) openApp(id); tick = window.setInterval(() => { root.querySelector('.ps-phone__clock').textContent = clock(); const bc = root.querySelector('.ps-phone__bigclock'); if (bc) bc.textContent = clock(); }, 1000); root.querySelector('.ps-phone__clock').textContent = clock(); sfx && sfx('click', 0.5); return true; }
-  function close() { if (!open) return; open = false; app = null; root.style.display = 'none'; clearInterval(tick); /** @type {any} */ (window).__noAutoMenu = false; if (X.started && !X.menuOpen() && X.lockMouse) X.lockMouse(); }
+  function close() { if (!open) return; open = false; app = null; root.style.display = 'none'; clearInterval(tick); const vk = !!(S.VOKA && S.VOKA.mission); /* Vokabaum-Fenster gerade aus dem Handy gestartet: Maus frei lassen */ /** @type {any} */ (window).__noAutoMenu = vk; if (X.started && !X.menuOpen() && !vk && X.lockMouse) X.lockMouse(); }
   function toggle() { return open ? (close(), false) : show(); }
   addEventListener('keydown', e => {
     if (open && e.code === 'Escape') { e.preventDefault(); e.stopImmediatePropagation(); back(); return; }
