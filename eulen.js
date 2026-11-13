@@ -84,15 +84,15 @@ export function initEulen(X) {
   const fmt = ms => { const s = Math.floor(ms / 1000); return Math.floor(s / 3600) + ':' + String(Math.floor(s / 60) % 60).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0'); };
   const G = () => /** @type {any} */ (window).G;
   function giveBike(x, z) { const g = G(); if (!g || !g.makeBike) return false; const c = g.makeBike(); c.position.set(x, TH(x, z), z); g.scene.add(c); g.cars.push(c); player.pos.set(x + 0.5, TH(x, z), z); g.toggleCar(); return !!(player.car && player.car.userData.bike); }
-  function start(r, resume, mode = 'lauf', opt = {}) { const W = wps(r); const B = big(r) ? stages(r) : []; const sv = resume ? readSave(mode) : null; const go = sv && sv.name === r.name;
+  function start(r, resume, mode = 'lauf', opt = {}) { if (!WEG.frei()) return false; /* vor Teleport und Rad: abgelehnter Start ohne Nebenwirkung */ const W = wps(r); const B = big(r) ? stages(r) : []; const sv = resume ? readSave(mode) : null; const go = sv && sv.name === r.name;
     const i = go ? sv.i : 1; const stage = B.filter(b => b < i).length;
     if (go && mode === 'lauf' && !player.car) { const [x, z] = W[i - 1]; player.pos.set(x, TH(x, z), z); }
-    if (mode === 'rad' && !(player.car && player.car.userData.bike && !player.car.userData.moto)) { const [x, z] = W[go ? i - 1 : 0]; if (!giveBike(x, z)) { showMsg('KEIN RAD VERFÜGBAR', 1500); return; } }
+    if (mode === 'rad' && !(player.car && player.car.userData.bike && !player.car.userData.moto)) { const [x, z] = W[go ? i - 1 : 0]; if (!giveBike(x, z)) { showMsg('KEIN RAD VERFÜGBAR', 1500); return false; } }
     run = { r, W, B, mode, i, stage, times: go ? sv.times.slice() : [], st0: performance.now(), grace: performance.now() + 3000, last: player.pos.clone(), test: !!opt.test };
     WEG.route({ pts: W, get i() { return run ? run.i : 1; }, off: 1, big: big(r), label: (mode === 'rad' ? '🚲 ' : '🦉 ') + kind(r) }); if (r.marathon) buildFinish(r.ziel);
     const et = B.length ? ` · Etappe ${stage + 1}/${B.length + 1}` : '';
-    card((mode === 'rad' ? 'RAD-WETTBEWERB · ' : 'EULEN-') + kind(r).toUpperCase(), `${r.name} · ${r.info}${et} · ` + (mode === 'rad' ? 'nur mit dem Fahrrad, Absteigen macht ungültig' : 'zu Fuß, gehen oder rennen, ohne Auto, Rad oder Bahn') + (B.length ? ' · an jeder Etappengrenze wird gespeichert' : ''), 5); sfx('bell', 0.5); }
-  function stop(msg) { run = null; WEG.route(null); const o = document.getElementById('obj'); if (o) o.textContent = ''; if (msg) showMsg(msg, 2600); }
+    card((mode === 'rad' ? 'RAD-WETTBEWERB · ' : 'EULEN-') + kind(r).toUpperCase(), `${r.name} · ${r.info}${et} · ` + (mode === 'rad' ? 'nur mit dem Fahrrad, Absteigen macht ungültig' : 'zu Fuß, gehen oder rennen, ohne Auto, Rad oder Bahn') + (B.length ? ' · an jeder Etappengrenze wird gespeichert' : ''), 5); sfx('bell', 0.5); return true; }
+  function stop(msg) { run = null; WEG.route(null); const o = document.getElementById('obj'); if (o) o.textContent = ''; if (X.objDirty) X.objDirty(); /* Story schreibt ihr Kapitelziel neu */ if (msg) showMsg(msg, 2600); }
   let objEl = null;
   function runUpdate(dt) { const u = run;
     if (u.mode === 'lauf' && player.car) { stop('DISQUALIFIZIERT: NUR ZU FUSS'); return; }
