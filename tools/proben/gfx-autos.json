@@ -1,6 +1,6 @@
 [
  { "n": "hoch_setzen", "shot": false, "wait": 500,
-   "js": "(() => { const o = JSON.parse(localStorage.getItem('notgta.opts') || '{}'); o.quality = 'hoch'; localStorage.setItem('notgta.opts', JSON.stringify(o)); setTimeout(() => location.reload(), 300); return 'reload'; })()" },
+   "js": "(() => { const o = JSON.parse(localStorage.getItem('notgta.opts') || '{}'); o.quality = 'hoch'; o.qualityManuell = true; localStorage.setItem('notgta.opts', JSON.stringify(o)); setTimeout(() => location.reload(), 300); return 'reload'; })()" },
  { "n": "neu_laden", "shot": false, "wait": 1000,
    "js": "(async () => { const s = ms => new Promise(r => setTimeout(r, ms)); for (let i = 0; i < 150 && !document.body.innerText.includes('Frankfurt bereit'); i++) await s(1000); for (let i = 0; i < 2; i++) { [...document.querySelectorAll('button')].find(b => /Rein da/.test(b.textContent))?.click(); await s(i ? 5000 : 12000); } return JSON.stringify({ q: window.G && window.G.opts.quality }); })()",
    "expect": "window.G && window.G.opts.quality === 'hoch'" },
