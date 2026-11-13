@@ -2936,11 +2936,15 @@ function unregisterTile(t) {
   DEMT.delete(t.k); DEMN.delete(dkey(t.tx, t.tz)); thK = NaN; thH = null; t.mm = null; t.data = null; t.rd = []; t.rp = []; t.bi = t.bar = null; TILES.delete(t.k);
 }
 const loadingTiles = new Set(); const LOAD_STAT = { ms: 0, n: 0 }; // registerTile & Co. je Kachel, summiert bis F3 abholt
+const TILE_FAIL = new Map(); // k -> { n, next }: Fehlversuche beim Herunterladen, nächster Versuch frühestens bei next (ms)
+const tileWait = k => { const f = TILE_FAIL.get(k); return !!f && f.next > performance.now(); };
 async function loadTile(tx, tz) {
-  const k = tkey(tx, tz); if (TILES.has(k) || loadingTiles.has(k) || !WIDX.tiles[k]) return; loadingTiles.add(k);
+  const k = tkey(tx, tz); if (TILES.has(k) || loadingTiles.has(k) || !WIDX.tiles[k] || tileWait(k)) return; loadingTiles.add(k);
   try {
     const inf = WIDX.tiles[k];
-    const [data, dem] = await Promise.all([inf[0] || inf[1] ? fetch(`data/tiles/${k}.json`).then(r => r.ok ? r.json() : {}) : Promise.resolve({}), inf[3] ? fetch(`data/dem/${k}.bin`).then(r => r.ok ? r.arrayBuffer() : null) : Promise.resolve(null)]);
+    let data, dem; // Netzfehler und HTTP-Fehler (außer 404) nicht als leere Kachel merken: zweimal neu versuchen (2 s, 5 s), erst dann leer eintragen
+    try { [data, dem] = await Promise.all([inf[0] || inf[1] ? fetch(`data/tiles/${k}.json`).then(r => r.ok ? r.json() : r.status === 404 ? {} : Promise.reject(new Error('HTTP ' + r.status))) : Promise.resolve({}), inf[3] ? fetch(`data/dem/${k}.bin`).then(r => r.ok ? r.arrayBuffer() : r.status === 404 ? null : Promise.reject(new Error('HTTP ' + r.status))) : Promise.resolve(null)]); TILE_FAIL.delete(k); }
+    catch (e) { const f = TILE_FAIL.get(k) || { n: 0, next: 0 }; f.n++; if (f.n >= 3) { TILE_FAIL.delete(k); throw e; } f.next = performance.now() + (f.n === 1 ? 2000 : 5000); TILE_FAIL.set(k, f); console.warn('Kachel', k, 'Versuch', f.n, e); return; }
     const l0 = performance.now(); // Arbeit nach dem Laden läuft außerhalb der Spielschleife (Promise): für F3 messen (#173)
     if (dem) { const u = new Uint16Array(dem); const f = new Float32Array(u.length); for (let i = 0; i < u.length; i++) f[i] = u[i] / 100 - 50; DEMT.set(k, f); DEMN.set(dkey(tx, tz), f); }
     for (const b of data.buildings || []) { markLandmark(b); markStadium(b); } // Wahrzeichen (#73): eigener Bau statt OSM-Klotz
@@ -3013,7 +3017,7 @@ function streamUpdate(dt, force = false) {
   const ptx = Math.floor(cx / TS), ptz = Math.floor(cz / TS);
   R_MESH = (opts.view || 700) > 550 ? 2 : 1;
   streamT -= dt; if (streamT <= 0 || force) { streamT = 0.3;
-    const want = []; for (let a = -R_DATA; a <= R_DATA; a++) for (let b = -R_DATA; b <= R_DATA; b++) { const k = tkey(ptx + a, ptz + b); if (WIDX.tiles[k] && !TILES.has(k) && !loadingTiles.has(k)) want.push([a * a + b * b, ptx + a, ptz + b]); }
+    const want = []; for (let a = -R_DATA; a <= R_DATA; a++) for (let b = -R_DATA; b <= R_DATA; b++) { const k = tkey(ptx + a, ptz + b); if (WIDX.tiles[k] && !TILES.has(k) && !loadingTiles.has(k) && !tileWait(k)) want.push([a * a + b * b, ptx + a, ptz + b]); }
     want.sort((p, q) => p[0] - q[0]); for (const [, tx, tz] of want) { if (loadingTiles.size >= 6) break; loadTile(tx, tz); }
     let changed = false; for (const [, t] of TILES) if (t.built && (Math.abs(t.tx - ptx) > R_MESH + 1 || Math.abs(t.tz - ptz) > R_MESH + 1)) { unbuildTile(t); changed = true; }
     for (const [, t] of TILES) if (!t.built && t !== (job && job.t) && (Math.abs(t.tx - ptx) > R_DATA + 2 || Math.abs(t.tz - ptz) > R_DATA + 2)) unregisterTile(t); // Daten ferner Kacheln freigeben
