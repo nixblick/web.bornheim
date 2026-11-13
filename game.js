@@ -2210,9 +2210,12 @@ function spawnCar(police = false, near = null, minD = 60, maxD = 220, bike = fal
   c.rotation.y = u.heading; scene.add(c); cars.push(c); shootables.push(c); return c;
 }
 function spawnPed(near = null) {
-  const pool = roadsNear(player.pos.x, player.pos.z, 1, false); if (!pool.length) return null; const r = pick(pool); const p = randomRoadPoint(r); const side = Math.random() < 0.5 ? 1 : -1; const w = r.w / 2 + 1.5;
-  const x = p.x + Math.cos(p.heading) * side * w, z = p.z - Math.sin(p.heading) * side * w;
-  if (solidAt(x, z) >= 0) return null; if (near && Math.hypot(x - near.x, z - near.z) > 200) return null;
+  const pool = roadsNear(player.pos.x, player.pos.z, 1, false); if (!pool.length) return null; let r, p, side, x, z, ok = false;
+  // im Spiel (near) 40 bis 200 m vom Spieler, sonst tauchen Passanten direkt vor der Kamera auf; bis zu 4 Versuche, vor dem Figurenbau
+  for (let k = 0; k < (near ? 4 : 1) && !ok; k++) { r = pick(pool); p = randomRoadPoint(r); side = Math.random() < 0.5 ? 1 : -1; const w = r.w / 2 + 1.5;
+    x = p.x + Math.cos(p.heading) * side * w; z = p.z - Math.sin(p.heading) * side * w;
+    if (solidAt(x, z) >= 0) continue; const dn = near ? Math.hypot(x - near.x, z - near.z) : 0; ok = !near || (dn <= 200 && dn >= 40); }
+  if (!ok) return null;
   const h = makeHuman(Math.random() < 0.5); h.position.set(x, TH(x, z), z);
   Object.assign(h.userData, { road: r, seg: p.seg, dir: p.dir, side, speed: rnd(1.0, 1.7), hp: 100, state: 'walk', t: Math.random() * 10 });
   scene.add(h); peds.push(h); shootables.push(h); return h;
@@ -3337,7 +3340,7 @@ function update(dt) {
     else if (u.state === 'dead') { if (u.mixer && ragdoll(h, u, dt)) {} else if (u.fly) { const y0 = h.position.y; if (moveWithCollision(h.position, u.fly.x * dt, u.fly.z * dt, 0.3, h.position.y) === 2) { u.fly.x *= -0.2; u.fly.z *= -0.2; } /* weggeschleudert: nicht durch Wände, auf Brücken und Dächern landen */ h.position.y += u.fly.y * dt; u.fly.y -= 14 * dt; h.rotation.y += (u.spin || 0) * dt; const fy = floorAt(h.position.x, h.position.z, Math.max(y0, h.position.y) + 0.3); if (h.position.y <= fy && u.fly.y < 0) { h.position.y = fy; if (u.fly.length() > 4) { u.fly.multiplyScalar(0.35); u.fly.y = Math.abs(u.fly.y) * 0.3; } else u.fly = null; } } if (u.mixer && !u.rd) { if (!u.dead) { u.dead = true; playAnim(h, 'death', { once: true, fade: 0.1 }); } u.mixer.update(dt); } else h.rotation.x = Math.min(h.rotation.x + dt * 5, Math.PI / 2); u.deadT = (u.deadT || 0) + dt; if (u.deadT > (u.medic ? 75 : 25)) { freeSkel(h); scene.remove(h); peds.splice(i, 1); unshoot(h); } }
   }
   if (!POCKET) { const pw = Math.round(55 * (opts.peds ?? 1)); for (let k = 0; k < 2 && peds.length < pw; k++) spawnPed(player.pos); if (peds.length > pw + 3) { const far = peds.find(p => { const u = p.userData; return !u.cop && !u.demo && !u.keep && !u.follow && !u.medic && u.state !== 'arrested' && u.state !== 'stunned' && p.position.distanceTo(player.pos) > 90; }); if (far) { freeSkel(far); scene.remove(far); peds.splice(peds.indexOf(far), 1); unshoot(far); } }
-    /* weit entfernte Passanten (nach U-Bahn-Fahrt, Reise) nach und nach in die Nähe holen, sonst bleibt die neue Gegend leer */ for (let k = 0, n = 0; k < peds.length && n < 2; k++) { const p = peds[k], u = p.userData; if (u.cop || u.demo || u.keep || u.follow || u.ff || u.medic || u.state === 'arrested' || !(u.state === 'walk' || u.state === 'flee' || u.state === 'dead') || p.position.distanceTo(player.pos) < 450) continue; freeSkel(p); scene.remove(p); peds.splice(k, 1); unshoot(p); k--; n++; spawnPed(player.pos); } }
+    /* weit entfernte Passanten (nach U-Bahn-Fahrt, Reise) nach und nach in die Nähe holen, sonst bleibt die neue Gegend leer */ for (let k = 0, n = 0; k < peds.length && n < 2; k++) { const p = peds[k], u = p.userData; if (u.cop || u.demo || u.keep || u.follow || u.ff || u.medic || u.state === 'arrested' || !(u.state === 'walk' || u.state === 'flee' || u.state === 'dead') || p.position.distanceTo(player.pos) < 230 /* ab 200 m eingefroren und unsichtbar: Platz gleich freigeben */) continue; freeSkel(p); scene.remove(p); peds.splice(k, 1); unshoot(p); k--; n++; spawnPed(player.pos); } }
   updateBikeRacks(dt); updatePickups(dt); updateTrams(dt); updateFallenPoles(dt); WPN.update(dt); DEMO.update(dt); FIRE.update(dt); STORY.update(dt); updateFx(dt); updateDynLights();
   FX.update(dt); // Partikel (ein Pool, ein Draw-Call)
   // Fahndung
