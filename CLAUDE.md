@@ -17,6 +17,17 @@ eine davon das Spiel im Browser getestet hat (Headless-Chrome mit WebGL, hohe CP
   Server dieses Laufs beenden.
 - Ausnahme nur auf Andrés ausdrückliches Wort in der laufenden Sitzung („teste jetzt“).
 
+## Tagsüber: Spieltest auf GitHub
+
+Seit 13.11.2026 fährt der Workflow „Spieltest“ (`.github/workflows/spieltest.yml`) `tools/probe.mjs` auf einem
+GitHub-Rechner. Er belastet das Notebook nicht und ist deshalb jederzeit erlaubt:
+
+```
+gh workflow run spieltest.yml -R nixblick/web.bornheim -f ref=<zweig> -f proben="wahrzeichen bugs ausstieg"   # Proben von main, Code vom Zweig; neue Proben testen: --ref <probenzweig>
+gh run list -R nixblick/web.bornheim -w spieltest.yml -L 1
+gh run download -R nixblick/web.bornheim <run-id> -D <ordner>
+```
+
 ## Werkzeug für gezielte Proben: `tools/probe.mjs`
 
 13.11.2026: Eine Nachtrunde hat die ganze Nacht ihr eigenes Testskript gebaut und nichts getestet.
