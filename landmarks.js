@@ -2,6 +2,7 @@
 // Ein einziges Objekt aus wenigen Dreh- und Kastenkörpern, eine geteilte Zifferblatt-Textur, die einmal
 // pro Minute die echte Uhrzeit zeigt. Gebaut wird erst, wenn der Spieler in der Nähe ist (Gelände ist dann
 // geladen), und wieder abgebaut, wenn er weit weg ist. Kosten: rund 1.500 Dreiecke, eine 256er-Textur.
+/** @param {import('./types').Ctx} X */
 export function initLandmarks(X) {
   const { THREE, scene, player, TH, CITY, canvasTex, solidAt } = X;
   const poi = { x: -196, z: 427, fest: true };

@@ -29,6 +29,9 @@ jobs:
         run: |
           npm i --no-save --no-package-lock eslint@9.15.0 globals@15.12.0
           npx eslint --config eslint.config.mjs *.js
+      - name: Typprüfung (unbekannte Eigenschaften am Kontext X und an Kachel-Daten, #119)
+        # jsconfig.json + types.d.ts; noch nicht geprüft: game.js, feedback.js, sw.js, touch.js (Liste im Ticket #119)
+        run: npx -y -p typescript@5 tsc -p jsconfig.json
       - name: Spieldateien zusammenstellen
         run: |
           mkdir _site

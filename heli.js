@@ -1,6 +1,7 @@
 // Christoph 2: Rettungshubschrauber auf dem Dach der BG Unfallklinik (Seckbach), Aufzug vom Eingang zum Dachlandeplatz, selbst fliegen.
 // Der Hubschrauber ist im Fahrzeugsystem ein „Auto“ (cars, E zum Einsteigen, Kamera folgt), fliegt aber mit eigener Physik (heliDrive).
 // Steuerung: W/S neigen (vor/zurück), A/D drehen, Leertaste steigen, Shift sinken, E aussteigen (nur gelandet).
+/** @param {import('./types').Ctx} X */
 export function initHeli(X) {
   const { THREE, scene, cars, player } = X;
   const BGU = [-35, -1767]; // Hauptgebäude der BG Unfallklinik Frankfurt (Friedberger Landstraße 430)
