@@ -8,9 +8,9 @@ export function initInteriors(X, W, D, SH) {
   X.interiors = true;
   const PX = 60000, PZ = 0; // Taschenraum
   let inside = null; // { kind, grp, walls, triggers, exit, ... }
-  let metro = { lines: [], stations: [] }; const ST = new Map();
+  let metro = { lines: [], stations: [] }; const ST = new Map(); const mmDone = [];
   /* U-Bahn-Eingänge auf der Minikarte: blaues „U“ im Umkreis der Karte, damit man die Stationen findet (09.11.2026) */
-  if (X.mmHooks) X.mmHooks.push((ctx, P, R) => { const done = []; for (const s of metro.stations) for (const e of s.entr) { const [x, y] = P(e[0], e[1]); if (x * x + y * y > R * R || done.some(([a, b]) => Math.hypot(a - x, b - y) < 14)) continue; done.push([x, y]); /* jeder Eingang, nicht nur der erste (#97); Überlappung auf der Karte zusammengefasst */
+  if (X.mmHooks) X.mmHooks.push((ctx, P, R) => { mmDone.length = 0; const [ox, oy] = P(0, 0), k = P(1, 0)[0] - ox; /* P ist affin: ohne Array je Eingang */ for (const s of metro.stations) for (const e of s.entr) { const x = ox + e[0] * k, y = oy + e[1] * k; if (x * x + y * y > R * R) continue; let dup = false; for (let i = 0; i < mmDone.length; i += 2) if (Math.hypot(mmDone[i] - x, mmDone[i + 1] - y) < 14) { dup = true; break; } if (dup) continue; mmDone.push(x, y); /* jeder Eingang, nicht nur der erste (#97); Überlappung auf der Karte zusammengefasst */
     ctx.fillStyle = s.sOnly ? '#3a9a4a' : '#0a3d8f'; ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5; ctx.fillRect(x - 6, y - 6, 12, 12); ctx.strokeRect(x - 6, y - 6, 12, 12); ctx.fillStyle = '#fff'; ctx.font = 'bold 10px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(s.sOnly ? 'S' : 'U', x, y + 0.5); } });
   /* Tunnelstationen der S-Bahn (City-Tunnel Frankfurt, Quelle de.wikipedia „City-Tunnel Frankfurt“ und Artikel der Stationen, 12.11.2026).
      Schlachthof liegt auch im Tunnel, fehlt aber in data/metro.json. Reine S-Halte haben in OSM keinen subway_entrance:
@@ -218,7 +218,6 @@ export function initInteriors(X, W, D, SH) {
       tr.m.position.set(PX + tr.x, 0, PZ + tr.sd * 6.5); tr.m.visible = tr.state !== 'away';
       if (tr.m.userData.doors) { const op = tr.state === 'dwell' ? Math.min(1, (14 - tr.t) / 1.2, tr.t / 1.2) : 0; for (const d of tr.m.userData.doors) d.position.x = d.userData.x0 + d.userData.s * 0.62 * Math.max(0, op); } } };
     R.trainNear = () => R.trains.find(tr => tr.state === 'dwell' && Math.sign(player.pos.z - PZ) === tr.sd && Math.abs(player.pos.z - PZ) > 2.6);
-    R.station = st;
     R.station = full;
     const fromBelow = !sL && level === 'U' && full.sTun; // von der S-Bahn heraufgekommen: am Abgang stehen
     enter(R, onTrain ? [4, onTrain === 1 ? 2.4 : -2.4] : fromBelow ? [L - 9, 0] : [-L + 9, 0], onTrain ? Math.PI / 2 : fromBelow ? Math.PI / 2 : -Math.PI / 2, exit, `${sL ? 'S-Bahn' : 'U-Bahn'} ${st.name}`, st.p);
@@ -248,23 +247,26 @@ export function initInteriors(X, W, D, SH) {
     return g;
   }
   // Netz: Nachbarn je Linie, Fahrzeit über Breitensuche (Umstieg + 3 Min.)
-  function plan(from, to) {
-    const adj = new Map(); for (const l of metro.lines) for (let i = 0; i < l.stops.length; i++) { const a = l.stops[i]; if (!adj.has(a)) adj.set(a, []); if (i) adj.get(a).push([l.stops[i - 1], l.ref]); if (i < l.stops.length - 1) adj.get(a).push([l.stops[i + 1], l.ref]); }
-    const best = new Map([[from.id + '|', 0]]); const q = [[0, from.id, '', [from.id]]];
-    while (q.length) { q.sort((a, b) => a[0] - b[0]); const [c, id, line, path] = q.shift(); if (id === to.id) return { min: Math.max(2, Math.round(c)), path, line }; for (const [n, l] of adj.get(id) || []) { const nc = c + 1.8 + (line && l !== line ? 3 : 0); const k = n + '|' + l; if (nc < (best.get(k) ?? 1e9)) { best.set(k, nc); q.push([nc, n, l, path.concat(n)]); } } }
-    return null;
+  let adj = null, adjM = null; // Nachbarschaft nur einmal je geladenem Netz aufbauen
+  function planAll(from) {
+    if (adjM !== metro) { adjM = metro; adj = new Map(); for (const l of metro.lines) for (let i = 0; i < l.stops.length; i++) { const a = l.stops[i]; if (!adj.has(a)) adj.set(a, []); if (i) adj.get(a).push([l.stops[i - 1], l.ref]); if (i < l.stops.length - 1) adj.get(a).push([l.stops[i + 1], l.ref]); } }
+    const best = new Map([[from.id + '|', 0]]); const q = [[0, from.id, '', [from.id]]]; const all = new Map();
+    while (q.length) { q.sort((a, b) => a[0] - b[0]); const [c, id, line, path] = q.shift(); if (!all.has(id)) all.set(id, { min: Math.max(2, Math.round(c)), path, line }); /* erster Treffer je Station ist der günstigste */ for (const [n, l] of adj.get(id) || []) { const nc = c + 1.8 + (line && l !== line ? 3 : 0); const k = n + '|' + l; if (nc < (best.get(k) ?? 1e9)) { best.set(k, nc); q.push([nc, n, l, path.concat(n)]); } } }
+    return all;
   }
+  // Eine Suche liefert alle Ziele (Fahrkarten-Menü); plan() bleibt für ride() und außen
+  function plan(from, to) { return planAll(from).get(to.id) || null; }
   const reachable = s => { const k = Math.floor(s.p[0] / X.TS) + '_' + Math.floor(s.p[1] / X.TS); return !!X.WIDX.tiles[k]; };
-  let menuEl = null;
+  let menuEl = null, closeTravel = null;
   function travelMenu(st) {
     if (!menuEl) { menuEl = document.createElement('div'); menuEl.id = 'metromenu'; menuEl.style.cssText = 'position:fixed;inset:0;background:#000b;display:none;align-items:center;justify-content:center;z-index:45;font-family:system-ui,sans-serif'; document.body.appendChild(menuEl); }
-    const dests = metro.stations.filter(s => s.id !== st.id && reachable(s)).map(s => ({ s, p: plan(st, s) })).filter(d => d.p).sort((a, b) => a.p.min - b.p.min);
+    const all = planAll(st); const dests = metro.stations.filter(s => s.id !== st.id && reachable(s)).map(s => ({ s, p: all.get(s.id) })).filter(d => d.p).sort((a, b) => a.p.min - b.p.min);
     const mine = dests.filter(d => d.s.lines.some(l => st.lines.includes(l))), other = dests.filter(d => !d.s.lines.some(l => st.lines.includes(l)));
     const item = d => `<div class="mi" data-id="${d.s.id}" style="display:flex;justify-content:space-between;gap:10px;padding:6px 8px;border-radius:7px;cursor:pointer"><span>${d.s.lines.map(l => `<b style="background:${LCOL(l)};color:#fff;border-radius:4px;padding:0 5px;font-size:12px;margin-right:4px">${l}</b>`).join('')}${d.s.name}</span><span style="color:#aaa">${d.p.min} Min.</span></div>`;
     menuEl.innerHTML = `<div style="background:#16181d;color:#eee;border:1px solid #333;border-radius:12px;padding:16px 18px;width:min(560px,94vw);max-height:86vh;overflow:auto"><h3 style="margin:0 0 4px">🚇 ${st.name}</h3><div style="color:#aaa;font-size:13px;margin-bottom:8px">Fahrkarte 3 € · Du hast ${player.money} € · Klick aufs Ziel</div>` +
       (mine.length ? `<div style="color:#ffd84a;font-size:13px;margin:6px 0">Direkt (${st.lines.join(', ')})</div>` + mine.map(item).join('') : '') + (other.length ? `<div style="color:#ffd84a;font-size:13px;margin:10px 0 6px">Mit Umstieg</div>` + other.map(item).join('') : '') +
       `<div style="margin-top:10px;text-align:right"><button id="mm_x" style="background:#2a2d35;color:#eee;border:1px solid #444;border-radius:8px;padding:8px 14px;font:600 14px system-ui;cursor:pointer">Abbrechen</button></div></div>`;
-    const close = () => { menuEl.style.display = 'none'; X.shopOpen = false; window.__noAutoMenu = false; if (wasLocked) { wasLocked = false; try { X.renderer.domElement.requestPointerLock(); } catch (e) {} } };
+    const close = () => { menuEl.style.display = 'none'; X.shopOpen = false; window.__noAutoMenu = false; if (wasLocked) { wasLocked = false; try { X.renderer.domElement.requestPointerLock(); } catch (e) {} } }; closeTravel = close;
     let wasLocked = !!document.pointerLockElement; window.__noAutoMenu = true; if (wasLocked) document.exitPointerLock(); X.shopOpen = true; for (const k in keys) keys[k] = false;
     menuEl.querySelector('#mm_x').onclick = close;
     for (const d of menuEl.querySelectorAll('.mi')) { d.onmouseenter = () => d.style.background = '#2a2d35'; d.onmouseleave = () => d.style.background = ''; d.onclick = () => { close(); ride(st, ST.get(d.dataset.id)); }; }
@@ -377,6 +379,8 @@ export function initInteriors(X, W, D, SH) {
     const h = nearHouse(); if (h) { curT = { label: 'F · Hauseingang', act: () => stairwell(h, { x: player.pos.x, z: player.pos.z, yaw: camYaw.v + Math.PI }) }; return curT.label; }
     return null;
   }
+  // Esc/F schließt das Fahrkarten-Menü selbst (vorher lief das close() des Ladens, Menü blieb stehen, #132); gehaltenes F zählt nicht
+  addEventListener('keydown', e => { if (!menuEl || menuEl.style.display !== 'flex' || !closeTravel) return; if (e.code === 'Escape' || e.code === 'KeyF' && !e.repeat) { closeTravel(); e.preventDefault(); e.stopImmediatePropagation(); } }, true);
   addEventListener('keydown', e => { if (e.code !== 'KeyF' || X.shopOpen || riding || (menuEl && menuEl.style.display === 'flex')) return; if (curT) { e.preventDefault(); curT.act(); } });
   return { update, enter, leave, station, shop, stairwell, travelMenu, ride, plan, get inside() { return inside; }, get metro() { return metro; }, ST, nearMetro };
 }
