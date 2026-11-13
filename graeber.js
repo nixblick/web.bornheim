@@ -131,6 +131,6 @@ export function initGraeber(X) {
       else built.set(e.key, place(makeAnlage(), e.a.x, e.a.z, e.a.ang)); }
   }
   setInterval(() => { try { update(1.5); } catch (e) { console.warn('graeber', e); } }, 1500); // eigener Takt, keine Zeile in der Spielschleife
-  const api = { update, makeGrave, makeAnlage, makeHaltestelle, get count() { return built.size; } };
+  const api = { update, makeGrave, makeAnlage, makeHaltestelle, get count() { return built.size; }, get list() { return [...built].map(([k, g]) => [k, Math.round(g.position.x), Math.round(g.position.z)]); } };
   window.GRAEBER = api; return api;
 }
