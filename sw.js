@@ -22,6 +22,7 @@ const CORE_ASSETS = [
   './vokabaum.js',
   './touch.js',
   './feedback.js',
+  './debugoverlay.js',
   './vendor/three/build/three.module.js',
   './data/tiles/index.json'
 ];
