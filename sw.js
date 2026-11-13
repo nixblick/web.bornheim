@@ -23,6 +23,7 @@ const CORE_ASSETS = [
   './touch.js',
   './feedback.js',
   './debugoverlay.js',
+  './audio.js',
   './vendor/three/build/three.module.js',
   './data/tiles/index.json'
 ];
