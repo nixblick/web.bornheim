@@ -102,9 +102,10 @@ function updateWeather(dt) {
   if (rainPts) { rainPts.visible = weather.rain > 0.05 && !POCKET; rainPts.material.opacity = 0.45 * weather.rain; if (rainPts.visible) { rainU.value = (rainU.value + 26 * dt) % 30; rainPts.position.set(camera.position.x, camera.position.y - 15, camera.position.z); } }
   weather.wet = (weather.wet || 0) + ((weather.rain > 0.1 ? 1 : 0) - (weather.wet || 0)) * dt * (weather.rain > 0.1 ? 0.05 : 0.008);
   STR.update(dt);
-  if (roadMatRef) { const w = weather.wet; roadMatRef.color.setScalar(0.6 - w * 0.25); if (roadMatRef.isMeshStandardMaterial) { roadMatRef.color.setScalar(0.4 - w * 0.15); /* PBR-Asphalt plus Umgebungslicht wirkte bei 0,6 ausgewaschen hellgrau (seit Mittel Standard ist) */ roadMatRef.roughness = 0.95 - w * 0.75; const pm = w > 0.12 ? roadMatRef.userData.pud : null; if (roadMatRef.roughnessMap !== pm) { roadMatRef.roughnessMap = pm; roadMatRef.needsUpdate = true; } roadMatRef.envMapIntensity = 0.2 + w * 2.4; } }
+  if (roadMatRef) { const w = weather.wet; roadMatRef.color.setScalar(0.6 - w * 0.25); if (roadMatRef.isMeshStandardMaterial) { roadMatRef.color.setScalar(0.4 - w * 0.15); /* PBR-Asphalt plus Umgebungslicht wirkte bei 0,6 ausgewaschen hellgrau (seit Mittel Standard ist) */ roadMatRef.roughness = 0.95 - w * 0.75; const pm = w > 0.12 && roadMatRef.userData.pud ? roadMatRef.userData.pud : (roadMatRef.userData.rv || null); if (roadMatRef.roughnessMap !== pm) { roadMatRef.roughnessMap = pm; roadMatRef.needsUpdate = true; } roadMatRef.envMapIntensity = 0.2 + w * 2.4; } }
   updateStreaks(dt);
   if (gradePass) { gradePass.uniforms.wet.value = weather.wet || 0; gradePass.uniforms.night.value = (world.hour < 6.5 || world.hour > 20) ? 1 : 0; }
+  if (bloomPass && bloomPass.baseStrength !== undefined) { const n = world.night ? 1 : 0; bloomPass.strength = bloomPass.baseStrength * (1 + 0.5 * n); bloomPass.threshold = bloomPass.baseThreshold - 0.07 * n; } // Laternen und Schaufenster glühen nachts kräftiger (#164), kein Extra-Pass
   // Gewitter
   if (weather.kind === 'storm' && weather.rain > 0.5) { weather.thunderT -= dt; if (weather.thunderT <= 0) { weather.thunderT = rnd(6, 25); weather.flash = 0.25; const dist = rnd(0.2, 2.5); setTimeout(() => sfx('thunder', clamp(1.2 - dist * 0.4, 0.3, 1)), dist * 1000); } }
   weather.flash = Math.max(0, weather.flash - dt);
@@ -119,8 +120,8 @@ function applyTime() {
   const day = h < 5 ? 0 : h < 7 ? (h - 5) / 2 : h < 18 ? 1 : h < 21 ? 1 - (h - 18) / 3 : 0;
   const dusk = (h > 17 && h < 21.5) ? 1 - Math.abs(h - 19.5) / 2 : (h > 4.5 && h < 8) ? 1 - Math.abs(h - 6.2) / 1.7 : 0;
   const dk = Math.max(0, dusk);
-  lerpC2(_cSky, 0x141830, 0x3a3550, dk).lerp(_cTmp1.setHex(0x8fb6e8), day);
-  lerpC2(_cFog, 0x141830, 0x3a3550, dk).lerp(_cTmp1.setHex(0xb9cde6), day);
+  lerpC2(_cSky, 0x0c1634, 0x3a3550, dk) /* Nacht tiefer blau (#164) */.lerp(_cTmp1.setHex(0x8fb6e8), day);
+  lerpC2(_cFog, 0x111a36, 0x3a3550, dk).lerp(_cTmp1.setHex(0xb9cde6), day);
   const grey = weather.cloud * 0.45; _cSky.lerp(_cTmp1.setHex(0x6b7078), grey * day).multiplyScalar(1 - weather.cloud * 0.25 * day); _cFog.lerp(_cTmp1.setHex(0x7a808a), grey * day);
   if (weather.flash > 0) { _cSky.addScalar(weather.flash * 2); }
   if (skyU) { skyU.top.value.copy(_cSky).multiplyScalar(0.78); skyU.bot.value.copy(_cFog); }
@@ -175,7 +176,7 @@ function applyQuality() {
       for (const [, t] of TILES) if (t.built && t.grp && t.grp.visible) { const dx = (t.tx + 0.5) * TS - cx, dz = (t.tz + 0.5) * TS - cz; if (dx * dx + dz * dz > 420 * 420) hide(t.grp); }
       r0(...args);
       for (let i = 0; i < _aoHid.length; i++) _aoHid[i].visible = true;
-    }; composer.addPass(aoPass); } const LP = LOOK_PRESET[ultra ? 'ultra' : 'hoch']; bloomPass = new UnrealBloomPass(new THREE.Vector2(innerWidth / 2, innerHeight / 2), LP.bloom.strength, LP.bloom.radius, LP.bloom.threshold); composer.addPass(bloomPass); composer.addPass(makeLookPass(ShaderPass, LP)); gradePass = new ShaderPass(GradeShader); gradePass.uniforms.vig.value = 0; composer.addPass(gradePass); if (LP.fxaa) composer.addPass(makeFxaaPass(THREE, ShaderPass, innerWidth, innerHeight)); } composer.setSize(innerWidth, innerHeight); bloomPass.strength = LOOK_PRESET[ultra ? 'ultra' : 'hoch'].bloom.strength * (opts.bloom ?? 1); }
+    }; composer.addPass(aoPass); } const LP = LOOK_PRESET[ultra ? 'ultra' : 'hoch']; bloomPass = new UnrealBloomPass(new THREE.Vector2(innerWidth / 2, innerHeight / 2), LP.bloom.strength, LP.bloom.radius, LP.bloom.threshold); composer.addPass(bloomPass); composer.addPass(makeLookPass(ShaderPass, LP)); gradePass = new ShaderPass(GradeShader); gradePass.uniforms.vig.value = 0; composer.addPass(gradePass); if (LP.fxaa) composer.addPass(makeFxaaPass(THREE, ShaderPass, innerWidth, innerHeight)); } composer.setSize(innerWidth, innerHeight); bloomPass.strength = LOOK_PRESET[ultra ? 'ultra' : 'hoch'].bloom.strength * (opts.bloom ?? 1); bloomPass.baseStrength = bloomPass.strength; bloomPass.baseThreshold = LOOK_PRESET[ultra ? 'ultra' : 'hoch'].bloom.threshold; }
   else composer = null;
 }
 
@@ -1205,6 +1206,8 @@ function chunkStatic(TILE = (+new URLSearchParams(location.search).get("tile") |
   }
 }
 
+// Asphalt: fleckige Rauheit (Flicken, abgefahrene Spuren glatter), 6 m Kachel, als roughnessMap auf dem PBR-Fahrbahnmaterial (#164)
+function roughVarTex() { const t = canvasTex(256, 256, (c, w, h) => { c.fillStyle = '#ececec'; c.fillRect(0, 0, w, h); for (let i = 0; i < 70; i++) { const g = 190 + Math.floor(Math.random() * 60); c.fillStyle = `rgba(${g},${g},${g},0.55)`; c.beginPath(); c.ellipse(Math.random() * w, Math.random() * h, 6 + Math.random() * 30, 4 + Math.random() * 18, Math.random() * 3, 0, 6.3); c.fill(); } for (let i = 0; i < 6000; i++) { const g = 200 + Math.floor(Math.random() * 55); c.fillStyle = `rgb(${g},${g},${g})`; c.fillRect(Math.random() * w, Math.random() * h, 1, 1); } }, 1 / 6, 1 / 6); t.colorSpace = THREE.NoColorSpace; return t; }
 function puddleTex() { const N = 256; const c = document.createElement('canvas'); c.width = c.height = N; const x = c.getContext('2d'); x.fillStyle = '#f0f0f0'; x.fillRect(0, 0, N, N);
   for (let i = 0; i < 26; i++) { const px = Math.random() * N, py = Math.random() * N, r = 6 + Math.random() * 22; const g = x.createRadialGradient(px, py, 0, px, py, r); g.addColorStop(0, 'rgba(25,25,25,1)'); g.addColorStop(0.6, 'rgba(60,60,60,0.8)'); g.addColorStop(1, 'rgba(60,60,60,0)'); x.fillStyle = g; x.save(); x.translate(px, py); x.scale(1, 0.5 + Math.random()); x.translate(-px, -py); x.beginPath(); x.arc(px, py, r, 0, 7); x.fill(); x.restore(); }
   const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(0.05, 0.05); return t; }
@@ -1467,7 +1470,12 @@ function* buildCity() { CITY_PART = 'c0';
         const [pa, pb, ka, kb] = sgn > 0 ? [[bx, bz], [ax, az], yb, ya] : [[ax, az], [bx, bz], ya, yb];
         const A = [pa[0] + ox, ka, pa[1] + oz], B = [pb[0] + ox, kb, pb[1] + oz], C = [pb[0] + ox, yt, pb[1] + oz], D = [pa[0] + ox, yt, pa[1] + oz];
         const tri = (P, Q, R, uP, uQ, uR, cP, cQ, cR) => { v.push(...P, ...Q, ...R); uvs.push(...uP, ...uQ, ...uR); nn.push(nx, 0, nz, nx, 0, nz, nx, 0, nz); cc.push(cP, cP, cP, cQ, cQ, cQ, cR, cR, cR); };
-        tri(A, B, C, [along, 0], [along + l, 0], [along + l, H], 0.78, 0.78, 0.96); tri(A, C, D, [along, 0], [along + l, H], [along, H], 0.78, 0.96, 0.96);
+        /* Sockel (#164): dunkle Kante bis 45 cm über dem Gehweg (Band beginnt 40 cm darunter), darüber fast hell; gleiche Draw-Calls, 2 Dreiecke mehr je Kante */
+        const ma = ka + 0.85, mb = kb + 0.85;
+        if (yt - Math.max(ma, mb) > 0.3) { const va = H * 0.85 / (yt - ka), vb = H * 0.85 / (yt - kb), MA = [pa[0] + ox, ma, pa[1] + oz], MB = [pb[0] + ox, mb, pb[1] + oz];
+          tri(A, B, MB, [along, 0], [along + l, 0], [along + l, vb], 0.5, 0.5, 0.88); tri(A, MB, MA, [along, 0], [along + l, vb], [along, va], 0.5, 0.88, 0.88);
+          tri(MA, MB, C, [along, va], [along + l, vb], [along + l, H], 0.88, 0.88, 0.96); tri(MA, C, D, [along, va], [along + l, H], [along, H], 0.88, 0.96, 0.96); }
+        else { tri(A, B, C, [along, 0], [along + l, 0], [along + l, H], 0.78, 0.78, 0.96); tri(A, C, D, [along, 0], [along + l, H], [along, H], 0.78, 0.96, 0.96); }
         along += l;
       }
       if (v.length) { const bg = new THREE.BufferGeometry(); bg.setAttribute('position', new THREE.Float32BufferAttribute(v, 3)); bg.setAttribute('normal', new THREE.Float32BufferAttribute(nn, 3)); bg.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2)); bg.setAttribute('color', new THREE.Float32BufferAttribute(cc, 3)); const gk = kind === 'res' && GEWERBE.has(b) ? 'resshop' : kind; if (!gfByKind.has(gk)) gfByKind.set(gk, []); gfByKind.get(gk).push(bg); }
@@ -1600,7 +1608,7 @@ function* buildCity() { CITY_PART = 'c0';
   yield; CITY_PART = 'c13'; const plazas = []; for (const r of CITY.roads) if (isPedArea(r)) { const sh = new THREE.Shape(r.p.map(([x, z]) => new THREE.Vector2(x, -z))); const pg = new THREE.ShapeGeometry(sh); pg.rotateX(-Math.PI / 2); plazas.push(drape(pg, 0.025, 2.5, 0.05, 10, true)); }
   if (plazas.length && WALK_MAT) flatMat(mergeGeometries(plazas), WALK_MAT);
   yield; CITY_PART = 'c14'; { const pedG = ribbon(CITY.roads.filter(r => r.ped && !isPedArea(r) && r.w >= 4), 0.042, r => r.w); if (pedG) flatMat(pedG, GRANIT_MAT || (GRANIT_MAT = Object.assign(new THREE.MeshLambertMaterial({ map: canvasTex(256, 256, (c, w, h) => { c.fillStyle = '#9c9a96'; c.fillRect(0, 0, w, h); for (let i = 0; i < 9000; i++) { c.fillStyle = pick(['#6e6c69', '#c4c2bd', '#888682', '#b0aea9']); c.fillRect(Math.random() * w, Math.random() * h, 1.5, 1.5); } c.strokeStyle = 'rgba(40,40,40,0.55)'; c.lineWidth = 1.5; for (let y = 0; y < h; y += 32) { c.beginPath(); c.moveTo(0, y); c.lineTo(w, y); c.stroke(); for (let x = (y / 32) % 2 ? 0 : 32; x < w; x += 64) { c.beginPath(); c.moveTo(x, y); c.lineTo(x, y + 32); c.stroke(); } } }, 1 / 4, 1 / 4) }), { userData: { shared: true } }))); } // Granitplatten in Fußgängerzonen (Foto TG Bornheim, Innenstadt)
-  yield; CITY_PART = 'c15'; const fahrRoads = CITY.roads.filter(r => !isPedArea(r) && !(r.ped && r.w >= 4)); const roadG = ribbon(fahrRoads.filter(r => !STR.sorte(r)), 0.04, r => r.w); /* Sorte 0: bisheriger Asphalt; 1–3 (neuer Asphalt, Pflaster) darunter, ab Mittel (#153) */ if (roadG) { const rm = new THREE.Mesh(roadG, roadMatRef || ((LOW_GFX || opts.potato) ? new THREE.MeshLambertMaterial({ map: fahrbahnTex, color: 0xb8b8b8 }) : new THREE.MeshStandardMaterial(Object.assign({ map: fahrbahnTex, normalMap: TEX.asphaltN, color: 0xb8b8b8 }, { roughness: 0.92, metalness: 0, roughnessMap: null })))); /* Sparmodus und „Sehr schwacher Rechner“: Lambert mit Map */ if (rm.material.userData.pud === undefined) { rm.material.userData.pud = rm.material.isMeshStandardMaterial ? null : puddleTex(); rm.material.userData.shared = true; STR.nass(rm.material); /* Pfützen jetzt im Shader (#153) */ } rm.receiveShadow = true; scene.add(rm); roadMatRef = rm.material; }
+  yield; CITY_PART = 'c15'; const fahrRoads = CITY.roads.filter(r => !isPedArea(r) && !(r.ped && r.w >= 4)); const roadG = ribbon(fahrRoads.filter(r => !STR.sorte(r)), 0.04, r => r.w); /* Sorte 0: bisheriger Asphalt; 1–3 (neuer Asphalt, Pflaster) darunter, ab Mittel (#153) */ if (roadG) { const rm = new THREE.Mesh(roadG, roadMatRef || ((LOW_GFX || opts.potato) ? new THREE.MeshLambertMaterial({ map: fahrbahnTex, color: 0xb8b8b8 }) : new THREE.MeshStandardMaterial(Object.assign({ map: fahrbahnTex, normalMap: TEX.asphaltN, color: 0xb8b8b8 }, { roughness: 0.92, metalness: 0, roughnessMap: null })))); /* Sparmodus und „Sehr schwacher Rechner“: Lambert mit Map */ if (rm.material.userData.pud === undefined) { rm.material.userData.pud = rm.material.isMeshStandardMaterial ? null : puddleTex(); rm.material.userData.rv = rm.material.isMeshStandardMaterial ? roughVarTex() : null; rm.material.userData.shared = true; STR.nass(rm.material); /* Pfützen jetzt im Shader (#153) */ } rm.receiveShadow = true; scene.add(rm); roadMatRef = rm.material; }
   yield; CITY_PART = 'c16'; for (const so of [1, 2, 3]) { const g = ribbon(fahrRoads.filter(r => STR.sorte(r) === so), 0.04 + so * 0.002, r => r.w); if (g) flatMat(g, STR.belagMat(so, TEX.asphaltN)); }
   yield; CITY_PART = 'c17'; STR.ecken(CITY.roads, m => scene.add(m)); // Bordsteinecken als Bogen (ab Mittel)
   // Fußwege: Stücke, die im Gehwegband einer Straße liegen (in OSM oft als eigene Linie direkt neben der Fahrbahn), weglassen;
@@ -3105,7 +3113,7 @@ const _nearCars = [];
 function update(dt) {
   ANIM_DT = dt;
   dynRes(); if (!started || menuOpen) return; streamUpdate(dt); if (!hereReady()) { showBuild(true); waitMsg = true; return; } else if (waitMsg) { waitMsg = false; showBuild(false); } updateWeather(dt); if (mapOpen && Math.floor(worldT * 2) !== Math.floor((worldT - dt) * 2)) drawBigMap(); worldT += dt; world.hour = (world.hour + dt * world.speed) % 24; applyTime();
-  const emI = world.night ? 1.0 : 0.25 * (1 - world.day); for (const o of nightOnly) o.visible = world.night; for (const m of emissiveMats) m.emissiveIntensity = emI; for (const m of sharedEmissiveMats) m.emissiveIntensity = emI;
+  const emI = world.night ? 1.0 : 0.25 * (1 - world.day); for (const o of nightOnly) o.visible = world.night; for (const m of emissiveMats) m.emissiveIntensity = emI; for (const m of sharedEmissiveMats) m.emissiveIntensity = emI; { const lh = _basCache.get(0xffe3a0); if (lh) lh.color.setHex(0xffe3a0).multiplyScalar(world.night ? 2.2 : 1); } /* Laternenkopf über 1: Bloom greift, auf Mittel heller im Tonemapping (#164) */
   if (Math.floor(worldT * 4) !== sigTick) { sigTick = Math.floor(worldT * 4); /* Ampelfarben mit 4 Hz statt jedes Bild hochladen */ for (const lm of signalMeshes) { const L = lm.userData.lights; const ph = worldT % 8; for (let i = 0; i < L.length; i++) { const l = L[i]; const red = signalRed(l.hd, worldT); const amber = !red && ph > 6.6, redAmber = red && ph > 7.2; const on = l.k === 0 ? red : l.k === 1 ? (amber || redAmber) : (!red && !amber); lm.setColorAt(i, SIG_C[l.k][on ? 1 : 0]); } lm.instanceColor.needsUpdate = true; } }
   const ctrl = { fwd: keys.KeyW || keys.ArrowUp, back: keys.KeyS || keys.ArrowDown, left: keys.KeyA || keys.ArrowLeft, right: keys.KeyD || keys.ArrowRight, brake: keys.Space, run: keys.ShiftLeft || keys.ShiftRight };
   if (player.dead) { if (keys.Enter) respawn(); }
