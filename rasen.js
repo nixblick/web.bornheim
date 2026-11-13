@@ -124,7 +124,7 @@ export function initRasen(X) {
   function reset() { cells.clear(); pending = []; lastX = lastZ = 1e9; if (mesh) mesh.count = 0; total = 0; }
 
   function update(dt) {
-    const q = opts.quality || 'mittel', st = opts.potato || (X.WEAK_GPU && !opts.rasenForce) ||  X.inPocket && X.inPocket(camera.position.x, camera.position.z) ? null : STUFE[q] || null;
+    const q = opts.quality || 'mittel', st = !opts.rasenForce && (opts.potato || X.WEAK_GPU) ||  X.inPocket && X.inPocket(camera.position.x, camera.position.z) ? null : STUFE[q] || null;
     if (st !== stufe) { stufe = st; reset(); if (st) { dens = st.d; rad = st.r; wind.uFade.value.set(rad * 0.72, rad - 1); } }
     if (mesh) mesh.visible = !!stufe; if (!stufe) return;
     wind.uTime.value += dt; wind.uWind.value = X.weather && X.weather.wind ? 1 + X.weather.wind : (X.weather && X.weather.rain ? 1.6 : 1);
