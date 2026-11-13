@@ -18,12 +18,18 @@ import { initFire } from './fire.js';
 import { initHeli } from './heli.js';
 import { initEulen } from './eulen.js';
 import { applyLookTone, makeLookPass, makeFxaaPass, LOOK_PRESET } from './look.js';
+import { initLichtpfuetzen } from './lichtpfuetzen.js';
+import { autolack } from './autolack.js';
 import { initVokabaum } from './vokabaum.js';
 import { initLaufrunden } from './laufrunden.js';
+import { installDunst, initDunst } from './dunst.js';
+import { initRasen, rasenMat, RASEN_KINDS } from './rasen.js';
 import { initLandmarks } from './landmarks.js';
 import { initGraeber } from './graeber.js';
 import { initWahrzeichen, markLandmark } from './wahrzeichen.js';
 import { disposeHierarchy } from './dispose.js';
+import { initPhone } from './phone.js';
+import { initMenu } from './menu.js';
 const GradeShader = { uniforms: { tDiffuse: { value: null }, vig: { value: 0.32 }, wet: { value: 0 }, night: { value: 0 } }, vertexShader: 'varying vec2 vUv; void main(){ vUv=uv; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0); }',
   fragmentShader: 'uniform sampler2D tDiffuse; uniform float vig, wet, night; varying vec2 vUv; void main(){ vec4 c=texture2D(tDiffuse,vUv); vec3 col=c.rgb; float l=dot(col,vec3(0.299,0.587,0.114)); col=mix(vec3(l),col,1.12-wet*0.25); col=(col-0.5)*1.06+0.5; col*=mix(vec3(1.0),vec3(0.92,0.97,1.06),wet*0.7+night*0.5); col=mix(col,col*vec3(1.04,1.0,0.94),0.6*(1.0-night)); vec2 d=vUv-0.5; col*=1.0-vig*dot(d,d)*2.2; gl_FragColor=vec4(clamp(col,0.0,1.0),c.a); }' };
 let aoPass = null, gradePass = null;
@@ -122,6 +128,7 @@ function applyTime() {
   if (!world.sunDir) world.sunDir = new THREE.Vector3();
   world.sunDir.set(Math.cos(ang) * 120, Math.max(8, Math.sin(ang) * 160), 60);
   world.night = day < 0.35; world.day = day;
+  if (typeof PFUETZEN !== 'undefined' && PFUETZEN) PFUETZEN.update(day, weather.rain); // Licht-Pfützen blenden in der Dämmerung ein (#152)
 }
 const sun = new THREE.DirectionalLight(0xffa860, 1.6);
 sun.castShadow = true;
@@ -203,6 +210,7 @@ const GPU = detectGPU(); let QUALITY = 'mittel', QUALITY_AUTO = false, WEAK_VIEW
 try { const o = JSON.parse(localStorage.getItem('notgta.opts') || '{}'); if (o.quality) QUALITY = o.quality; else { const a = autoQuality(GPU); QUALITY = a === 'ultra' ? 'hoch' : a; QUALITY_AUTO = true; } /* Standard nach GPU, höchstens „Hoch“: „Mittel“ mit Schatten lief auf Intel UHD so schnell wie „Niedrig“ (41,8 zu 40,7 fps, 09.11.2026), sah aber deutlich besser aus; Software-Renderer bekommen weiter „Niedrig“ */ if (WEAK_GPU && !o.weakTuned) WEAK_VIEW = true; } catch (e) {}
 // Sparmodus: „Niedrig“ oder integrierte GPU → Figuren, Autos und Straße mit MeshLambertMaterial (kein PBR, kein Umgebungslicht), Anisotropie global aus der Stufe
 const LOW_GFX = WEAK_GPU || QUALITY === 'niedrig';
+installDunst(THREE, !LOW_GFX); // Höhendunst ab „Mittel“ (dunst.js, #152), vor dem ersten Kompilieren
 let ANISO = QUALITY === 'ultra' ? renderer.capabilities.getMaxAnisotropy() : QUALITY === 'niedrig' ? 2 : 4;
 if (LOW_GFX) scene.environment = null; else { const pm = new THREE.PMREMGenerator(renderer); scene.environment = pm.fromScene(new RoomEnvironment(), 0.04).texture; scene.environmentIntensity = 0.6; pm.dispose(); }
 // GLB-Materialien (Standard/Physical) einmalig nach Lambert wandeln: map, Farbe, Emissive, Transparenz bleiben; Skinning setzt three.js automatisch
@@ -1097,9 +1105,9 @@ function buildParked() {
   const TG = {};
   for (const type of Object.keys(CAR_TPL)) { const T = CAR_TPL[type]; T.root.updateMatrixWorld(true); const body = [], rest = []; let atlas = null;
     T.root.traverse(m => { if (!m.isMesh) return; const g = toNI(m.geometry.clone().applyMatrix4(m.matrixWorld)); if (BODY_MATS.includes(m.material.name)) body.push(g); else { if (m.material.map) atlas = m.material.map; rest.push(withColor(g, m.material.color)); } });
-    TG[type] = { body: body.length ? mergeGeometries(body) : null, rest: rest.length ? mergeGeometries(rest) : null, restMat: atlas ? new THREE.MeshLambertMaterial({ map: atlas }) : new THREE.MeshLambertMaterial({ vertexColors: true }) }; }
+    TG[type] = { body: body.length ? mergeGeometries(body) : null, rest: rest.length ? mergeGeometries(rest) : null, restMat: (m => LACK ? LACK.rest(m) : m)(atlas ? new THREE.MeshLambertMaterial({ map: atlas }) : new THREE.MeshLambertMaterial({ vertexColors: true })) }; }
   for (const t of Object.values(TG)) { for (const g of [t.body, t.rest]) if (g) g.userData.shared = true; t.restMat.userData.shared = true; } return TG; })());
-  if (!PARK_LOW) { PARK_LOW = { bodyMat: new THREE.MeshLambertMaterial({ color: 0xffffff }) }; PARK_LOW.bodyMat.userData.shared = true; }
+  if (!PARK_LOW) { PARK_LOW = { bodyMat: LACK ? LACK.body : new THREE.MeshLambertMaterial({ color: 0xffffff }) }; PARK_LOW.bodyMat.userData.shared = true; }
   const bodyMat = PARK_LOW.bodyMat;
   // Ferne Stufe: einfacher Kasten mit Fensterband
   const lp = []; const lcol = (g, c) => withColor(toNI(g), new THREE.Color(c));
@@ -1474,11 +1482,11 @@ function* buildCity() {
   const byCol = new Map();
   for (const g of CITY.green) { if (++YC % 10 === 0) yield;
     const shape = new THREE.Shape(g.p.map(([x, z]) => new THREE.Vector2(x, -z)));
-    let geo = new THREE.ShapeGeometry(shape); geo.rotateX(-Math.PI / 2); geo = drape(geo, g.k === 'pitch' || g.k === 'playground' ? 0.07 : 0.05, 2.5, 0.05, 10);
-    const col = g.k === 'pitch' ? (sportCol[g.s] || 0x7a7f86) : (greenCol[g.k] || 0x6f9a52);
-    if (!byCol.has(col)) byCol.set(col, []); byCol.get(col).push(geo);
+    const lawn = RASEN_KINDS.has(g.k); let geo = new THREE.ShapeGeometry(shape); geo.rotateX(-Math.PI / 2); geo = drape(geo, g.k === 'pitch' || g.k === 'playground' ? 0.07 : 0.05, 2.5, 0.05, 10, lawn);
+    const col = g.k === 'pitch' ? (sportCol[g.s] || 0x7a7f86) : (greenCol[g.k] || 0x6f9a52); const bk = lawn ? 'r' + col : col; /* Rasen: Bodentextur aus rasen.js (uv in Weltmetern) */
+    if (!byCol.has(bk)) byCol.set(bk, []); byCol.get(bk).push(geo);
   }
-  for (const [col, geos] of byCol) { const m = new THREE.Mesh(mergeGeometries(geos), shLambert(col)); m.receiveShadow = true; scene.add(m); }
+  for (const [col, geos] of byCol) { const m = new THREE.Mesh(mergeGeometries(geos), typeof col === 'string' ? rasenMat(THREE, +col.slice(1)) : shLambert(col)); m.receiveShadow = true; scene.add(m); }
   // Spielplatzgeräte und Sportplatz-Linien
   const propGeos = { red: [], blue: [], yellow: [], wood: [], white: [], steel: [] };
   const bx = (w, h, d, x, y, z, ry, bucket) => { const g = new THREE.BoxGeometry(w, h, d); if (ry) g.rotateY(ry); g.translate(x, y + TH(x, z), z); propGeos[bucket].push(g); };
@@ -1644,7 +1652,7 @@ function* buildCity() {
   const spotG = LAMP_SPOT_G || (LAMP_SPOT_G = (() => { const g = new THREE.CircleGeometry(6, 14); g.rotateX(-Math.PI / 2); g.userData.shared = true; return g; })());
   const spotMat = SPOT_GLOW_MAT || (SPOT_GLOW_MAT = Object.assign(new THREE.MeshBasicMaterial({ color: 0xffc77a, map: glowTex, transparent: true, opacity: 0.55, blending: THREE.AdditiveBlending, depthWrite: false }), { userData: { shared: true } }));
   const spotM = new THREE.InstancedMesh(spotG, spotMat, lamps.length);
-  lamps.forEach((sp, i) => { o.position.set(sp[0], 0.07 + TH(sp[0], sp[1]), sp[1]); o.scale.setScalar(1); o.updateMatrix(); spotM.setMatrixAt(i, o.matrix); sp.lm = lm; sp.hm = hm; sp.spotM = spotM; sp.pts = pts; sp.i = i; }); spotM.computeBoundingSphere(); scene.add(spotM); nightOnly.push(spotM);
+  lamps.forEach((sp, i) => { o.position.set(sp[0], 0.07 + TH(sp[0], sp[1]), sp[1]); o.scale.setScalar(1); o.updateMatrix(); spotM.setMatrixAt(i, o.matrix); sp.lm = lm; sp.hm = hm; sp.spotM = spotM; sp.pts = pts; sp.i = i; }); if (typeof PFUETZEN !== 'undefined' && PFUETZEN) PFUETZEN.attach(spotM, lamps); spotM.computeBoundingSphere(); scene.add(spotM); nightOnly.push(spotM);
 }
 function extraTrees(n) {
   const out = []; let tries = 0;
@@ -1932,6 +1940,7 @@ if (CAR_TPL.ev) { // 12.11.2026: E-Auto auch als Frankfurter Taxi (hellelfenbein
   for (const sx of [-0.9, 0.9]) { bx(0.3, 0.14, 0.05, hl, sx, 0.75, 6.02); bx(0.25, 0.4, 0.05, tl, sx, 0.9, -6.02); }
   for (const z of [3.9, -3.2]) for (const sx of [-1, 1]) { const piv = new THREE.Object3D(); piv.position.set(sx * 1.1, 0.5, z); piv.userData.wheel = true; const w = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 0.3, 16), schw); w.rotation.z = Math.PI / 2; piv.add(w); inner.add(piv); }
   root.updateMatrixWorld(true); const b = new THREE.Box3().setFromObject(root), s = b.getSize(new THREE.Vector3()); inner.position.y = -b.min.y; CAR_TPL.bus = { root, dims: { w: s.x, h: s.y, l: s.z } }; }
+const LACK = autolack(THREE, CAR_TPL, QUALITY, LOW_GFX); // Sunset-Optik: Klarlack, Glas, Felgen (#152)
 const CAR_PICK = ['ev', 'ev', 'ev', 'evtaxi', 'sedan', 'sedan', 'small', 'small', 'suv', 'hatchback', 'hatchback', 'wagon', 'wagon', 'taxi'].filter(n => CAR_TPL[n]); /* eigenes E-Auto am häufigsten (12.11.2026) */
 function carBodyColor(name) { if (name === 'bus') return 0x19a7b8; return name === 'taxi' || name === 'evtaxi' ? 0xf0e3b8 : name === 'evpolice' ? 0xf3f5f7 : name === 'evkdow' ? 0xe8281e : name === 'police' ? 0xd5dbe2 : pick(CARCOL); }
 function setCarColor(c, col) { c.userData.col = col; for (const m of c.userData.bodyMats || []) m.color.setHex(col).convertSRGBToLinear(); if (!c.userData.bodyMats) c.traverse(o => { if (o.isMesh && o.material?.color && o === c.children[0]) o.material.color.setHex(col); }); }
@@ -3016,7 +3025,7 @@ const quickPairs = [];
     const push = () => { if (c.type === 'checkbox') o.checked = c.checked; else o.value = c.value; o.dispatchEvent(new Event('input', { bubbles: true })); o.dispatchEvent(new Event('change', { bubbles: true })); show(); };
     c.addEventListener('input', push); c.addEventListener('change', push); quickPairs.push([o, c, show]); } } }
 function quickSync() { for (const [o, c, show] of quickPairs) { if (c.type === 'checkbox') c.checked = o.checked; else c.value = o.value; show(); } }
-MENU_HOOKS.push(() => setTimeout(() => { quickSync(); MENU_TAB('schnell'); }, 0));
+MENU_HOOKS.push(() => setTimeout(quickSync, 0)); /* #150: Startseite setzt menu.js (Übersicht), damit F1 und Handy-Karte ihren Reiter behalten */
 // Karte im Menü: springen, U-Bahn und Bus fahren
 let pmX = 0, pmZ = 0, pmSpan = 3000; const PM_OFF = new Set(); const pmHits = [];
 // Übersicht der ganzen Stadt (data/overview.json, tools/build_overview.py): Hintergrund für Gegenden ohne geladene Kachel
@@ -3086,9 +3095,9 @@ $('cont').onclick = () => { let d = null; try { d = JSON.parse(localStorage.getI
 { const bs = CITY.roads.filter(r => r.n === 'Berger Straße').sort((a, b) => Math.hypot(a.p[0][0] - 150, a.p[0][1] + 100) - Math.hypot(b.p[0][0] - 150, b.p[0][1] + 100)); const r = bs[0] || CITY.roads[0]; const [ax, az] = r.p[0], [bx, bz] = r.p[1 % r.p.length];
   const l = Math.hypot(bx - ax, bz - az) || 1; const nx = -(bz - az) / l, nz = (bx - ax) / l; player.pos.set((ax + bx) / 2 + nx * 2, 0, (az + bz) / 2 + nz * 2); player.pos.y = TH(player.pos.x, player.pos.z); camYaw.v = Math.atan2(bx - ax, bz - az) + Math.PI; }
 while (solidAt(player.pos.x, player.pos.z) >= 0) player.pos.x += 3;
-const X = { FAR_HAZE, THREE, scene, camera, renderer, player, peds, cars, shootables, pickups, FX, puff, losFactor, keys, camYaw, camPitch, opts, world, weather, CITY, TH, solidAt, solidAtH, floorAt, nearestEdge, edgeNormal, moveWithCollision, makeHuman, makeCar, makeAmbulance, dropRider, tipBike, rehome, spawnCar, spawnPedAt, playAnim, animateWalk, damage, explode, burst, smoke, wakeParked, wakeParkedRay, sfx, SND, showMsg, raiseWanted, camShake, freeSkel, canvasTex, tracerMat, makeGun, dentCar, rnd, clamp, pick, lerpAngle, distSegSq, pointInPoly, randomRoadPoint, roadsDrivable, driveCar, carFx, carTerrain, exitCar, syncHand, CHAR, coneTex, hurtPlayer, card, closeMenu, saveGame, lockMouse, disposeCar,
-  listeners: [], mmHooks: MM_HOOKS, menuHooks: MENU_HOOKS, rallyLimit: 8, get creative() { return creative; }, creativeSpawnerActive, pedRoads: () => pedRoads, roadsNear: (x, z, R, car) => roadsNear(x, z, R, car), streetAt: (x, z) => streetNameAt(x, z), barrierNear: (x, z, r) => barrierHit(x, z, r), storyBusy: () => STORY ? STORY.busy : false };
-var WPN = initWeapons(X); var DEMO = initDemo(X, WPN); var FIRE = initFire(X, WPN, DEMO); var STORY = initStory(X, WPN, DEMO, FIRE); var SHOPS = initShops(X, WPN); Object.assign(X, { wachen: WACHEN, nearestRoadDir, pushOffRoads, setPocket: p => { POCKET = p; camera.userData.init = false; }, inPocket, streamInit, roofHeight, WORLD, TILES, TS, WIDX }); var INTERIORS = initInteriors(X, WPN, DEMO, SHOPS); var PROGRESS = initProgress(X); var HELI = initHeli(X); var EULEN = null; try { EULEN = initEulen(X); } catch (e) { console.warn('Frischlufteulen aus', e); } var VOKA = null; var LAUF = null; try { VOKA = initVokabaum(X); try { LAUF = initLaufrunden(X); X.VOKA_BUSY = () => !!(VOKA && (VOKA.mission || VOKA.ped)); X.PROGRESS_GAIN = (n, why) => PROGRESS.gain(n, why); } catch (e) { console.warn('Laufrunden', e); LAUF = null; } } catch (e) { console.warn('Vokabaum-Mission aus', e); } var LANDMARKS = initLandmarks(X); initGraeber(X); var WAHRZ = initWahrzeichen(X);
+const X = { FAR_HAZE, sun, THREE, scene, camera, renderer, player, peds, cars, shootables, pickups, FX, puff, losFactor, keys, camYaw, camPitch, opts, world, weather, CITY, TH, solidAt, solidAtH, floorAt, nearestEdge, edgeNormal, moveWithCollision, makeHuman, makeCar, makeAmbulance, dropRider, tipBike, rehome, spawnCar, spawnPedAt, playAnim, animateWalk, damage, explode, burst, smoke, wakeParked, wakeParkedRay, sfx, SND, showMsg, raiseWanted, camShake, freeSkel, canvasTex, tracerMat, makeGun, dentCar, rnd, clamp, pick, lerpAngle, distSegSq, pointInPoly, randomRoadPoint, roadsDrivable, driveCar, carFx, carTerrain, exitCar, syncHand, CHAR, coneTex, hurtPlayer, card, closeMenu, saveGame, lockMouse, disposeCar,
+  listeners: [], mmHooks: MM_HOOKS, menuHooks: MENU_HOOKS, rallyLimit: 8, get creative() { return creative; }, creativeSpawnerActive, pedRoads: () => pedRoads, roadsNear: (x, z, R, car) => roadsNear(x, z, R, car), streetAt: (x, z) => streetNameAt(x, z), barrierNear: (x, z, r) => barrierHit(x, z, r), storyBusy: () => STORY ? STORY.busy : false, openMenu, menuTab: t => MENU_TAB(t), get started() { return started; }, menuOpen: () => menuOpen };
+var PFUETZEN = initLichtpfuetzen(X); var DUNST = initDunst(X); var WPN = initWeapons(X); var DEMO = initDemo(X, WPN); var FIRE = initFire(X, WPN, DEMO); var STORY = initStory(X, WPN, DEMO, FIRE); var SHOPS = initShops(X, WPN); Object.assign(X, { wachen: WACHEN, nearestRoadDir, pushOffRoads, setPocket: p => { POCKET = p; camera.userData.init = false; }, inPocket, streamInit, roofHeight, WORLD, TILES, TS, WIDX }); var INTERIORS = initInteriors(X, WPN, DEMO, SHOPS); var PROGRESS = initProgress(X); var HELI = initHeli(X); var EULEN = null; try { EULEN = initEulen(X); } catch (e) { console.warn('Frischlufteulen aus', e); } var VOKA = null; var LAUF = null; try { VOKA = initVokabaum(X); try { LAUF = initLaufrunden(X); X.VOKA_BUSY = () => !!(VOKA && (VOKA.mission || VOKA.ped)); X.PROGRESS_GAIN = (n, why) => PROGRESS.gain(n, why); } catch (e) { console.warn('Laufrunden', e); LAUF = null; } } catch (e) { console.warn('Vokabaum-Mission aus', e); } var RASEN = null; try { Object.assign(X, { LOW_GFX, WEAK_GPU, waterAt, deckAt, rasenRoad: (x, z) => onOtherRoad(x, z, null, 0.3) }); RASEN = initRasen(X); } catch (e) { console.warn('Rasen aus', e); } var LANDMARKS = initLandmarks(X); initGraeber(X); var WAHRZ = initWahrzeichen(X); /* #150: Handy (H) und Pausenmenü nach Sunset */ var PHONE = null; try { const SY = { STORY, DEMO, PROGRESS, LAUF, VOKA, get EULEN() { return EULEN; } }; initMenu(X, SY); PHONE = initPhone(X, SY); } catch (e) { console.warn('Handy/Menü', e); }
 for (let i = 0; i < 200 && cars.length < 60; i++) spawnCar(false, player.pos, 10, 260);
 for (let i = 0; i < 55; i++) spawnPed(null);
 spawnPickups(40);
@@ -3245,7 +3254,7 @@ function update(dt) {
     if (near) ht = remountable(near.userData) ? (near.userData.moto ? 'E · Motorrad aufheben' : 'E · Fahrrad aufheben') : near.userData.mode === 'parked' ? (near.userData.cannon ? 'E · Wasserwerfer übernehmen' : near.userData.ambulance ? 'E · Rettungswagen nehmen' : near.userData.moto ? 'E · Motorrad nehmen' : near.userData.bike ? 'E · Fahrrad nehmen' : 'E · einsteigen') : near.userData.moto ? 'E · Motorradfahrer runterziehen' : near.userData.bike ? 'E · Radler runterziehen' : 'E · Fahrer rauszerren';
     else { const px = player.pos.x, pz = player.pos.z; for (const sp of staticParked) { if (!sp.active) continue; const dx = sp.x - px; if (dx > 3.6 || dx < -3.6) continue; const dz = sp.z - pz; if (dz > 3.6 || dz < -3.6) continue; if (dx * dx + dz * dz < 12.96) { ht = 'E · einsteigen'; break; } } } }
   else ht = player.car.userData.cannon ? 'E · aussteigen · Linksklick Wasser · Maus zielt' : player.car.userData.ambulance ? 'E · aussteigen · Leertaste bremsen · H Martinshorn' : player.car.userData.moto ? 'E · absteigen · Linksklick schießen · H hupen' : player.car.userData.bike ? 'E · absteigen · Linksklick schießen · H klingeln' : 'E · aussteigen · Leertaste bremsen';
-  { const sh = SHOPS.update(dt); if (sh && !player.car && !ht) ht = sh; const ih = INTERIORS.update(dt); if (ih) ht = ih; PROGRESS.update(dt); LANDMARKS.update(dt); WAHRZ.update(dt); if (EULEN) EULEN.update(dt); if (VOKA) VOKA.update(dt); if (LAUF) LAUF.update(dt); archCheck(); policeHeli(dt); if (WARN_MAT) WARN_MAT.color.setHex(Math.floor(performance.now() / 750) % 2 ? 0xff2a1a : 0x3a0806); if (player.car && player.car.userData.voi) { const vu = player.car.userData; vu.voiT = (vu.voiT || 0) + dt; if (vu.voiT >= 60) { vu.voiT -= 60; if (player.money >= 2) { player.money -= 2; showMsg('VOI −2 €', 700); } else { showMsg('VOI: GUTHABEN LEER', 1200); exitCar(); } } } const hh = HELI.update(dt); if (hh && (!ht || player.car)) ht = hh; }
+  { const sh = SHOPS.update(dt); if (sh && !player.car && !ht) ht = sh; const ih = INTERIORS.update(dt); if (ih) ht = ih; PROGRESS.update(dt); LANDMARKS.update(dt); WAHRZ.update(dt); if (DUNST) DUNST.update(); if (EULEN) EULEN.update(dt); if (VOKA) VOKA.update(dt); if (LAUF) LAUF.update(dt); if (RASEN) RASEN.update(dt); archCheck(); policeHeli(dt); if (WARN_MAT) WARN_MAT.color.setHex(Math.floor(performance.now() / 750) % 2 ? 0xff2a1a : 0x3a0806); if (player.car && player.car.userData.voi) { const vu = player.car.userData; vu.voiT = (vu.voiT || 0) + dt; if (vu.voiT >= 60) { vu.voiT -= 60; if (player.money >= 2) { player.money -= 2; showMsg('VOI −2 €', 700); } else { showMsg('VOI: GUTHABEN LEER', 1200); exitCar(); } } } const hh = HELI.update(dt); if (hh && (!ht || player.car)) ht = hh; }
   if (!locked && !menuOpen && !mapOpen && !document.hidden && !window.__touch) ht = 'Ins Spiel klicken für Maussteuerung';
   setTxt(hint, ht); setSty(hint, 'display', ht ? 'block' : 'none');
   setSty(cross, 'display', ((!player.car || !player.car.userData.cannon) && !player.dead) ? 'block' : 'none');
@@ -3327,7 +3336,7 @@ let cardT = null; function card(title, sub, sec = 4) { const el = $('card'); el.
 let breathEl = null, breathHint = false;
 function respawn() { player.dead = false; player.hp = 100; player.breath = 1; player.drowning = false; player.wanted = 0; msgEl.style.display = 'none'; for (const c of cars) if (c.userData.police && c !== player.car) c.userData.mode = 'parked'; }
 
-window.G = { barrierHit, HELI, get EULEN() { return EULEN; }, get VOKA() { return VOKA; }, get LAUF() { return LAUF; }, makeMoto, makeAmbulance, updateBikeRacks, onMotorway, PROGRESS, INTERIORS, explode, makeBike, FX, puff, burst, smoke, LOW_GFX, WEAK_GPU, get canvasTexCount() { return _allCanvasTex.length; }, get ANISO() { return ANISO; }, get roadMat() { return roadMatRef; }, DEMN, DEMT, R_DATA, unregisterTile, SHOPS, TILES, WORLD, WIDX, streamUpdate, streamInit, buildTileNow, TS, WPN, DEMO, STORY, FIRE, X, card, hurtPlayer, composerRef: () => composer,  autoQuality, groundH, dentCar, deckAt, surfAt, signalPoles, treeSpots, lampSpots, pushOffRoads, onOtherRoad, floorAt, solidAtH, solidAt, roofHeight, camShake,  CHAR, CAR_TPL, playAnim, makeHuman, makeCar, makeGun, applyQuality,  staticParked, chunkStatic,  saveGame, loadGame, world, opts, pickups, weather, trams, scene, cars, peds, player, camera, camYaw, camPitch, keys, CITY, DEM, TH, renderer, sun, hemi, THREE, shoot, toggleCar, update, toggleCreative, creative, creativePlace, creativeSpawnerActive };
+window.G = { get PHONE() { return PHONE; }, barrierHit, HELI, get EULEN() { return EULEN; }, get VOKA() { return VOKA; }, get LAUF() { return LAUF; }, get RASEN() { return RASEN; }, makeMoto, makeAmbulance, updateBikeRacks, onMotorway, PROGRESS, INTERIORS, explode, makeBike, FX, puff, burst, smoke, LOW_GFX, WEAK_GPU, get canvasTexCount() { return _allCanvasTex.length; }, get ANISO() { return ANISO; }, get roadMat() { return roadMatRef; }, DEMN, DEMT, R_DATA, unregisterTile, SHOPS, TILES, WORLD, WIDX, streamUpdate, streamInit, buildTileNow, TS, WPN, DEMO, STORY, FIRE, X, card, hurtPlayer, composerRef: () => composer,  autoQuality, groundH, dentCar, deckAt, surfAt, signalPoles, treeSpots, lampSpots, pushOffRoads, onOtherRoad, floorAt, solidAtH, solidAt, roofHeight, camShake,  CHAR, CAR_TPL, playAnim, makeHuman, makeCar, makeGun, applyQuality,  staticParked, chunkStatic,  saveGame, loadGame, world, opts, pickups, weather, trams, scene, cars, peds, player, camera, camYaw, camPitch, keys, CITY, DEM, TH, renderer, sun, hemi, THREE, shoot, toggleCar, update, toggleCreative, creative, creativePlace, creativeSpawnerActive };
 let fpsN = 0, fpsT = 0;
 renderer.setAnimationLoop(() => {
   fpsN++; const tn = performance.now(); if (tn - fpsT > 500) { const fe = document.getElementById('fps'); if (fe && opts.fps) fe.textContent = Math.round(fpsN * 1000 / (tn - fpsT)) + ' fps'; fpsN = 0; fpsT = tn; }
