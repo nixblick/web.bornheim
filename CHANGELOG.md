@@ -2,6 +2,8 @@
 
 ## 2026-11-13
 
+- **Spieltest: Rundum-Messung und Bug-Proben:** `tools/proben/wahrzeichen.json` misst je Wahrzeichen 32 Strahlen von außen: wo beginnt die Kollision, wo die sichtbare Wand (ohne Autos, Passanten, Nachbarhäuser); mehr als 3 Abweichungen über 1,5 m = rot. Stadion-Innenraum muss frei sein. Neu `tools/proben/bugs.json`: Rechtsverkehr (#99), HUD-Überlappung (#100), Ausgänge je Station (#97). Proben und Werkzeug kommen im Workflow immer aus dem Stand des Workflows (main oder `--ref`), der Spielcode aus `ref`.
+
 - **Spieltest nimmt Proben immer von main:** Ältere Zweige ohne neue Probendatei lassen sich so trotzdem testen.
 
 - **Spieltest auf GitHub (Actions):** Workflow „Spieltest“ fährt `tools/probe.mjs` auf einem GitHub-Rechner (Headless-Chrome, SwiftShader), je Probendatei ein paralleler Job, Bilder als Artefakt. Start von Hand mit Zweig und Proben oder automatisch bei jedem PR. Tests laufen damit tagsüber ohne Last auf dem Notebook. Neue Probe `tools/proben/wahrzeichen.json` (neun Wahrzeichen aus 70 m, Kollision im Kern, Stadion-Innenraum).
