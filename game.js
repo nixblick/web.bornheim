@@ -64,28 +64,29 @@ const camera = new THREE.PerspectiveCamera(65, (innerWidth > 0 && innerHeight > 
 
 const hemi = new THREE.HemisphereLight(0x8a90c8, 0x4a4038, 1.1); scene.add(hemi);
 const world = { hour: 8, speed: 0.25 / 60, headlights: true }; /* Start 8 Uhr, 1 Spielstunde = 4 Minuten (12.11.2026, André) */
-let skyU = null, HIMMEL = null, skyDome = null, sunDisk = null, skylineMesh = null, skylineBeacons = null; const clouds = [];
+let skyU = null, HIMMEL = null, skyDome = null, sunDisk = null, skylineMesh = null, skylineBeacons = null;
 let WET = null, roadMatRef = null; const lampSpots = []; let streaks = null, streakT = 0;
+// Wiederverwendete Hilfsobjekte für updateStreaks: nichts wird je Lauf neu angelegt
+const _stO = new THREE.Object3D(), _stC = new THREE.Color(), _stD = [], _stL = [], _stI = [], _stCmp = (a, b) => _stD[a] - _stD[b];
 function updateStreaks(dt) {
   const night = (world.hour < 6.5 || world.hour > 19.8) ? 1 : 0; const k = opts.quality === 'niedrig' ? 0 : (weather.wet || 0) * night;
   if (!streaks) { const tex = canvasTex(32, 128, (ctx, w, h) => { const gx = ctx.createLinearGradient(0, 0, w, 0); gx.addColorStop(0, 'rgba(0,0,0,0)'); gx.addColorStop(0.5, 'rgba(255,255,255,1)'); gx.addColorStop(1, 'rgba(0,0,0,0)'); ctx.fillStyle = gx; ctx.fillRect(0, 0, w, h); ctx.globalCompositeOperation = 'destination-in'; const gy = ctx.createLinearGradient(0, 0, 0, h); gy.addColorStop(0, 'rgba(0,0,0,0)'); gy.addColorStop(0.25, 'rgba(0,0,0,1)'); gy.addColorStop(1, 'rgba(0,0,0,0)'); ctx.fillStyle = gy; ctx.fillRect(0, 0, w, h); });
     const g = new THREE.PlaneGeometry(1, 1); g.rotateX(-Math.PI / 2); g.translate(0, 0, 0.5);
     streaks = new THREE.InstancedMesh(g, new THREE.MeshBasicMaterial({ map: tex, color: 0xffd090, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, opacity: 0 }), 60); streaks.frustumCulled = false; streaks.count = 0; scene.add(streaks); }
   streaks.visible = k > 0.05; if (streaks.userData.car) streaks.userData.car.visible = streaks.visible; if (!streaks.visible) return; streaks.material.opacity = 1.6 * k;
-  streakT -= dt; if (streakT > 0 && streaks.count) return; streakT = 0.05;
-  const cx = camera.position.x, cz = camera.position.z; const near = []; for (const l of lampSpots) { const d = (l[0] - cx) ** 2 + (l[1] - cz) ** 2; if (d < 120 * 120 && d > 4) near.push([d, l]); }
-  near.sort((a, b) => a[0] - b[0]); const o = new THREE.Object3D(); let n = 0;
-  for (const [d, [x, z]] of near.slice(0, 60)) { const dist = Math.sqrt(d); o.position.set(x, TH(x, z) + 0.07, z); o.rotation.set(0, Math.atan2(cx - x, cz - z), 0); const L = Math.min(dist * 0.85, 4 + dist * 0.35); o.scale.set(1.3 + dist * 0.015, 1, L); o.updateMatrix(); streaks.setMatrixAt(n++, o.matrix); }
+  streakT -= dt; if (streakT > 0) return; streakT = 0.05; // 20 Hz, auch wenn keine Laterne in Reichweite ist
+  const cx = camera.position.x, cz = camera.position.z; let nn = 0; for (let i = 0; i < lampSpots.length; i++) { const l = lampSpots[i]; const d = (l[0] - cx) ** 2 + (l[1] - cz) ** 2; if (d < 120 * 120 && d > 4) { _stD[nn] = d; _stL[nn] = l; _stI[nn] = nn; nn++; } }
+  _stI.length = nn; _stI.sort(_stCmp); const o = _stO; let n = 0; // die 60 nächsten, Reihenfolge wie bisher (stabile Sortierung über Indizes)
+  for (let i = 0; i < nn && i < 60; i++) { const j = _stI[i], x = _stL[j][0], z = _stL[j][1], dist = Math.sqrt(_stD[j]); o.position.set(x, TH(x, z) + 0.07, z); o.rotation.set(0, Math.atan2(cx - x, cz - z), 0); const L = Math.min(dist * 0.85, 4 + dist * 0.35); o.scale.set(1.3 + dist * 0.015, 1, L); o.updateMatrix(); streaks.setMatrixAt(n++, o.matrix); }
   streaks.count = n; streaks.instanceMatrix.needsUpdate = true;
   // Scheinwerfer (weiß) und Rücklichter (rot) der Autos in der Nähe
   if (!streaks.userData.car) { const m = new THREE.InstancedMesh(streaks.geometry, streaks.material.clone(), 80); m.material.color.setHex(0xffffff); m.frustumCulled = false; m.count = 0; m.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(80 * 3), 3); scene.add(m); streaks.userData.car = m; }
-  const cm = streaks.userData.car; cm.material.opacity = 1.3 * k; let m2 = 0; const col = new THREE.Color();
-  const near2 = cars.filter(c => (c.visible !== false || c.userData.inst) && (c.position.x - cx) ** 2 + (c.position.z - cz) ** 2 < 90 * 90 && c.userData.mode !== 'parked' && c.userData.mode !== 'wreck').slice(0, 20);
-  for (const c of near2) { const u = c.userData, fx = Math.sin(u.heading), fz = Math.cos(u.heading), L = (u.dims ? u.dims.l : 4.2) / 2;
-    for (const [end, cc] of [[1, 0xfff4dd], [-1, 0xff2010]]) { const ex = c.position.x + fx * L * end, ez = c.position.z + fz * L * end; const dist = Math.hypot(ex - cx, ez - cz); if (dist < 3) continue;
+  const cm = streaks.userData.car; cm.material.opacity = 1.3 * k; let m2 = 0, nc = 0; const col = _stC;
+  for (let ci = 0; ci < cars.length && nc < 20; ci++) { const c = cars[ci]; if (!((c.visible !== false || c.userData.inst) && (c.position.x - cx) ** 2 + (c.position.z - cz) ** 2 < 90 * 90 && c.userData.mode !== 'parked' && c.userData.mode !== 'wreck')) continue; nc++; const u = c.userData, fx = Math.sin(u.heading), fz = Math.cos(u.heading), L = (u.dims ? u.dims.l : 4.2) / 2;
+    for (let end = 1; end >= -1; end -= 2) { const cc = end > 0 ? 0xfff4dd : 0xff2010; const ex = c.position.x + fx * L * end, ez = c.position.z + fz * L * end; const dist = Math.hypot(ex - cx, ez - cz); if (dist < 3) continue;
       // nur sichtbar, wenn die Lampe zur Kamera zeigt
       if (((cx - ex) * fx + (cz - ez) * fz) * end < 0) continue;
-      for (const sd of [-0.65, 0.65]) { if (m2 >= 80) break; const x = ex + fz * sd, z = ez - fx * sd; o.position.set(x, surfAt(x, z, c.position.y) + 0.08, z); o.rotation.set(0, Math.atan2(cx - x, cz - z), 0); o.scale.set(0.45 + dist * 0.008, 1, Math.min(dist * 0.8, 2 + dist * 0.3) * (end > 0 ? 1 : 0.6)); o.updateMatrix(); cm.setMatrixAt(m2, o.matrix); cm.setColorAt(m2, col.setHex(cc)); m2++; } } }
+      for (let si = 0; si < 2; si++) { if (m2 >= 80) break; const sd = si ? 0.65 : -0.65; const x = ex + fz * sd, z = ez - fx * sd; o.position.set(x, surfAt(x, z, c.position.y) + 0.08, z); o.rotation.set(0, Math.atan2(cx - x, cz - z), 0); o.scale.set(0.45 + dist * 0.008, 1, Math.min(dist * 0.8, 2 + dist * 0.3) * (end > 0 ? 1 : 0.6)); o.updateMatrix(); cm.setMatrixAt(m2, o.matrix); cm.setColorAt(m2, col.setHex(cc)); m2++; } } }
   cm.count = m2; cm.instanceMatrix.needsUpdate = true; if (cm.instanceColor) cm.instanceColor.needsUpdate = true; }
 function updateWeather(dt) {
   WET.step(dt); // Übergänge, Regen-Partikel, Nässe: wetter.js (#118)
@@ -142,7 +143,7 @@ function applyQuality() {
   const sig = [q, opts.scale || 1, !!opts.ao, innerWidth, innerHeight, devicePixelRatio || 1].join('|'), same = sig === _qSig; _qSig = sig;
   if (!same) renderer.setPixelRatio((q === 'niedrig' ? 0.75 : ultra ? Math.min(1.5, Math.max(1, devicePixelRatio || 1)) : 1) * (opts.scale || 1)); if (!same) renderer.setSize(innerWidth, innerHeight);
   const sm = ultra ? 4096 : q === 'hoch' ? 2048 : 1024; sun.shadow.mapSize.set(sm, sm); { const e = ultra ? 95 : q === 'mittel' ? 50 : 70; /* Mittel: 1024er Karte auf 100 m statt 140 m, ~10 statt 14 cm je Texel: weniger Treppen an Bordsteinkanten */ sc.left = -e; sc.right = e; sc.top = e; sc.bottom = -e; sc.updateProjectionMatrix(); } sun.shadow.radius = ultra ? 2 : 1;
-  WIN_U.value = q === 'niedrig' ? 0 : 1; applyTreeQuality(); rebuildAllTiles();
+  if (HIMMEL) HIMMEL.setStufe(himmelStufe(), !post); WIN_U.value = q === 'niedrig' ? 0 : 1; applyTreeQuality(); rebuildAllTiles();
   if (same) { if (composer && bloomPass) { bloomPass.strength = LOOK_PRESET[ultra ? 'ultra' : 'hoch'].bloom.strength * (opts.bloom ?? 1); bloomPass.baseStrength = bloomPass.strength; } return false; }
   { const an = ANISO = ultra ? renderer.capabilities.getMaxAnisotropy() : q === 'niedrig' ? 2 : 4;
     syncAnisoAll(an);
@@ -159,7 +160,6 @@ function applyQuality() {
     aoPass.render = (...args) => {
       _aoHid.length = 0; const hide = o => { if (o && o.visible) { o.visible = false; _aoHid.push(o); } };
       hide(skyDome); hide(sunDisk); hide(skylineMesh); hide(skylineBeacons); hide(WET && WET.rainPts); hide(farPlane); hide(streaks); if (streaks) hide(streaks.userData.car); if (skids.mesh) hide(skids.mesh); hide(FX.mesh);
-      for (let i = 0; i < clouds.length; i++) hide(clouds[i]);
       for (let i = 0; i < leafMeshes.length; i++) hide(leafMeshes[i]);
       for (let i = 0; i < nightOnly.length; i++) hide(nightOnly[i]);
       const cx = camera.position.x, cz = camera.position.z;
@@ -1011,9 +1011,10 @@ const SKYLINE_TOWERS = [
   [-3059, 976, 20, 48, 96, -1.27, -8, 2], [-2767, 815, 29, 36, 95, -1.32, -7, 2], [-1826, 27, 34, 42, 93, 0.31, -5, 0],
   [546, 1277, 18, 86, 90, -0.21, 1, 3], [-4404, 1463, 21, 61, 87, -0.87, -12, 3]
 ];
+const SKY_KEYS = SKYLINE_TOWERS.map(t => t[6] + '_' + t[7]); // Kachelschlüssel einmal bauen statt 88 Strings je Bild in updateSky
 const _skyO = new THREE.Object3D(), _skyC1 = new THREE.Color(), _skyC2 = new THREE.Color(), _skyTint = new THREE.Color();
 function buildSky() {
-  HIMMEL = makeHimmel(THREE, !LOW_GFX); skyU = HIMMEL.uniforms; skyDome = HIMMEL.dome; scene.add(skyDome); // Verlauf und Wolkendecke in einem Shader (himmel.js, #152)
+  HIMMEL = makeHimmel(THREE, himmelStufe(), !himmelPost()); skyU = HIMMEL.uniforms; skyDome = HIMMEL.dome; scene.add(skyDome); // Verlauf und Wolkendecke in einem Shader (himmel.js, #152)
   const sunTex = canvasTex(128, 128, (ctx, w, h) => { const gr = ctx.createRadialGradient(64, 64, 4, 64, 64, 64); gr.addColorStop(0, 'rgba(255,255,240,1)'); gr.addColorStop(0.15, 'rgba(255,245,210,0.95)'); gr.addColorStop(0.35, 'rgba(255,220,160,0.25)'); gr.addColorStop(1, 'rgba(255,200,120,0)'); ctx.fillStyle = gr; ctx.fillRect(0, 0, w, h); });
   sunDisk = new THREE.Sprite(new THREE.SpriteMaterial({ map: sunTex, fog: false, depthWrite: false, transparent: true, blending: THREE.AdditiveBlending })); sunDisk.scale.set(140, 140, 1); scene.add(sunDisk);
   // Frankfurter Skyline-Horizontschicht: ein einziges InstancedMesh (1 Draw-Call) für alle fernen Wolkenkratzer
@@ -1040,6 +1041,9 @@ function buildSky() {
   skylineBeacons = new THREE.InstancedMesh(bcGeo, bcMat, SKYLINE_TOWERS.length);
   skylineBeacons.userData.noChunk = true; skylineBeacons.frustumCulled = false; scene.add(skylineBeacons);
 }
+// Himmelsstufe aus der aktuellen Qualität (auch beim Umschalten im Menü): 0 einfach, 1 fein, 2 Volumen (Hoch/Ultra)
+function himmelPost() { return opts.quality === 'hoch' || opts.quality === 'ultra'; }
+function himmelStufe() { return WEAK_GPU || opts.quality === 'niedrig' ? 0 : himmelPost() ? 2 : 1; }
 const _sunV = new THREE.Vector3();
 function updateSky(dt) {
   if (BAU_LAMP_MAT) BAU_LAMP_MAT.color.setHex(world.night && Math.floor(performance.now() / 500) % 2 ? 0x4a3a10 : 0xffc21a); // Baustellen-Warnleuchten blinken nachts
@@ -1056,8 +1060,8 @@ function updateSky(dt) {
       const baseCol = world.night ? _skyC1.setHex(0xd8dce6) : _skyC1.setHex(0x7b8ea6).multiplyScalar(0.38 + 0.62 * world.day); // nachts leuchten die Fenster selbst
       const blink = Math.floor(performance.now() / 700) % 2 === 0;
       for (let i = 0; i < SKYLINE_TOWERS.length; i++) {
-        const [tx0, tz0, w, d, h, ang, ktx, ktz] = SKYLINE_TOWERS[i];
-        const tile = TILES.get(ktx + '_' + ktz);
+        const T = SKYLINE_TOWERS[i], tx0 = T[0], tz0 = T[1], w = T[2], d = T[3], h = T[4], ang = T[5];
+        const tile = TILES.get(SKY_KEYS[i]);
         if (tile && tile.built) {
           _skyO.scale.setScalar(0); _skyO.updateMatrix();
           skylineMesh.setMatrixAt(i, _skyO.matrix);
@@ -1066,7 +1070,7 @@ function updateSky(dt) {
         }
         const dx = tx0 - cx, dz = tz0 - cz, dist = Math.hypot(dx, dz) || 1;
         const dProj = Math.min(dist, 760), s = dProj / dist;
-        const inf = WIDX.tiles[ktx + '_' + ktz]; const by = inf ? inf[2] : 98;
+        const inf = WIDX.tiles[SKY_KEYS[i]]; const by = inf ? inf[2] : 98;
         _skyO.position.set(cx + dx * s, cy + (by + h * 0.5 - cy) * s, cz + dz * s);
         _skyO.rotation.set(0, ang, 0);
         _skyO.scale.set(w * s, h * s, d * s);

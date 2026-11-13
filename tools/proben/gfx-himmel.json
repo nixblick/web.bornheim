@@ -192,6 +192,30 @@
   "expect": "window.__H && window.__H.art === 'fein'"
  },
  {
+  "n": "himmel_volumen_abend_sonne",
+  "x": -3300,
+  "z": 2500,
+  "tx": -4300,
+  "tz": 2000,
+  "pitch": -0.3,
+  "hour": 18.6,
+  "wait": 2500,
+  "js": "(async () => { const G = window.G; G.opts.timeSpeed = 0; G.opts.weather = 'cloudy'; G.weather.kind = 'cloudy'; G.weather.rain = 0; G.weather.cloud = 0.7; G.weather.fog = 0.1; await new Promise(r => setTimeout(r, 1500)); let dome = null, sprites = 0; G.scene.traverse(o => { if (o.userData && o.userData.himmel) dome = o; }); if (dome) { const m = dome.material; m.defines.HIMMEL_FEIN = 1; m.defines.HIMMEL_VOLUMEN = 1; m.needsUpdate = true; dome.userData.himmel = 'volumen'; await new Promise(r => setTimeout(r, 1500)); } for (const o of G.scene.children) if (o.isSprite && o.scale.x >= 140 && o.material && o.material.blending !== G.THREE.AdditiveBlending) sprites++; const u = dome && dome.material.uniforms.wolken.value; window.__H = { art: dome && dome.userData.himmel, wolkenSprites: sprites, schwelle: u && +u.x.toFixed(2), deckkraft: u && +u.y.toFixed(2), low: G.LOW_GFX, shader: G.renderer.info.programs.some(p => p.cacheKey.indexOf('HIMMEL_VOLUMEN') >= 0 && G.renderer.getContext().getProgramParameter(p.program, 35714)) }; return JSON.stringify(window.__H); })()",
+  "expect": "window.__H && window.__H.art === 'volumen' && window.__H.shader === true"
+ },
+ {
+  "n": "himmel_volumen_tag_bewoelkt",
+  "x": -3300,
+  "z": 2500,
+  "tx": -2600,
+  "tz": 2000,
+  "pitch": -0.35,
+  "hour": 13,
+  "wait": 2500,
+  "js": "(async () => { const G = window.G; G.opts.timeSpeed = 0; G.opts.weather = 'cloudy'; G.weather.kind = 'cloudy'; G.weather.rain = 0; G.weather.cloud = 0.7; G.weather.fog = 0.1; await new Promise(r => setTimeout(r, 1500)); let dome = null, sprites = 0; G.scene.traverse(o => { if (o.userData && o.userData.himmel) dome = o; }); if (dome) { const m = dome.material; m.defines.HIMMEL_FEIN = 1; m.defines.HIMMEL_VOLUMEN = 1; m.needsUpdate = true; dome.userData.himmel = 'volumen'; await new Promise(r => setTimeout(r, 1500)); } for (const o of G.scene.children) if (o.isSprite && o.scale.x >= 140 && o.material && o.material.blending !== G.THREE.AdditiveBlending) sprites++; const u = dome && dome.material.uniforms.wolken.value; window.__H = { art: dome && dome.userData.himmel, wolkenSprites: sprites, schwelle: u && +u.x.toFixed(2), deckkraft: u && +u.y.toFixed(2), low: G.LOW_GFX, shader: G.renderer.info.programs.some(p => p.cacheKey.indexOf('HIMMEL_VOLUMEN') >= 0 && G.renderer.getContext().getProgramParameter(p.program, 35714)) }; return JSON.stringify(window.__H); })()",
+  "expect": "window.__H && window.__H.art === 'volumen' && window.__H.shader === true"
+ },
+ {
   "n": "himmel_bornheim_tag",
   "x": -119,
   "z": 342,
@@ -200,7 +224,7 @@
   "pitch": -0.3,
   "hour": 13,
   "wait": 6000,
-  "js": "(async () => { const G = window.G; G.opts.timeSpeed = 0; G.opts.weather = 'cloudy'; G.weather.kind = 'cloudy'; G.weather.rain = 0; G.weather.cloud = 0.7; G.weather.fog = 0.1; await new Promise(r => setTimeout(r, 1500)); let dome = null, sprites = 0; G.scene.traverse(o => { if (o.userData && o.userData.himmel) dome = o; }); if (dome) { const m = dome.material; if (false) m.defines.HIMMEL_FEIN = 1; else delete m.defines.HIMMEL_FEIN; m.needsUpdate = true; dome.userData.himmel = 'einfach'; await new Promise(r => setTimeout(r, 800)); } for (const o of G.scene.children) if (o.isSprite && o.scale.x >= 140 && o.material && o.material.blending !== G.THREE.AdditiveBlending) sprites++; const u = dome && dome.material.uniforms.wolken.value; window.__H = { art: dome && dome.userData.himmel, wolkenSprites: sprites, schwelle: u && +u.x.toFixed(2), deckkraft: u && +u.y.toFixed(2), low: G.LOW_GFX }; return JSON.stringify(window.__H); })()",
+  "js": "(async () => { const G = window.G; G.opts.timeSpeed = 0; G.opts.weather = 'cloudy'; G.weather.kind = 'cloudy'; G.weather.rain = 0; G.weather.cloud = 0.7; G.weather.fog = 0.1; await new Promise(r => setTimeout(r, 1500)); let dome = null, sprites = 0; G.scene.traverse(o => { if (o.userData && o.userData.himmel) dome = o; }); if (dome) { const m = dome.material; if (false) m.defines.HIMMEL_FEIN = 1; else delete m.defines.HIMMEL_FEIN; delete m.defines.HIMMEL_VOLUMEN; m.needsUpdate = true; dome.userData.himmel = 'einfach'; await new Promise(r => setTimeout(r, 800)); } for (const o of G.scene.children) if (o.isSprite && o.scale.x >= 140 && o.material && o.material.blending !== G.THREE.AdditiveBlending) sprites++; const u = dome && dome.material.uniforms.wolken.value; window.__H = { art: dome && dome.userData.himmel, wolkenSprites: sprites, schwelle: u && +u.x.toFixed(2), deckkraft: u && +u.y.toFixed(2), low: G.LOW_GFX }; return JSON.stringify(window.__H); })()",
   "expect": "window.__H && window.__H.wolkenSprites === 0"
  },
  {
