@@ -5,6 +5,7 @@
 // Laufrunde/Frischlufteulen/Vokabaum/Storys (Missionen), progress.js (Statistik), Bildschirmfoto (Kamera), saveGame (Speichern).
 // H im Fahrzeug bleibt Hupe/Sondersignal (game.js); das Handy öffnet nur zu Fuß. Cheats nur im Kreativmodus.
 /** @param {import('./types').Ctx} X @param {any} S Systeme aus game.js */
+import { missionList } from './missionen.js';
 export function initPhone(X, S) {
   const { player, world, weather, showMsg, sfx } = X;
   const $ = id => document.getElementById(id);
@@ -72,20 +73,9 @@ export function initPhone(X, S) {
 
   // Missionen: was gerade läuft, dann startbare Aufträge aus den vorhandenen Systemen
   function appMissions(p) {
-    const rows = [], acts = [];
-    const row = (kicker, name, info, btn, fn) => { const i = acts.push(fn) - 1; rows.push(`<div class="ps-pmis"><div class="ps-pmis__k">${esc(kicker)}</div><b>${esc(name)}</b><p>${esc(info)}</p>${btn ? `<button class="ps-pbtn" data-i="${i}">${esc(btn)}</button>` : ''}</div>`); };
-    const obj = ($('obj') && $('obj').textContent.trim()) || '';
-    const L = S.LAUF, E = S.EULEN, V = S.VOKA, ST = S.STORY;
-    if (L && L.run) row('Läuft', 'Laufrunde', `Wegpunkt ${L.run.i + 1} von ${L.run.pts.length}`, '', null);
-    if (E && E.run) row('Läuft', 'Frischlufteulen', obj || 'Strecke läuft', 'Abbrechen', () => { E.stop(); toast('Abgebrochen'); });
-    if (V && V.mission) row('Läuft', 'Vokabaum', obj || 'Mission läuft', '', null);
-    if (ST && ST.busy) row('Läuft', 'Story', obj || 'Kapitel läuft', '', null);
-    if (L && !L.run) row('Fitness', 'Laufrunde', '1–3 km zu Fuß mit einem Passanten, bringt Fitness und EP.', 'Laufrunde starten', () => { if (player.car) { toast('Nur zu Fuß', 'error'); return; } if (L.force()) close(); else toast('Gerade keine Runde möglich', 'error'); });
-    if (E && !E.run) for (const r of (E.routes || []).slice(0, 12)) { const big = r.marathon || r.mega; row(big ? (r.mega ? 'Megamarsch' : 'Marathon') : 'Frischlufteulen', r.name, r.info || (r.km_gebiet + ' km'), big ? 'Lauf starten / fortsetzen' : 'Lauf starten', () => { if (player.car) { toast('Nur zu Fuß', 'error'); return; } E.start(r, !!big, 'lauf'); close(); }); }
-    if (V && !V.mission && V.force) row('Hilfe', 'Vokabaum', 'Ein Passant braucht Hilfe mit Vokabeln.', 'Mission starten', () => { V.force(); close(); });
-    if (ST && ST.STORIES) for (const [id, s] of Object.entries(ST.STORIES)) { const st = /** @type {any} */ (s); row('Story', st.title, st.sub || '', ST.busy ? '' : 'Story starten', () => { ST.start('phone', id); close(); }); }
-    p.innerHTML = list(rows, 'Gerade keine Missionen.');
-    for (const b of p.querySelectorAll('button[data-i]')) b.addEventListener('click', () => { const f = acts[+/** @type {HTMLElement} */ (b).dataset.i]; if (f) f(); });
+    const rows = missionList(X, S, close, toast);
+    p.innerHTML = list(rows.map((r, i) => `<div class="ps-pmis"><div class="ps-pmis__k">${esc(r.k)}</div><b>${esc(r.name)}</b><p>${esc(r.info)}</p>${r.btn ? `<button class="ps-pbtn" data-i="${i}">${esc(r.btn)}</button>` : ''}</div>`), 'Gerade keine Missionen.');
+    for (const b of p.querySelectorAll('button[data-i]')) b.addEventListener('click', () => { const f = rows[+/** @type {HTMLElement} */ (b).dataset.i].fn; if (f) f(); });
   }
 
   // ---------- Öffnen / Schließen ----------
