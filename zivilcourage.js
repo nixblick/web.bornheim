@@ -27,7 +27,7 @@ export function initZivilcourage(X) {
 
   // ---------- Einschreiten: kurze Szene in Schritten ----------
   const SCHRITTE = s => [[0, 'DU STELLST DICH DAZU'], [1.6, 'DU SPRICHST RUHIG AN: „LASS DAS. GEH WEITER.“'], ...(Math.random() < 0.4 ? [[3.2, 'DU RUFST HILFE (110)']] : []), [s ? 4.8 : 3.4, 'BETROFFENE PERSON: „DANKE!“']];
-  function intervene() { if (!sc || act) return; act = { t: 0, steps: SCHRITTE(Math.random() < 0.4), i: 0 }; sfx('click', 0.6); }
+  function intervene() { if (!sc || act) return; act = { t0: performance.now(), t: 0, steps: SCHRITTE(Math.random() < 0.4), i: 0 }; sfx('click', 0.6); }
   X.fHooks = X.fHooks || [];
   X.fHooks.push(() => { if (!sc || act || blocked()) return null; if (Math.min(dist(sc.a), dist(sc.b)) > NAH) return null; return { label: 'F · Einschreiten (ohne Gewalt)', act: intervene }; });
 
@@ -39,7 +39,7 @@ export function initZivilcourage(X) {
     if (hurt(a) || hurt(b)) { if (dist(a) < HOER) showMsg('GEWALT IST KEIN EINSCHREITEN · KEIN KARMA', 1800); end(); return; }
     a.rotation.y = Math.atan2(b.position.x - a.position.x, b.position.z - a.position.z); b.rotation.y = Math.atan2(a.position.x - b.position.x, a.position.z - b.position.z);
     mark.position.set(a.position.x, a.position.y + 2.4 + Math.sin(performance.now() / 250) * 0.06, a.position.z);
-    if (act) { act.t += dt; const st = act.steps; while (act.i < st.length && act.t >= st[act.i][0]) { showMsg(st[act.i][1], 1700, act.i === st.length - 1 ? 'ok' : undefined); act.i++; }
+    if (act) { act.t = (performance.now() - act.t0) / 1000; /* Echtzeit: Meldungen laufen auch in ms, unabhängig von der Bildrate */ const st = act.steps; while (act.i < st.length && act.t >= st[act.i][0]) { showMsg(st[act.i][1], 1700, act.i === st.length - 1 ? 'ok' : undefined); act.i++; }
       if (act.i >= st.length && act.t >= st[st.length - 1][0] + 0.8) { const u = a.userData; free(a); u.state = 'flee'; u.fleeT = 5; u.fleeDir = null; X.emit('karma', player.pos, { n: LOHN, why: 'Zivilcourage' }); sc.ok = true; end(); }
       return; }
     if (dist(a) < HOER) { if (!sc.heard) showMsg('PASSANT ' + sc.txt.toUpperCase() + ' · F IN DER NÄHE: EINSCHREITEN', 2500); sc.heard = true; }

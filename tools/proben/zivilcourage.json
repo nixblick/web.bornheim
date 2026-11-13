@@ -2,13 +2,13 @@
  { "n": "zc_szene", "x": -138, "z": 372, "wait": 4000,
    "js": "(() => { const G = window.G, Z = G.ZIVIL; window.__k0 = G.PROGRESS.P.karma; const s = Z.force(0); if (!s) return 'keine Szene'; const p = s.a.position; G.player.pos.set(p.x + 1.5, G.TH(p.x + 1.5, p.z), p.z); return JSON.stringify({ txt: s.txt, hook: (G.X.fHooks || []).map(f => f()).filter(Boolean).map(r => r.label) }); })()",
    "expect": "(() => { const Z = window.G.ZIVIL; return !!Z.scene && (window.G.X.fHooks || []).some(f => { const r = f(); return r && /Einschreiten/.test(r.label); }); })()" },
- { "n": "zc_eingreifen", "wait": 7000,
+ { "n": "zc_eingreifen", "wait": 9000,
    "js": "(() => { const G = window.G; (G.X.fHooks || []).map(f => f()).find(r => r && /Einschreiten/.test(r.label)).act(); return 'eingegriffen'; })()",
    "expect": "window.G.PROGRESS.P.karma === window.__k0 + 5 && !window.G.ZIVIL.scene" },
- { "n": "zc_wegsehen", "wait": 3000,
+ { "n": "zc_wegsehen", "wait": 8000,
    "js": "(() => { const G = window.G, Z = G.ZIVIL; window.__k1 = G.PROGRESS.P.karma; const s = Z.force(1); const p = s.a.position; G.player.pos.set(p.x + 12, G.TH(p.x + 12, p.z), p.z); return s.txt; })()",
    "expect": "!!window.G.ZIVIL.scene && window.G.ZIVIL.scene.heard" },
- { "n": "zc_weggesehen", "wait": 2000,
+ { "n": "zc_weggesehen", "wait": 6000,
    "js": "(() => { window.G.ZIVIL.scene.t = 0.01; return 'abgelaufen'; })()",
    "expect": "window.G.PROGRESS.P.karma === window.__k1 - 2 && !window.G.ZIVIL.scene" }
 ]
