@@ -5,6 +5,7 @@
   "z": 160,
   "wait": 15000,
   "shot": true,
-  "js": "(async () => { await import('/tools/fahren.js?' + Date.now()); const r = await T.fahren(); return JSON.stringify(r); })()"
+  "js": "(async () => { await import('/tools/fahren.js?' + Date.now()); window.__f = await T.fahren(); return JSON.stringify(window.__f.filter(r => !r.ok || /Hang|Bergab/.test(r.name))); })()",
+  "expect": "window.__f && window.__f.filter(r => /Hang|Bergab/.test(r.name)).every(r => r.ok)"
  }
 ]

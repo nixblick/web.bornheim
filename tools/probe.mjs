@@ -57,7 +57,7 @@ try {
     await sleep(s.wait ?? 5000);
     if (s.tx !== undefined) await ev(`window.G.camYaw.v = Math.atan2(${s.tx} - window.G.player.pos.x, ${s.tz} - window.G.player.pos.z); window.G.camPitch.v = ${s.pitch ?? 0.2};`);
     let zeile = `${s.n}: ${await ev(pos)}`;
-    if (s.js) zeile += ` js=${JSON.stringify(await ev(s.js))}`;
+    if (s.js) { const r = await ev(s.js); zeile += ` js=${JSON.stringify(r)}`; if (typeof r === 'string' && /^(EXC|TIMEOUT)/.test(r)) { zeile += ' ROT (Ausnahme)'; code = 1; } }
     if (s.expect) { const ok = await ev(`!!(${s.expect})`) === true; zeile += ok ? ' OK' : ` ROT (${s.expect})`; if (!ok) code = 1; }
     if (s.shot !== false) await shot(s.n);
     log(zeile);
