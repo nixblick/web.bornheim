@@ -108,6 +108,7 @@ export function initDemo(X, W) {
     for (const z of [2.5, -1.3, -2.6]) for (const x of [-1.08, 1.08]) { const piv = new THREE.Group(); piv.position.set(x, 0.55, z); piv.userData.wheel = true; const w = new THREE.Mesh(wg, wm); w.castShadow = true; piv.add(w); body.add(piv); wheels.push(piv); }
     const cone = new THREE.Mesh(new THREE.PlaneGeometry(4.6, 10), new THREE.MeshBasicMaterial({ map: X.coneTex, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide })); cone.rotation.x = -Math.PI / 2; cone.position.set(0, 0.08, 9); cone.visible = false; g.add(cone);
     g.userData = { speed: 0, heading: 0, hp: 450, police: true, driver: null, mode: 'parked', bar, wheels, tlMat, cone, type: fire ? 'firetruck' : 'cannon', fireTruck: fire, blMat: null, heads: [headMat], bodyMats: [], dims: { w: 2.5, h: 3.1, l: 7.6 }, maxS: 17, turret, pitch, muzzle, cannon: true, tank: 100, spraying: false, burstT: 0 };
+    g.traverse(o => { if (o.isMesh) { o.geometry.userData.own = true; o.material.userData.own = true; } }); // alles je Fahrzeug gebaut: disposeCar gibt es frei (#120), Texturen bleiben
     return g; }
   // Strahl: ein Punktwolken-Mesh, Treffer werden entlang der Flugbahn gesucht
   const JN = 420; const jPos = new Float32Array(JN * 3), jVel = new Float32Array(JN * 3), jLife = new Float32Array(JN); let jI = 0;
