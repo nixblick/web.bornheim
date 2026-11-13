@@ -56,8 +56,9 @@ export function initDemo(X, W) {
   const stickMat = new THREE.MeshLambertMaterial({ color: 0x8a6a45 }); const signGeo = new THREE.PlaneGeometry(0.78, 0.52), stickGeo = new THREE.BoxGeometry(0.03, 1.15, 0.03);
   function addSign(h, text) { const g = new THREE.Group(); const st = new THREE.Mesh(stickGeo, stickMat); st.position.y = 1.75; g.add(st); const m = new THREE.MeshLambertMaterial({ map: signTex(text || pick(SLOGANS), pick(['#f2ead8', '#ffe14d', '#b6f08a', '#ffffff', '#ffb0c8', '#202020'])) });
     const a = new THREE.Mesh(signGeo, m); a.position.set(0, 2.42, 0.02); const b = new THREE.Mesh(signGeo, m); b.position.set(0, 2.42, -0.02); b.rotation.y = Math.PI; g.add(a, b); g.position.set(0.22, 0, 0.12); h.add(g); h.userData.sign = g; }
+  const bannerGeo = new THREE.PlaneGeometry(1, 0.85); // geteilt; Textur und Material je Demo, endDemo gibt beide frei (#120)
   function bannerMesh(text) { const t = canvasTex(1024, 128, (ctx, w, h) => { ctx.fillStyle = '#f4efe2'; ctx.fillRect(0, 0, w, h); ctx.fillStyle = '#c81e3a'; ctx.fillRect(0, 0, w, 14); ctx.fillRect(0, h - 14, w, 14); ctx.fillStyle = '#151515'; ctx.font = '900 76px system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(text, w / 2, h / 2 + 4); });
-    const m = new THREE.MeshLambertMaterial({ map: t, side: THREE.FrontSide }); const g = new THREE.Group(); const a = new THREE.Mesh(new THREE.PlaneGeometry(1, 0.85), m); const b = a.clone(); b.rotation.y = Math.PI; g.add(a, b); scene.add(g); return g; }
+    const m = new THREE.MeshLambertMaterial({ map: t, side: THREE.FrontSide }); const g = new THREE.Group(); const a = new THREE.Mesh(bannerGeo, m); const b = a.clone(); b.rotation.y = Math.PI; g.add(a, b); scene.add(g); return g; }
 
   // ---------- Figuren ----------
   const YOUNG = ['woman_casual', 'woman_tanktop', 'woman_jacket', 'man', 'hero_man', 'hero_woman'].filter(n => X.CHAR[n]);
@@ -107,6 +108,7 @@ export function initDemo(X, W) {
     for (const z of [2.5, -1.3, -2.6]) for (const x of [-1.08, 1.08]) { const piv = new THREE.Group(); piv.position.set(x, 0.55, z); piv.userData.wheel = true; const w = new THREE.Mesh(wg, wm); w.castShadow = true; piv.add(w); body.add(piv); wheels.push(piv); }
     const cone = new THREE.Mesh(new THREE.PlaneGeometry(4.6, 10), new THREE.MeshBasicMaterial({ map: X.coneTex, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide })); cone.rotation.x = -Math.PI / 2; cone.position.set(0, 0.08, 9); cone.visible = false; g.add(cone);
     g.userData = { speed: 0, heading: 0, hp: 450, police: true, driver: null, mode: 'parked', bar, wheels, tlMat, cone, type: fire ? 'firetruck' : 'cannon', fireTruck: fire, blMat: null, heads: [headMat], bodyMats: [], dims: { w: 2.5, h: 3.1, l: 7.6 }, maxS: 17, turret, pitch, muzzle, cannon: true, tank: 100, spraying: false, burstT: 0 };
+    g.traverse(o => { if (o.isMesh) { o.geometry.userData.own = true; o.material.userData.own = true; } }); // alles je Fahrzeug gebaut: disposeCar gibt es frei (#120), Texturen bleiben
     return g; }
   // Strahl: ein Punktwolken-Mesh, Treffer werden entlang der Flugbahn gesucht
   const JN = 420; const jPos = new Float32Array(JN * 3), jVel = new Float32Array(JN * 3), jLife = new Float32Array(JN); let jI = 0;
@@ -149,10 +151,10 @@ export function initDemo(X, W) {
     const nBlack = o.peaceful ? 0 : (o.black ?? Math.round(n * 0.1));
     for (let i = d.members.length; i < n; i++) { const a = rnd(0, 6.28), r = rnd(1, 6); const [qx, qz] = freeSpot(x + Math.cos(a) * r, z + Math.sin(a) * r, 1.5); const h = makeMember(qx, qz, { slogans: o.slogans, signs: o.slogans ? 0.6 : undefined, black: i < nBlack + (o.members || []).length && i >= (o.members || []).length, student: o.student }); h.userData.demo = d; d.members.push(h); }
     d.student = !!o.student; d.mob = !!o.mob;
-    d.banner = bannerMesh(d.theme); demos.push(d); emit('demoStart', new V3(x, 0, z), { demo: d }); return d;
+    d.banner = o.noBanner ? null : bannerMesh(d.theme); demos.push(d); emit('demoStart', new V3(x, 0, z), { demo: d }); return d;
   }
   function leaveDemo(h) { const u = h.userData; const d = u.demo; if (!d) return; d.members.splice(d.members.indexOf(h), 1); u.demo = null; }
-  function endDemo(d, result) { if (d.result) return; d.result = result; d.endT = 0; for (const h of [...d.members]) { const u = h.userData; leaveDemo(h); if (u.state === 'demo') { u.state = 'flee'; u.fleeT = rnd(6, 12); } } if (d.banner) { scene.remove(d.banner); d.banner = null; } if (d.onEnd) d.onEnd(result, d); emit('demoEnd', new V3(d.cx, 0, d.cz), { demo: d, result }); }
+  function endDemo(d, result) { if (d.result) return; d.result = result; d.endT = 0; for (const h of [...d.members]) { const u = h.userData; leaveDemo(h); if (u.state === 'demo') { u.state = 'flee'; u.fleeT = rnd(6, 12); } } if (d.banner) { const bm = d.banner.children[0].material; if (bm.map) bm.map.dispose(); bm.dispose(); scene.remove(d.banner); d.banner = null; } if (d.onEnd) d.onEnd(result, d); emit('demoEnd', new V3(d.cx, 0, d.cz), { demo: d, result }); }
   function frontS(d) { return d.leadPlayer ? d.trail[d.trail.length - 1].s : d.s; }
   function slotOf(d, i) {
     const cols = d.leadPlayer ? 4 : 5; const row = Math.floor(i / cols), col = i % cols; const h = d.members[i].userData;
@@ -313,14 +315,15 @@ export function initDemo(X, W) {
     if (opts.demos !== false && !X.creative.on && demos.filter(d => !d.result).length < 2 && !X.storyBusy()) { spontT -= dt; if (spontT <= 0) { spontT = rnd(120, 240); /* mehr Demos in der Stadt (André 12.11.2026) */ if (world.hour > 9 && world.hour < 21) spontaneous(); } }
   }
   function arrive(d) { // Neue Leute kommen aus einer Seitenstraße dazu
-    const a = rnd(0, 6.28); const r = rnd(35, 55); let [x, z] = [d.cx + Math.cos(a) * r, d.cz + Math.sin(a) * r]; if (solidAt(x, z) >= 0) { const rp = X.randomRoadPoint(pick(pedRoads())); if (Math.hypot(rp.x - d.cx, rp.z - d.cz) > 120) return; x = rp.x; z = rp.z; }
+    const a = rnd(0, 6.28); const r = rnd(35, 55); let [x, z] = [d.cx + Math.cos(a) * r, d.cz + Math.sin(a) * r]; if (solidAt(x, z) >= 0) { const rs = pedRoads(); if (!rs.length) return; const rp = X.randomRoadPoint(pick(rs)); if (Math.hypot(rp.x - d.cx, rp.z - d.cz) > 120) return; x = rp.x; z = rp.z; }
     const h = makeMember(x, z, { slogans: d.slogans, signs: d.slogans ? 0.6 : undefined, black: !d.peaceful && Math.random() < (d.mob ? 0.2 : 0.08), student: d.student && Math.random() < 0.8 }); h.userData.demo = d; d.members.push(h); }
   function updateArrested(dt) { for (let i = peds.length - 1; i >= 0; i--) { const h = peds[i], u = h.userData; if (u.state !== 'arrested') continue; u.arrT += dt; if (u.mixer && !u.lod) { u.mixer.update(dt); } if (u.arrT > 9 && h.position.distanceTo(player.pos) > 12) removePed(h); else if (u.arrT > 30) removePed(h); } }
 
   // ---------- Spontane Demo und Leute sammeln (Taste G) ----------
   function spontaneous(at, o = {}) { /* o.noPolice: Kreativmodus, nur Leute (André 12.11.2026) */
-    let p = at; if (!p) { for (let k = 0; k < 30; k++) { const rp = X.randomRoadPoint(pick(pedRoads().filter(r => r.w >= 6))); const dd = Math.hypot(rp.x - player.pos.x, rp.z - player.pos.z); if (dd > 90 && dd < 200) { p = [rp.x, rp.z]; break; } } } if (!p) return null;
-    let goal = null; for (let k = 0; k < 30; k++) { const rp = X.randomRoadPoint(pick(pedRoads().filter(r => r.w >= 7))); const dd = Math.hypot(rp.x - p[0], rp.z - p[1]); if (dd > 260 && dd < 520) { goal = [rp.x, rp.z]; break; } }
+    const breit = pedRoads().filter(r => r.w >= 7); if (!at && !breit.length) return null; // keine breite Straße geladen: pick() wäre undefined (Absturz in randomRoadPoint)
+    let p = at; if (!p) { const rs = pedRoads().filter(r => r.w >= 6); for (let k = 0; k < 30; k++) { const rp = X.randomRoadPoint(pick(rs)); const dd = Math.hypot(rp.x - player.pos.x, rp.z - player.pos.z); if (dd > 90 && dd < 200) { p = [rp.x, rp.z]; break; } } } if (!p) return null;
+    let goal = null; for (let k = 0; k < 30 && breit.length; k++) { const rp = X.randomRoadPoint(pick(breit)); const dd = Math.hypot(rp.x - p[0], rp.z - p[1]); if (dd > 260 && dd < 520) { goal = [rp.x, rp.z]; break; } }
     const th = o.thema === false ? null : pick(THEMEN); const d = spawnDemo(Object.assign({ x: p[0], z: p[1], n: 6, gather: true, max: 30, noPolice: !!o.noPolice }, th ? { banner: th.b, slogans: th.s, chants: th.c, peaceful: true, maxStage: 1, student: !!th.st, tension: 0 } : {})); d.goal = goal; d.joinT = 1; d.energy = 0.7; const st = X.streetAt(p[0], p[1]);
     post('kollektiv', th ? `${th.st ? 'Schüler:innen-Demo' : 'Spontandemo'} „${th.b}“ ${st ? 'in der ' + st : 'in Frankfurt'}! Kommt alle, friedlich und laut.` : `Spontandemo ${st ? 'in der ' + st : 'in Bornheim'}! ${world.hour > 11 && world.hour < 19 ? '38 Grad und die Stadt baut Parkplätze. ' : ''}Kommt alle! #Hitzefrei`, Math.round(rnd(300, 1200))); return d;
   }
@@ -370,7 +373,7 @@ export function initDemo(X, W) {
 
   function spawnSquad(pos) { // Kreativmodus: Einsatzhundertschaft mit Wanne
     const near = demos.find(d => !d.result && Math.hypot(pos.x - d.cx, pos.z - d.cz) < 90); if (near) { copsNeeded(near, near.pol.cops.length + 6); if (near.pol.stage < 1) setStage(near, 1); return near; }
-    const d = spawnDemo({ x: pos.x, z: pos.z, n: 0, noPolice: false, maxStage: 1 }); d.members.length = 0; d.state = 'guard'; d.banner.visible = false; d.guard = true; d.pol.stage = 1; copsNeeded(d, 6); for (const c of d.pol.cops) { c.position.set(pos.x + rnd(-3, 3), 0, pos.z + rnd(-3, 3)); c.userData.task = 'escort'; } policeCar(d, 0, 1, true); return d; }
+    const d = spawnDemo({ x: pos.x, z: pos.z, n: 0, noPolice: false, maxStage: 1, noBanner: true }); d.members.length = 0; d.state = 'guard'; d.guard = true; d.pol.stage = 1; copsNeeded(d, 6); for (const c of d.pol.cops) { c.position.set(pos.x + rnd(-3, 3), 0, pos.z + rnd(-3, 3)); c.userData.task = 'escort'; } policeCar(d, 0, 1, true); return d; }
   // Wachen ohne Demo bleiben stehen; endDemo erst, wenn der Spieler weit weg ist
   const _origUpdate = update;
   function update2(dt) { for (const d of demos) if (d.guard && !d.result) { d.age = 0; d.members.length = 0; d.cx = d.cx; } _origUpdate(dt); for (const d of demos) if (d.guard && !d.result && Math.hypot(player.pos.x - d.cx, player.pos.z - d.cz) > 250) endDemo(d, 'faded'); }
