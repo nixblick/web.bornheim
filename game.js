@@ -22,6 +22,7 @@ import { initVokabaum } from './vokabaum.js';
 import { initLaufrunden } from './laufrunden.js';
 import { initLandmarks } from './landmarks.js';
 import { initWahrzeichen, markLandmark } from './wahrzeichen.js';
+import { disposeHierarchy } from './dispose.js';
 const GradeShader = { uniforms: { tDiffuse: { value: null }, vig: { value: 0.32 }, wet: { value: 0 }, night: { value: 0 } }, vertexShader: 'varying vec2 vUv; void main(){ vUv=uv; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0); }',
   fragmentShader: 'uniform sampler2D tDiffuse; uniform float vig, wet, night; varying vec2 vUv; void main(){ vec4 c=texture2D(tDiffuse,vUv); vec3 col=c.rgb; float l=dot(col,vec3(0.299,0.587,0.114)); col=mix(vec3(l),col,1.12-wet*0.25); col=(col-0.5)*1.06+0.5; col*=mix(vec3(1.0),vec3(0.92,0.97,1.06),wet*0.7+night*0.5); col=mix(col,col*vec3(1.04,1.0,0.94),0.6*(1.0-night)); vec2 d=vUv-0.5; col*=1.0-vig*dot(d,d)*2.2; gl_FragColor=vec4(clamp(col,0.0,1.0),c.a); }' };
 let aoPass = null, gradePass = null;
@@ -2323,7 +2324,7 @@ MENU_HOOKS.push(() => { const el = document.getElementById('ovstat'); if (!el) r
   el.innerHTML = card('💶', (player.money || 0).toLocaleString('de-DE') + ' €', 'Geld') + card('❤', Math.max(0, Math.round(player.hp)) + ' %', 'Leben') + card('🚨', w, 'Fahndung') + card('📍', st, 'Ort') + (obj ? `<div style="grid-column:1/-1"><small>🎯 Ziel</small><b style="font-size:14px;font-weight:600">${obj.slice(0, 160)}</b></div>` : ''); });
 function openMenu() { menuOpen = true; clearTimeout(lockT); for (const f of MENU_HOOKS) f(); for (const id of ['m_save', 'm_load', 'm_restart', 'm_export', 'm_creative']) { const b = $(id); if (b) b.style.display = started ? '' : 'none'; } if ($('m_creative')) $('m_creative').textContent = creative.on ? '🛠 Spielmodus (C)' : '🛠 Kreativmodus (C)'; $('m_resume').textContent = started ? 'Weiter' : 'Zurück'; document.exitPointerLock(); $('menu').style.display = 'flex'; $('o_sens').value = opts.sens; $('o_vol').value = opts.vol; $('o_shadows').checked = opts.shadows; $('o_time').value = opts.timeSpeed; $('o_hour').value = Math.round(world.hour); for (const [id, k] of Object.entries(OPT_BIND)) { const el = $(id); if (!el) continue; if (el.type === 'checkbox') el.checked = !!opts[k]; else el.value = opts[k]; } updateOptLabels(); $('o_quality').value = opts.quality || 'mittel'; $('o_weather').value = opts.weather; $('o_traffic').value = opts.traffic; $('m_load').disabled = !hasSave(); }
 let lockT = 0; /* #98: Handle des verzögerten lockMouse aus closeMenu; openMenu bricht ihn ab */
-function lockMouse() { if (menuOpen) return; try { const p = renderer.domElement.requestPointerLock(); if (p && p.catch) p.catch(() => {}); } catch (e) {} }
+function lockMouse() { if (menuOpen || window.__noAutoMenu) return; /* Ticketkauf/Laden offen: Klick gehört dem Menü, nicht dem Spiel (André 13.11.2026) */ try { const p = renderer.domElement.requestPointerLock(); if (p && p.catch) p.catch(() => {}); } catch (e) {} }
 function closeMenu() { menuOpen = false; $('menu').style.display = 'none'; clearTimeout(lockT); if (started) lockT = setTimeout(lockMouse, 1300); }
 let mapOpen = false, mapPanX = 0, mapPanZ = 0;
 function toggleMap() { mapOpen = !mapOpen; if (mapOpen) { mapPanX = 0; mapPanZ = 0; } $('bigmap').style.display = mapOpen ? 'block' : 'none'; if (mapOpen) drawBigMap(); }
@@ -2397,7 +2398,7 @@ document.addEventListener('pointerlockerror', () => {});
 document.addEventListener('pointerlockchange', () => { locked = document.pointerLockElement === renderer.domElement; if (locked && menuOpen) { document.exitPointerLock(); locked = false; return; } /* #98: Sperre bei offenem Menü (alter Timer, Fremdaufruf) sofort lösen, sonst geht der Kartenklick als Schuss ins Spiel */ if (!locked && started && !menuOpen && !window.__noAutoMenu && !document.hidden && !mapOpen) setTimeout(() => { if (!locked && !menuOpen) openMenu(); }, 50); });
 addEventListener('mousemove', e => { if (!locked) return; camYaw.lastMove = performance.now(); camYaw.v -= e.movementX * 0.0022 * opts.sens; camPitch.v = clamp(camPitch.v + e.movementY * 0.0018 * opts.sens * (opts.invy ? -1 : 1), player.car ? -0.5 : -1.25, 1.1); /* zu Fuß steil nach oben zielen (Hubschrauber, Dächer; André 12.11.2026) */ });
 addEventListener('mouseup', e => { if (!WPN) return; /* Klick während des Ladens */ if (e.button === 2) player.aimHold = false; if (e.button === 0) { WPN.press(false); DEMO.carTrigger(false); } });
-addEventListener('mousedown', e => { if (!WPN) return; if (!locked) { if (started && !menuOpen) lockMouse(); return; } if (e.button === 2 && !creativeSpawnerActive()) player.aimHold = true; if (e.button !== 0) return; if (creativeSpawnerActive()) creativePlace(); else if (player.car && player.car.userData.cannon) DEMO.carTrigger(true); else WPN.press(true); });
+addEventListener('mousedown', e => { if (!WPN) return; if (!locked) { if (started && !menuOpen && !window.__noAutoMenu) lockMouse(); return; } if (e.button === 2 && !creativeSpawnerActive()) player.aimHold = true; if (e.button !== 0) return; if (creativeSpawnerActive()) creativePlace(); else if (player.car && player.car.userData.cannon) DEMO.carTrigger(true); else WPN.press(true); });
 addEventListener('contextmenu', e => e.preventDefault());
 addEventListener('wheel', e => { if (creative.on && started && !menuOpen) { creativeSelect(creative.slot + (e.deltaY > 0 ? 1 : -1)); return; } if (!locked) return; if (creative.on) creativeSelect(creative.slot + (e.deltaY > 0 ? 1 : -1)); else if (!player.car || !player.car.userData.cannon) WPN.cycle(e.deltaY > 0 ? 1 : -1); });
 
@@ -2919,7 +2920,7 @@ function cancelJob() { if (!job) return; const t = { built: true, grp: job.grp, 
 function unbuildTile(t) { barrierDrop(t);
   if (!t.built) return; scene.remove(t.grp); const L = OWN_LISTS();
   L.forEach((l, i) => { const own = t.owned[i]; if (!own.length) return; const s = new Set(own); let w = 0; for (let r = 0; r < l.length; r++) if (!s.has(l[r])) l[w++] = l[r]; l.length = w; });
-  t.grp.traverse(o => { if (o.geometry && !o.geometry.userData.shared) o.geometry.dispose(); if (o.isInstancedMesh) o.dispose(); const ms = Array.isArray(o.material) ? o.material : o.material ? [o.material] : []; for (const m of ms) if (!m.userData.shared) { if (m.userData.ownTex && m.map) m.map.dispose(); m.dispose(); } });
+  disposeHierarchy(t.grp, { keep: x => x.isTexture && !(x.userData && x.userData.own) }); /* Kachel-Texturen kommen aus Caches (TEX, Fassaden, Gehweg), Speicherprobe #120: Zahl bleibt stabil; eigene markiert userData.own */
   t.grp = null; t.owned = null; t.built = false;
 }
 function rebuildAllTiles() { let n = 0; for (const [, t] of TILES) if (t.built && (t.mul !== groundMul() || !!t.potato !== !!opts.potato)) { unbuildTile(t); n++; } if (n) refreshActive(); }
