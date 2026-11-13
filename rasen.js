@@ -89,9 +89,12 @@ export function initRasen(X) {
   };
   mat.customProgramCacheKey = () => 'rasen-halme';
   const maxCap = Math.round(Math.PI * STUFE.ultra.r ** 2 * STUFE.ultra.d * 0.75);
-  let mesh = null, cap = 0;
-  function ensureMesh(n) { if (mesh && cap >= n) return; if (mesh) { scene.remove(mesh); mesh.dispose(); } cap = Math.min(maxCap, Math.max(n, 4000));
-    mesh = new THREE.InstancedMesh(tuftGeo(THREE), mat, cap); mesh.count = 0; mesh.frustumCulled = false; mesh.castShadow = false; mesh.receiveShadow = true; mesh.name = 'rasen-halme';
+  // Eine Büschel-Geometrie für alle Neuanlagen (mesh.dispose() gibt nur die Instanzpuffer frei, die Geometrie blieb sonst je Wachstum liegen);
+  // Platz wächst in Schritten von 50 %, damit nicht fast jedes assemble() ein neues InstancedMesh samt MB-großer Arrays anlegt.
+  const geo = tuftGeo(THREE);
+  let mesh = null, cap = 0, lastAsm = 0;
+  function ensureMesh(n) { if (mesh && cap >= n) return; if (mesh) { scene.remove(mesh); mesh.dispose(); } cap = Math.min(maxCap, Math.max(4000, Math.ceil(n * 1.5)));
+    mesh = new THREE.InstancedMesh(geo, mat, cap); mesh.count = 0; mesh.frustumCulled = false; mesh.castShadow = false; mesh.receiveShadow = true; mesh.name = 'rasen-halme';
     mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage); mesh.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(cap * 3), 3); scene.add(mesh); }
 
   // Grünflächen-Index: Eimer zu 64 m. WORLD.green wächst beim Nachladen und wird beim Entladen ferner Kacheln in Ort gekürzt,
@@ -126,7 +129,10 @@ export function initRasen(X) {
   }
   function assemble() { let n = 0; for (const c of cells.values()) n += c.n; ensureMesh(n); n = Math.min(n, cap); let o = 0; const M = mesh.instanceMatrix.array, C = mesh.instanceColor.array;
     for (const c of cells.values()) { if (!c.n) continue; const take = Math.min(c.n, cap - o); if (take <= 0) break; M.set(c.m.subarray(0, take * 16), o * 16); C.set(c.c.subarray(0, take * 3), o * 3); o += take; }
-    mesh.count = o; total = o; mesh.instanceMatrix.needsUpdate = true; mesh.instanceColor.needsUpdate = true; dirty = false; }
+    mesh.count = o; total = o; dirty = false; lastAsm = performance.now(); if (!o) return;
+    // nur den belegten Teil hochladen, nicht den ganzen Puffer bis cap
+    mesh.instanceMatrix.clearUpdateRanges(); mesh.instanceMatrix.addUpdateRange(0, o * 16); mesh.instanceMatrix.needsUpdate = true;
+    mesh.instanceColor.clearUpdateRanges(); mesh.instanceColor.addUpdateRange(0, o * 3); mesh.instanceColor.needsUpdate = true; }
   function reset() { cells.clear(); pending = []; lastX = lastZ = 1e9; if (mesh) mesh.count = 0; total = 0; }
 
   function update(dt) {
@@ -142,7 +148,7 @@ export function initRasen(X) {
       pending.sort((a, b) => Math.hypot(b[0] - ccx, b[1] - ccz) - Math.hypot(a[0] - ccx, a[1] - ccz));
       for (const [k, c] of cells) { const [a, b] = k.split(',').map(Number); if (Math.hypot(a - ccx, b - ccz) * CELL > rad + 2 * CELL) { cells.delete(k); dirty = true; } } }
     const t0 = performance.now(); while (pending.length && performance.now() - t0 < 2) { const [a, b] = pending.pop(), k = a + ',' + b, c = cells.get(k); if (!c || c.v !== gen) { cells.set(k, buildCell(a, b)); dirty = true; } }
-    if (dirty && (!pending.length || (performance.now() | 0) % 4 === 0)) assemble();
+    if (dirty && (!pending.length || t0 - lastAsm > 200)) assemble(); // Zwischenstände im Takt statt zufällig in jedem vierten Bild
   }
   return { update, get count() { return total; }, get cells() { return cells.size; }, get stufe() { return stufe ? opts.quality : 'aus'; }, reset };
 }
