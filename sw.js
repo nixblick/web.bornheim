@@ -5,39 +5,33 @@
 const CACHE_STATIC = 'bornheim-static-v2';
 const CACHE_TILES = 'bornheim-tiles-v4';
 
+// Bilder, Modelle und three.js: eigener Cache, der Programm-Deploys überlebt. pages.yml benennt ihn nur um,
+// wenn sich assets/ oder vendor/ geändert haben (vorher lud jeder Deploy rund 25 MB neu).
+const CACHE_ASSETS = 'bornheim-assets-v1';
+
+// Nur Adressen, die sich je Deploy nicht ändern. game.js und die Module holt die Seite mit ?v=<Commit>,
+// die legt Zweig 3 beim ersten Laden unter der echten Adresse ab (eine Liste hier lud sie nur doppelt).
 const CORE_ASSETS = [
   './',
   './play.html',
-  './game.js?v=2',
-  './weapons.js',
-  './demo.js',
-  './story.js',
-  './shops.js',
-  './interiors.js',
-  './dispose.js',
-  './progress.js',
-  './fire.js',
-  './heli.js',
-  './eulen.js',
-  './vokabaum.js',
-  './touch.js',
-  './feedback.js',
-  './debugoverlay.js',
-  './vendor/three/build/three.module.js',
   './data/tiles/index.json'
+];
+const CORE_VENDOR = [
+  './vendor/three/build/three.module.js'
 ];
 
 self.addEventListener('install', event => {
-  event.waitUntil(
-    caches.open(CACHE_STATIC).then(cache => cache.addAll(CORE_ASSETS).catch(() => {}))
-  );
+  event.waitUntil(Promise.all([
+    caches.open(CACHE_STATIC).then(cache => cache.addAll(CORE_ASSETS)).catch(() => {}),
+    caches.open(CACHE_ASSETS).then(cache => cache.addAll(CORE_VENDOR)).catch(() => {})
+  ]));
   self.skipWaiting();
 });
 
 self.addEventListener('activate', event => {
   event.waitUntil(
     caches.keys().then(keys => Promise.all(
-      keys.filter(k => k !== CACHE_STATIC && k !== CACHE_TILES).map(k => caches.delete(k))
+      keys.filter(k => k !== CACHE_STATIC && k !== CACHE_TILES && k !== CACHE_ASSETS).map(k => caches.delete(k))
     )).then(() => self.clients.claim())
   );
 });
@@ -69,7 +63,7 @@ self.addEventListener('fetch', event => {
   // 2) 3D-Modelle, Texturen & Vendor-Bibliotheken: Cache-First
   if (path.includes('/assets/') || path.includes('/vendor/')) {
     event.respondWith(
-      caches.open(CACHE_STATIC).then(cache =>
+      caches.open(CACHE_ASSETS).then(cache =>
         cache.match(req).then(cached => {
           if (cached) return cached;
           return fetch(req).then(res => {

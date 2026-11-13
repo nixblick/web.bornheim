@@ -41,9 +41,15 @@ jobs:
           V="${GITHUB_SHA::7}"
           sed -i "s/game\.js[^']*/game.js?v=$V/" _site/play.html
           sed -i -E "s/from '\.\/([a-z0-9_-]+\.js)'/from '.\/\1?v=$V'/g" _site/*.js
+          sed -i -E "s/(menu-neu\.css)\?v=[0-9a-z]+/\1?v=$V/" _site/play.html _site/menu-neu.js   # Stylesheet des Pausenmenüs: stand fest auf ?v=3
           # Service Worker: Cache fuer Programm, Bilder und CSS je Deploy neu benennen (alter wird beim Aktivieren geloescht),
           # sonst bekaemen Spieler geaenderte Bilder/CSS nie und der Cache wuechse mit jeder Version (12.11.2026)
           sed -i "s/bornheim-static-v2/bornheim-static-$V/" _site/sw.js
+          # Bilder, Modelle und three.js liegen in einem eigenen Cache. Sein Name hängt am Inhalt von assets/ und vendor/
+          # (Baum-Hashes): reine Programm-Deploys lassen ihn stehen, geänderte Bilder benennen ihn um und kommen an.
+          A="$(git rev-parse --short HEAD:assets)$(git rev-parse --short HEAD:vendor)"
+          sed -i "s/bornheim-assets-v1/bornheim-assets-$A/" _site/sw.js
+          grep -q "bornheim-static-$V" _site/sw.js && grep -q "bornheim-assets-$A" _site/sw.js || { echo "Cache-Namen in sw.js nicht ersetzt"; exit 1; }
           cp -r assets vendor _site/
           mkdir _site/data && cp -r data/tiles data/dem _site/data/ && cp data/*.json _site/data/   # alle JSON im Datenordner (belag.json und vokabeln.json fehlten live); Rohdaten *.osm.json sind nicht eingecheckt
           touch _site/.nojekyll
