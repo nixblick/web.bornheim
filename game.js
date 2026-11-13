@@ -2156,11 +2156,14 @@ function updateBikeRacks(dt) { if (POCKET || (rackT -= dt) > 0) return; rackT = 
 function voiSpawn() { const px = player.pos.x, pz = player.pos.z; let have = 0; for (const c of cars) if (c.userData.voi && c.userData.mode === 'parked' && (c.position.x - px) ** 2 + (c.position.z - pz) ** 2 < 180 * 180) have++; if (have >= 6) return;
   const rs = roadsNear(px, pz, 1, true); if (!rs.length) return; const p = randomRoadPoint(pick(rs)); const d = Math.hypot(p.x - px, p.z - pz); if (d < 30 || d > 160 || p.road.mw) return; const sd = Math.random() < 0.5 ? 1 : -1; const x = p.x + Math.cos(p.heading) * (p.road.w / 2 + 1.4) * sd, z = p.z - Math.sin(p.heading) * (p.road.w / 2 + 1.4) * sd; if (solidAt(x, z) >= 0 || onOtherRoad(x, z, null, 0.6)) return; /* Roller nicht auf die Nachbarstraße */
   const c = makeVoi(); c.position.set(x, surfAt(x, z, TH(x, z) + 2), z); c.userData.heading = p.heading; c.rotation.y = p.heading; c.userData.mode = 'parked'; scene.add(c); cars.push(c); shootables.push(c); }
+// Voi-Aufbau und Helme: je eine geteilte Geometrie und geteilte Materialien statt neuer je Fahrzeug (disposeCar gab sie nie frei). Räder bekommen weder Dellen noch Wrackfarbe, also bleibt Geteiltes unverändert
+const VOI_M = new THREE.MeshLambertMaterial({ color: 0xf26d5b }), VOI_DECK_G = new THREE.BoxGeometry(0.17, 0.06, 1.0), VOI_ST_G = new THREE.CylinderGeometry(0.025, 0.025, 1.0, 6);
+const HELMET_G = new THREE.SphereGeometry(0.15, 12, 10), HELMET_M = new Map();
 function makeVoi() { // Voi-E-Scooter (Fotos): lachsfarbenes Trittbrett und Lenkstange auf dem Rad-Fahrwerk
   const c = makeBike(0xf26d5b); const fm = c.userData.bodyMats[0]; c.traverse(o => { if (o.isMesh && (o.material === fm || (o.geometry.parameters && (o.geometry.parameters.width === 0.12 || o.geometry.parameters.width === 0.3)))) o.visible = false; });
-  const body = c.children[0], vm = new THREE.MeshLambertMaterial({ color: 0xf26d5b }); const deck = new THREE.Mesh(new THREE.BoxGeometry(0.17, 0.06, 1.0), vm); deck.position.set(0, 0.16, 0); body.add(deck); const st = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 1.0, 6), vm); st.position.set(0, 0.62, 0.42); st.rotation.x = -0.15; body.add(st);
+  const body = c.children[0], vm = VOI_M; const deck = new THREE.Mesh(VOI_DECK_G, vm); deck.position.set(0, 0.16, 0); body.add(deck); const st = new THREE.Mesh(VOI_ST_G, vm); st.position.set(0, 0.62, 0.42); st.rotation.x = -0.15; body.add(st);
   c.userData.voi = true; c.userData.type = 'voi'; return c; }
-function addHelmet(h, col) { const m = new THREE.Mesh(new THREE.SphereGeometry(0.15, 12, 10), new THREE.MeshLambertMaterial({ color: col ?? pick([0x111111, 0xeeeeee, 0xc0392b, 0x2d6fd8]) })); m.scale.set(1, 1.05, 1.1);
+function addHelmet(h, col) { const hc = col ?? pick([0x111111, 0xeeeeee, 0xc0392b, 0x2d6fd8]); let hm = HELMET_M.get(hc); if (!hm) { hm = new THREE.MeshLambertMaterial({ color: hc }); HELMET_M.set(hc, hm); } const m = new THREE.Mesh(HELMET_G, hm); m.scale.set(1, 1.05, 1.1);
   /* Am Kopfknochen statt fest auf 1,68 m: Fahrer beugt sich auf dem Motorrad vor (poseBikeRider), der Helm blieb hinter dem Kopf (André 12.11.2026).
      Knochen-Y zeigt nach oben aus dem Hals (aimB), Maßstab des Knochens herausrechnen */
   const hb = h.userData.bones && h.userData.bones.Head;
@@ -2169,7 +2172,7 @@ function addHelmet(h, col) { const m = new THREE.Mesh(new THREE.SphereGeometry(0
   h.userData.helmet = m; return m; }
 // Radler auf einem KI-Rad: eine Figur als Kind des Rads (nicht in peds), beim Klauen steigt sie ab und flieht
 function addRider(c) { const h = makeHuman(Math.random() < 0.5), m = !!c.userData.moto; h.position.set(0, m ? -0.02 : 0.05, m ? -0.22 : -0.24); c.add(h); c.userData.rider = h; poseBikeRider(h, m, Math.random() * 6); return h; }
-function dropRider(c, flee = true) { const u = c.userData; if (!u.rider) return null; c.remove(u.rider); u.rider = null; const d = spawnPedAt(c.position.x + Math.cos(u.heading) * 1.1, c.position.z - Math.sin(u.heading) * 1.1); if (d) { d.userData.state = flee ? 'flee' : 'stunned'; d.userData.fleeT = 8; if (!flee) WPN.stun(d, 'hit', 2.5); } return d; }
+function dropRider(c, flee = true) { const u = c.userData; if (!u.rider) return null; const r = u.rider; c.remove(r); u.rider = null; freeSkel(r); /* Figur wird verworfen: Knochen-Textur freigeben, disposeCar erreicht sie nicht mehr */ const d = spawnPedAt(c.position.x + Math.cos(u.heading) * 1.1, c.position.z - Math.sin(u.heading) * 1.1); if (d) { d.userData.state = flee ? 'flee' : 'stunned'; d.userData.fleeT = 8; if (!flee) WPN.stun(d, 'hit', 2.5); } return d; }
 // Umgekipptes Rad/Motorrad (nicht versunken) bleibt nutzbar: E stellt es wieder auf (André 13.11.2026, #101)
 const remountable = u => u.mode === 'wreck' && u.bike && !u.sunk;
 function tipBike(c, src) { const u = c.userData; if (c === player.car) { player.hp -= 15; camShake(0.3); showMsg('GESTÜRZT', 900); exitCar(); } const d = dropRider(c, false); u.hp = 0; u.speed = 0; u.mode = 'wreck'; u.wreckT = 0; c.rotation.z = Math.PI / 2 * 0.92; c.position.y += 0.1; sfx('crash', 0.35); return d; }
@@ -2179,13 +2182,16 @@ function spawnCar(police = false, near = null, minD = 60, maxD = 220, bike = fal
   if (wantBus) { const cx = player.pos.x, cz = player.pos.z; for (let k = 0; k < 12 && !line; k++) { const L = pick(BUSLINES); for (let i = 0; i < L.p.length - 1; i += 3) { const d = Math.hypot(L.p[i][0] - cx, L.p[i][1] - cz); if (d > minD && d < maxD) { line = L; li = i; break; } } } if (line) p = { x: line.p[li][0], z: line.p[li][1], heading: Math.atan2(line.p[li + 1][0] - line.p[li][0], line.p[li + 1][1] - line.p[li][1]), road: { p: line.p, w: 8, o: 1, s: line.s }, seg: li, dir: 1 }; else wantBus = false; }
   const moto = bike && Math.random() < 0.35, amb = !police && !bike && Math.random() < 0.035; if (bike && !moto && (p.road.mw || p.road.ry)) return null; // keine Fahrräder auf Autobahn und Hochstraße (Motorräder schon)
   const minGap = bike ? 9 : 64; for (const o of cars) if ((o.position.x - p.x) ** 2 + (o.position.z - p.z) ** 2 < minGap) return null; // nicht in ein anderes Fahrzeug setzen
-  const c = moto ? makeMoto() : bike ? makeBike() : amb ? makeAmbulance() : makeCar(police, wantBus ? 'bus' : null); c.position.set(p.x, roadY(p.road, p.x, p.z), p.z);
-  const u = c.userData; u.heading = p.heading; u.road = p.road; u.seg = p.seg; u.dir = p.road.o ? p.road.o : p.dir; if (u.dir < 0) u.heading += Math.PI;
+  // Modus, Parkplatz und Hauswand-Probe zuerst nur mit Koordinaten: abgelehnte Plätze kosten keinen Fahrzeugbau mehr (GLB-Klon samt Materialien)
+  let sh = p.heading, sx = p.x, sz = p.z; const sdir = p.road.o ? p.road.o : p.dir; if (sdir < 0) sh += Math.PI;
+  const smode = police ? 'police' : (Math.random() < (bike ? 0.65 : 0.55) || p.road.mw || p.road.ry ? 'ai' : 'parked');
+  if (smode === 'parked') { const side = p.road.o && Math.random() < 0.5 ? 1 : -1; /* #102: (cos h, -sin h) zeigt links; Rechtsverkehr parkt rechts in Fahrtrichtung, nur in Einbahnstraßen auch links */ const w = p.road.w / 2 + (bike ? 0.7 : 1.1); sx += Math.cos(sh) * side * w; sz -= Math.sin(sh) * side * w; if (bike) sh += side * Math.PI / 2 * (Math.random() < 0.5 ? 1 : -1) * 0.5; }
+  const fr = bike ? 0.8 : 1.8;
+  if (solidAt(sx, sz) >= 0 || solidAt(sx + fr, sz) >= 0 || solidAt(sx - fr, sz) >= 0 || solidAt(sx, sz + fr) >= 0 || solidAt(sx, sz - fr) >= 0) return null;
+  const c = moto ? makeMoto() : bike ? makeBike() : amb ? makeAmbulance() : makeCar(police, wantBus ? 'bus' : null); c.position.set(sx, roadY(p.road, p.x, p.z), sz);
+  const u = c.userData; u.heading = sh; u.road = p.road; u.seg = p.seg; u.dir = sdir;
   if (line) { u.line = line.ref; let m = BUS_DISP.get(line.ref); if (!m) { m = new THREE.MeshBasicMaterial({ map: canvasTex(256, 40, (cx2, w, h) => { cx2.fillStyle = '#111'; cx2.fillRect(0, 0, w, h); cx2.fillStyle = '#ffa020'; cx2.font = 'bold 30px monospace'; cx2.fillText(`${line.ref} ${line.n}`.slice(0, 15), 6, 31); }, 1, 1) }); BUS_DISP.set(line.ref, m); } c.traverse(o => { if (o.material && o.material.name === 'Display') o.material = m; }); } // Liniennummer vorn
-  u.mode = police ? 'police' : (Math.random() < (bike ? 0.65 : 0.55) || p.road.mw || p.road.ry ? 'ai' : 'parked'); u.maxv = moto ? Math.min((p.road.v || 50) / 3.6, 22) * rnd(0.9, 1.15) : bike ? rnd(3.8, 6.2) : Math.min((p.road.v || 50) / 3.6, 15) * rnd(0.8, 1.05);
-  if (u.mode === 'parked') { const side = p.road.o && Math.random() < 0.5 ? 1 : -1; /* #102: (cos h, -sin h) zeigt links; Rechtsverkehr parkt rechts in Fahrtrichtung, nur in Einbahnstraßen auch links */ const w = p.road.w / 2 + (bike ? 0.7 : 1.1); c.position.x += Math.cos(u.heading) * side * w; c.position.z -= Math.sin(u.heading) * side * w; if (bike) u.heading += side * Math.PI / 2 * (Math.random() < 0.5 ? 1 : -1) * 0.5; }
-  const fr = bike ? 0.8 : 1.8, cx = c.position.x, cz = c.position.z;
-  if (solidAt(cx, cz) >= 0 || solidAt(cx + fr, cz) >= 0 || solidAt(cx - fr, cz) >= 0 || solidAt(cx, cz + fr) >= 0 || solidAt(cx, cz - fr) >= 0) return null;
+  u.mode = smode; u.maxv = moto ? Math.min((p.road.v || 50) / 3.6, 22) * rnd(0.9, 1.15) : bike ? rnd(3.8, 6.2) : Math.min((p.road.v || 50) / 3.6, 15) * rnd(0.8, 1.05);
   if (u.mode === 'ai') { u.isCar = true; snapToLane(u, c.position, u.road.w * laneK(u)); u.vh = u.heading; if (solidAt(c.position.x, c.position.z) >= 0) return null; if (bike) { const rd = addRider(c); if (moto) addHelmet(rd); } }
   c.rotation.y = u.heading; scene.add(c); cars.push(c); shootables.push(c); return c;
 }
@@ -2514,6 +2520,8 @@ function nearestStreet() { if (POCKET) return POCKET.label || 'Frankfurt'; retur
 
 // ---------- Schießen ----------
 const tracerMat = new THREE.MeshBasicMaterial({ color: 0xfff0a0 });
+const TRACER_G = new THREE.BoxGeometry(1, 1, 1), _shotFrom = new THREE.Vector3(), _shotTo = new THREE.Vector3(); // eine Einheits-Geometrie für alle Leuchtspuren (Dicke und Länge über scale), Scratch-Vektoren für Polizeischüsse
+function tracer(from, target, dick, ms) { const tr = new THREE.Mesh(TRACER_G, tracerMat); tr.scale.set(dick, dick, from.distanceTo(target)); tr.position.copy(from).lerp(target, 0.5); tr.lookAt(target); scene.add(tr); setTimeout(() => scene.remove(tr), ms); }
 function shoot() { WPN.press(true); WPN.press(false); }
 function reload() { WPN.reload(); }
 function damage(o, amt, dir, src = 'player') {
@@ -2525,7 +2533,8 @@ function damage(o, amt, dir, src = 'player') {
 }
 function explode(c, src = 'player') {
   const u = c.userData; if (u.bike) return tipBike(c, src); u.hp = 0; u.speed = 0; u.mode = 'wreck'; if (c.position.distanceTo(player.pos) < 40) camShake(0.6 * (1 - c.position.distanceTo(player.pos) / 40)); sfx('explosion', clamp(1 - c.position.distanceTo(player.pos) / 150, 0.1, 1));
-  c.traverse(m => { if (m.isSprite) m.visible = false; else if (m.isMesh && m.material?.color && m !== u.cone) { m.material = m.material.clone(); m.material.color.setHex(0x1a1a1a); if (m.material.emissive) m.material.emissive.setHex(0); } }); if (u.cone) u.cone.visible = false; u.heads = [];
+  const wm = new Map(); /* ein Wrack-Material je bisherigem Material statt je Mesh; eigene alte freigeben, Klone als eigen markieren (disposeCar) */
+  c.traverse(m => { if (m.isSprite) m.visible = false; else if (m.isMesh && m.material?.color && m !== u.cone) { const old = m.material; let k = wm.get(old); if (!k) { k = old.clone(); k.userData.own = true; k.color.setHex(0x1a1a1a); if (k.emissive) k.emissive.setHex(0); wm.set(old, k); if (old.userData.own) old.dispose(); } m.material = k; } }); if (u.cone) u.cone.visible = false; u.heads = [];
   burst(c.position.clone().setY(1), 0xff7a1a, 40, 6); burst(c.position.clone().setY(1.5), 0x222222, 20, 3);
   if (c === player.car) { player.hp -= 50; exitCar(); }
   if (player.pos.distanceTo(c.position) < 7 && !player.car) player.hp -= 40 * losFactor(c.position.x, c.position.y + 0.8, c.position.z, player.pos.x, player.pos.y + 1, player.pos.z);
@@ -2592,17 +2601,17 @@ const shadowSnap = { x: 1e9, z: 1e9, n: 0 };
 function vibrate(ms) { if (opts.vibrate !== false && navigator.vibrate) try { navigator.vibrate(ms); } catch (e) {} }
 let shakeT = 0; function camShake(t) { shakeT = Math.max(shakeT, t); if (t >= 0.3) vibrate(Math.min(80, Math.round(t * 95))); }
 // Polizeihubschrauber (#63): ab 4 Sternen kreist er über dem Spieler, bei 5 Sternen und unerreichbarem Spieler (Dach) schießt der Scharfschütze
-const PHELI = []; let PHELI_WAIT = 0;
+const PHELI = []; let PHELI_WAIT = 0, PHELI_SPARE = null; // PHELI_SPARE: abgezogener Hubschrauber wartet auf den nächsten Einsatz (kein Neubau, nichts bleibt auf der GPU liegen)
 function makePoliceHeli() { const g = HELI.makeHeli(); const seen = new Map(); g.traverse(o => { if (!o.isMesh || !o.material || !o.material.color) return; const hx = o.material.color.getHex(); if (hx !== 0xc8102e && hx !== 0xf4f4f2) return; if (!seen.has(o.material)) { const m = o.material.clone(); m.color.setHex(hx === 0xc8102e ? 0x1d4f9e : 0xc4c9d0); seen.set(o.material, m); } o.material = seen.get(o.material); });
   const rotor = g.children.find(c => c.isGroup && Math.abs(c.position.y - 3.2) < 0.01); const laser = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.03, 1), new THREE.MeshBasicMaterial({ color: 0xff2020, transparent: true, opacity: 0.7 })); laser.visible = false; scene.add(laser);
   const lamp = new THREE.Mesh(new THREE.SphereGeometry(0.25, 8, 6), new THREE.MeshBasicMaterial({ color: 0xffffee })); lamp.position.set(0, 0.2, 2.2); g.add(lamp);
   g.userData = { pheli: true, hp: 450, ang: Math.random() * 6.28, aimT: 0, shotT: 2.5, rotor, laser, lamp, hitT: 0 }; return g; }
-function dropPoliceHeli(h) { scene.remove(h); scene.remove(h.userData.laser); const i = shootables.indexOf(h); if (i >= 0) shootables.splice(i, 1); PHELI.splice(PHELI.indexOf(h), 1); }
+function dropPoliceHeli(h) { scene.remove(h); h.userData.laser.visible = false; scene.remove(h.userData.laser); const i = shootables.indexOf(h); if (i >= 0) shootables.splice(i, 1); PHELI.splice(PHELI.indexOf(h), 1); PHELI_SPARE = h; }
 function policeHeli(dt) {
   const off = opts.police === false || creative.on || POCKET || player.dead || player.wanted < 4 || !HELI.makeHeli;
   if (off) { while (PHELI.length) dropPoliceHeli(PHELI[0]); PHELI_WAIT = 0; return; }
   const want = 1; /* immer nur ein Hubschrauber (André 12.11.2026) */ PHELI_WAIT -= dt;
-  if (PHELI.length < want && PHELI_WAIT <= 0) { const h = makePoliceHeli(); const a = Math.random() * 6.28; h.position.set(player.pos.x + Math.cos(a) * 260, player.pos.y + 70, player.pos.z + Math.sin(a) * 260); scene.add(h); shootables.push(h); PHELI.push(h); PHELI_WAIT = 4; showMsg('POLIZEIHUBSCHRAUBER IM ANFLUG', 1500); }
+  if (PHELI.length < want && PHELI_WAIT <= 0) { let h = PHELI_SPARE; if (h) { PHELI_SPARE = null; Object.assign(h.userData, { hp: 450, ang: Math.random() * 6.28, aimT: 0, shotT: 2.5, hitT: 0 }); scene.add(h.userData.laser); } else h = makePoliceHeli(); const a = Math.random() * 6.28; h.position.set(player.pos.x + Math.cos(a) * 260, player.pos.y + 70, player.pos.z + Math.sin(a) * 260); scene.add(h); shootables.push(h); PHELI.push(h); PHELI_WAIT = 4; showMsg('POLIZEIHUBSCHRAUBER IM ANFLUG', 1500); }
   const ground = TH(player.pos.x, player.pos.z); const high = player.pos.y > ground + 4; const night = world.hour < 6.5 || world.hour > 19;
   for (const h of [...PHELI]) { const u = h.userData;
     if (u.hp <= 0) { try { burst(h.position.clone(), 0xff8a30, 40); } catch (e) { /* nur Effekt */ } sfx('explosion', 1); dropPoliceHeli(h); PHELI_WAIT = 30; raiseWanted(1, 5); showMsg('HUBSCHRAUBER ABGESCHOSSEN', 1600); continue; }
@@ -2613,7 +2622,7 @@ function policeHeli(dt) {
     const snipe = player.wanted >= 5 && high; if (snipe) u.aimT += dt; else u.aimT = Math.max(0, u.aimT - dt);
     const lz = u.laser; lz.visible = snipe && u.aimT > 2; if (lz.visible) { const a = h.position.clone(); a.y -= 0.5; const b = player.pos.clone(); b.y += 1.3; const d = a.distanceTo(b); lz.scale.z = d; lz.position.copy(a).lerp(b, 0.5); lz.lookAt(b); }
     if (snipe && u.aimT > 8) { u.shotT -= dt; if (u.shotT <= 0) { u.shotT = 2.5; const from = h.position.clone(); from.y -= 0.5; const target = player.pos.clone(); target.y += 1.3; const hit = Math.random() < Math.min(0.9, 0.35 + (u.aimT - 8) * 0.05); if (!hit) { target.x += rnd(-2, 2); target.z += rnd(-2, 2); }
-        const len = from.distanceTo(target); const tr = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.05, len), tracerMat); tr.position.copy(from).lerp(target, 0.5); tr.lookAt(target); scene.add(tr); setTimeout(() => { scene.remove(tr); tr.geometry.dispose(); }, 120); sfx('shot', 0.8);
+        tracer(from, target, 0.05, 120); sfx('shot', 0.8);
         if (hit && !opts.god) { player.hp -= 45; camShake(0.4); showMsg('SCHARFSCHÜTZE!', 900); } } } } }
 function archCheck() { const o = player.car || null; if (o && !o.userData.bike) return; const p = o ? o.position : player.pos; const c = deckGrid.get(Math.floor(p.x / DCELL) + ',' + Math.floor(p.z / DCELL)); if (!c) return;
   for (const s of c) { if (!s.arch || !s.apex) continue; const dx = s.bx - s.ax, dz = s.bz - s.az, L2 = dx * dx + dz * dz || 1; const tt = clamp(((p.x - s.ax) * dx + (p.z - s.az) * dz) / L2, 0, 1); if ((p.x - s.ax - dx * tt) ** 2 + (p.z - s.az - dz * tt) ** 2 > 1.2 || Math.abs(p.y - (s.ya + (s.yb - s.ya) * tt)) > 2) continue;
@@ -2706,6 +2715,7 @@ function carFx(c, dt, braking) {
 const skids = { mesh: null, i: 0 };
 function addSkid(x, z, h) { if (!skids.mesh) { const g = new THREE.PlaneGeometry(0.24, 0.7); g.rotateX(-Math.PI / 2); skids.mesh = new THREE.InstancedMesh(g, new THREE.MeshBasicMaterial({ color: 0x111111, transparent: true, opacity: 0.55, depthWrite: false }), 600); const z0 = new THREE.Object3D(); z0.scale.setScalar(0); z0.updateMatrix(); for (let i = 0; i < 600; i++) skids.mesh.setMatrixAt(i, z0.matrix); skids.mesh.frustumCulled = false; scene.add(skids.mesh); }
   const o = new THREE.Object3D(); o.position.set(x, TH(x, z) + 0.06, z); o.rotation.y = h; o.updateMatrix(); skids.mesh.setMatrixAt(skids.i, o.matrix); skids.i = (skids.i + 1) % 600; skids.mesh.instanceMatrix.needsUpdate = true; }
+const _want = new THREE.Vector2(); // Scratch für driveCar (Soll-Geschwindigkeit)
 function driveCar(c, dt, ctrl) {
   if (c.userData.heli) { if (X.heliDrive) X.heliDrive(c, dt, ctrl); return; } /* Hubschrauber: eigene Flugphysik in heli.js */
   const u = c.userData; if (c === player.car && !u.bike && ((u.mwT = (u.mwT || 0) - 1) <= 0)) { u.mwT = 15; u.onMw = onMotorway(c.position.x, c.position.z); } const maxS = (u.maxS || (u.police ? 30 : 26)) * (c === player.car && u.onMw ? (u.moto ? 1.25 : 1.7) : 1); /* Autobahn: bis ~160 km/h */ const prev = u.speed, h0 = u.heading;
@@ -2722,9 +2732,9 @@ function driveCar(c, dt, ctrl) {
   else u.heading += u.steerS * clamp(sp / 6, 0, 1) * (2.3 - 1.0 * Math.min(1, sp / maxS)) * dt * Math.sign(u.speed || 1); // KI-Fahrzeuge (Polizei, Wasserwerfer, Feuerwehr): bewährte Lenkung
   // Geschwindigkeit als Vektor: Haftung zieht ihn zur Fahrtrichtung, Handbremse und Tempo lassen das Heck kommen
   if (!u.vel) u.vel = new THREE.Vector2(Math.sin(u.heading) * u.speed, Math.cos(u.heading) * u.speed);
-  const want = new THREE.Vector2(Math.sin(u.heading) * u.speed, Math.cos(u.heading) * u.speed);
+  const want = _want.set(Math.sin(u.heading) * u.speed, Math.cos(u.heading) * u.speed);
   const grip = (hand ? 1.6 : 7.5) * (opts.grip || 1) * (1 - weather.rain * 0.35) * (u.bike ? 2.5 : 1); u.vel.lerp(want, Math.min(1, grip * dt));
-  const slip = want.clone().sub(u.vel).length();
+  const slip = Math.hypot(want.x - u.vel.x, want.y - u.vel.y);
   if (slip > 3.2 && sp > 6 && !u.bike) { u.skidT = (u.skidT || 0) + dt; if (u.skidT > 0.035) { u.skidT = 0; const rx = Math.cos(u.heading) * 0.8, rz = -Math.sin(u.heading) * 0.8, bx = -Math.sin(u.heading) * 1.4, bz = -Math.cos(u.heading) * 1.4; addSkid(c.position.x + bx + rx, c.position.z + bz + rz, u.heading); addSkid(c.position.x + bx - rx, c.position.z + bz - rz, u.heading); }
     if (c === player.car) { u.scrT = (u.scrT || 0) - dt; if (u.scrT <= 0) { u.scrT = 0.16; sfx('screech', clamp(slip / 10, 0.2, 0.7)); } } }
   // Karosserie neigt sich in Kurven und beim Bremsen/Beschleunigen
@@ -2754,16 +2764,17 @@ function driveCar(c, dt, ctrl) {
     const mv = Math.hypot(p.x - px0, p.z - pz0) / Math.max(dt, 1e-3); if (u.vel && mv > 0.01) u.vel.set((p.x - px0) / Math.max(dt, 1e-3), (p.z - pz0) / Math.max(dt, 1e-3)); u.speed *= Math.pow(0.55, dt); if (impact > 1.5 && c === player.car && Math.random() < dt * 6) sfx('bump', 0.2); }
   else if (hit) { if (impact > 5 && (u.dents || 0) < 12) { const sg = Math.sign(u.speed) || 1; const fx = Math.sin(u.heading) * sg, fz = Math.cos(u.heading) * sg; const L = (u.dims ? u.dims.l : 4.2) / 2; const side = (Math.random() - 0.5) * 1.2; const wp = new THREE.Vector3(c.position.x + fx * (L - 0.15) + fz * side, c.position.y + 0.65, c.position.z + fz * (L - 0.15) - fx * side); dentCar(c, wp, new THREE.Vector3(-fx, 0, -fz), Math.min(0.32, impact * 0.013)); } u.pv = (u.pv || 0) + clamp(u.speed * 0.05, -1.2, 1.2); u.rv = (u.rv || 0) + (Math.random() - 0.5) * impact * 0.03; u.hv = (u.hv || 0) + impact * 0.015; if (u.vel) u.vel.multiplyScalar(-0.12); if (impact > 6 && c === player.car) camShake(Math.min(0.5, impact / 45)); if (impact > 11) { if (c === player.car) sfx('crash', clamp(impact / 30, 0.3, 1)); u.hp -= (impact - 8) * 2.2 * dmgK; burst(p.clone().setY(p.y + 0.8), 0xaaaaaa, 4, 2); if (u.hp <= 0) explode(c); } else if (impact > 5 && c === player.car) sfx('bump', 0.5); u.speed = -Math.sign(u.speed) * Math.min(2.5, impact * 0.12); }
   c.rotation.y = u.heading; carFx(c, dt, ctrl.brake || (ctrl.back && u.speed > 0)); carTerrain(c);
-  if (Math.abs(u.speed) > 3) for (const ped of peds) { if (ped.userData.state === 'dead') continue; if (ped.position.distanceTo(p) < 3.5 && (() => { const D = u.dims || { l: 4.4, w: 1.9 }; const sg = Math.sign(u.speed) || 1; const hx = Math.sin(u.heading) * sg, hz = Math.cos(u.heading) * sg; const rx = ped.position.x - p.x, rz = ped.position.z - p.z; const al = rx * hx + rz * hz, ac = rx * hz - rz * hx; return al > -D.l / 2 + 0.6 && al < D.l / 2 + 0.3 && Math.abs(ac) < D.w / 2 + 0.25; })()) { const dir = new THREE.Vector3(dx, 0, dz).normalize(); if (c !== player.car) { /* KI-Fahrer weichen aus und schubsen nur */ const sx = ped.position.x - p.x, sz = ped.position.z - p.z, sl = Math.hypot(sx, sz) || 1; moveWithCollision(ped.position, sx / sl * 1.2, sz / sl * 1.2, 0.3); if (ped.userData.state !== 'stunned' && ped.userData.state !== 'cop') WPN.stun(ped, 'hit', 1.5); u.speed *= 0.5; continue; } damage(ped, u.bike ? 35 : 100, dir); const v = Math.abs(u.speed); ped.userData.fly = new THREE.Vector3(dir.x * v * 0.75 + rnd(-1, 1), 2.5 + v * 0.22, dir.z * v * 0.75 + rnd(-1, 1)); ped.userData.spin = rnd(-6, 6); sfx('hit', 0.9); if (c === player.car) raiseWanted(0.5, 2); } }
+  if (Math.abs(u.speed) > 3) { const kl = u.dims ? u.dims.l : 4.4, kw = u.dims ? u.dims.w : 1.9, ksg = Math.sign(u.speed) || 1, khx = Math.sin(u.heading) * ksg, khz = Math.cos(u.heading) * ksg; /* Fahrzeugkasten einmal vor der Schleife statt Closure je Passant */
+   for (const ped of peds) { if (ped.userData.state === 'dead') continue; if (ped.position.distanceTo(p) >= 3.5) continue; const prx = ped.position.x - p.x, prz = ped.position.z - p.z, pal = prx * khx + prz * khz, pac = prx * khz - prz * khx; if (pal > -kl / 2 + 0.6 && pal < kl / 2 + 0.3 && Math.abs(pac) < kw / 2 + 0.25) { const dir = new THREE.Vector3(dx, 0, dz).normalize(); if (c !== player.car) { /* KI-Fahrer weichen aus und schubsen nur */ const sx = ped.position.x - p.x, sz = ped.position.z - p.z, sl = Math.hypot(sx, sz) || 1; moveWithCollision(ped.position, sx / sl * 1.2, sz / sl * 1.2, 0.3); if (ped.userData.state !== 'stunned' && ped.userData.state !== 'cop') WPN.stun(ped, 'hit', 1.5); u.speed *= 0.5; continue; } damage(ped, u.bike ? 35 : 100, dir); const v = Math.abs(u.speed); ped.userData.fly = new THREE.Vector3(dir.x * v * 0.75 + rnd(-1, 1), 2.5 + v * 0.22, dir.z * v * 0.75 + rnd(-1, 1)); ped.userData.spin = rnd(-6, 6); sfx('hit', 0.9); if (c === player.car) raiseWanted(0.5, 2); } } }
   { const D = u.dims || { l: 4.4, w: 1.9 }; const hx = Math.sin(u.heading), hz = Math.cos(u.heading);
     for (const o of cars) { if (o === c || o.userData.mode === 'tram' || o.userData.heli || Math.abs(o.position.y - p.y) > 2.5) continue; const rx = o.position.x - p.x, rz = o.position.z - p.z; if (rx * rx + rz * rz > 49) continue; const ou = o.userData, OD = ou.dims || { l: 4.4, w: 1.9 };
       // Zwei gedrehte Rechtecke (Trennachsen-Test über die vier Kantenrichtungen): Stoßrichtung = Achse mit der kleinsten Überlappung.
       // Vorher zählte vom anderen Auto nur min(Länge, 1,6 × Breite): beim Auffahren steckten 0,7 m Blech ineinander
       const oh = o.rotation.y, ohx = Math.sin(oh), ohz = Math.cos(oh); let nx = 0, nz = 0, pen = 1e9;
-      for (const [axx, axz] of [[hx, hz], [hz, -hx], [ohx, ohz], [ohz, -ohx]]) { const ra = D.l / 2 * Math.abs(hx * axx + hz * axz) + D.w / 2 * Math.abs(hz * axx - hx * axz), rb = OD.l / 2 * Math.abs(ohx * axx + ohz * axz) + OD.w / 2 * Math.abs(ohz * axx - ohx * axz); const dd = rx * axx + rz * axz, ov = ra + rb - Math.abs(dd); if (ov < pen) { pen = ov; const sg = Math.sign(dd) || 1; nx = axx * sg; nz = axz * sg; } }
+      for (let a = 0; a < 4; a++) { const axx = a === 0 ? hx : a === 1 ? hz : a === 2 ? ohx : ohz, axz = a === 0 ? hz : a === 1 ? -hx : a === 2 ? ohz : -ohx; const ra = D.l / 2 * Math.abs(hx * axx + hz * axz) + D.w / 2 * Math.abs(hz * axx - hx * axz), rb = OD.l / 2 * Math.abs(ohx * axx + ohz * axz) + OD.w / 2 * Math.abs(ohz * axx - ohx * axz); const dd = rx * axx + rz * axz, ov = ra + rb - Math.abs(dd); if (ov < pen) { pen = ov; const sg = Math.sign(dd) || 1; nx = axx * sg; nz = axz * sg; } }
       if (pen <= 0) continue;
-      const myV = u.vel ? [u.vel.x, u.vel.y] : [hx * u.speed, hz * u.speed]; const oV = ou.vel ? [ou.vel.x, ou.vel.y] : [Math.sin(ou.heading || 0) * (ou.speed || 0), Math.cos(ou.heading || 0) * (ou.speed || 0)];
-      const closing = (myV[0] - oV[0]) * nx + (myV[1] - oV[1]) * nz; // > 0: wir fahren aufeinander zu
+      const mvx = u.vel ? u.vel.x : hx * u.speed, mvz = u.vel ? u.vel.y : hz * u.speed, ovx = ou.vel ? ou.vel.x : Math.sin(ou.heading || 0) * (ou.speed || 0), ovz = ou.vel ? ou.vel.y : Math.cos(ou.heading || 0) * (ou.speed || 0);
+      const closing = (mvx - ovx) * nx + (mvz - ovz) * nz; // > 0: wir fahren aufeinander zu
       const share = ou.mode === 'wreck' || ou.mode === 'parked' && !ou.unitCar ? 0.35 : 0.5; moveWithCollision(p, -nx * pen * (1 - share), -nz * pen * (1 - share), rr); if (ou.mode !== 'wreck') moveWithCollision(o.position, nx * pen * share, nz * pen * share, Math.min(1.05, OD.w / 2 + 0.1)); /* Schuebe ueber die Kollision: nicht in Waende */
       if (closing > 0.5) { /* Impuls nach Masse (Grundfläche): ein Kleinwagen prallt am Wasserwerfer ab, ein stehendes Auto wird weggeschoben statt nur 0,2 m */ const mA = D.l * D.w, mB = OD.l * OD.w * (ou.cannon ? 2.5 : 1), kA = closing * 1.1 * mB / (mA + mB), kB = closing * 1.1 * mA / (mA + mB);
         if (u.vel) { u.vel.x -= nx * kA; u.vel.y -= nz * kA; } u.speed -= (nx * hx + nz * hz) * kA;
@@ -3266,12 +3277,12 @@ function update(dt) {
       // Hindernis voraus? (Spieler, Passanten, andere Autos innerhalb 9 m im Fahrkegel)
       const fx = Math.sin(u.heading), fz = Math.cos(u.heading); let block = false;
       const pc = player.car; const yieldS = !!(pc && pc.userData.siren && c !== pc && d < 50 && ((c.position.x - pc.position.x) * Math.sin(pc.userData.heading) + (c.position.z - pc.position.z) * Math.cos(pc.userData.heading)) > 0); // Einsatzfahrzeug hinter mir: rechts ran
-      const ahead = (px, pz, r) => { const rx = px - c.position.x, rz = pz - c.position.z; const along = rx * fx + rz * fz; const sidew = Math.abs(rx * fz - rz * fx); return along > 0 && along < 9 + u.speed * 0.4 && sidew < r; };
-      if (!player.car && ahead(player.pos.x, player.pos.z, 1.6)) block = true;
+      const aReach = 9 + u.speed * 0.4; // u.speed ändert sich erst nach den Hindernisprüfungen
+      if (!player.car && aheadOf(c, fx, fz, aReach, player.pos.x, player.pos.z, 1.6)) block = true;
       if (!block && u.speed > 0.2 && barrierHit(c.position.x + fx * 4, c.position.z + fz * 4, 0.9)) block = true; // vor Bauzaun halten
-      if (u.type === 'bus') { if ((u.haltT || 0) > 0) { u.haltT -= dt; block = true; } else if ((u.haltT || 0) > -6) u.haltT = (u.haltT || 0) - dt; else for (const st of (u.road.s ? u.road.s.map(q => ({ x: q[0], z: q[1], k: 'bus' })) : CITY.stops)) { if (st.k !== 'bus') continue; const dd = (st.x - c.position.x) ** 2 + (st.z - c.position.z) ** 2; if (dd < 64) { u.haltT = 8; block = true; break; } } } // Bus hält an der Haltestelle
-      if (!block) for (const o of cars) { if (o !== c && (o.visible || o.userData.inst) && Math.abs(o.position.y - c.position.y) < 2.5 && ahead(o.position.x, o.position.z, 1.8)) { block = true; break; } }
-      if (!block) for (const p of peds) { if (p.visible && p.userData.state !== 'dead' && ahead(p.position.x, p.position.z, 1.4)) { block = true; break; } }
+      if (u.type === 'bus') { if ((u.haltT || 0) > 0) { u.haltT -= dt; block = true; } else if ((u.haltT || 0) > -6) u.haltT = (u.haltT || 0) - dt; else if (u.road.s) { for (const q of u.road.s) { const dd = (q[0] - c.position.x) ** 2 + (q[1] - c.position.z) ** 2; if (dd < 64) { u.haltT = 8; block = true; break; } } } else for (const st of CITY.stops) { if (st.k !== 'bus') continue; const dd = (st.x - c.position.x) ** 2 + (st.z - c.position.z) ** 2; if (dd < 64) { u.haltT = 8; block = true; break; } } } // Bus hält an der Haltestelle
+      if (!block) for (const o of cars) { if (o !== c && (o.visible || o.userData.inst) && Math.abs(o.position.y - c.position.y) < 2.5 && aheadOf(c, fx, fz, aReach, o.position.x, o.position.z, 1.8)) { block = true; break; } }
+      if (!block) for (const p of peds) { if (p.visible && p.userData.state !== 'dead' && aheadOf(c, fx, fz, aReach, p.position.x, p.position.z, 1.4)) { block = true; break; } }
       if (!block) for (const sg of signalsNear(c.position.x, c.position.z)) { const rx = sg[0] - c.position.x, rz = sg[1] - c.position.z; const along = rx * fx + rz * fz; if (along > 1 && along < 7 + u.speed * 0.6 && Math.abs(rx * fz - rz * fx) < 7 && signalRed(u.heading, worldT)) { block = true; break; } }
       u.isCar = true; u.speed = block ? Math.max(0, u.speed - 18 * dt) : Math.min(u.speed + (u.bike && !u.moto ? 2.2 : 6) * dt, yieldS ? 2.5 : (u.maxv || 9)); if (yieldS && u.speed > 2.5) u.speed = Math.max(2.5, u.speed - 8 * dt);
       u.stuckT = block && u.speed < 0.5 ? (u.stuckT || 0) + dt : 0; if (u.stuckT > rnd(2.5, 6) && d < 80) { u.stuckT = -rnd(4, 10); sfx('horn', clamp(1 - d / 80, 0.1, 0.8)); }
@@ -3334,6 +3345,8 @@ function update(dt) {
   setSty(cross, 'display', ((!player.car || !player.car.userData.cannon) && !player.dead) ? 'block' : 'none');
   mmT -= dt; if (mmT <= 0) { mmT = 0.05; drawMinimap(); } // Minikarte mit 20 Hz statt jedem Bild
 }
+// Liegt (px, pz) im Fahrkegel des KI-Autos c (Richtung fx/fz, Reichweite reach, halbe Breite r)? Modulfunktion statt Closure je Auto und Bild
+function aheadOf(c, fx, fz, reach, px, pz, r) { const rx = px - c.position.x, rz = pz - c.position.z; const along = rx * fx + rz * fz; return along > 0 && along < reach && Math.abs(rx * fz - rz * fx) < r; }
 function unshoot(o) { const j = shootables.indexOf(o); if (j >= 0) shootables.splice(j, 1); } // nie splice(-1): das entfernte sonst ein fremdes Objekt
 function freeSkel(h) { h.traverse(o => { if (o.isSkinnedMesh && o.skeleton && o.skeleton.boneTexture) o.skeleton.dispose(); }); } // Knochen-Textur je SkinnedMesh (12x12/16x16), sonst bleibt sie je entfernter Figur auf der GPU
 function despawnPed(h) { freeSkel(h); scene.remove(h); const i = peds.indexOf(h); if (i >= 0) peds.splice(i, 1); const j = shootables.indexOf(h); if (j >= 0) shootables.splice(j, 1); }
@@ -3352,8 +3365,8 @@ function copAI(h, dt) {
   if (d > 9) { moveWithCollision(h.position, dirx * u.speed * dt, dirz * u.speed * dt, 0.3); h.position.y = floorAt(h.position.x, h.position.z, h.position.y + 0.3); animateWalk(h, u.t, 4); }
   else animateWalk(h, u.t, 0);
   u.armR.rotation.x = -Math.PI / 2; u.armL.rotation.x = -Math.PI / 2; u.armL.rotation.z = -0.35;
-  u.shotT -= dt; if (u.shotT <= 0 && d < 28) { u.shotT = rnd(0.9, 1.6); const from = new THREE.Vector3(); u.gun.userData.muzzle.getWorldPosition(from); const hit = Math.random() < (player.car ? 0.25 : 0.4); const target = player.pos.clone(); target.y += 1.2; if (!hit) { target.x += rnd(-2, 2); target.y += rnd(-1, 1.5); target.z += rnd(-2, 2); }
-    const len = from.distanceTo(target); const tr = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.04, len), tracerMat); tr.position.copy(from).lerp(target, 0.5); tr.lookAt(target); scene.add(tr); setTimeout(() => { scene.remove(tr); tr.geometry.dispose(); }, 90); sfx('shot', clamp(1 - d / 40, 0.2, 0.7));
+  u.shotT -= dt; if (u.shotT <= 0 && d < 28) { u.shotT = rnd(0.9, 1.6); const from = _shotFrom; u.gun.userData.muzzle.getWorldPosition(from); const hit = Math.random() < (player.car ? 0.25 : 0.4); const target = _shotTo.copy(player.pos); target.y += 1.2; if (!hit) { target.x += rnd(-2, 2); target.y += rnd(-1, 1.5); target.z += rnd(-2, 2); }
+    tracer(from, target, 0.04, 90); sfx('shot', clamp(1 - d / 40, 0.2, 0.7));
     if (hit) { if (player.car) { player.car.userData.hp -= 6; if (player.car.userData.hp <= 0) explode(player.car); } else player.hp -= 9; } }
 }
 const roadLen = r => r._len ?? (r._len = r.p.reduce((a, p, i) => i ? a + Math.hypot(p[0] - r.p[i - 1][0], p[1] - r.p[i - 1][1]) : 0, 0));
