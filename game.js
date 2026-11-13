@@ -271,7 +271,9 @@ function bandH(x, z) { // oberstes Gehweg-/Straßen-/Wegband über (x,z) oder nu
   const pc = pathGrid.get(c0); if (pc) for (const [r, i] of pc) seg(r, i, 1, 0.03);
   return best; }
 function surfH(x, z) { const g = meshGroundH(x, z), b = bandH(x, z); return b !== null && b > g ? b : g; }
-function footTH(x, z, r) { let m = surfH(x, z); for (const [a, b] of [[r, r], [r, -r], [-r, r], [-r, -r]]) m = Math.min(m, surfH(x + a, z + b)); return m; }
+// Untergrenze: höchstens 30 cm unter dem tiefsten TH. Grün-, Platz- und Parkflächen liegen als eigene Netze auf TH über dem abgesenkten
+// Geländenetz; ohne Grenze steckten Bänke und Bäume dort bis 4 m tief (Probe gelaende, Lauf 43470519653)
+function footTH(x, z, r) { let m = surfH(x, z), t = TH(x, z); for (const [a, b] of [[r, r], [r, -r], [-r, r], [-r, -r]]) { m = Math.min(m, surfH(x + a, z + b)); t = Math.min(t, TH(x + a, z + b)); } return Math.max(m, t - 0.3); }
 function TH(x, z) {
   let tx = Math.floor(x / TS), tz = Math.floor(z / TS); const k = dkey(tx, tz); let H; if (k === thK) H = thH; else { H = DEMN.get(k); if (H) { thK = k; thH = H; } }
   if (!H) {
