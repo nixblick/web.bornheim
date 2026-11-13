@@ -4,8 +4,8 @@
   "x": -138,
   "z": 372,
   "wait": 9000,
-  "js": "(() => { const G = window.G; if (G.player.car) G.toggleCar(); dispatchEvent(new KeyboardEvent('keydown', { code: 'Escape', key: 'Escape' })); return document.querySelector('#menu .mn-board').textContent.slice(0, 200); })()",
-  "expect": "document.getElementById('menu').style.display === 'flex' && document.querySelector('#menu .pane[data-tab=uebersicht]').style.display === 'block' && document.querySelectorAll('#menu .mn-nav button').length === 5 && !!document.getElementById('m_save') && !!document.getElementById('m_creative') && !!document.getElementById('m_home')"
+  "js": "(() => { const G = window.G; if (G.player.car) G.toggleCar(); G.PROGRESS.P.medals.push({ id: 'probe', n: 'Bornheim-Marathon', ms: 15123000, at: Date.now() }); localStorage.setItem('eulenBest', JSON.stringify({ 'lauf|Rund um den Günthersburgpark': [{ ms: 1534000, am: '2026-11-13' }], 'rad|Bornheim-Marathon': [{ ms: 4210000, am: '2026-11-12' }] })); dispatchEvent(new KeyboardEvent('keydown', { code: 'Escape', key: 'Escape' })); return document.querySelector('#menu .mn-board').textContent.slice(0, 200); })()",
+  "expect": "document.getElementById('menu').style.display === 'flex' && document.querySelector('#menu .pane[data-tab=uebersicht]').style.display === 'block' && document.querySelectorAll('#menu .mn-nav button').length === 5 && !!document.getElementById('m_save') && !!document.getElementById('m_creative') && !!document.getElementById('m_home') && document.querySelectorAll('#menu .mn-extra .mn-card').length === 3 && document.querySelectorAll('#menu .mn-medals li').length >= 1"
  },
  {
   "n": "mn_2_karte",
@@ -17,7 +17,7 @@
   "n": "mn_3_missionen",
   "wait": 1500,
   "js": "(() => { window.G.X.menuTab('story'); return document.querySelector('#menu .mn-nav .on').textContent; })()",
-  "expect": "document.querySelector('#menu .pane[data-tab=story]').style.display === 'block'"
+  "expect": "document.querySelector('#menu .pane[data-tab=story]').style.display === 'block' && !!document.querySelector('#storypane .mn-mis') && document.querySelectorAll('#storypane .mn-misgrid button').length >= 2 && !!document.querySelector('#storypane .story')"
  },
  {
   "n": "mn_4_statistik",
@@ -55,5 +55,11 @@
   "shot": false,
   "js": "(() => { const m = document.getElementById('menu'); m.style.width = ''; m.style.right = ''; document.querySelector('#menu .mn-nav [data-main=karte]').click(); return 'ok'; })()",
   "expect": "document.querySelector('#menu .pane[data-tab=karte]').style.display === 'block'"
+ },
+ {
+  "n": "mn_10_laufrunde_aus_menue",
+  "wait": 1500,
+  "js": "(async () => { const G = window.G, w = ms => new Promise(r => setTimeout(r, ms)); let n = 0; for (; n < 12 && !G.LAUF.run; n++) { G.X.closeMenu(); await w(2500); G.X.openMenu(); G.X.menuTab('story'); await w(300); const b = [...document.querySelectorAll('#storypane .mn-misgrid button')].find(x => /Laufrunde/.test(x.textContent)); if (b) b.click(); await w(800); } return JSON.stringify({ run: !!G.LAUF.run, versuche: n, menu: document.getElementById('menu').style.display }); })()",
+  "expect": "!!window.G.LAUF.run && document.getElementById('menu').style.display === 'none'"
  }
 ]
