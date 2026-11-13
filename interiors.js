@@ -8,7 +8,7 @@ export function initInteriors(X, W, D, SH) {
   let inside = null; // { kind, grp, walls, triggers, exit, ... }
   let metro = { lines: [], stations: [] }; const ST = new Map();
   /* U-Bahn-Eingänge auf der Minikarte: blaues „U“ im Umkreis der Karte, damit man die Stationen findet (09.11.2026) */
-  if (X.mmHooks) X.mmHooks.push((ctx, P, R) => { const done = new Set(); for (const s of metro.stations) { if (s.entr.length === 0) continue; const e = s.entr[0]; const [x, y] = P(e[0], e[1]); if (x * x + y * y > R * R || done.has(s.id)) continue; done.add(s.id);
+  if (X.mmHooks) X.mmHooks.push((ctx, P, R) => { const done = []; for (const s of metro.stations) for (const e of s.entr) { const [x, y] = P(e[0], e[1]); if (x * x + y * y > R * R || done.some(([a, b]) => Math.hypot(a - x, b - y) < 14)) continue; done.push([x, y]); /* jeder Eingang, nicht nur der erste (#97); Überlappung auf der Karte zusammengefasst */
     ctx.fillStyle = s.sOnly ? '#3a9a4a' : '#0a3d8f'; ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5; ctx.fillRect(x - 6, y - 6, 12, 12); ctx.strokeRect(x - 6, y - 6, 12, 12); ctx.fillStyle = '#fff'; ctx.font = 'bold 10px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(s.sOnly ? 'S' : 'U', x, y + 0.5); } });
   /* Tunnelstationen der S-Bahn (City-Tunnel Frankfurt, Quelle de.wikipedia „City-Tunnel Frankfurt“ und Artikel der Stationen, 12.11.2026).
      Schlachthof liegt auch im Tunnel, fehlt aber in data/metro.json. Reine S-Halte haben in OSM keinen subway_entrance:
@@ -196,6 +196,14 @@ export function initInteriors(X, W, D, SH) {
       for (const zz of [-1.7, 1.7]) box(g, 4.6, 1, 0.08, L - 4.6, 0.5, zz, M(0x5a6068, 0.3));
       panel(g, signTex('S  S-Bahn eine Ebene tiefer ↓', '#2f7d3c'), 4.2, 0.62, L - 3, 4.6, 0, -Math.PI / 2); panel(g, signTex('S-Bahn ↓', '#2f7d3c', '#fff', 512, 160), 2.2, 0.68, L - 8.5, H - 1.4, 0.36, 0);
       R.walls.push([L - 2.2, -1.7, L, 1.7]); trig(R, L - 7, 0, 2.2, 'F · Treppe runter zur S-Bahn', () => station(full, exit, 0, 'S')); }
+    /* Zweiter Ausgang am anderen Bahnsteigende (#97): führt zum OSM-Eingang, der am weitesten vom ersten Ausgang liegt.
+       Nur aus den entr-Daten; Stationen mit einem Eingang behalten einen. Auf der U-Ebene einer S-Tunnelstation ist das
+       Ende von der S-Treppe belegt, dort liegt der zweite Ausgang am anderen Ende der S-Ebene. */
+    const ent = full.entr || []; if (ent.length >= 2 && !(!sL && full.sTun)) {
+      const far = ent.reduce((m, e) => Math.hypot(e[0] - exit.x, e[1] - exit.z) > Math.hypot(m[0] - exit.x, m[1] - exit.z) ? e : m);
+      const ex2 = { x: far[0] + 2, z: far[1] + 2, yaw: camYaw.v, fix: () => { [ex2.x, ex2.z] = exitNear(far[0] + 2, far[1] + 2); } };
+      for (let i = 0; i < 12; i++) box(g, 0.42, 0.25 * (i + 1), 3.2, L - 6.4 + i * 0.4, 0.125 * (i + 1), 0, M(0x9a958c, 0.3)); box(g, 0.08, 1, 4.6, L - 4, 3.3, 1.7, M(0x5a6068, 0.3)); box(g, 0.08, 1, 4.6, L - 4, 3.3, -1.7, M(0x5a6068, 0.3)); panel(g, signTex('Ausgang ↑', sL ? '#2f7d3c' : '#0a3d8f'), 3, 0.6, L - 3, 4.6, 0, -Math.PI / 2);
+      R.walls.push([L - 6.6, -1.7, L, 1.7]); trig(R, L - 8, 0, 2.2, 'F · Treppe rauf zum zweiten Ausgang', () => { if (inside) inside.exit = ex2; leave(); }); }
     trig(R, -L + 12, -2.6, 1.4, 'F · Fahrkartenautomat: Ziel wählen (3 €)', () => travelMenu(st));
     // Züge auf beiden Gleisen
     R.trains = [-1, 1].map((sd, i) => { const t = sL ? sTrainModel(sd) : trainModel(LCOL(st.lines[i % st.lines.length] || st.lines[0])); g.add(t); return { m: t, sd, x: 140 * (i ? -1 : 1), state: 'away', t: i * 14 + 6, dir: i ? 1 : -1 }; });
