@@ -2687,8 +2687,11 @@ function vehName(c) { const u = c.userData; const n = u.heli ? 'Christoph 2' : u
 function exitCar() {
   const c = player.car; if (!c) return; const u = c.userData; sfx(u.bike ? 'click' : 'door'); u.mode = u.sunk ? 'wreck' : 'parked'; u.driver = null; if (player.mesh.userData.helmet) player.mesh.userData.helmet.visible = false;
   if (u.heli) { player.pos.set(c.position.x + Math.cos(u.heading) * 2.6, 0, c.position.z - Math.sin(u.heading) * 2.6); player.pos.y = floorAt(player.pos.x, player.pos.z, c.position.y + 1); player.vy = 0; player.car = null; player.mesh.visible = true; player.mesh.position.copy(player.pos); return; }
-  const cand = [[Math.cos(u.heading) * 2.2, -Math.sin(u.heading) * 2.2], [-Math.cos(u.heading) * 2.2, Math.sin(u.heading) * 2.2], [-Math.sin(u.heading) * 3.5, -Math.cos(u.heading) * 3.5]];
-  for (const [ox, oz] of cand) { player.pos.set(c.position.x + ox, 0, c.position.z + oz); if (solidAt(player.pos.x, player.pos.z) < 0) break; }
+  const hs = Math.sin(u.heading), hc = Math.cos(u.heading), cx = c.position.x, cz = c.position.z;
+  const cand = [[hc * 2.2, -hs * 2.2], [-hc * 2.2, hs * 2.2], [-hs * 3.5, -hc * 3.5], [hs * 3.5, hc * 3.5], [hc * 1.4, -hs * 1.4], [-hc * 1.4, hs * 1.4]];
+  // rechts, links, hinten, vorn, dann eng am Fahrzeug: erst ohne Zaun, dann nur hausfrei; ist alles zu, bleibt die Figur am Fahrzeug stehen statt im Haus
+  const spot = cand.find(([ox, oz]) => solidAt(cx + ox, cz + oz) < 0 && !barrierHit(cx + ox, cz + oz, 0.35)) || cand.find(([ox, oz]) => solidAt(cx + ox, cz + oz) < 0) || [0, 0];
+  player.pos.set(cx + spot[0], 0, cz + spot[1]);
   player.pos.y = surfAt(player.pos.x, player.pos.z, c.position.y + 0.5); player.vy = 0; // Brücken/Hochstraßen: auf dem Deck aussteigen, nicht darunter
   player.car = null; player.mesh.visible = true; player.mesh.position.copy(player.pos);
   if (player.mesh.userData.hand) player.mesh.userData.hand.rotation.set(0, Math.PI, 0);
