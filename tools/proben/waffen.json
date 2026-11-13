@@ -1,0 +1,8 @@
+[
+ { "n": "keine_waffen_pickups", "x": -138, "z": 372, "wait": 8000, "shot": false,
+   "js": "JSON.stringify({ pickups: window.G.pickups.length, waffen: window.G.pickups.filter(p => p.userData.kind.startsWith('w:')).length })",
+   "expect": "window.G.pickups.length > 0 && window.G.pickups.every(p => !p.userData.kind.startsWith('w:'))" },
+ { "n": "kreativ_raketenwerfer", "wait": 1500,
+   "js": "(() => { const G = window.G, W = G.WPN; G.toggleCreative(); const has = !!W.DEF.rocket; W.give('rocket', 0); W.select('rocket', true); const im = !!W.inv.rocket; G.toggleCreative(); return JSON.stringify({ def: has, imKreativ: im, danach: !!W.inv.rocket }); })()",
+   "expect": "(() => { const W = window.G.WPN; return !!W.DEF.rocket && !W.inv.rocket; })()" }
+]

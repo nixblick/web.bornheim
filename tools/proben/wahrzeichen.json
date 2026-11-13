@@ -110,6 +110,17 @@
   "expect": "(() => { try { const r = JSON.parse(window.__last); return r.strahlen >= 16 && r.unsichtbar + r.begehbar <= 3; } catch (e) { return false; } })()"
  },
  {
+  "n": "messe_rundum",
+  "x": -4061,
+  "z": 1988,
+  "tx": -4061,
+  "tz": 1898,
+  "pitch": 0.45,
+  "wait": 6000,
+  "js": "(async () => { window.__last = await (async () => { const G = window.G, T = G.THREE; await new Promise(r => setTimeout(r, 2500));\n const i0 = G.solidAt(-4061, 1898); if (i0 < 0) return 'kein Bau';\n const b = G.WORLD.buildings[i0]; let cx = 0, cz = 0; for (const q of b.p) { cx += q[0]; cz += q[1]; } cx /= b.p.length; cz /= b.p.length;\n let R = 0; for (const q of b.p) R = Math.max(R, Math.hypot(q[0] - cx, q[1] - cz)); R += 15;\n const y = G.TH(cx, cz) + 1.6, rc = new T.Raycaster(); rc.camera = G.camera; let unsicht = 0, begehbar = 0, n = 0, worst = 0;\n for (let k = 0; k < 32; k++) { const a = k / 32 * Math.PI * 2, dx = -Math.sin(a), dz = -Math.cos(a), sx = cx - dx * R, sz = cz - dz * R;\n  let dc = null; for (let s = 0; s < R; s += 0.25) { if (G.solidAt(sx + dx * s, sz + dz * s) === i0) { dc = s; break; } } if (dc === null) continue;\n  rc.set(new T.Vector3(sx, y, sz), new T.Vector3(dx, 0, dz)); rc.far = R;\n  const dyn = new Set([...(G.cars || []), ...((G.peds || []).map(p => p.mesh || p))]); const mobil = o => { for (let q = o; q; q = q.parent) if (dyn.has(q) || q.isSkinnedMesh) return true; return false; }; const hit = rc.intersectObjects(G.scene.children, true).find(h => !mobil(h.object) && h.object.isMesh && !h.object.isSprite && !h.object.isInstancedMesh && h.object.visible && h.distance > dc - 6);\n  if (!hit) continue; { const j = G.solidAt(hit.point.x + dx * 0.4, hit.point.z + dz * 0.4); if (j >= 0 && j !== i0) continue; } n++; const d = hit.distance - dc; worst = Math.max(worst, Math.abs(d)); if (d > 1.5) unsicht++; else if (d < -1.5) begehbar++; }\n return JSON.stringify({ bau: b.lm, strahlen: n, unsichtbar: unsicht, begehbar, max_m: +worst.toFixed(1) }); })(); return window.__last; })()",
+  "expect": "(() => { try { const r = JSON.parse(window.__last); return r.strahlen >= 16 && r.unsichtbar + r.begehbar <= 3; } catch (e) { return false; } })()"
+ },
+ {
   "n": "waldstadion",
   "x": -4583,
   "z": 6771,

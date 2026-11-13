@@ -36,6 +36,9 @@ const LIST = [
   { id: 'euro', n: 'Eurotower', c: [-2550, 2211], h: 148, t: null, r: 1500 },
   // Trianon: 186 m, dreieckiger Grundriss, auf die Spitze gestellte Pyramide als Kopf
   { id: 'trianon', n: 'Trianon', c: [-3062, 1858], h: 186, t: null, r: 1800 },
+  // Messeturm (https://de.wikipedia.org/wiki/Messeturm): 257 m, rotbrauner Granit, quadratischer Schaft, Glaszylinder unter der Pyramidenspitze.
+  // Seit 13.11.2026 hier statt im Kachelbau (game.js kindOf 'messeturm'), damit er wie die Skyline bis 2 km steht, auch wenn seine Kachel nicht gebaut ist.
+  { id: 'messe', n: 'Messeturm', c: [-4061, 1898], h: 257, t: null, r: 2000 },
 ];
 
 function centroid(p) { let x = 0, z = 0; for (const q of p) { x += q[0]; z += q[1]; } return [x / p.length, z / p.length]; }
@@ -85,6 +88,7 @@ function core(e, W, D) {
   if (e.id === 'main') { const rr = Math.min(r, D / 2) * 0.95, zc = D / 2 - rr, hw = W * 0.45, z0 = -D / 2 - 2, z1 = zc - rr + 4; // Glaszylinder und Steinturm wie mk()
     const inside = (x, z) => (x * x + (z - zc) ** 2 <= rr * rr) || (Math.abs(x) <= hw && z >= z0 && z <= z1);
     return [star(inside, 0, Math.min(z1, zc) - 1, Math.max(W, D) + 10), H]; }
+  if (e.id === 'messe') return [rect(W * 0.95, D * 0.95), 170];
   if (e.id === 'westend') return [rect(W * 0.85, D * 0.85), H - 16];
   if (e.id === 'euro') return [rect(W * 0.9, D * 0.75), H];
   return null;
@@ -97,6 +101,7 @@ export function markLandmark(b) {
     return; }
 }
 
+/** @param {import('./types').Ctx} X */
 export function initWahrzeichen(X) {
   const { THREE, scene, player, TH, canvasTex, world } = X;
   const built = new Map(); let scanT = 0; let lastNight = null;
@@ -186,7 +191,10 @@ export function initWahrzeichen(X) {
     } else { // Hochhäuser
       const glas = (base, band, rx, ry) => T(256, 256, (c, w, h) => { c.fillStyle = base; c.fillRect(0, 0, w, h); c.fillStyle = band; for (let y = 0; y < h; y += 16) c.fillRect(0, y, w, 4); c.fillStyle = 'rgba(255,255,255,0.10)'; for (let x = 0; x < w; x += 16) c.fillRect(x, 0, 2, h); c.fillStyle = 'rgba(255,236,190,0.35)'; for (let i = 0; i < 60; i++) c.fillRect(((i * 97) % 16) * 16 + 3, ((i * 53) % 16) * 16 + 5, 10, 9); }, rx, ry);
       const H = e.h, r = Math.min(W, D) / 2;
-      if (e.id === 'coba') { const f = glas('#7f96a8', '#c9d0d4', 6, 60); const t = new THREE.CylinderGeometry(r * 1.12, r * 1.12, H, 3, 1); add(t, f, 0, H / 2 - 1, 0, Math.PI / 6);
+      if (e.id === 'messe') { const s = Math.min(W, D) * 0.95; const gr = T(256, 256, (c, w, h) => { c.fillStyle = '#8a5a4e'; c.fillRect(0, 0, w, h); for (let r = 0; r < 12; r++) for (let q = 0; q < 8; q++) { const x = q * w / 8, y = r * h / 12; if (q === 0 || q === 7) { c.fillStyle = '#1e2733'; c.fillRect(x, y, w / 8, h / 12); continue; } c.fillStyle = '#6e443b'; c.fillRect(x + 6, y + 4, w / 8 - 12, h / 12 - 8); c.fillStyle = '#26303c'; c.fillRect(x + 9, y + 7, w / 8 - 18, h / 12 - 14); } }, 2, 12);
+        add(box(s, 171, s), gr, 0, 84.5, 0); add(box(s * 0.83, 20, s * 0.83), M(0x8a5a4e), 0, 180, 0, Math.PI / 4); // gestufte Krone
+        add(new THREE.CylinderGeometry(s * 0.44, s * 0.47, 31, 24), M(0x2a3340), 0, 205.5, 0); add(new THREE.ConeGeometry(s * 0.44, 36, 4), M(0x7a4a40), 0, 239, 0, Math.PI / 4);
+      } else if (e.id === 'coba') { const f = glas('#7f96a8', '#c9d0d4', 6, 60); const t = new THREE.CylinderGeometry(r * 1.12, r * 1.12, H, 3, 1); add(t, f, 0, H / 2 - 1, 0, Math.PI / 6);
         const gr = M(0x5b8a4a); for (let k = 1; k < 5; k++) add(new THREE.CylinderGeometry(r * 1.13, r * 1.13, 6, 3, 1, true), gr, 0, k * H / 5, 0, Math.PI / 6); // Himmelsgärten
         add(new THREE.CylinderGeometry(r * 0.35, r * 0.5, 8, 3), M(0xd0d4d8), 0, H + 4, 0, Math.PI / 6); add(new THREE.CylinderGeometry(0.5, 1.2, 41, 6), M(0xe8e8e8), 0, H + 20.5, 0);
       } else if (e.id === 'main') { const f = glas('#4d6f8e', '#93a6b6', 8, 50); const rr = Math.min(r, D / 2) * 0.95, zc = D / 2 - rr; add(new THREE.CylinderGeometry(rr, rr, H, 24), f, 0, H / 2 - 1, zc);
@@ -201,11 +209,21 @@ export function initWahrzeichen(X) {
     g.position.set(ob.cx, y0, ob.cz); g.rotation.y = Math.atan2(fx, fz);
     g.userData.mats = mats; scene.add(g); return g;
   }
-  function drop(g) { scene.remove(g); disposeHierarchy(g); for (const m of g.userData.mats) { if (m.map) m.map.dispose(); m.dispose(); } /* auch Materialien, die gerade an keinem Mesh hängen */ }
+  function drop(g) { if (g.userData.sockel) { scene.remove(g.userData.sockel); g.userData.sockel.geometry.dispose(); } scene.remove(g); disposeHierarchy(g); for (const m of g.userData.mats) { if (m.map) m.map.dispose(); m.dispose(); } /* auch Materialien, die gerade an keinem Mesh hängen */ }
   // Fernsicht (André 13.11.2026): Der Szenen-Nebel endet je nach Stufe bei 250–700 m, dahinter waren Dom und Skyline weg.
   // Wahrzeichen nehmen nicht am Nebel teil, sondern bekommen einen eigenen, weiteren Dunst: Farbe gleitet bis FERN zur Nebelfarbe.
   const FERN = 2200, _fc = new THREE.Color();
+  // Dunst-Sockel (13.11.2026): Jenseits des Nebels verschwindet der Boden in Nebelfarbe, der Turmfuß blieb scharf, die Hochhäuser
+  // schienen zu schweben. Ein offener Zylinder in Nebelfarbe, unten deckend, oben durchsichtig, legt sich um den Fuß; nah unsichtbar.
+  function sockel(g) { if (g.userData.sockel) return g.userData.sockel; const bb = new THREE.Box3().setFromObject(g); const R = Math.max(bb.max.x - bb.min.x, bb.max.z - bb.min.z) * 0.62 + 6;
+    const geo = new THREE.CylinderGeometry(R, R, 60, 24, 6, true); const p = geo.attributes.position, col = new Float32Array(p.count * 4);
+    for (let i = 0; i < p.count; i++) { const a = Math.max(0, Math.min(1, 1 - (p.getY(i) + 30) / 60)); col.set([1, 1, 1, a * a], i * 4); }
+    geo.setAttribute('color', new THREE.BufferAttribute(col, 4)); geo.translate(0, 26, 0);
+    const m = new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, depthWrite: false, fog: false, opacity: 0 }); const s = new THREE.Mesh(geo, m); s.renderOrder = 2;
+    s.position.set(g.position.x, g.position.y, g.position.z); scene.add(s); g.userData.sockel = s; g.userData.mats.push(m); return s; }
   function haze() { const f = scene.fog; if (!f) return; const cam = X.camera; if (!cam) return;
+    for (const g of built.values()) { if (!g.userData.b || !['coba', 'main', 'westend', 'euro', 'trianon', 'messe'].includes(g.userData.b.lm)) continue; const s = sockel(g);
+      const d = Math.hypot(cam.position.x - g.position.x, cam.position.z - g.position.z); s.material.color.copy(f.color); s.material.opacity = Math.max(0, Math.min(0.95, (d - f.far * 0.8) / 150)); s.visible = s.material.opacity > 0.01; }
     for (const g of [...built.values(), ...(X.FAR_HAZE || []).map(h => (h.position = h.position || { x: h.x, z: h.z }, h.userData = h.userData || { mats: h.mats }, h))]) { const d = Math.hypot(cam.position.x - g.position.x, cam.position.z - g.position.z); const near = Math.max(60, f.near);
       const k = Math.min(0.85, Math.max(0, (d - near) / (Math.max(FERN, f.far * 3) - near)));
       if (g.userData.k !== undefined && Math.abs(g.userData.k - k) < 0.01 && g.userData.fc === f.color.getHex()) continue; g.userData.k = k; g.userData.fc = f.color.getHex(); _fc.copy(f.color);
