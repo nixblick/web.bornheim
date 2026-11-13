@@ -8,13 +8,13 @@ export function initWegweiser(X) {
   let cur = null; const drawn = { mm: 0, map: 0 };
 
   // Strahl: hohe Säule (additiv, 90 m), breiter Bodenring, schwebender Pfeil
-  const beam = (() => { const g = new THREE.Group();
-    const b = new THREE.Mesh(new THREE.CylinderGeometry(0.9, 0.9, 90, 12, 1, true), new THREE.MeshBasicMaterial({ color: COL, transparent: true, opacity: 0.28, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide })); b.position.y = 45;
-    const core = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.25, 90, 8, 1, true), new THREE.MeshBasicMaterial({ color: 0xc8ffd8, transparent: true, opacity: 0.5, depthWrite: false, blending: THREE.AdditiveBlending })); core.position.y = 45;
+  const beam = (() => { const g = new THREE.Group(); g.userData.mats = [];
+    const b = new THREE.Mesh(new THREE.CylinderGeometry(0.9, 0.9, 90, 12, 1, true), new THREE.MeshBasicMaterial({ color: COL, transparent: true, opacity: 0.28, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide })); b.position.y = 45; g.userData.mats = [b.material];
+    const core = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.25, 90, 8, 1, true), new THREE.MeshBasicMaterial({ color: 0xc8ffd8, transparent: true, opacity: 0.5, depthWrite: false, blending: THREE.AdditiveBlending })); core.position.y = 45; g.userData.mats.push(core.material);
     const ring = new THREE.Mesh(new THREE.TorusGeometry(3.6, 0.42, 10, 40), new THREE.MeshBasicMaterial({ color: COL, transparent: true, opacity: 0.95, depthWrite: false })); ring.rotation.x = Math.PI / 2; ring.position.y = 0.5;
     const disc = new THREE.Mesh(new THREE.RingGeometry(0.4, 3.4, 40), new THREE.MeshBasicMaterial({ color: COL, transparent: true, opacity: 0.22, depthWrite: false, side: THREE.DoubleSide })); disc.rotation.x = -Math.PI / 2; disc.position.y = 0.08;
     const arrow = new THREE.Mesh(new THREE.ConeGeometry(0.8, 1.4, 4), new THREE.MeshBasicMaterial({ color: COL })); arrow.rotation.x = Math.PI; arrow.position.y = 4;
-    g.add(b, core, ring, disc, arrow); g.userData = { ring, arrow }; g.visible = false; scene.add(g); return g; })();
+    g.add(b, core, ring, disc, arrow); Object.assign(g.userData, { ring, arrow }); g.visible = false; scene.add(g); return g; })();
 
   // Anzeige oben im Spielbild: eigenes Feld unter #obj (das gehört story.js)
   const hud = document.createElement('div'); hud.id = 'wegweiser';
@@ -28,7 +28,12 @@ export function initWegweiser(X) {
   const relAngle = (dx, dz) => { const t = camYaw.v + Math.PI, x = dx * Math.cos(t) - dz * Math.sin(t), y = dx * Math.sin(t) + dz * Math.cos(t); return Math.atan2(x, -y); };
 
   function route(r) { cur = r; beam.visible = !!r; hud.style.display = r ? 'flex' : 'none'; if (!r) lastTxt = ''; }
-  function update(dt) { if (!cur || !cur.pts[cur.i]) return; const [x, z] = cur.pts[cur.i]; const here = player.car ? player.car.position : player.pos;
+  // Nicht unter #obj (Willkommen/Auftrag, kann zweizeilig sein) rutschen: Oberkante dynamisch darunter (13.11.2026)
+  const objEl = document.getElementById('obj'); let topPx = 84;
+  const place = () => { const o = objEl && objEl.style.display !== 'none' && objEl.offsetHeight ? objEl.offsetTop + objEl.offsetHeight + 8 : 40; if (o !== topPx) { topPx = o; hud.style.top = o + 'px'; } };
+  // Am Tag geht der additive Strahl im hellen Himmel unter: Deckkraft nach Tageslicht anheben (André 13.11.2026)
+  const sun = () => { const d = X.world && X.world.day; return typeof d === 'number' ? Math.max(0, Math.min(1, d)) : 0.5; };
+  function update(dt) { if (!cur || !cur.pts[cur.i]) return; place(); { const k = sun(), [mb, mc] = beam.userData.mats; mb.opacity = 0.28 + 0.37 * k; mc.opacity = 0.5 + 0.45 * k; const sc = 1 + 0.5 * k; beam.children[0].scale.set(sc, 1, sc); } const [x, z] = cur.pts[cur.i]; const here = player.car ? player.car.position : player.pos;
     beam.position.set(x, TH(x, z), z); beam.userData.ring.rotation.z += dt * 1.5; beam.userData.arrow.position.y = 4 + Math.sin(performance.now() / 300) * 0.4; beam.userData.arrow.rotation.y += dt * 2;
     const dx = x - here.x, dz = z - here.z, d = Math.hypot(dx, dz);
     pfeil.style.transform = `rotate(${relAngle(dx, dz).toFixed(2)}rad)`;
