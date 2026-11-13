@@ -1,0 +1,147 @@
+[
+ {
+  "n": "dunst_hoch_setzen",
+  "shot": false,
+  "wait": 1000,
+  "js": "(async () => { try { const o = JSON.parse(localStorage.getItem('notgta.opts') || '{}'); if (o.quality === 'hoch') return 'schon hoch, LOW_GFX=' + window.G.LOW_GFX; o.quality = 'hoch'; localStorage.setItem('notgta.opts', JSON.stringify(o)); setTimeout(() => location.reload(), 200); return 'neu laden'; } catch (e) { return 'EXC ' + e; } })()"
+ },
+ {
+  "n": "dunst_neu_geladen",
+  "shot": false,
+  "wait": 3000,
+  "js": "(async () => { for (let i = 0; i < 170; i++) { if (window.G && document.body.innerText.includes('Frankfurt bereit')) break; await new Promise(r => setTimeout(r, 1000)); } for (let i = 0; i < 2; i++) { const b = [...document.querySelectorAll('button')].find(b => /Rein da/.test(b.textContent)); if (b) b.click(); await new Promise(r => setTimeout(r, i ? 5000 : 12000)); } return JSON.stringify({ q: window.G.opts.quality, low: window.G.LOW_GFX, dunst: /hazeP/.test(window.G.THREE.ShaderChunk.fog_fragment) }); })()",
+  "expect": "window.G.opts.quality === 'hoch' && /hazeP/.test(window.G.THREE.ShaderChunk.fog_fragment)"
+ },
+ {
+  "n": "dunst_tag_skyline_vorher",
+  "x": -3300,
+  "z": 2500,
+  "tx": -2600,
+  "tz": 2000,
+  "pitch": -0.2,
+  "hour": 13,
+  "wait": 8000,
+  "js": "(async () => { window.G.opts.quality = 'hoch'; window.G.opts.dunst = false; await new Promise(r => setTimeout(r, 1500)); return JSON.stringify({ q: window.G.opts.quality, fog: [Math.round(window.G.scene.fog.near), Math.round(window.G.scene.fog.far)] }); })()"
+ },
+ {
+  "n": "dunst_tag_skyline_nachher",
+  "x": -3300,
+  "z": 2500,
+  "tx": -2600,
+  "tz": 2000,
+  "pitch": -0.2,
+  "hour": 13,
+  "wait": 1500,
+  "js": "(async () => { window.G.opts.quality = 'hoch'; window.G.opts.dunst = true; await new Promise(r => setTimeout(r, 1500)); return JSON.stringify({ q: window.G.opts.quality, fog: [Math.round(window.G.scene.fog.near), Math.round(window.G.scene.fog.far)] }); })()"
+ },
+ {
+  "n": "dunst_tag_altstadt_vorher",
+  "x": -2250,
+  "z": 2640,
+  "tx": -2350,
+  "tz": 2000,
+  "pitch": -0.12,
+  "hour": 13,
+  "wait": 8000,
+  "js": "(async () => { window.G.opts.quality = 'hoch'; window.G.opts.dunst = false; await new Promise(r => setTimeout(r, 1500)); return JSON.stringify({ q: window.G.opts.quality, fog: [Math.round(window.G.scene.fog.near), Math.round(window.G.scene.fog.far)] }); })()"
+ },
+ {
+  "n": "dunst_tag_altstadt_nachher",
+  "x": -2250,
+  "z": 2640,
+  "tx": -2350,
+  "tz": 2000,
+  "pitch": -0.12,
+  "hour": 13,
+  "wait": 1500,
+  "js": "(async () => { window.G.opts.quality = 'hoch'; window.G.opts.dunst = true; await new Promise(r => setTimeout(r, 1500)); return JSON.stringify({ q: window.G.opts.quality, fog: [Math.round(window.G.scene.fog.near), Math.round(window.G.scene.fog.far)] }); })()"
+ },
+ {
+  "n": "dunst_tag_bornheim_vorher",
+  "x": -138,
+  "z": 372,
+  "tx": -1500,
+  "tz": 1200,
+  "pitch": -0.05,
+  "hour": 13,
+  "wait": 8000,
+  "js": "(async () => { window.G.opts.quality = 'hoch'; window.G.opts.dunst = false; await new Promise(r => setTimeout(r, 1500)); return JSON.stringify({ q: window.G.opts.quality, fog: [Math.round(window.G.scene.fog.near), Math.round(window.G.scene.fog.far)] }); })()"
+ },
+ {
+  "n": "dunst_tag_bornheim_nachher",
+  "x": -138,
+  "z": 372,
+  "tx": -1500,
+  "tz": 1200,
+  "pitch": -0.05,
+  "hour": 13,
+  "wait": 1500,
+  "js": "(async () => { window.G.opts.quality = 'hoch'; window.G.opts.dunst = true; await new Promise(r => setTimeout(r, 1500)); return JSON.stringify({ q: window.G.opts.quality, fog: [Math.round(window.G.scene.fog.near), Math.round(window.G.scene.fog.far)] }); })()"
+ },
+ {
+  "n": "dunst_nacht_skyline_vorher",
+  "x": -3300,
+  "z": 2500,
+  "tx": -2600,
+  "tz": 2000,
+  "pitch": -0.2,
+  "hour": 21.5,
+  "wait": 8000,
+  "js": "(async () => { window.G.opts.quality = 'hoch'; window.G.opts.dunst = false; await new Promise(r => setTimeout(r, 1500)); return JSON.stringify({ q: window.G.opts.quality, fog: [Math.round(window.G.scene.fog.near), Math.round(window.G.scene.fog.far)] }); })()"
+ },
+ {
+  "n": "dunst_nacht_skyline_nachher",
+  "x": -3300,
+  "z": 2500,
+  "tx": -2600,
+  "tz": 2000,
+  "pitch": -0.2,
+  "hour": 21.5,
+  "wait": 1500,
+  "js": "(async () => { window.G.opts.quality = 'hoch'; window.G.opts.dunst = true; await new Promise(r => setTimeout(r, 1500)); return JSON.stringify({ q: window.G.opts.quality, fog: [Math.round(window.G.scene.fog.near), Math.round(window.G.scene.fog.far)] }); })()"
+ },
+ {
+  "n": "dunst_nacht_altstadt_vorher",
+  "x": -2250,
+  "z": 2640,
+  "tx": -2350,
+  "tz": 2000,
+  "pitch": -0.12,
+  "hour": 21.5,
+  "wait": 8000,
+  "js": "(async () => { window.G.opts.quality = 'hoch'; window.G.opts.dunst = false; await new Promise(r => setTimeout(r, 1500)); return JSON.stringify({ q: window.G.opts.quality, fog: [Math.round(window.G.scene.fog.near), Math.round(window.G.scene.fog.far)] }); })()"
+ },
+ {
+  "n": "dunst_nacht_altstadt_nachher",
+  "x": -2250,
+  "z": 2640,
+  "tx": -2350,
+  "tz": 2000,
+  "pitch": -0.12,
+  "hour": 21.5,
+  "wait": 1500,
+  "js": "(async () => { window.G.opts.quality = 'hoch'; window.G.opts.dunst = true; await new Promise(r => setTimeout(r, 1500)); return JSON.stringify({ q: window.G.opts.quality, fog: [Math.round(window.G.scene.fog.near), Math.round(window.G.scene.fog.far)] }); })()"
+ },
+ {
+  "n": "dunst_nacht_bornheim_vorher",
+  "x": -138,
+  "z": 372,
+  "tx": -1500,
+  "tz": 1200,
+  "pitch": -0.05,
+  "hour": 21.5,
+  "wait": 8000,
+  "js": "(async () => { window.G.opts.quality = 'hoch'; window.G.opts.dunst = false; await new Promise(r => setTimeout(r, 1500)); return JSON.stringify({ q: window.G.opts.quality, fog: [Math.round(window.G.scene.fog.near), Math.round(window.G.scene.fog.far)] }); })()"
+ },
+ {
+  "n": "dunst_nacht_bornheim_nachher",
+  "x": -138,
+  "z": 372,
+  "tx": -1500,
+  "tz": 1200,
+  "pitch": -0.05,
+  "hour": 21.5,
+  "wait": 1500,
+  "js": "(async () => { window.G.opts.quality = 'hoch'; window.G.opts.dunst = true; await new Promise(r => setTimeout(r, 1500)); return JSON.stringify({ q: window.G.opts.quality, fog: [Math.round(window.G.scene.fog.near), Math.round(window.G.scene.fog.far)] }); })()"
+ }
+]
