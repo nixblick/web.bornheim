@@ -2468,13 +2468,13 @@ addEventListener('wheel', e => { if (creative.on && started && !menuOpen) { crea
 const $ = id => document.getElementById(id);
 let lastHp = 100;
 const cross = $('cross'), hint = $('hint'), streetEl = $('street'), ammoEl = $('ammo'), starsEl = $('stars'), healthBar = $('health').firstElementChild, msgEl = $('msg'), whoEl = $('who');
-function showMsg(t, ms, kind) { HUD.showMsg(t, ms, kind); } const { setTxt, setSty } = HUD; // #118: Anzeige-Code in hud.js
 const moneyEl = $('money'), weaponEl = $('weapon');
 // Minimap: ganze Stadt einmal vorzeichnen
 const MM_SCALE = 0.5; // px pro Meter
 const ext = { x0: -1000, z0: -1200 }; // Bezugspunkt der Kartenkoordinaten
 const mm = $('minimap'), mmc = mm.getContext('2d'); const MM_HOOKS = [], MAP_HOOKS = []; // MAP_HOOKS: Zeichnen auf großer Karte und Pausenkarte (c2, P), z. B. Laufstrecken (wegweiser.js)
 const HUD = initHud({ $, msgEl, mm, mmc, MM_HOOKS, ext, MM_SCALE, player, camYaw, opts, cars, TILES, TS, tkey, tileMap, interiors: () => INTERIORS });
+function showMsg(t, ms, kind) { HUD.showMsg(t, ms, kind); } const { setTxt, setSty } = HUD; // #118: Anzeige-Code in hud.js
 function drawMinimap() { HUD.drawMinimap(); }
 let streetTimer = 0, worldT = 0, sigTick = -1;
 function streetNameAt(x, z, maxD = 40) { let best = maxD * maxD, name = ''; const g = getRoadGrid(); const cx = Math.floor(x / CELL), cz = Math.floor(z / CELL);

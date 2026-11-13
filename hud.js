@@ -5,7 +5,8 @@
 export function initHud(X) {
   const { msgEl, mm, mmc, MM_HOOKS, ext, MM_SCALE, player, camYaw, opts, cars, TILES, TS, tkey, tileMap } = X; void mm;
   // kind: '' (Alarm, rot und groß), 'ok' (grün, klein), 'info' (gelb, klein)
-  function showMsg(t, ms = 2500, kind = '') { msgEl.textContent = t; msgEl.className = kind; msgEl.style.display = 'block'; clearTimeout(showMsg.t); showMsg.t = setTimeout(() => msgEl.style.display = 'none', ms); }
+  let msgT = 0;
+  function showMsg(t, ms = 2500, kind = '') { msgEl.textContent = t; msgEl.className = kind; msgEl.style.display = 'block'; clearTimeout(msgT); msgT = setTimeout(() => msgEl.style.display = 'none', ms); }
   // DOM nur schreiben, wenn sich der Wert ändert (spart Layout-Arbeit pro Bild)
   const setTxt = (el, v) => { if (el && el.__v !== v) { el.__v = v; el.textContent = v; } };
   const setSty = (el, k, v) => { if (!el) return; const s = el.__s || (el.__s = {}); if (s[k] !== v) { s[k] = v; el.style[k] = v; } };
