@@ -146,7 +146,7 @@ export function initWeapons(X) {
   }
   function shootPose(snd) { player.aimT = 1.6; const pm = player.mesh.userData; pm.aiming = true; if (pm.mixer && !player.car) { playAnim(player.mesh, 'shoot', { fade: 0.05 }); pm.curAnim = 'shooting'; } if (!player.car) { player.yaw = camYaw.v; player.mesh.rotation.y = camYaw.v; } if (snd) sfx(snd); }
   const _ray = new THREE.Raycaster(), _v = new V3(), _ndc = new THREE.Vector2();
-  function candidates(range) { const dir = camera.getWorldDirection(new V3()); const cp = camera.position; return shootables.filter(o => { if (!o.visible || o === player.car || o.userData.hp <= 0 && !cars.includes(o)) return false; const dx = o.position.x - cp.x, dz = o.position.z - cp.z, dy = o.position.y - cp.y; const L = Math.hypot(dx, dy, dz); if (L > range + 5) return false; return (dx * dir.x + dy * dir.y + dz * dir.z) > -3; }); }
+  function candidates(range) { const dir = camera.getWorldDirection(new V3()); const cp = camera.position; return shootables.filter(o => { if ((!o.visible && !o.userData.inst) || o === player.car || o.userData.hp <= 0 && !cars.includes(o)) return false; const dx = o.position.x - cp.x, dz = o.position.z - cp.z, dy = o.position.y - cp.y; const L = Math.hypot(dx, dy, dz); if (L > range + 5) return false; return (dx * dir.x + dy * dir.y + dz * dir.z) > -3; }); }
   function wallDist(ray, range) { for (let s = 2.5; s < range; s += 1.25) { const p = ray.at(s, _v); if (p.y <= TH(p.x, p.z) || solidAtH(p.x, p.z, p.y) !== -1) return s; } return range; }
   function owner(o) { while (o && !cars.includes(o) && !peds.includes(o) && !(o.userData && o.userData.pheli)) o = o.parent; return o; }
   function hitTarget(o, dmg, dir) {
