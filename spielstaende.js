@@ -4,8 +4,10 @@
 // (notgta.progress) und Story (notgta.story). Laden heißt: Platz vormerken, Seite neu laden, die Schlüssel werden beim
 // Start dieses Moduls zurückgeschrieben (vor initProgress/initStory), dann „Fortsetzen“. So bleibt kein alter Zustand
 // im Speicher der Module hängen, und ein automatisches Speichern beim Verlassen überschreibt den Platz nicht.
+// Seit Format 2 gehören auch Story 2, Story 3 (notgta.story2/3) und Ruf (notgta.rep) dazu. Ältere Plätze (ohne _v)
+// lassen diese drei Schlüssel beim Laden unberührt; eingelesene alte Exportdateien (nurSave) schreiben nur notgta.save.
 
-const KEYS = ['notgta.save', 'notgta.progress', 'notgta.story'];
+const KEYS_ALT = ['notgta.save', 'notgta.progress', 'notgta.story'], KEYS_NEU = ['notgta.story2', 'notgta.story3', 'notgta.rep'], KEYS = [...KEYS_ALT, ...KEYS_NEU];
 const IDX = 'notgta.slots', PRE = 'notgta.slot.', PEND = 'notgta.slot.pending', MAX = 20;
 
 // Vorgemerkten Platz zurückschreiben: läuft beim Import des Moduls, also vor dem Rumpf von game.js
@@ -14,7 +16,11 @@ try {
   if (id) {
     sessionStorage.removeItem(PEND);
     const d = JSON.parse(localStorage.getItem(PRE + id) || 'null');
-    if (d && typeof d === 'object') for (const k of KEYS) { if (typeof d[k] === 'string') localStorage.setItem(k, d[k]); else localStorage.removeItem(k); }
+    if (d && typeof d === 'object') {
+      const setzen = k => { if (typeof d[k] === 'string') localStorage.setItem(k, d[k]); else localStorage.removeItem(k); };
+      if (d.nurSave) { if (typeof d['notgta.save'] === 'string') localStorage.setItem('notgta.save', d['notgta.save']); } // alte Exportdatei: Fortschritt und Storys bleiben, wie sie sind
+      else { for (const k of KEYS_ALT) setzen(k); if (+d._v >= 2) for (const k of KEYS_NEU) setzen(k); }
+    }
   }
 } catch (e) { console.warn('Spielstand zurückschreiben', e); }
 
@@ -25,10 +31,10 @@ export function initSpielstaende(X) {
   if (!menu || !opts) return null;
   const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
   const msg = (t, ok) => { try { A.showMsg(t, 1500, ok ? 'ok' : undefined); } catch (e) {} };
-  /** @returns {{ id: string, name: string, when: number, ort: string, geld: number }[]} */
+  /** @returns {{ id: string, name: string, when: number, ort: string, geld: number, teil?: boolean }[]} */
   const list = () => { try { const l = JSON.parse(localStorage.getItem(IDX) || '[]'); return Array.isArray(l) ? l.filter(s => s && typeof s.id === 'string') : []; } catch (e) { return []; } };
   const putList = l => localStorage.setItem(IDX, JSON.stringify(l));
-  const snapshot = () => { /** @type {Record<string, string>} */ const d = {}; for (const k of KEYS) { const v = localStorage.getItem(k); if (v != null) d[k] = v; } return d; };
+  const snapshot = () => { /** @type {Record<string, string>} */ const d = { _v: '2' }; for (const k of KEYS) { const v = localStorage.getItem(k); if (v != null) d[k] = v; } return d; };
   const when = t => { try { return new Date(t).toLocaleString('de-DE', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }); } catch (e) { return ''; } };
   const meta = name => { let ort = ''; try { ort = A.streetAt(A.player.pos.x, A.player.pos.z) || ''; } catch (e) {} return { name: String(name || '').trim().slice(0, 40) || 'Spielstand ' + when(Date.now()), when: Date.now(), ort, geld: Math.round(A.player.money || 0) }; };
 
@@ -37,14 +43,15 @@ export function initSpielstaende(X) {
     if (!A.started) { msg('ERST INS SPIEL'); return false; }
     const l = list(); const alt = id ? l.find(s => s.id === id) : null;
     if (!alt && l.length >= MAX) { msg('HÖCHSTENS ' + MAX + ' SPIELSTÄNDE'); return false; }
+    let nid = '';
     try {
       A.saveGame(true); // schreibt notgta.save frisch; Fortschritt und Story speichern sich selbst
-      const nid = alt ? alt.id : Date.now().toString(36) + Math.floor(performance.now() % 1000).toString(36);
+      nid = alt ? alt.id : Date.now().toString(36) + Math.floor(performance.now() % 1000).toString(36);
       localStorage.setItem(PRE + nid, JSON.stringify(snapshot()));
       const m = { id: nid, ...meta(name || (alt && alt.name)) };
       putList(alt ? l.map(s => s.id === nid ? m : s) : [m, ...l]);
       msg('SPIELSTAND GESICHERT', true); return true;
-    } catch (e) { console.warn('Spielstand sichern', e); msg('SPEICHERN FEHLGESCHLAGEN'); return false; }
+    } catch (e) { console.warn('Spielstand sichern', e); if (!alt && nid) { try { localStorage.removeItem(PRE + nid); } catch (_) {} } msg('SPEICHERN FEHLGESCHLAGEN'); return false; }
   }
   function laden(id) {
     if (!localStorage.getItem(PRE + id)) { msg('SPIELSTAND UNBRAUCHBAR'); return; }
@@ -67,18 +74,20 @@ export function initSpielstaende(X) {
   function einlesen(file) {
     const fr = new FileReader();
     fr.onload = () => {
-      try {
-        const d = JSON.parse(String(fr.result)); if (!d || typeof d !== 'object') throw new Error('leer');
-        /** @type {Record<string, string>} */ const keys = {};
-        if (d.bornheimSpielstand && d.keys && typeof d.keys === 'object') { for (const k of KEYS) if (typeof d.keys[k] === 'string') keys[k] = d.keys[k]; }
-        else if (Array.isArray(d.pos)) keys['notgta.save'] = JSON.stringify(d);
-        const sv = JSON.parse(keys['notgta.save'] || 'null'); if (!sv || !Array.isArray(sv.pos) || !sv.pos.every(Number.isFinite)) throw new Error('kein Spielstand');
-        const l = list(); if (l.length >= MAX) { msg('HÖCHSTENS ' + MAX + ' SPIELSTÄNDE'); return; }
-        const nid = Date.now().toString(36) + 'i';
+      /** @type {Record<string, string>} */ const keys = {}; let d, sv, teil = false;
+      try { // 1. lesen und prüfen
+        d = JSON.parse(String(fr.result)); if (!d || typeof d !== 'object') throw new Error('leer');
+        if (d.bornheimSpielstand && d.keys && typeof d.keys === 'object') { for (const k of KEYS) if (typeof d.keys[k] === 'string') keys[k] = d.keys[k]; if (+d.keys._v >= 2) keys._v = '2'; if (d.keys.nurSave) { keys.nurSave = '1'; teil = true; } }
+        else if (Array.isArray(d.pos)) { keys['notgta.save'] = JSON.stringify(d); keys.nurSave = '1'; teil = true; } // alter Export: nur Position und Inventar
+        sv = JSON.parse(keys['notgta.save'] || 'null'); if (!sv || !Array.isArray(sv.pos) || !sv.pos.every(Number.isFinite)) throw new Error('kein Spielstand');
+      } catch (e) { alert('Diese Datei ist kein gültiger Spielstand.'); return; }
+      const l = list(); if (l.length >= MAX) { alert('Es sind schon ' + MAX + ' Spielstände gesichert. Bitte erst einen löschen.'); return; }
+      const nid = Date.now().toString(36) + 'i';
+      try { // 2. ablegen; voller Speicher ist kein Fehler der Datei
         localStorage.setItem(PRE + nid, JSON.stringify(keys));
-        putList([{ id: nid, name: String(d.name || file.name.replace(/\.json$/i, '')).slice(0, 40), when: +d.when || +sv.when || Date.now(), ort: String(d.ort || ''), geld: Math.round(+d.geld || +sv.money || 0) }, ...l]);
-        msg('SPIELSTAND EINGELESEN', true); render();
-      } catch (e) { alert('Diese Datei ist kein gültiger Spielstand.'); }
+        putList([{ id: nid, name: String(d.name || file.name.replace(/\.json$/i, '')).slice(0, 40), when: +d.when || +sv.when || Date.now(), ort: String(d.ort || ''), geld: Math.round(+d.geld || +sv.money || 0), teil }, ...l]);
+      } catch (e) { console.warn('Spielstand einlesen', e); try { localStorage.removeItem(PRE + nid); } catch (_) {} alert('Der Speicher des Browsers ist voll. Bitte erst einen Spielstand löschen.'); return; }
+      msg('SPIELSTAND EINGELESEN', true); render();
     };
     fr.readAsText(file);
   }
@@ -108,7 +117,7 @@ export function initSpielstaende(X) {
   function render() {
     const l = list();
     $('st_kopf').textContent = 'Gesicherte Spielstände (' + l.length + ' von ' + MAX + ')';
-    $('st_liste').innerHTML = l.length ? l.map(s => `<div class="mn-card mn-standzeile"><div><b>${esc(s.name)}</b><span>${esc(when(s.when))}${s.ort ? ' · ' + esc(s.ort) : ''} · ${(+s.geld || 0).toLocaleString('de-DE')} €</span></div>
+    $('st_liste').innerHTML = l.length ? l.map(s => `<div class="mn-card mn-standzeile"><div><b>${esc(s.name)}</b><span>${esc(when(s.when))}${s.ort ? ' · ' + esc(s.ort) : ''} · ${(+s.geld || 0).toLocaleString('de-DE')} €${s.teil ? ' · nur Position und Inventar' : ''}</span></div>
       <div class="mn-standknoepfe"><button type="button" data-a="laden" data-id="${esc(s.id)}">Laden</button><button type="button" data-a="neu" data-id="${esc(s.id)}">Überschreiben</button><button type="button" data-a="datei" data-id="${esc(s.id)}">Datei</button><button type="button" data-a="weg" data-id="${esc(s.id)}">Löschen</button></div></div>`).join('')
       : '<p class="mn-standleer">Noch kein Spielstand gesichert. Namen eintragen und „Sichern“ wählen.</p>';
   }
