@@ -1,4 +1,5 @@
 // Waffen, Wurfsachen, Pyro und Effekte. Wird von game.js mit allen Spiel-Interna (X) gestartet.
+/** @param {import('./types').Ctx} X */
 export function initWeapons(X) {
   const { THREE, scene, camera, player, peds, cars, shootables, keys, camYaw, opts, TH, solidAtH, floorAt, nearestEdge, edgeNormal, damage, explode, burst, sfx, showMsg, raiseWanted, camShake, canvasTex, tracerMat, makeGun, playAnim, dentCar, moveWithCollision, rnd, clamp, pick } = X;
   const V3 = THREE.Vector3;

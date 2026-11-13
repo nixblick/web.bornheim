@@ -2,6 +2,7 @@
 // Waffen: In Story 1 und 2 bleiben nur Fäuste und Demo-Zubehör (W.lock 'protest'), in Story 3 nur Fäuste (W.lock 'all').
 import { story2Chapters } from './story2.js';
 import { story3Chapters } from './story3.js';
+/** @param {import('./types').Ctx} X */
 export function initStory(X, W, D, F) {
   const { THREE, scene, camera, player, peds, cars, opts, world, weather, CITY, TH, solidAt, makeHuman, playAnim, sfx, showMsg, raiseWanted, canvasTex, rnd, clamp, pick, distSegSq, pointInPoly } = X;
   const V3 = THREE.Vector3; const $ = id => document.getElementById(id);
@@ -204,14 +205,18 @@ export function initStory(X, W, D, F) {
       <div class="row2"><button data-go="${st.id}">${on ? 'Kapitel neu starten' : Q.state === 'paused' ? 'Fortsetzen' : Q.finishedAll ? 'Noch einmal spielen' : 'Story starten'}</button>${on ? `<button data-stop="${st.id}">Pausieren (freies Spiel)</button>` : ''}</div>
       <div class="chaps">${st.CH.map((c, i) => `<button data-sid="${st.id}" data-ch="${i}" ${Q.done.includes(i) || i <= (Q.chap || 0) ? '' : 'disabled'}>${i + 1}. ${c.title}${Q.done.includes(i) ? ' ✓' : ''}</button>`).join('')}</div>`; };
     el.innerHTML = `<div class="story">${block(STORIES.s1)}${block(STORIES.s2)}<h3 style="margin-top:14px">Ruf</h3>${bar('kollektiv', 'Bewegung')}${bar('polizei', 'Polizei')}${bar('anwohner', 'Anwohner')}${bar('investor', 'Investor')}<p style="opacity:.7;font-size:12px">Reichweite ${D.stats.reach.toLocaleString('de')} · gefilmte Clips ${D.stats.filmed}</p></div>`;
+    // @ts-ignore -- Baseline #119: DOM-/Zahl-String-Typen, kein X-Fehler
     for (const b of el.querySelectorAll('[data-go]')) b.onclick = () => { const id = b.dataset.go; if (S.state === 'active' && sid === id) beginChapter(S.chap); else { if (S.state === 'active') stop(); useStory(id); if (S.finishedAll) { S.finishedAll = false; S.state = 'new'; S.chap = 0; S.done = []; } S.declined = false; start('menu'); } X.closeMenu(); };
+    // @ts-ignore -- Baseline #119: DOM-/Zahl-String-Typen, kein X-Fehler
     for (const b of el.querySelectorAll('[data-stop]')) b.onclick = () => { stop(); S.declined = true; persist(); renderMenu(); };
+    // @ts-ignore -- Baseline #119: DOM-/Zahl-String-Typen, kein X-Fehler
     for (const b of el.querySelectorAll('[data-ch]')) b.onclick = () => { const id = b.dataset.sid, i = +b.dataset.ch; if (S.state === 'active' && sid !== id) stop(); useStory(id); S.state = 'active'; S.declined = false; beginChapter(i); X.closeMenu(); }; }
   X.menuHooks.push(renderMenu);
   // Nach dem Laden: aktive Story setzt das Kapitel fort
   function resume() { if (S.state === 'active' && !begun) { beginChapter(S.chap || 0); return; } startIntro(); }
   // Einstieg für neue Spieler: Wegweiser zur ersten Story, solange noch keine begonnen wurde (höchstens drei Spielstarts lang)
   let intro = false, introT = 0;
+  // @ts-ignore -- Baseline #119: DOM-/Zahl-String-Typen, kein X-Fehler
   function startIntro() { if (S.state === 'active') return; const none = Object.values(STORIES).every(st => st.S.state === 'new' && !st.S.done.length && !st.S.finishedAll); let seen = 0; try { seen = +localStorage.getItem('notgta.introSeen') || 0; } catch (e) {} if (!none || seen >= 3) return; try { localStorage.setItem('notgta.introSeen', seen + 1); } catch (e) {}
     intro = true; introT = 240; setMark(UHR); setObj('Willkommen! Für die <b>Story</b> folge der gelben Linie zum lila <b>B</b> am Uhrtürmchen · oder Esc › Story wählen'); X.card('BORNHEIM', 'Freies Spiel – oder zur Story: dem gelben Strahl folgen', 5); }
   function endIntro() { if (!intro) return; intro = false; setMark(null); setObj(''); }
