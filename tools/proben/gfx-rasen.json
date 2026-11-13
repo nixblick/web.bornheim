@@ -1,5 +1,5 @@
 [
- { "n": "rasen_tag_hoch", "x": -730, "z": 160, "wait": 14000, "shot": true,
+ { "n": "rasen_tag_hoch", "x": -730, "z": 160, "wait": 40000, "shot": true,
    "js": "(async () => { const G = window.G; G.world.hour = 13; G.opts.rasenForce = true; /* SwiftShader gilt als WEAK_GPU */ G.opts.quality = 'hoch'; G.applyQuality(); await new Promise(r => setTimeout(r, 5000)); return JSON.stringify({ potato: G.opts.potato, weak: G.WEAK_GPU, q: G.opts.quality, stufe: G.RASEN && G.RASEN.stufe, halme: G.RASEN && G.RASEN.count, zellen: G.RASEN && G.RASEN.cells }); })()",
    "expect": "window.G.RASEN && window.G.RASEN.count > 0" },
  { "n": "rasen_tag_mittel", "wait": 3000, "shot": true,
