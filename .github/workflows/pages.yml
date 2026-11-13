@@ -39,7 +39,8 @@ jobs:
           cp *.css _site/  # Stylesheets im Wurzelverzeichnis (menu-neu.css, ui-sunset.css): fehlten live, 404 (13.11.2026)
           cp *.js _site/   # alle Spielmodule im Wurzelverzeichnis (tools/ bleibt draußen); eine feste Liste hat story3.js vergessen und die Seite hing bei „Lade Stadt“
           V="${GITHUB_SHA::7}"
-          sed -i "s/game\.js[^']*/game.js?v=$V/" _site/play.html
+          sed -i "s/game.js?v=[0-9a-z]*/game.js?v=$V/" _site/play.html
+          [ "$(grep -c "game.js?v=$V" _site/play.html)" = 2 ] && grep -q -- "-->" _site/play.html || { echo "game.js-Version in play.html nicht sauber ersetzt"; exit 1; }
           sed -i -E "s/from '\.\/([a-z0-9_-]+\.js)'/from '.\/\1?v=$V'/g" _site/*.js
           sed -i -E "s/(menu-neu\.css)\?v=[0-9a-z]+/\1?v=$V/" _site/play.html _site/menu-neu.js   # Stylesheet des Pausenmenüs: stand fest auf ?v=3
           # Service Worker: Cache fuer Programm, Bilder und CSS je Deploy neu benennen (alter wird beim Aktivieren geloescht),
