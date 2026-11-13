@@ -1,0 +1,324 @@
+[
+{
+"n": "selbsttest_start",
+"shot": false,
+"wait": 3000,
+"js": "(window.__st='läuft', import('/tools/selftest.js?'+Date.now()).then(()=>import('/tools/laufen.js?'+Date.now())).then(async()=>{const a=await T.checks(); const b=await T.laufen(); window.__st=[...a,...b]; T.clear();}).catch(e=>window.__st='EXC '+e), 'gestartet')"
+},
+{
+"n": "selbsttest_0",
+"shot": false,
+"wait": 45000,
+"js": "typeof window.__st==='string'?window.__st:(window.__st.length+' Punkte, rot: '+window.__st.filter(r=>!r.ok).map(r=>r.name+' ['+r.detail+']').join(' | '))"
+},
+{
+"n": "selbsttest_1",
+"shot": false,
+"wait": 45000,
+"js": "typeof window.__st==='string'?window.__st:(window.__st.length+' Punkte, rot: '+window.__st.filter(r=>!r.ok).map(r=>r.name+' ['+r.detail+']').join(' | '))"
+},
+{
+"n": "selbsttest_2",
+"shot": false,
+"wait": 45000,
+"js": "typeof window.__st==='string'?window.__st:(window.__st.length+' Punkte, rot: '+window.__st.filter(r=>!r.ok).map(r=>r.name+' ['+r.detail+']').join(' | '))"
+},
+{
+"n": "selbsttest_3",
+"shot": false,
+"wait": 45000,
+"js": "typeof window.__st==='string'?window.__st:(window.__st.length+' Punkte, rot: '+window.__st.filter(r=>!r.ok).map(r=>r.name+' ['+r.detail+']').join(' | '))"
+},
+{
+"n": "eulen",
+"shot": false,
+"wait": 1000,
+"js": "(async()=>{ window.__al=0; window.alert=()=>{window.__al++}; const of=window.fetch; window.fetch=async(u,...a)=>String(u).includes('strecken.json')? new Response(JSON.stringify({strecken:[{name:'<b>x</b><img src=y onerror=alert(2)>',laenge_km:'5<script>',linie:[[8.70,50.13],[8.701,50.131]],link:'javascript:alert(1)'}]}),{headers:{'content-type':'application/json'}}) : of(u,...a); const m=await import('/eulen.js'); const E=m.initEulen(window.G.X); await new Promise(r=>setTimeout(r,2000)); window.fetch=of; const r=E.routes[0]; if(!r) return 'keine Strecke'; E.start(r); await new Promise(r=>setTimeout(r,800)); const bad=[...document.querySelectorAll('b,img')].filter(e=>e.textContent==='x'||e.getAttribute('src')==='y').length; const oe=document.body.innerHTML.includes('onerror'); E.stop(); await new Promise(r=>setTimeout(r,800)); return JSON.stringify({name:r.name,km:r.laenge_km,link:r.link,htmlElemente:bad,onerrorImDom:oe,alerts:window.__al}); })()",
+"expect": "window.__al===0"
+},
+{
+"n": "oper_mess",
+"x": -2659.7678763302483,
+"z": 1532.2667807454839,
+"wait": 12000,
+"shot": false,
+"js": "(async()=>{ T.unsnap(); return JSON.stringify(await (await import('/tools/proben/wz.js?'+Date.now())).wz('oper')); })()"
+},
+{
+"n": "oper_50m",
+"wait": 1500,
+"js": "T.snap(-2660,window.G.TH(-2688,1491)+15,1532,-2688,window.G.TH(-2688,1491)+10,1491)"
+},
+{
+"n": "oper_50m_b",
+"wait": 300,
+"js": "T.snap(-2659.5,window.G.TH(-2688,1491)+15.2,1532,-2688,window.G.TH(-2688,1491)+10,1491)"
+},
+{
+"n": "oper_400m",
+"wait": 1500,
+"js": "T.snap(-2482,window.G.TH(-2688,1491)+45,1148,-2688,window.G.TH(-2688,1491)+12,1491)"
+},
+{
+"n": "roemer_mess",
+"x": -1976.7678763302483,
+"z": 2150.266780745484,
+"wait": 12000,
+"shot": false,
+"js": "(async()=>{ T.unsnap(); return JSON.stringify(await (await import('/tools/proben/wz.js?'+Date.now())).wz('roemer')); })()"
+},
+{
+"n": "roemer_50m",
+"wait": 1500,
+"js": "T.snap(-1977,window.G.TH(-2005,2109)+15,2150,-2005,window.G.TH(-2005,2109)+6,2109)"
+},
+{
+"n": "roemer_50m_b",
+"wait": 300,
+"js": "T.snap(-1976.5,window.G.TH(-2005,2109)+15.2,2150,-2005,window.G.TH(-2005,2109)+6,2109)"
+},
+{
+"n": "roemer_400m",
+"wait": 1500,
+"js": "T.snap(-1799,window.G.TH(-2005,2109)+45,1766,-2005,window.G.TH(-2005,2109)+7,2109)"
+},
+{
+"n": "dom_mess",
+"x": -1706.7678763302483,
+"z": 2128.266780745484,
+"wait": 12000,
+"shot": false,
+"js": "(async()=>{ T.unsnap(); return JSON.stringify(await (await import('/tools/proben/wz.js?'+Date.now())).wz('dom')); })()"
+},
+{
+"n": "dom_50m",
+"wait": 1500,
+"js": "T.snap(-1707,window.G.TH(-1735,2087)+15,2128,-1735,window.G.TH(-1735,2087)+20,2087)"
+},
+{
+"n": "dom_50m_b",
+"wait": 300,
+"js": "T.snap(-1706.5,window.G.TH(-1735,2087)+15.2,2128,-1735,window.G.TH(-1735,2087)+20,2087)"
+},
+{
+"n": "dom_400m",
+"wait": 1500,
+"js": "T.snap(-1529,window.G.TH(-1735,2087)+45,1744,-1735,window.G.TH(-1735,2087)+24,2087)"
+},
+{
+"n": "pauls_mess",
+"x": -2037.7678763302483,
+"z": 2072.266780745484,
+"wait": 12000,
+"shot": false,
+"js": "(async()=>{ T.unsnap(); return JSON.stringify(await (await import('/tools/proben/wz.js?'+Date.now())).wz('pauls')); })()"
+},
+{
+"n": "pauls_50m",
+"wait": 1500,
+"js": "T.snap(-2038,window.G.TH(-2066,2031)+15,2072,-2066,window.G.TH(-2066,2031)+15,2031)"
+},
+{
+"n": "pauls_50m_b",
+"wait": 300,
+"js": "T.snap(-2037.5,window.G.TH(-2066,2031)+15.2,2072,-2066,window.G.TH(-2066,2031)+15,2031)"
+},
+{
+"n": "pauls_400m",
+"wait": 1500,
+"js": "T.snap(-1860,window.G.TH(-2066,2031)+45,1688,-2066,window.G.TH(-2066,2031)+18,2031)"
+},
+{
+"n": "coba_mess",
+"x": -2489.7678763302483,
+"z": 2066.266780745484,
+"wait": 12000,
+"shot": false,
+"js": "(async()=>{ T.unsnap(); return JSON.stringify(await (await import('/tools/proben/wz.js?'+Date.now())).wz('coba')); })()"
+},
+{
+"n": "coba_50m",
+"wait": 1500,
+"js": "T.snap(-2490,window.G.TH(-2518,2025)+15,2066,-2518,window.G.TH(-2518,2025)+60,2025)"
+},
+{
+"n": "coba_50m_b",
+"wait": 300,
+"js": "T.snap(-2489.5,window.G.TH(-2518,2025)+15.2,2066,-2518,window.G.TH(-2518,2025)+60,2025)"
+},
+{
+"n": "coba_400m",
+"wait": 1500,
+"js": "T.snap(-2312,window.G.TH(-2518,2025)+45,1682,-2518,window.G.TH(-2518,2025)+72,2025)"
+},
+{
+"n": "main_mess",
+"x": -2646.7678763302483,
+"z": 1921.2667807454839,
+"wait": 12000,
+"shot": false,
+"js": "(async()=>{ T.unsnap(); return JSON.stringify(await (await import('/tools/proben/wz.js?'+Date.now())).wz('main')); })()"
+},
+{
+"n": "main_50m",
+"wait": 1500,
+"js": "T.snap(-2647,window.G.TH(-2675,1880)+15,1921,-2675,window.G.TH(-2675,1880)+50,1880)"
+},
+{
+"n": "main_50m_b",
+"wait": 300,
+"js": "T.snap(-2646.5,window.G.TH(-2675,1880)+15.2,1921,-2675,window.G.TH(-2675,1880)+50,1880)"
+},
+{
+"n": "main_400m",
+"wait": 1500,
+"js": "T.snap(-2469,window.G.TH(-2675,1880)+45,1537,-2675,window.G.TH(-2675,1880)+60,1880)"
+},
+{
+"n": "westend_mess",
+"x": -3345.7678763302483,
+"z": 2139.266780745484,
+"wait": 12000,
+"shot": false,
+"js": "(async()=>{ T.unsnap(); return JSON.stringify(await (await import('/tools/proben/wz.js?'+Date.now())).wz('westend')); })()"
+},
+{
+"n": "westend_50m",
+"wait": 1500,
+"js": "T.snap(-3346,window.G.TH(-3374,2098)+15,2139,-3374,window.G.TH(-3374,2098)+50,2098)"
+},
+{
+"n": "westend_50m_b",
+"wait": 300,
+"js": "T.snap(-3345.5,window.G.TH(-3374,2098)+15.2,2139,-3374,window.G.TH(-3374,2098)+50,2098)"
+},
+{
+"n": "westend_400m",
+"wait": 1500,
+"js": "T.snap(-3168,window.G.TH(-3374,2098)+45,1755,-3374,window.G.TH(-3374,2098)+60,2098)"
+},
+{
+"n": "euro_mess",
+"x": -2521.7678763302483,
+"z": 2252.266780745484,
+"wait": 12000,
+"shot": false,
+"js": "(async()=>{ T.unsnap(); return JSON.stringify(await (await import('/tools/proben/wz.js?'+Date.now())).wz('euro')); })()"
+},
+{
+"n": "euro_50m",
+"wait": 1500,
+"js": "T.snap(-2522,window.G.TH(-2550,2211)+15,2252,-2550,window.G.TH(-2550,2211)+35,2211)"
+},
+{
+"n": "euro_50m_b",
+"wait": 300,
+"js": "T.snap(-2521.5,window.G.TH(-2550,2211)+15.2,2252,-2550,window.G.TH(-2550,2211)+35,2211)"
+},
+{
+"n": "euro_400m",
+"wait": 1500,
+"js": "T.snap(-2344,window.G.TH(-2550,2211)+45,1868,-2550,window.G.TH(-2550,2211)+42,2211)"
+},
+{
+"n": "trianon_mess",
+"x": -3033.7678763302483,
+"z": 1899.2667807454839,
+"wait": 12000,
+"shot": false,
+"js": "(async()=>{ T.unsnap(); return JSON.stringify(await (await import('/tools/proben/wz.js?'+Date.now())).wz('trianon')); })()"
+},
+{
+"n": "trianon_50m",
+"wait": 1500,
+"js": "T.snap(-3034,window.G.TH(-3062,1858)+15,1899,-3062,window.G.TH(-3062,1858)+45,1858)"
+},
+{
+"n": "trianon_50m_b",
+"wait": 300,
+"js": "T.snap(-3033.5,window.G.TH(-3062,1858)+15.2,1899,-3062,window.G.TH(-3062,1858)+45,1858)"
+},
+{
+"n": "trianon_400m",
+"wait": 1500,
+"js": "T.snap(-2856,window.G.TH(-3062,1858)+45,1515,-3062,window.G.TH(-3062,1858)+54,1858)"
+},
+{
+"n": "unsnap",
+"shot": false,
+"wait": 200,
+"js": "T.unsnap()"
+},
+{
+"n": "wald_50m",
+"x": -4583,
+"z": 6950,
+"tx": -4583,
+"tz": 6771,
+"pitch": -0.1,
+"wait": 15000,
+"js": "(async()=>JSON.stringify(await (await import('/tools/proben/wz.js?'+Date.now())).stad(-4583, 6771)))()"
+},
+{
+"n": "wald_luft",
+"wait": 1500,
+"js": "T.snap(-4583+60,window.G.TH(-4583,6771)+90,6771+260,-4583,window.G.TH(-4583,6771),6771)"
+},
+{
+"n": "wald_innen",
+"x": -4583,
+"z": 6800,
+"tx": -4583,
+"tz": 6650,
+"pitch": 0.1,
+"wait": 4000,
+"expect": "window.G.solidAt(-4583, 6771) < 0",
+"js": "T.unsnap()"
+},
+{
+"n": "wald_400m",
+"x": -4200,
+"z": 7100,
+"tx": -4583,
+"tz": 6771,
+"pitch": -0.1,
+"wait": 10000,
+"js": "T.unsnap()"
+},
+{
+"n": "fsv_50m",
+"x": 948,
+"z": 300,
+"tx": 948,
+"tz": 174,
+"pitch": -0.1,
+"wait": 15000,
+"js": "(async()=>JSON.stringify(await (await import('/tools/proben/wz.js?'+Date.now())).stad(948, 174)))()"
+},
+{
+"n": "fsv_luft",
+"wait": 1500,
+"js": "T.snap(948+40,window.G.TH(948,174)+60,174+180,948,window.G.TH(948,174),174)"
+},
+{
+"n": "fsv_innen",
+"x": 948,
+"z": 190,
+"tx": 948,
+"tz": 100,
+"pitch": 0.1,
+"wait": 4000,
+"expect": "window.G.solidAt(948, 174) < 0",
+"js": "T.unsnap()"
+},
+{
+"n": "fsv_400m",
+"x": 1300,
+"z": 450,
+"tx": 948,
+"tz": 174,
+"pitch": -0.1,
+"wait": 10000,
+"js": "T.unsnap()"
+}
+]
