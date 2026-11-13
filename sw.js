@@ -3,7 +3,7 @@
 // Programmdateien (*.js, *.html) nutzen Network-First mit Offline-Fallback, damit Updates sofort ankommen.
 
 const CACHE_STATIC = 'bornheim-static-v2';
-const CACHE_TILES = 'bornheim-tiles-v3';
+const CACHE_TILES = 'bornheim-tiles-v4';
 
 const CORE_ASSETS = [
   './',
