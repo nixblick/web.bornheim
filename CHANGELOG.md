@@ -2,6 +2,8 @@
 
 ## 2026-11-13
 
+- **Pausenmenü neu gegliedert:** Kopfleiste über die volle Breite mit großem PAUSE und fünf Punkten (Übersicht, Karte, Missionen, Statistik, Einstellungen) plus Weiter; kein Scrollbalken in der Navigation, keine Emoji-Liste. Startseite Übersicht wie Sunsets Pausen-Board (Standort, aktuelle Mission, Spielfigur mit Gesundheit/Fahndung/Geld/Karma) und darunter die Spiel-Aktionen (Speichern, Laden, Fehler melden, Kreativmodus, Neu starten/Export/Import/Startseite). Einstellungen mit Reiterzeile (Schnell, Grafik, Kamera, Welt, Spiel, Ton & HUD, Hilfe), Einstellungen als Zeilen. F1 öffnet weiter die Hilfe, die Handy-Karte die Karte. Schmal (Handy) bleibt die Navigation einzeilig. Neu: `menu-neu.js`, `menu-neu.css`, Proben `menu-neu` und `menu-alt` (Vergleichsbilder). Spieltest 43426388882 grün.
+
 - **Pausenmenü wieder wie vor #154:** André: „schlechter als vorher“. `menu.js` (Sunset-Blatt mit Übersicht) ist raus, ESC öffnet wieder das alte Menü auf „Schnell“. Das Handy (H) bleibt; die Karten-App öffnet das Menü weiter auf der Karte, F1 weiter auf der Hilfe (Startreiter wird jetzt synchron gesetzt). Probe `handy` angepasst und um F1 ergänzt. Spieltest 43425525018 grün.
 
 - Grafik (#152, Zweig gfx-look): Nachbearbeitung nach Sunset-Vorbild in `look.js`. AgX-Tonemapping statt ACES in allen Stufen; ab Hoch eigener Look-Pass (AgX mit Kontrast/Sättigung, weiche Vignette) statt OutputPass, FXAA am Ende, Bloom-Voreinstellung je Stufe (Ultra etwas kräftiger). Niedrig/Mittel nur `renderer.toneMapping`, kein Extra-Pass. Spieltest 43419004866 grün (vorher 43419008547).
