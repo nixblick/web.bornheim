@@ -224,7 +224,7 @@ export function initStory(X, W, D, F) {
   function startIntro() { if (S.state === 'active') return; const none = Object.values(STORIES).every(st => st.S.state === 'new' && !st.S.done.length && !st.S.finishedAll); let seen = 0; try { seen = +localStorage.getItem('notgta.introSeen') || 0; } catch (e) {} if (!none || seen >= 3) return; try { localStorage.setItem('notgta.introSeen', seen + 1); } catch (e) {}
     intro = true; introT = 240; setMark(UHR); setObj('Willkommen! Für die <b>Story</b> folge der gelben Linie zum lila <b>B</b> am Uhrtürmchen · oder Esc › Story wählen · H Handy · F1 Hilfe'); X.card('BORNHEIM', 'Freies Spiel – oder zur Story: dem gelben Strahl folgen', 5); }
   function endIntro() { if (!intro) return; intro = false; setMark(null); setObj(''); }
-  // Wegweiser abgelaufen, keine Story begonnen: einmal je Spielstand kurz sagen, was es sonst gibt (kein Dauerhinweis)
+  // Wegweiser abgelaufen, keine Story begonnen: einmal je Browser kurz sagen, was es sonst gibt (kein Dauerhinweis)
   function freeHint() { try { if (localStorage.getItem('notgta.freiTipp')) return; localStorage.setItem('notgta.freiTipp', '1'); } catch (e) {} X.card('FREI UNTERWEGS', 'H Handy: Nebenjobs, Laufrunden · F1 Hilfe · Esc Story wählen', 6); }
 
   return { update, start, stop, resume, skipLine, renderMenu, get S() { return S; }, get CH() { return CH; }, get sid() { return sid; }, useStory, STORIES, ST2, persist, get busy() { return S.state === 'active'; }, places: { UHR, GATE, SITE, EIS, PARKC, ...ST2.places, ...ST3.places }, beginChapter, get kim() { return kim; } };
