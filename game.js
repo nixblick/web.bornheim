@@ -55,7 +55,7 @@ document.body.appendChild(renderer.domElement);
 // Grafik-Kontext verloren (#184): Welt anhalten und einmal speichern (das Overlay aus feedback.js verspricht das); nach der Wiederherstellung läuft die Schleife weiter
 let glLost = false;
 renderer.domElement.addEventListener('webglcontextlost', () => { glLost = true; try { if (started && !player.dead) saveGame(true); } catch (e) {} });
-renderer.domElement.addEventListener('webglcontextrestored', () => { glLost = false; });
+renderer.domElement.addEventListener('webglcontextrestored', () => { glLost = false; try { bakeEnv(); } catch (e) { console.warn('Umgebungslicht nach Kontextverlust', e); } });
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x3a3550);
@@ -140,8 +140,9 @@ function disposeComposer() { if (!composer) return; for (const p of composer.pas
 function applyQuality() {
   const q = opts.quality || 'mittel';
   const ultra = q === 'ultra', post = (q === 'hoch' || ultra) && !composerBroken;
-  const sig = [q, opts.scale || 1, !!opts.ao, innerWidth, innerHeight, devicePixelRatio || 1].join('|'), same = sig === _qSig; _qSig = sig;
+  const sig = [q, opts.scale || 1, !!opts.ao, devicePixelRatio || 1].join('|'), same = sig === _qSig; _qSig = sig; // ohne Fenstergröße: die stellt der resize-Listener selbst nach
   if (!same) renderer.setPixelRatio((q === 'niedrig' ? 0.75 : ultra ? Math.min(1.5, Math.max(1, devicePixelRatio || 1)) : 1) * (opts.scale || 1)); if (!same) renderer.setSize(innerWidth, innerHeight);
+  if (same && innerWidth > 0 && innerHeight > 0) { const gs = renderer.getSize(new THREE.Vector2()); if (gs.x !== innerWidth || gs.y !== innerHeight) { renderer.setSize(innerWidth, innerHeight); if (composer) composer.setSize(innerWidth, innerHeight); } } // verpasster resize (Fenster war 0x0): nur Größe, Pixelverhältnis bleibt
   const sm = ultra ? 4096 : q === 'hoch' ? 2048 : 1024; sun.shadow.mapSize.set(sm, sm); { const e = ultra ? 95 : q === 'mittel' ? 50 : 70; /* Mittel: 1024er Karte auf 100 m statt 140 m, ~10 statt 14 cm je Texel: weniger Treppen an Bordsteinkanten */ sc.left = -e; sc.right = e; sc.top = e; sc.bottom = -e; sc.updateProjectionMatrix(); } sun.shadow.radius = ultra ? 2 : 1;
   if (HIMMEL) HIMMEL.setStufe(himmelStufe(), !post); WIN_U.value = q === 'niedrig' ? 0 : 1; applyTreeQuality(); rebuildAllTiles();
   if (same) { if (composer && bloomPass) { bloomPass.strength = LOOK_PRESET[ultra ? 'ultra' : 'hoch'].bloom.strength * (opts.bloom ?? 1); bloomPass.baseStrength = bloomPass.strength; } return false; }
@@ -214,7 +215,9 @@ try { const o = JSON.parse(localStorage.getItem('notgta.opts') || '{}'); if (o.q
 const LOW_GFX = WEAK_GPU || QUALITY === 'niedrig';
 installDunst(THREE, !LOW_GFX); // Höhendunst ab „Mittel“ (dunst.js, #152), vor dem ersten Kompilieren
 let ANISO = QUALITY === 'ultra' ? renderer.capabilities.getMaxAnisotropy() : QUALITY === 'niedrig' ? 2 : 4;
-if (LOW_GFX) scene.environment = null; else { const pm = new THREE.PMREMGenerator(renderer); scene.environment = pm.fromScene(new RoomEnvironment(), 0.04).texture; scene.environmentIntensity = 0.6; pm.dispose(); }
+let envRT = null; // PMREM-Ziel des Umgebungslichts: nach einem Kontextverlust ist sein Inhalt weg, dann neu backen
+function bakeEnv() { if (LOW_GFX) { scene.environment = null; return; } const alt = envRT, pm = new THREE.PMREMGenerator(renderer); envRT = pm.fromScene(new RoomEnvironment(), 0.04); scene.environment = envRT.texture; pm.dispose(); if (alt) { try { alt.dispose(); } catch (e) {} } }
+bakeEnv(); if (!LOW_GFX) scene.environmentIntensity = 0.6;
 // GLB-Materialien (Standard/Physical) einmalig nach Lambert wandeln: map, Farbe, Emissive, Transparenz bleiben; Skinning setzt three.js automatisch
 function toLambert(m, cache) { if (!m || m.isMeshLambertMaterial || m.isMeshBasicMaterial) return m; let l = cache.get(m); if (!l) { l = new THREE.MeshLambertMaterial({ name: m.name, color: m.color, map: m.map || null, emissive: m.emissive || 0x000000, emissiveMap: m.emissiveMap || null, emissiveIntensity: m.emissiveIntensity ?? 1, transparent: m.transparent, opacity: m.opacity, side: m.side, alphaTest: m.alphaTest, vertexColors: m.vertexColors }); l.userData = m.userData; cache.set(m, l); m.dispose(); } return l; }
 function lambertify(root) { const cache = new Map(); root.traverse(o => { if (!o.isMesh) return; o.material = Array.isArray(o.material) ? o.material.map(m => toLambert(m, cache)) : toLambert(o.material, cache); }); }
@@ -223,10 +226,13 @@ const loadingEl = document.getElementById('loading'), loadBar = document.getElem
 const setLoading = (t, p) => { if (loadingEl) loadingEl.textContent = t; if (p != null) { if (loadBar) loadBar.style.width = Math.round(p * 100) + '%'; if (goBtn) goBtn.textContent = p >= 1 ? 'Rein da' : 'Lädt … ' + Math.round(p * 100) + ' %'; } };
 setLoading('Lade Modelle und Texturen …', 0.04);
 const gltfLoader = new GLTFLoader(); const texLoader = new THREE.TextureLoader();
-const loadGLB = u => new Promise(res => gltfLoader.load(u, g => res(g), undefined, e => { console.warn('Modell fehlt', u, e); res(null); }));
-const loadTex = (u, rep, srgb) => new Promise(res => texLoader.load(u, t => { t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(rep, rep); if (srgb) t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = ANISO; res(t); }, undefined, () => res(null)));
+const loadGLB = u => new Promise(res => gltfLoader.load(u, g => res(ladTick(g)), undefined, e => { console.warn('Modell fehlt', u, e); res(ladTick(null)); }));
+const loadTex = (u, rep, srgb) => new Promise(res => texLoader.load(u, t => { t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(rep, rep); if (srgb) t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = ANISO; res(ladTick(t)); }, undefined, () => res(ladTick(null))));
 const PEOPLE_FILES = ['man', 'man_suit', 'woman_casual', 'woman_tanktop', 'woman_dress', 'woman_jacket', 'hero_man', 'hero_woman', 'business_man', 'swat'];
 const CAR_FILES = ['sedan', 'small', 'suv', 'taxi', 'police', 'hatchback', 'wagon'];
+// Ladebalken je fertiger Datei von 4 auf 30 % (vorher stand er beim größten Download still); 1 Waffe + 10 Texturen
+let ladN = 0; const LAD_ALL = PEOPLE_FILES.length + CAR_FILES.length + 1 + 10;
+function ladTick(v) { if (ladN < LAD_ALL) { ladN++; setLoading('Lade Modelle und Texturen … ' + ladN + ' / ' + LAD_ALL, 0.04 + 0.26 * ladN / LAD_ALL); } return v; }
 const [gPeople, gCars, gPistol, TEXA] = await Promise.all([
   Promise.all(PEOPLE_FILES.map(n => loadGLB(`assets/people/${n}.glb`))),
   Promise.all(CAR_FILES.map(n => loadGLB(`assets/cars/${n}.glb`))),
@@ -3026,7 +3032,7 @@ function runJob(j, budget) {
   while (j.steps.length) { const st = j.steps[0]; if (!j.gen) j.gen = (st === 'ground' || any) ? STEP_FN[st](j.t) : null; let done = !j.gen; const a = performance.now();
     while (!done) { BUILD_TILE = j.t; const s0 = performance.now(); const res = withBuildSet(d, () => { try { done = j.gen.next().done; } finally { BUILD_TILE = null; } }, j.grp); res.owned.forEach((o, i) => { if (o.length) j.owned[i].push(...o); }); const sl = performance.now() - s0; if (sl > BUILD_STAT.max) { BUILD_STAT.max = sl; BUILD_STAT.step = st === 'city' ? 'city:' + CITY_PART : st === 'det' ? 'det:' + DET_PART : st; } if (performance.now() - t0 > budget) break; }
     j.t.prof[st] = (j.t.prof[st] || 0) + Math.round(performance.now() - a); if (done) { j.steps.shift(); j.gen = null; } if (performance.now() - t0 > budget) break; }
-  if (j.steps.length) return false; if (j.upgrade) { j.t.lod = 'near'; j.t.ms = Object.values(j.t.prof).reduce((a, b) => a + b, 0); return true; } finishTile(j.t, j.grp, j.owned); return true;
+  if (j.steps.length) return false; if (j.upgrade) { if (!j.t.built) return true; j.t.lod = 'near'; j.t.ms = Object.values(j.t.prof).reduce((a, b) => a + b, 0); return true; } finishTile(j.t, j.grp, j.owned); return true;
 }
 function buildTileNow(t) { runJob(makeJob(t), Infinity); }
 let job = null; // Kachel, die gerade schrittweise gebaut wird
@@ -3035,7 +3041,7 @@ const BUILD_STAT = { ms: 0, max: 0, step: '', sync: 0, syncN: 0 }; // Kachelbau 
 function stepJob() { const b = opts.potato ? 4 : (_smoothFt > 26 ? 4.5 : BUILD_BUDGET); const t0 = performance.now(); const done = runJob(job, b); if (done) { job = null; refreshActive(); } BUILD_STAT.ms += performance.now() - t0; }
 function cancelJob() { if (!job) return; const t = { built: true, grp: job.grp, owned: job.owned }; scene.add(job.grp); unbuildTile(t); if (!job.upgrade) { barrierDrop(job.t); barrierDrop(job.t, 'barH'); } /* halb gebaute Kachel: ihre Hindernisse (Zäune, Hecken) wieder aus dem Raster; beim Aufwerten gehören sie der stehenden Kachel */ job = null; }
 function unbuildTile(t) { barrierDrop(t); barrierDrop(t, 'barH');
-  if (!t.built) return; scene.remove(t.grp); const L = OWN_LISTS();
+  if (!t.built) return; if (job && job.upgrade && job.t === t) job = null; /* laufende Aufwertung dieser Kachel verwerfen: sie baute sonst in die entfernte Gruppe weiter (unsichtbare Parkautos) */ scene.remove(t.grp); const L = OWN_LISTS();
   L.forEach((l, i) => { const own = t.owned[i]; if (!own.length) return; const s = new Set(own); let w = 0; for (let r = 0; r < l.length; r++) if (!s.has(l[r])) l[w++] = l[r]; l.length = w; });
   disposeHierarchy(t.grp, { keep: x => x.isTexture && !(x.userData && x.userData.own) }); /* Kachel-Texturen kommen aus Caches (TEX, Fassaden, Gehweg), Speicherprobe #120: Zahl bleibt stabil; eigene markiert userData.own */
   t.grp = null; t.owned = null; t.built = false;
