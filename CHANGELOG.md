@@ -2,6 +2,7 @@
 
 ## 2026-11-13
 
+- **Kompakter Spieltest-Bericht (#121):** `tools/probe.mjs` schreibt zusätzlich `ergebnis.json` (`passed`, `failed: [{step, error, pos}]`, bei Fehler die letzten 10 Schritte davor) und am Ende eine Zeile `ERGEBNIS: …`. Bekannte harmlose Chrome-/WebGL-Meldungen (Liste `HARMLOS` im Code) zählen nicht mehr als Fehler, nur gezählt. stand.txt, Exit 0/1/2 und JS-Ausnahmen = rot bleiben. Workflow „Spieltest“ schreibt die Zusammenfassung ins Job-Summary. Spieltest GitHub siehe PR.
 - **Messeturm im Fern-Dunst:** Fassade, Krone, Glaszylinder und Pyramide nehmen wie die Wahrzeichen nicht mehr am Szenen-Nebel teil, sondern am weiten Dunst aus `wahrzeichen.js` (Liste `FAR_HAZE`, für weitere Bauten offen). Grenze: In der Sparstufe baut das Spiel nur Kacheln im Umkreis von etwa 500–750 m; weiter entfernte Bauten fehlen ganz, Dunst hin oder her. Spieltest GitHub: fernsicht/wahrzeichen ohne Fehler, Messeturm angemeldet; Sichtprüfung im Bild steht noch aus (Probe blickt am Turm vorbei).
 
 - Pausemenü-Karte (#98): Ein alter Timer aus dem Schließen des Menüs sperrte die Maus, wenn das Menü binnen 1,3 s wieder offen war; der Klick auf die U-Bahn-Station ging dann als Schuss ins Spiel. Timer wird jetzt beim Öffnen abgebrochen, bei offenem Menü wird keine Sperre mehr gesetzt bzw. sofort gelöst. Probe `tools/proben/kartenklick.json` (Spieltest auf GitHub, rechnet den Stationspunkt auf der Karte selbst aus, Reiter Karte erst nach dem Menü-Hook, prüft Fahrtanzeige und Ankunft).
