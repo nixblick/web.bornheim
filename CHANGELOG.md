@@ -2,6 +2,8 @@
 
 ## 2026-11-13
 
+- **Rechtsverkehr (#99):** Autos, Räder und Polizei fuhren links. Die Straßennormale (-dz, dx) zeigt bei x = Ost, z = Süd nach rechts (belegt: Hauptwache liegt westlich der Konstablerwache und südlich von Bornheim), der Spurversatz war negativ. Vorzeichen an allen vier Stellen gedreht, Wandprüfung (sideGuard) mit. Ungetestet, Test im Nachtfenster.
+- **HUD oben links (#100):** „Stufe“ stand fest bei 84 px und überlagerte die Waffenzeile. Jetzt im selben Block unter der Waffe, auf Touch ebenso. Ungetestet, Test im Nachtfenster.
 - **Spieltest nimmt Proben immer von main:** Ältere Zweige ohne neue Probendatei lassen sich so trotzdem testen.
 
 - **Spieltest auf GitHub (Actions):** Workflow „Spieltest“ fährt `tools/probe.mjs` auf einem GitHub-Rechner (Headless-Chrome, SwiftShader), je Probendatei ein paralleler Job, Bilder als Artefakt. Start von Hand mit Zweig und Proben oder automatisch bei jedem PR. Tests laufen damit tagsüber ohne Last auf dem Notebook. Neue Probe `tools/proben/wahrzeichen.json` (neun Wahrzeichen aus 70 m, Kollision im Kern, Stadion-Innenraum).

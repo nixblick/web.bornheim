@@ -21,7 +21,7 @@
 #minimap{position:fixed!important;left:8px!important;top:78px!important;bottom:auto!important;width:96px!important;height:96px!important;pointer-events:auto!important}
 #street{top:6px!important;bottom:auto!important;right:auto!important;left:50%!important;transform:translateX(-50%);font-size:14px!important}
 #stars{font-size:16px!important;top:52px!important;letter-spacing:2px!important}#money{font-size:14px!important;top:72px!important}
-#lvl{top:180px!important;left:10px!important}#zone{display:none}#zoneban b{font-size:26px!important}#feed{width:210px!important;top:92px!important;font-size:11px!important}#hint{bottom:12px!important;font-size:12px!important;max-width:38vw;white-space:normal}
+#zone{display:none}#zoneban b{font-size:26px!important}#feed{width:210px!important;top:92px!important;font-size:11px!important}#hint{bottom:12px!important;font-size:12px!important;max-width:38vw;white-space:normal}
 #obj{top:30px!important;font-size:11px!important;max-width:44vw!important;padding:4px 10px!important;pointer-events:auto!important}
 #sub{bottom:58px!important;font-size:12px!important;max-width:56vw!important;pointer-events:auto!important}
 #ammo,#weapon{pointer-events:auto!important}
