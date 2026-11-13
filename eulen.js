@@ -1,6 +1,7 @@
 // Frischlufteulen im Spiel (#61, erster Kunde): Plakate an Litfaßsäulen (geteilt mit weiteren Kunden-Motiven, #81 Vokabaum), Eulen-Lauf und Eulen-Marathon mit Ziel an der Festhalle.
 // Daten nur aus https://frischlufteulen.de/api/spiel/strecken.json (einmal je Sitzung), nichts ausgedacht: ohne freigegebene Strecke keine Plakate und keine Mission.
 // Format je Strecke: { name, laenge_km, linie: [[lon, lat], …], link, marathon? }. Keine Nutzerdaten, keine fremden Marken.
+/** @param {import('./types').Ctx} X */
 export function initEulen(X) {
   const { THREE, scene, player, TH, showMsg, canvasTex, card, sfx, burst, solidAt } = X;
   const LAT0 = 50.129441, LON0 = 8.7096938, R = 6371000;
@@ -58,6 +59,7 @@ export function initEulen(X) {
   function done(ms) { const r = run.r; stop(); writeSave(null);
     if (r.marathon) { player.money = (player.money || 0) + 10000; player.hp = 100; if ('stamina' in player) player.stamina = 1; try { const a = JSON.parse(localStorage.getItem('eulenErfolge') || '[]'); a.push({ was: 'Marathon gefinisht', zeit: fmt(ms), am: new Date().toISOString().slice(0, 10) }); localStorage.setItem('eulenErfolge', JSON.stringify(a)); } catch (e) { /* Erfolg nur für diese Sitzung */ }
       for (let k = 0; k < 6; k++) setTimeout(() => burst(player.pos.clone().setY(player.pos.y + 3), [0xff4060, 0xffd84a, 0x3ad17a, 0x4fa8ff][k % 4], 40), k * 250); }
+    if (r.marathon && X.emit) X.emit('medal', player.pos, { id: 'marathon', n: 'Eulen-Marathon · ' + r.name, ms }); /* Medaille in der Statistik (#127) */
     card(r.marathon ? 'MARATHON GEFINISHT' : 'EULEN-LAUF GESCHAFFT', `${fmt(ms)}` + (r.marathon ? ' · +10.000 € · volles Leben · Erfolg „Marathon gefinisht“' : '') + ` · <a href="${r.link}" target="_blank" rel="noopener" style="color:#7fe0a0">Strecke auf frischlufteulen.de</a>`, 9); }
 
   // ---------- Ziel Festhalle: Bogen, roter Teppich, Zuschauer ----------

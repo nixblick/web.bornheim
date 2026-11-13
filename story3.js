@@ -47,6 +47,7 @@ export function story3Chapters(K) {
   function barrierRow(x, z, h, n) { const out = []; for (let i = 0; i < n; i++) { const m = new THREE.Mesh(new THREE.BoxGeometry(2.4, 1.1, 0.06), new THREE.MeshLambertMaterial({ color: 0xc8c8c8 })); const ox = (i - (n - 1) / 2) * 2.5; const px = x + Math.cos(h) * ox, pz = z - Math.sin(h) * ox; m.position.set(px, TH(px, pz) + 0.55, pz); m.rotation.y = h; scene.add(m); out.push(track(m)); } return out; }
   function blackCar(x, z, h, type = 'sedan') { const c = X.makeCar(false, type); c.position.set(x, TH(x, z), z); c.userData.heading = h; c.rotation.y = h; c.userData.mode = 'parked'; c.userData.speed = 0; c.userData.keep = true; for (const m of c.userData.bodyMats || []) m.color.setHex(0x101114).convertSRGBToLinear(); c.userData.col = 0x101114; D.addCar(c); return track(c); }
   function policeCar(x, z, h) { const c = X.makeCar(true); c.position.set(x, TH(x, z), z); c.userData.heading = h; c.rotation.y = h; c.userData.mode = 'parked'; c.userData.speed = 0; D.addCar(c); return track(c); }
+  // @ts-ignore -- Baseline #119: DOM-/Zahl-String-Typen, kein X-Fehler
   function convoy(at, h) { const out = []; let k = 0; for (const [type, pol] of [['police', true], ['sedan', false], ['suv', false], ['police', true]]) { const d = -(k++) * 7; const x = at[0] + Math.sin(h) * d, z = at[1] + Math.cos(h) * d; const [fx, fz] = D.freeSpot(x, z, 2.5); out.push(pol ? policeCar(fx, fz, h) : blackCar(fx, fz, h, type)); } return out; }
   function squad(x, z) { const g = D.spawnSquad(new V3(x, 0, z)); g.isDemo = true; track(g); return g; }
   const audience = (n, cx, cz) => { for (let i = 0; i < n; i++) { const a = rnd(0, 6.28), r = rnd(2.5, 7); const [x, z] = D.freeSpot(cx + Math.cos(a) * r, cz + Math.sin(a) * r, 1); const h = npc(pick(['man_suit', 'business_man', 'woman_dress', 'man', 'woman_jacket']), x, z, Math.atan2(cx - x, cz - z) + Math.PI, null, null, { keep: true }); h.userData.guest = true; } };
@@ -95,6 +96,7 @@ export function story3Chapters(K) {
       audience(12, SAAL[0] + Math.sin(h) * 9, SAAL[1] + Math.cos(h) * 9); squad(SAAL_ROAD[0] + Math.cos(sr.h) * 8, SAAL_ROAD[1] - Math.sin(sr.h) * 8); Q.cars = convoy(BACK, BACK[2]);
       D.post('presse', 'Live: Kanzler Hollweg spricht in Bornheim. Zugelassen sind Pool-Kameras und geladene Gäste.', 2300); D.post('troll', 'Bürgerdialog = Bürger draußen, Dialog drinnen 😂', 870);
       talk([['📱 Mara Lenz', 'Hier Mara, freie Journalistin. Yusuf hat mir von dir erzählt. Versuch\'s am Haupteingang. Wenn sie dich abweisen: Seiteneingang, ich bin da.', 6]]); },
+    // @ts-ignore -- Baseline #119: DOM-/Zahl-String-Typen, kein X-Fehler
     update(dt) { const Q = S(); if (Q.phase === 'speech') { Q.spT -= dt; if (D.filming) Q.filmedSec += dt; if (Q.spT <= 0) { const l = SPEECH[Q.spI++]; if (!l) { Q.phase = 'open'; return; } D.sub(l[0], l[1], l[2]); Q.spT = l[2] + 0.6; if (Q.spI === 6) Q.phase = 'open'; } } },
     steps: [
       { obj: 'Geh zum <b>Haupteingang</b> des Saalbaus', mark: () => S().falk, done: () => S().falk && S().falk.position.distanceTo(player.pos) < 4 && !player.car },

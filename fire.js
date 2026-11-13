@@ -1,4 +1,5 @@
 // Feuer (Autos, Mülltonnen, Brandflächen) und Feuerwehr (Löschfahrzeug, Trupp mit Schlauch, Absperrung, Rückzug bei Angriffen)
+/** @param {import('./types').Ctx} X */
 export function initFire(X, W, D) {
   const { THREE, scene, player, peds, cars, opts, TH, floorAt, solidAt, sfx, rnd, clamp, pick, moveWithCollision, canvasTex, explode, damage, animateWalk, makeHuman, lerpAngle } = X;
   const V3 = THREE.Vector3;
@@ -15,6 +16,7 @@ export function initFire(X, W, D) {
     if (target && target.isObject3D && cars.includes(target)) { const c = target; if (c.userData.fire) { c.userData.fire.I = Math.max(c.userData.fire.I, o.I ?? 0.5); return c.userData.fire; } const D2 = c.userData.dims || { l: 4.4, w: 1.9 }; f = { car: c, I: o.I ?? 0.45, t: 0, g: makeFlames(c.userData.cannon ? 14 : 10, D2.w * 0.35, D2.l * 0.38), h: 0.7 }; c.userData.fire = f; }
     else if (target && target.userData && target.userData.bin) { const b = target; if (b.userData.fire) { b.userData.fire.I = Math.max(b.userData.fire.I, o.I ?? 0.6); return b.userData.fire; } f = { bin: b, I: o.I ?? 0.6, t: 0, g: makeFlames(5, 0.25, 0.25), h: 1.0 }; b.userData.fire = f; }
     else { const p = target.isVector3 ? target.clone() : new V3(target.x, target.y ?? 0, target.z); p.y = floorAt(p.x, p.z, p.y + 0.5); f = { pos: p, I: o.I ?? 0.85, t: 0, life: o.life ?? 10, g: makeFlames(7, 0.9, 0.9), h: 0.05, ground: true }; }
+    // @ts-ignore -- Baseline #119: DOM-/Zahl-String-Typen, kein X-Fehler
     f.by = o.by || 'npc'; f.spreadT = rnd(1.5, 3); fires.push(f); emit('fireStart', fireAt(f), { fire: f, by: f.by }); sfx('whoosh', clamp(1 - fireAt(f).distanceTo(player.pos) / 80, 0.1, 0.7)); return f;
   }
   function douse(x, y, z, amt) { let hit = false; for (const f of fires) { const p = fireAt(f); const dx = p.x - x, dz = p.z - z; if (dx * dx + dz * dz > 10 || y > p.y + 4) continue; f.I -= amt; f.wetT = 0.4; hit = true; } return hit; }

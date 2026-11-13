@@ -19,6 +19,15 @@ permissions:
   contents: read
 
 jobs:
+  typen:
+    # Typprüfung schon im PR, nicht erst beim Ausrollen (#119); gleicher Befehl wie in pages.yml
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.event.pull_request.head.sha || github.ref }}
+      - run: npx -y -p typescript@5 tsc -p jsconfig.json
+
   liste:
     runs-on: ubuntu-latest
     outputs:
@@ -58,6 +67,15 @@ jobs:
       - name: Stand
         if: always()
         run: cat "out/${{ matrix.probe }}/stand.txt" || true
+      - name: Zusammenfassung ins Job-Summary
+        if: always()
+        run: |
+          f="out/${{ matrix.probe }}/ergebnis.json"
+          { echo "### Probe ${{ matrix.probe }}"
+            if [ -f "$f" ]; then jq -r '"\(.passed) ok, \(.failed|length) rot, \(.harmlos) harmlose Meldungen gefiltert"' "$f"
+              jq -r '.failed[] | "- **\(.step)**: \(.error|tostring|.[0:300]) `\(.pos|tostring)`"' "$f"
+              echo '```json'; jq -c '.letzte // empty' "$f"; echo '```'
+            else echo "kein ergebnis.json"; fi; } >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -65,4 +83,5 @@ jobs:
           path: |
             out/${{ matrix.probe }}/*.jpg
             out/${{ matrix.probe }}/*.txt
+            out/${{ matrix.probe }}/ergebnis.json
           retention-days: 14
