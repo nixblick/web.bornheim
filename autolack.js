@@ -7,7 +7,7 @@ const PAINT = new Set(['Blue', 'LightBlue', 'White', 'Yellow', 'Main', 'Red', 'G
 // Werte aus Sunset (Lack roughness 0.46/clearcoat 1/clearcoatRoughness 0.045, Glas roughness 0.05 envMapIntensity 1.35), für Bornheims RoomEnvironment etwas gedämpft
 const LOOK = {
   paint: { roughness: 0.42, metalness: 0.05, clearcoat: 1, clearcoatRoughness: 0.06 },
-  glass: { roughness: 0.06, metalness: 0.2, envMapIntensity: 1.35, clearcoat: 1, clearcoatRoughness: 0.03 },
+  glass: { roughness: 0.08, metalness: 0, envMapIntensity: 0.9 }, // ohne Clearcoat: bei Nacht spiegelte die Heckscheibe hellgrau (Spieltest 43418999090)
   rim: { roughness: 0.3, metalness: 0.85 },
   rimDark: { roughness: 0.45, metalness: 0.6 },
   rubber: { roughness: 0.88, metalness: 0 },
