@@ -41,7 +41,7 @@ export function initProgress(X) {
   }
   function fmtMs(ms) { const t = Math.round(ms / 1000); return Math.floor(t / 3600) + ':' + String(Math.floor(t / 60) % 60).padStart(2, '0') + ':' + String(t % 60).padStart(2, '0') + ' h'; }
   // @ts-ignore -- Baseline #119: DOM-/Zahl-String-Typen, kein X-Fehler
-  function banner(big, small, sub) { ban.innerHTML = `<small>${small}</small><b>${big}</b>${sub ? '<i>' + sub + '</i>' : ''}`; ban.style.opacity = 1; banT = 4; }
+  function banner(big, small, sub) { const e = t => String(t).replace(/[&<>"']/g, c => '&#' + c.charCodeAt(0) + ';'); /* alles maskiert: Medaillen-/Streckennamen kommen von außen (Hinweis programmierer bornheim, 13.11.2026) */ ban.innerHTML = `<small>${e(small)}</small><b>${e(big)}</b>${sub ? '<i>' + e(sub) + '</i>' : ''}`; ban.style.opacity = 1; banT = 4; }
   function drawLvl() { lvlEl.innerHTML = `Stufe ${P.lvl}<i><b style="width:${Math.round(P.xp / need(P.lvl) * 100)}%"></b></i>`; }
   drawLvl();
   // ---------- Stadtteile ----------

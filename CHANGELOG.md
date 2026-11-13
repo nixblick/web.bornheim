@@ -2,6 +2,9 @@
 
 ## 2026-11-13
 
+- **Sicherheit: Banner maskiert alle Texte:** `banner()` in `progress.js` setzte Medaillen- und Gebietsnamen ungeprüft per innerHTML. Medaillennamen können aus Streckennamen von frischlufteulen.de kommen, also von außen. Jetzt werden alle drei Texte maskiert (Hinweis der Sitzung „programmierer bornheim“).
+- **Doku:** `docs/vergleich-project-sunset.md`, der Vergleich Project Sunset vs. Bornheim aus Andrés Google Drive, als Markdown abgelegt.
+
 - **Kompakter Spieltest-Bericht (#121):** `tools/probe.mjs` schreibt zusätzlich `ergebnis.json` (`passed`, `failed: [{step, error, pos}]`, bei Fehler die letzten 10 Schritte davor) und am Ende eine Zeile `ERGEBNIS: …`. Bekannte harmlose Chrome-/WebGL-Meldungen (Liste `HARMLOS` im Code) zählen nicht mehr als Fehler, nur gezählt. stand.txt, Exit 0/1/2 und JS-Ausnahmen = rot bleiben. Workflow „Spieltest“ schreibt die Zusammenfassung ins Job-Summary. Spieltest GitHub siehe PR.
 - **Statistik: Karma, Fitness, Medaillen (Basis für #127–#129):** Drei neue Werte im Spielstand und in der Statistik (Tab/Menü). Missionen melden sie über Ereignisse: `karma` (−100…+100, positiv gibt EP), `fitness` (0…100, bis +20 % Laufgeschwindigkeit), `medal` (Name, Zeit, Datum; Banner „MEDAILLE“, +200 EP). Der Eulen-Marathon vergibt beim Finish schon eine Medaille. Medaillennamen werden escaped.
 - Getestet: Spieltest auf GitHub, Probe `karma` (Karma 3, Fitness 10, 1 Medaille, Statistikzeilen da, kein eingeschleustes HTML), `waffen`, `bugs2` grün, `tsc` lokal grün.
