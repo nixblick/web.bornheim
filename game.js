@@ -8,6 +8,7 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { GTAOPass } from 'three/addons/postprocessing/GTAOPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
+import { initSpielstaende } from './spielstaende.js'; // zuerst: schreibt einen vorgemerkten Spielstand zurück, bevor Fortschritt und Story lesen
 import { initWeapons } from './weapons.js';
 import { initDemo } from './demo.js';
 import { initStory } from './story.js';
@@ -24,7 +25,7 @@ import { autolack } from './autolack.js';
 import { initVokabaum } from './vokabaum.js';
 import { initLaufrunden } from './laufrunden.js';
 import { initNebenjobs } from './nebenjobs.js';
-import { installDunst, initDunst } from './dunst.js';
+import { installDunst, initDunst } from './dunst.js'; import { makeHimmel } from './himmel.js';
 import { weather, initWetter } from './wetter.js';
 import { initRasen, rasenMat, RASEN_KINDS } from './rasen.js';
 import { initLandmarks } from './landmarks.js';
@@ -63,7 +64,7 @@ const camera = new THREE.PerspectiveCamera(65, (innerWidth > 0 && innerHeight > 
 
 const hemi = new THREE.HemisphereLight(0x8a90c8, 0x4a4038, 1.1); scene.add(hemi);
 const world = { hour: 8, speed: 0.25 / 60, headlights: true }; /* Start 8 Uhr, 1 Spielstunde = 4 Minuten (12.11.2026, André) */
-let skyU = null, skyDome = null, sunDisk = null, skylineMesh = null, skylineBeacons = null; const clouds = [];
+let skyU = null, HIMMEL = null, skyDome = null, sunDisk = null, skylineMesh = null, skylineBeacons = null; const clouds = [];
 let WET = null, roadMatRef = null; const lampSpots = []; let streaks = null, streakT = 0;
 function updateStreaks(dt) {
   const night = (world.hour < 6.5 || world.hour > 19.8) ? 1 : 0; const k = opts.quality === 'niedrig' ? 0 : (weather.wet || 0) * night;
@@ -1007,15 +1008,9 @@ const SKYLINE_TOWERS = [
 ];
 const _skyO = new THREE.Object3D(), _skyC1 = new THREE.Color(), _skyC2 = new THREE.Color(), _skyTint = new THREE.Color();
 function buildSky() {
-  skyU = { top: { value: new THREE.Color(0x6a8fd0) }, bot: { value: new THREE.Color(0xb9cde6) } };
-  const mat = new THREE.ShaderMaterial({ uniforms: skyU, side: THREE.BackSide, depthWrite: false, fog: false,
-    vertexShader: 'varying vec3 vW; void main(){ vW = normalize(position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
-    fragmentShader: 'uniform vec3 top; uniform vec3 bot; varying vec3 vW; void main(){ float h = clamp(vW.y * 1.8 + 0.04, 0.0, 1.0); gl_FragColor = vec4(mix(bot, top, pow(h, 0.65)), 1.0);\n#include <colorspace_fragment>\n}' });
-  skyDome = new THREE.Mesh(new THREE.SphereGeometry(850, 24, 12), mat); skyDome.renderOrder = -1; skyDome.userData.noChunk = true; skyDome.frustumCulled = false; scene.add(skyDome);
+  HIMMEL = makeHimmel(THREE, !LOW_GFX); skyU = HIMMEL.uniforms; skyDome = HIMMEL.dome; scene.add(skyDome); // Verlauf und Wolkendecke in einem Shader (himmel.js, #152)
   const sunTex = canvasTex(128, 128, (ctx, w, h) => { const gr = ctx.createRadialGradient(64, 64, 4, 64, 64, 64); gr.addColorStop(0, 'rgba(255,255,240,1)'); gr.addColorStop(0.15, 'rgba(255,245,210,0.95)'); gr.addColorStop(0.35, 'rgba(255,220,160,0.25)'); gr.addColorStop(1, 'rgba(255,200,120,0)'); ctx.fillStyle = gr; ctx.fillRect(0, 0, w, h); });
   sunDisk = new THREE.Sprite(new THREE.SpriteMaterial({ map: sunTex, fog: false, depthWrite: false, transparent: true, blending: THREE.AdditiveBlending })); sunDisk.scale.set(140, 140, 1); scene.add(sunDisk);
-  const cloudTex = canvasTex(256, 128, (ctx, w, h) => { for (let i = 0; i < 22; i++) { const x = rnd(40, 216), y = rnd(45, 90), r = rnd(18, 44); const gr = ctx.createRadialGradient(x, y, 2, x, y, r); gr.addColorStop(0, 'rgba(255,255,255,0.55)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.fill(); } });
-  for (let i = 0; i < 26; i++) { const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: cloudTex, fog: false, depthWrite: false, transparent: true })); const a = Math.random() * Math.PI * 2, d = rnd(150, 680); sp.userData = { ox: Math.cos(a) * d, oz: Math.sin(a) * d, y: rnd(170, 290) }; const sc = rnd(140, 260); sp.scale.set(sc, sc * 0.45, 1); scene.add(sp); clouds.push(sp); }
   // Frankfurter Skyline-Horizontschicht: ein einziges InstancedMesh (1 Draw-Call) für alle fernen Wolkenkratzer
   const twTex = canvasTex(64, 128, (ctx, w, h) => {
     ctx.fillStyle = '#8fa0b5'; ctx.fillRect(0, 0, w, h);
@@ -1045,8 +1040,7 @@ function updateSky(dt) {
   if (BAU_LAMP_MAT) BAU_LAMP_MAT.color.setHex(world.night && Math.floor(performance.now() / 500) % 2 ? 0x4a3a10 : 0xffc21a); // Baustellen-Warnleuchten blinken nachts
   if (!skyDome) return; skyDome.position.copy(camera.position);
   const sd = _sunV.copy(world.sunDir).normalize(); sunDisk.position.copy(camera.position).addScaledVector(sd, 700); sunDisk.material.opacity = clamp(world.day * 1.2 - weather.cloud * 0.9, 0, 1); sunDisk.visible = sunDisk.material.opacity > 0.02;
-  const bright = 0.25 + 0.75 * world.day; const grey = 1 - weather.cloud * 0.45; const cov = 0.25 + 0.75 * weather.cloud;
-  for (const c of clouds) { c.userData.ox += dt * 2.5; if (c.userData.ox > 700) c.userData.ox -= 1400; const x = camera.position.x + c.userData.ox, z = camera.position.z + c.userData.oz; c.position.set(x, c.userData.y, z); c.material.opacity = cov * (0.55 + 0.45 * world.day); c.material.color.setScalar(bright * grey); }
+  HIMMEL.update(dt, { day: world.day, cloud: weather.cloud, flash: weather.flash, night: !!world.night, sunColor: sun.color, sunDir: world.sunDir });
   if (skylineMesh) {
     const showSkyline = !POCKET;
     skylineMesh.visible = showSkyline;
@@ -3180,7 +3174,7 @@ $('cont').onclick = () => { let d = null; try { d = JSON.parse(localStorage.getI
 while (solidAt(player.pos.x, player.pos.z) >= 0) player.pos.x += 3;
 const X = { FAR_HAZE, sun, THREE, scene, camera, renderer, player, peds, cars, shootables, pickups, FX, puff, losFactor, keys, camYaw, camPitch, opts, world, weather, CITY, TH, solidAt, solidAtH, floorAt, nearestEdge, edgeNormal, moveWithCollision, makeHuman, makeCar, makeAmbulance, dropRider, tipBike, rehome, spawnCar, spawnPedAt, playAnim, animateWalk, damage, explode, burst, smoke, wakeParked, wakeParkedRay, sfx, SND, showMsg, raiseWanted, camShake, freeSkel, canvasTex, tracerMat, makeGun, dentCar, rnd, clamp, pick, lerpAngle, distSegSq, pointInPoly, randomRoadPoint, roadsDrivable, driveCar, carFx, carTerrain, exitCar, syncHand, CHAR, coneTex, hurtPlayer, card, closeMenu, saveGame, lockMouse, disposeCar,
   listeners: [], mmHooks: MM_HOOKS, mapHooks: MAP_HOOKS, menuHooks: MENU_HOOKS, rallyLimit: 8, get creative() { return creative; }, creativeSpawnerActive, pedRoads: () => pedRoads, roadsNear: (x, z, R, car) => roadsNear(x, z, R, car), streetAt: (x, z) => streetNameAt(x, z), barrierNear: (x, z, r) => barrierHit(x, z, r), storyBusy: () => STORY ? STORY.busy : false, openMenu, menuTab: t => MENU_TAB(t), get started() { return started; }, menuOpen: () => menuOpen };
-var PFUETZEN = initLichtpfuetzen(X); var DUNST = initDunst(X); var WPN = initWeapons(X); var DEMO = initDemo(X, WPN); var FIRE = initFire(X, WPN, DEMO); var STORY = initStory(X, WPN, DEMO, FIRE); var SHOPS = initShops(X, WPN); Object.assign(X, { wachen: WACHEN, nearestRoadDir, pushOffRoads, setPocket: p => { POCKET = p; camera.userData.init = false; }, inPocket, streamInit, roofHeight, WORLD, TILES, TS, WIDX }); var INTERIORS = initInteriors(X, WPN, DEMO, SHOPS); var PROGRESS = initProgress(X); var HELI = initHeli(X); var EULEN = null; try { EULEN = initEulen(X); } catch (e) { console.warn('Frischlufteulen aus', e); } var VOKA = null; var LAUF = null; var NEBENJOBS = null; try { VOKA = initVokabaum(X); try { LAUF = initLaufrunden(X); try { X.SHOPS_LIST = () => SHOPS.shops; NEBENJOBS = initNebenjobs(X); } catch (e) { console.warn('Nebenjobs aus', e); NEBENJOBS = null; } X.VOKA_BUSY = () => !!(VOKA && (VOKA.mission || VOKA.ped)); X.PROGRESS_GAIN = (n, why) => PROGRESS.gain(n, why); } catch (e) { console.warn('Laufrunden', e); LAUF = null; } } catch (e) { console.warn('Vokabaum-Mission aus', e); } var RASEN = null; try { Object.assign(X, { LOW_GFX, WEAK_GPU, waterAt, deckAt, rasenRoad: (x, z) => onOtherRoad(x, z, null, 0.3) }); RASEN = initRasen(X); } catch (e) { console.warn('Rasen aus', e); } var ZIVIL = null; try { ZIVIL = initZivilcourage(X); } catch (e) { console.warn('Zivilcourage aus', e); } var LANDMARKS = initLandmarks(X); initGraeber(X); var WAHRZ = initWahrzeichen(X); /* #150: Handy (H) nach Sunset */ var PHONE = null; try { const SY = { STORY, DEMO, PROGRESS, LAUF, VOKA, get NEBENJOBS() { return NEBENJOBS; }, get EULEN() { return EULEN; } }; initMenuNeu(X, SY); PHONE = initPhone(X, SY); } catch (e) { console.warn('Handy/Menü', e); }
+var PFUETZEN = initLichtpfuetzen(X); var DUNST = initDunst(X); var WPN = initWeapons(X); var DEMO = initDemo(X, WPN); var FIRE = initFire(X, WPN, DEMO); var STORY = initStory(X, WPN, DEMO, FIRE); var SHOPS = initShops(X, WPN); Object.assign(X, { wachen: WACHEN, nearestRoadDir, pushOffRoads, setPocket: p => { POCKET = p; camera.userData.init = false; }, inPocket, streamInit, roofHeight, WORLD, TILES, TS, WIDX }); var INTERIORS = initInteriors(X, WPN, DEMO, SHOPS); var PROGRESS = initProgress(X); var HELI = initHeli(X); var EULEN = null; try { EULEN = initEulen(X); } catch (e) { console.warn('Frischlufteulen aus', e); } var VOKA = null; var LAUF = null; var NEBENJOBS = null; try { VOKA = initVokabaum(X); try { LAUF = initLaufrunden(X); try { X.SHOPS_LIST = () => SHOPS.shops; NEBENJOBS = initNebenjobs(X); } catch (e) { console.warn('Nebenjobs aus', e); NEBENJOBS = null; } X.VOKA_BUSY = () => !!(VOKA && (VOKA.mission || VOKA.ped)); X.PROGRESS_GAIN = (n, why) => PROGRESS.gain(n, why); } catch (e) { console.warn('Laufrunden', e); LAUF = null; } } catch (e) { console.warn('Vokabaum-Mission aus', e); } var RASEN = null; try { Object.assign(X, { LOW_GFX, WEAK_GPU, waterAt, deckAt, rasenRoad: (x, z) => onOtherRoad(x, z, null, 0.3) }); RASEN = initRasen(X); } catch (e) { console.warn('Rasen aus', e); } var ZIVIL = null; try { ZIVIL = initZivilcourage(X); } catch (e) { console.warn('Zivilcourage aus', e); } var LANDMARKS = initLandmarks(X); initGraeber(X); var WAHRZ = initWahrzeichen(X); /* #150: Handy (H) nach Sunset */ var PHONE = null; try { const SY = { STORY, DEMO, PROGRESS, LAUF, VOKA, get NEBENJOBS() { return NEBENJOBS; }, get EULEN() { return EULEN; } }; initSpielstaende(X); initMenuNeu(X, SY); PHONE = initPhone(X, SY); } catch (e) { console.warn('Handy/Menü', e); }
 for (let i = 0; i < 200 && cars.length < 60; i++) spawnCar(false, player.pos, 10, 260);
 for (let i = 0; i < 55; i++) spawnPed(null);
 spawnPickups(40);
