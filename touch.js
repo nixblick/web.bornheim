@@ -90,7 +90,7 @@
   addEventListener('touchstart', e => {
     if (!started()) return;
     for (const t of e.changedTouches) {
-      if (t.target.closest && t.target.closest('#tc .b, #tc .stick, #menu, #shop, #metromenu, #fb, #hotbar, #wbar, #bigmap, #minimap, #sub, #obj')) continue;
+      if (t.target.closest && t.target.closest('#tc .b, #tc .stick, #menu, #shop, #metromenu, #fb, #hotbar, #wbar, #bigmap, #minimap, #sub, #obj, #phone .ps-phone, #phonebtn, #tabov, #gl_lost')) continue;
       if (lid === null && t.clientX > innerWidth * 0.3) { lid = t.identifier; lx = t.clientX; ly = t.clientY; }
     }
   }, { passive: true });
@@ -183,6 +183,9 @@
 
   // Kontextabhängige Beschriftung & Sichtbarkeit der Touch-Knöpfe (alle 200 ms)
   function started() { const s = document.getElementById('start'); return !s || s.style.display === 'none'; }
+  // Beschriftung nur schreiben, wenn sie sich ändert (textContent/innerHTML ersetzen sonst jedes Mal die Kindknoten)
+  const setT = (b, v) => { if (b._t !== v) { b._t = v; b.textContent = v; } };
+  const setH = (b, v) => { if (b._t !== v) { b._t = v; b.innerHTML = v; } };
   setInterval(() => {
     const g = G();
     const on = started() && !document.querySelector('#menu[style*="flex"]');
@@ -198,15 +201,15 @@
     if (cTopB) cTopB.classList.toggle('on', isCreat);
 
     // 1) Feuer-/Hauptknopf
-    fireB.textContent = p.dead ? 'NEUSTART' : spawner ? 'SETZEN' : isCannon ? '💦\nWASSER' : 'ANGRIFF';
+    setT(fireB, p.dead ? 'NEUSTART' : spawner ? 'SETZEN' : isCannon ? '💦\nWASSER' : 'ANGRIFF');
 
     // 2) Sprung / Bremse / Steigen / Tauchen
-    jumpB.textContent = p.dead ? '↩' : p.swim ? 'TAUCHEN' : isCreat ? '▲ HOCH' : isHeli ? '▲ STEIGEN' : car ? 'BREMSE' : 'SPRUNG';
+    setT(jumpB, p.dead ? '↩' : p.swim ? 'TAUCHEN' : isCreat ? '▲ HOCH' : isHeli ? '▲ STEIGEN' : car ? 'BREMSE' : 'SPRUNG');
 
     // 3) Sinken / Runter (nur im Kreativflug oder Hubschrauber)
     const showDown = !p.dead && (isCreat || isHeli);
     downB.classList.toggle('hide', !showDown);
-    if (showDown) downB.textContent = isHeli ? '▼ SINKEN' : '▼ RUNTER';
+    if (showDown) setT(downB, isHeli ? '▼ SINKEN' : '▼ RUNTER');
 
     // 4) Zielen-Knopf im Hubschrauber oder bei Spawner ausblenden
     aimB.classList.toggle('hide', isHeli || spawner || isCannon);
@@ -214,18 +217,18 @@
     // 5) Kontextknöpfe ctx1 (Hupe/Sirene/Nachladen) & ctx2 (Licht/Zünder)
     if (car && !isHeli) {
       ctx1B.classList.remove('hide'); ctx1B.dataset.act = 'KeyH';
-      ctx1B.textContent = (cu.police || cu.cannon || cu.brigade || cu.ambulance) ? '🚨' : (cu.bike && !cu.moto) ? '🔔' : '📢';
+      setT(ctx1B, (cu.police || cu.cannon || cu.brigade || cu.ambulance) ? '🚨' : (cu.bike && !cu.moto) ? '🔔' : '📢');
       ctx1B.classList.toggle('on', !!cu.siren);
       ctx2B.classList.remove('hide'); ctx2B.dataset.act = 'KeyL';
-      ctx2B.textContent = '💡';
+      setT(ctx2B, '💡');
     } else if (!car && g.WPN && g.WPN.DEF) {
       const w = g.WPN.DEF[g.WPN.cur];
       const canReload = !!(w && w.mag);
       const hasFuse = g.WPN.cur === 'tnt' || g.WPN.cur === 'grenade';
       ctx1B.classList.toggle('hide', !canReload);
-      if (canReload) { ctx1B.dataset.act = 'KeyR'; ctx1B.textContent = '↻'; ctx1B.classList.remove('on'); }
+      if (canReload) { ctx1B.dataset.act = 'KeyR'; setT(ctx1B, '↻'); ctx1B.classList.remove('on'); }
       ctx2B.classList.toggle('hide', !hasFuse);
-      if (hasFuse) { ctx2B.dataset.act = 'KeyT'; ctx2B.textContent = '⏱'; ctx2B.classList.remove('on'); }
+      if (hasFuse) { ctx2B.dataset.act = 'KeyT'; setT(ctx2B, '⏱'); ctx2B.classList.remove('on'); }
     } else {
       ctx1B.classList.add('hide');
       ctx2B.classList.add('hide');
@@ -235,9 +238,9 @@
     const h = (document.getElementById('hint') || {}).textContent || '';
     const fm = h.match(/F · ([^·]+)/);
     fB.classList.toggle('hide', !fm);
-    if (fm) fB.textContent = fm[1].trim().slice(0, 34);
+    if (fm) setT(fB, fm[1].trim().slice(0, 34));
     const em = h.match(/E · ([^·]+)/);
-    eB.innerHTML = em ? em[1].trim().split(' ')[0] : 'E<br><small style="font-size:9px;font-weight:600">Auto</small>';
+    setH(eB, em ? em[1].trim().split(' ')[0] : 'E<br><small style="font-size:9px;font-weight:600">Auto</small>');
     eB.classList.toggle('hide', !em && !car);
     eB.style.bottom = showDown ? 'calc(5vh + 26vmin)' : 'calc(5vh + 14vmin)';
 

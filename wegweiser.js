@@ -22,21 +22,21 @@ export function initWegweiser(X) {
   hud.innerHTML = '<span class="ww-pfeil" style="display:inline-block;color:' + CSS + ';font-size:26px;line-height:1">⬆</span><span class="ww-text"></span>';
   (document.getElementById('hud') || document.body).appendChild(hud);
   const pfeil = /** @type {HTMLElement} */ (hud.querySelector('.ww-pfeil')), text = /** @type {HTMLElement} */ (hud.querySelector('.ww-text'));
-  let lastTxt = '';
+  let lastTxt = '', lastRot = '', placeT = 0;
 
   // Richtung relativ zur Blickrichtung wie auf der Minikarte (rotate(yaw + π) legt vorwärts nach oben), als Drehung im Uhrzeigersinn
   const relAngle = (dx, dz) => { const t = camYaw.v + Math.PI, x = dx * Math.cos(t) - dz * Math.sin(t), y = dx * Math.sin(t) + dz * Math.cos(t); return Math.atan2(x, -y); };
 
-  function route(r) { cur = r; beam.visible = !!r; hud.style.display = r ? 'flex' : 'none'; if (!r) lastTxt = ''; }
+  function route(r) { cur = r; placeT = 0; beam.visible = !!r; hud.style.display = r ? 'flex' : 'none'; if (!r) lastTxt = ''; }
   // Nicht unter #obj (Willkommen/Auftrag, kann zweizeilig sein) rutschen: Oberkante dynamisch darunter (13.11.2026)
   const objEl = document.getElementById('obj'); let topPx = 84;
   const place = () => { const o = objEl && objEl.style.display !== 'none' && objEl.offsetHeight ? objEl.offsetTop + objEl.offsetHeight + 8 : 40; if (o !== topPx) { topPx = o; hud.style.top = o + 'px'; } };
   // Am Tag geht der additive Strahl im hellen Himmel unter: Deckkraft nach Tageslicht anheben (André 13.11.2026)
   const sun = () => { const d = X.world && X.world.day; return typeof d === 'number' ? Math.max(0, Math.min(1, d)) : 0.5; };
-  function update(dt) { if (!cur || !cur.pts[cur.i]) return; place(); { const k = sun(), [mb, mc] = beam.userData.mats; mb.opacity = 0.28 + 0.37 * k; mc.opacity = 0.5 + 0.45 * k; const sc = 1 + 0.5 * k; beam.children[0].scale.set(sc, 1, sc); } const [x, z] = cur.pts[cur.i]; const here = player.car ? player.car.position : player.pos;
+  function update(dt) { if (!cur || !cur.pts[cur.i]) return; placeT -= dt || 0.016; if (placeT <= 0) { placeT = 0.25; place(); } /* Layout nur 4-mal je Sekunde lesen */ { const k = sun(), [mb, mc] = beam.userData.mats; mb.opacity = 0.28 + 0.37 * k; mc.opacity = 0.5 + 0.45 * k; const sc = 1 + 0.5 * k; beam.children[0].scale.set(sc, 1, sc); } const [x, z] = cur.pts[cur.i]; const here = player.car ? player.car.position : player.pos;
     beam.position.set(x, TH(x, z), z); beam.userData.ring.rotation.z += dt * 1.5; beam.userData.arrow.position.y = 4 + Math.sin(performance.now() / 300) * 0.4; beam.userData.arrow.rotation.y += dt * 2;
     const dx = x - here.x, dz = z - here.z, d = Math.hypot(dx, dz);
-    pfeil.style.transform = `rotate(${relAngle(dx, dz).toFixed(2)}rad)`;
+    const rot = relAngle(dx, dz).toFixed(2); if (rot !== lastRot) { lastRot = rot; pfeil.style.transform = `rotate(${rot}rad)`; }
     const t = `${cur.label} · Punkt ${cur.i + 1 - (cur.off || 0)}/${cur.pts.length - (cur.off || 0)} · ${d < 1000 ? Math.round(d) + ' m' : (d / 1000).toFixed(1).replace('.', ',') + ' km'}`; if (t !== lastTxt) { lastTxt = t; text.textContent = t; } }
 
   // Strecke auf einer Karte: erledigte Abschnitte blass, Rest kräftig, nächster Punkt groß mit Rand; R = Kartenradius (Minikarte) zum Anheften am Rand

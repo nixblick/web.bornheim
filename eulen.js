@@ -2,6 +2,7 @@
 // Daten nur aus https://frischlufteulen.de/api/spiel/strecken.json (einmal je Sitzung), nichts ausgedacht: ohne freigegebene Strecke keine Plakate und keine Mission.
 // Format je Strecke: { name, laenge_km, linie: [[lon, lat], …], link, marathon? }. Keine Nutzerdaten, keine fremden Marken.
 import { initWegweiser } from './wegweiser.js';
+import { disposeHierarchy } from './dispose.js';
 /** @param {import('./types').Ctx} X */
 export function initEulen(X) {
   const { THREE, scene, player, TH, showMsg, canvasTex, card, sfx, burst, solidAt } = X;
@@ -42,8 +43,9 @@ export function initEulen(X) {
   const posterMat = m => MATS[m] || (MATS[m] = new THREE.MeshLambertMaterial({ map: MOTIV[m](), emissive: 0x223322, emissiveIntensity: 0.4 }));
   // je Säule ein Motiv: Eulen nur, wenn der Endpunkt Strecken liefert, Vokabaum immer; abwechselnd verteilt
   const nextMotif = () => { if (!routes.length) return 'vokabaum'; const n = m => posters.filter(p => p.userData.motif === m).length; return n('eulen') <= n('vokabaum') ? 'eulen' : 'vokabaum'; };
-  function litfass(x, z, motif) { const g = new THREE.Group(); g.userData.motif = motif; const y = TH(x, z); const col = new THREE.Mesh(new THREE.CylinderGeometry(0.6, 0.6, 2.8, 16, 1, true), posterMat(motif)); col.position.y = 1.6; g.add(col);
-    const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.72, 0.62, 0.3, 16), new THREE.MeshLambertMaterial({ color: 0x2d4a3a })); cap.position.y = 3.15; g.add(cap); const base = new THREE.Mesh(new THREE.CylinderGeometry(0.66, 0.7, 0.2, 16), cap.material); base.position.y = 0.1; g.add(base);
+  const lfCol = new THREE.CylinderGeometry(0.6, 0.6, 2.8, 16, 1, true), lfCap = new THREE.CylinderGeometry(0.72, 0.62, 0.3, 16), lfBase = new THREE.CylinderGeometry(0.66, 0.7, 0.2, 16), lfMat = new THREE.MeshLambertMaterial({ color: 0x2d4a3a }); // alle Säulen teilen Geometrie und Material: scene.remove genügt (#120)
+  function litfass(x, z, motif) { const g = new THREE.Group(); g.userData.motif = motif; const y = TH(x, z); const col = new THREE.Mesh(lfCol, posterMat(motif)); col.position.y = 1.6; g.add(col);
+    const cap = new THREE.Mesh(lfCap, lfMat); cap.position.y = 3.15; g.add(cap); const base = new THREE.Mesh(lfBase, lfMat); base.position.y = 0.1; g.add(base);
     g.position.set(x, y, z); scene.add(g); return g; }
   function updatePosters() { const keep = []; for (const p of posters) { if (Math.hypot(p.position.x - player.pos.x, p.position.z - player.pos.z) < 450) keep.push(p); else scene.remove(p); } posters = keep;
     if (posters.length >= 4) return; const stops = ((X.WORLD || X.CITY).stops || []).filter(s => s.k === 'bus' && Math.hypot(s.x - player.pos.x, s.z - player.pos.z) < 350 && !posters.some(p => Math.hypot(p.position.x - s.x, p.position.z - s.z) < 60));
@@ -91,12 +93,13 @@ export function initEulen(X) {
     const et = B.length ? ` · Etappe ${stage + 1}/${B.length + 1}` : '';
     card((mode === 'rad' ? 'RAD-WETTBEWERB · ' : 'EULEN-') + kind(r).toUpperCase(), `${r.name} · ${r.info}${et} · ` + (mode === 'rad' ? 'nur mit dem Fahrrad, Absteigen macht ungültig' : 'zu Fuß, gehen oder rennen, ohne Auto, Rad oder Bahn') + (B.length ? ' · an jeder Etappengrenze wird gespeichert' : ''), 5); sfx('bell', 0.5); }
   function stop(msg) { run = null; WEG.route(null); const o = document.getElementById('obj'); if (o) o.textContent = ''; if (msg) showMsg(msg, 2600); }
+  let objEl = null;
   function runUpdate(dt) { const u = run;
     if (u.mode === 'lauf' && player.car) { stop('DISQUALIFIZIERT: NUR ZU FUSS'); return; }
     if (u.mode === 'rad' && performance.now() > u.grace && !(player.car && player.car.userData.bike && !player.car.userData.moto)) { stop('UNGÜLTIG: RAD-WETTBEWERB NUR AUF DEM FAHRRAD'); return; }
     const here = player.car ? player.car.position : player.pos; if (!u.test && here.distanceTo(u.last) > 60) { stop('DISQUALIFIZIERT: KEINE ABKÜRZUNG PER BAHN ODER SPRUNG'); return; } u.last.copy(here);
     if (Math.hypot(u.W[u.i][0] - here.x, u.W[u.i][1] - here.z) < 200) offRoad(u.W[u.i]); const [x, z] = u.W[u.i]; WEG.update(dt); const d = Math.hypot(here.x - x, here.z - z); const ms = performance.now() - u.st0;
-    const o = document.getElementById('obj'); if (o) o.textContent = `${u.mode === 'rad' ? '🚲' : '🦉'} ${u.r.name}${u.B.length ? ` · Etappe ${u.stage + 1}/${u.B.length + 1}` : ''}: Wegpunkt ${u.i}/${u.W.length - 1} · ${Math.round(d)} m · ${fmt(ms)}`;
+    const o = objEl || (objEl = document.getElementById('obj')); if (o) { const s = `${u.mode === 'rad' ? '🚲' : '🦉'} ${u.r.name}${u.B.length ? ` · Etappe ${u.stage + 1}/${u.B.length + 1}` : ''}: Wegpunkt ${u.i}/${u.W.length - 1} · ${Math.round(d)} m · ${fmt(ms)}`; if (o.textContent !== s) o.textContent = s; } // nur schreiben, wenn sich der Text ändert
     if (d < (u.mode === 'rad' ? 9 : 7)) { u.i++; sfx('click', 0.6);
       if (u.B.includes(u.i - 1) || u.i >= u.W.length) { u.times.push(ms); u.st0 = performance.now(); u.stage++;
         if (u.i < u.W.length) { writeSave(u.mode, { name: u.r.name, i: u.i, times: u.times }); player.hp = Math.min(100, player.hp + 30); showMsg(`ETAPPE ${u.stage} GESCHAFFT · ${fmt(ms)} · GESPEICHERT`, 2200); } }
@@ -116,7 +119,7 @@ export function initEulen(X) {
   function buildFinish([x, z]) { if (finish) return; const g = new THREE.Group(); const y = TH(x, z); const red = new THREE.MeshLambertMaterial({ color: 0xb01020 }), arch = new THREE.MeshLambertMaterial({ color: 0x1f5b3a });
     const carpet = new THREE.Mesh(new THREE.BoxGeometry(3, 0.04, 40), red); carpet.position.set(0, 0.03, -20); g.add(carpet);
     for (const sx of [-2.2, 2.2]) { const p = new THREE.Mesh(new THREE.BoxGeometry(0.5, 5, 0.5), arch); p.position.set(sx, 2.5, 0); g.add(p); } const top = new THREE.Mesh(new THREE.BoxGeometry(5, 1.1, 0.5), new THREE.MeshLambertMaterial({ map: canvasTex(512, 112, (c, w, h) => { c.fillStyle = '#1f5b3a'; c.fillRect(0, 0, w, h); c.fillStyle = '#ffe9a8'; c.font = 'bold 64px sans-serif'; c.textAlign = 'center'; c.fillText('ZIEL', w / 2, 80); }, 1, 1) })); top.position.set(0, 5.4, 0); g.add(top);
-    const fans = []; const fm = [0xd84a4a, 0x4a7ad8, 0xe8c040, 0x5ab868, 0xffffff]; for (let i = 0; i < 40; i++) { const side = i % 2 ? 1 : -1; const f = new THREE.Mesh(new THREE.CapsuleGeometry(0.25, 1.1, 4, 8), new THREE.MeshLambertMaterial({ color: fm[i % fm.length] })); f.position.set(side * (2.4 + Math.random() * 1.5), 0.8, -2 - Math.random() * 36); g.add(f); fans.push(f); }
+    const fans = []; const fg = new THREE.CapsuleGeometry(0.25, 1.1, 4, 8), fm = [0xd84a4a, 0x4a7ad8, 0xe8c040, 0x5ab868, 0xffffff].map(c => new THREE.MeshLambertMaterial({ color: c })); /* eine Geometrie, fünf Materialien statt je 40 */ for (let i = 0; i < 40; i++) { const side = i % 2 ? 1 : -1; const f = new THREE.Mesh(fg, fm[i % fm.length]); f.position.set(side * (2.4 + Math.random() * 1.5), 0.8, -2 - Math.random() * 36); g.add(f); fans.push(f); }
     g.position.set(x, y, z); scene.add(g); finish = { g, fans }; }
 
   // ---------- F-Aktionen und Update ----------
@@ -125,7 +128,8 @@ export function initEulen(X) {
     for (const m of startMark || []) { const r = m.userData.route, [x, z] = r.pts[0]; if (big(r) && Math.hypot(x + 4 - player.pos.x, z - player.pos.z) < 2.5) { const sv = readSave('rad'); const goes = sv && sv.name === r.name; return { label: goes ? `F · Rad-Wettbewerb fortsetzen (${kind(r)})` : `F · Rad-Wettbewerb starten (${kind(r)}, ${r.km_gebiet} km)`, act: () => start(r, goes, 'rad') }; } if (Math.hypot(x - player.pos.x, z - player.pos.z) < 5) { const sv = big(r) ? readSave('lauf') : null; const goes = sv && sv.name === r.name; return { label: big(r) ? (goes ? `F · ${kind(r)} fortsetzen (Etappe ${(r.B || stages(r)).filter(b => b < sv.i).length + 1})` : `F · ${kind(r)} zu Fuß starten (${r.km_gebiet} km)`) : `F · Eulen-Lauf „${r.name}“ starten (${r.km_gebiet} km)`, act: () => { pendingStart = null; start(r, goes); } }; } }
     if (pendingStart) { const [x, z] = pendingStart.pts[0]; if (Math.hypot(x - player.pos.x, z - player.pos.z) < 5) { const r = pendingStart; return { label: `F · Eulen-Lauf „${r.name}“ starten`, act: () => { pendingStart = null; start(r); } }; } }
     return null; });
-  function update(dt) { t += dt; if (Math.floor(t) !== Math.floor(t - dt)) { updatePosters(); placeMarks(); } if (run) runUpdate(dt);
-    if (finish) for (const [i, f] of finish.fans.entries()) f.position.y = 0.8 + Math.abs(Math.sin(t * 6 + i)) * 0.35; }
+  const finishDist = () => Math.hypot(finish.g.position.x - player.pos.x, finish.g.position.z - player.pos.z);
+  function update(dt) { t += dt; if (Math.floor(t) !== Math.floor(t - dt)) { updatePosters(); placeMarks(); if (finish && !run && finishDist() > 400) { scene.remove(finish.g); disposeHierarchy(finish.g); finish = null; } /* Ziel weit weg und kein Lauf: abbauen, der nächste Start baut es neu */ } if (run) runUpdate(dt);
+    if (finish && finishDist() < 150) { const fs = finish.fans; for (let i = 0; i < fs.length; i++) fs[i].position.y = 0.8 + Math.abs(Math.sin(t * 6 + i)) * 0.35; } } // Zuschauer hüpfen nur in Sichtnähe
   return { update, get posters() { return posters; }, get routes() { return routes; }, get run() { return run; }, get marks() { return startMark || []; }, weg: WEG, wps, use, start, stop };
 }

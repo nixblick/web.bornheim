@@ -1,4 +1,5 @@
 // Waffen, Wurfsachen, Pyro und Effekte. Wird von game.js mit allen Spiel-Interna (X) gestartet.
+import { disposeHierarchy } from './dispose.js';
 /** @param {import('./types').Ctx} X */
 export function initWeapons(X) {
   const { THREE, scene, camera, player, peds, cars, shootables, keys, camYaw, opts, TH, solidAtH, floorAt, nearestEdge, edgeNormal, damage, explode, burst, sfx, showMsg, raiseWanted, camShake, canvasTex, tracerMat, makeGun, playAnim, dentCar, moveWithCollision, rnd, clamp, pick } = X;
@@ -62,9 +63,10 @@ export function initWeapons(X) {
   // ---------- Modelle ----------
   const MS = (c, r = 0.55, m = 0.25) => new THREE.MeshStandardMaterial({ color: c, roughness: r, metalness: m });
   const mBlk = MS(0x1b1c1f, 0.5, 0.4), mGry = MS(0x3d4046, 0.4, 0.6), mWood = MS(0x6b4423, 0.8, 0), mBat = MS(0xb98a55, 0.6, 0);
+  for (const m of [mBlk, mGry, mWood, mBat]) m.userData.shared = true; // von allen Modellen geteilt: beim Abbau stehen lassen
   const box = (w, h, d, m, x, y, z) => { const o = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m); o.position.set(x, y, z); o.castShadow = true; return o; };
   const cyl = (r, l, m, x, y, z, alongZ, r2) => { const o = new THREE.Mesh(new THREE.CylinderGeometry(r, r2 ?? r, l, 10), m); if (alongZ) o.rotation.x = Math.PI / 2; o.position.set(x, y, z); o.castShadow = true; return o; };
-  const flashTex = canvasTex(64, 64, (ctx, w, h) => { const gr = ctx.createRadialGradient(32, 32, 2, 32, 32, 32); gr.addColorStop(0, 'rgba(255,255,220,1)'); gr.addColorStop(0.3, 'rgba(255,200,80,0.9)'); gr.addColorStop(1, 'rgba(255,120,0,0)'); ctx.fillStyle = gr; ctx.fillRect(0, 0, w, h); });
+  const flashTex = canvasTex(64, 64, (ctx, w, h) => { const gr = ctx.createRadialGradient(32, 32, 2, 32, 32, 32); gr.addColorStop(0, 'rgba(255,255,220,1)'); gr.addColorStop(0.3, 'rgba(255,200,80,0.9)'); gr.addColorStop(1, 'rgba(255,120,0,0)'); ctx.fillStyle = gr; ctx.fillRect(0, 0, w, h); }); flashTex.userData.shared = true;
   function addMuzzle(g, z, y, s) { const f = new THREE.Sprite(new THREE.SpriteMaterial({ map: flashTex, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true })); f.position.set(0, y, z); f.scale.set(s, s, 1); f.visible = false; g.add(f); g.userData.flash = f; const mz = new THREE.Object3D(); mz.position.set(0, y, z + 0.02); g.add(mz); g.userData.muzzle = mz; }
   const PAINT = [0xff2d95, 0x39ff14, 0xffe600, 0x00b3ff, 0xff7a00, 0xb14dff];
   let paintIdx = 0;
@@ -77,7 +79,7 @@ export function initWeapons(X) {
     else if (id === 'bat') { const b = cyl(0.038, 0.85, mBat, 0, 0.36, 0, false, 0.017); const piv = new THREE.Group(); piv.add(b); g.add(piv); g.userData.piv = piv; }
     else if (id === 'spray') { g.add(cyl(0.03, 0.16, MS(0xd8541e, 0.35, 0.5), 0, 0.06, 0), box(0.025, 0.03, 0.03, mBlk, 0, 0.155, -0.01)); const mz = new THREE.Object3D(); mz.position.set(0, 0.155, -0.04); g.add(mz); g.userData.muzzle = mz; }
     else if (id === 'taser') { g.add(box(0.045, 0.08, 0.16, MS(0xf2c418, 0.5, 0.1), 0, 0.05, -0.05), box(0.04, 0.12, 0.05, mBlk, 0, -0.03, 0.02)); const mz = new THREE.Object3D(); mz.position.set(0, 0.05, -0.14); g.add(mz); g.userData.muzzle = mz; }
-    else if (id === 'paint') { const col = PAINT[paintIdx % PAINT.length]; const s = new THREE.Mesh(new THREE.SphereGeometry(0.075, 10, 8), MS(col, 0.3, 0)); s.scale.y = 0.85; s.castShadow = true; g.add(s, box(0.03, 0.04, 0.03, MS(0xeeeeee), 0, 0.07, 0)); g.userData.col = col; }
+    else if (id === 'paint') { const col = PAINT[paintIdx % PAINT.length]; const s = new THREE.Mesh(new THREE.SphereGeometry(0.075, 10, 8), MS(col, 0.3, 0)); s.scale.y = 0.85; s.castShadow = true; g.add(s, box(0.03, 0.04, 0.03, MS(0xeeeeee), 0, 0.07, 0)); g.userData.col = col; g.userData.ball = s; }
     else if (id === 'banger') { g.add(cyl(0.02, 0.13, MS(0xc81e1e, 0.5, 0), 0, 0, 0), cyl(0.003, 0.05, MS(0x222222), 0, 0.085, 0)); }
     else if (id === 'smoke') { g.add(cyl(0.045, 0.14, MS(0x3b7d3a, 0.5, 0.2), 0, 0, 0), cyl(0.03, 0.03, mGry, 0, 0.085, 0)); }
     else if (id === 'flare') { g.add(cyl(0.022, 0.26, MS(0xd02020, 0.5, 0), 0, 0.05, 0), cyl(0.024, 0.04, MS(0x222222), 0, 0.2, 0)); }
@@ -92,12 +94,14 @@ export function initWeapons(X) {
     else if (id === 'rocket') { const mOl = MS(0x4a5a3a, 0.7, 0.2); g.add(cyl(0.055, 0.95, mOl, 0, 0.1, -0.12, true), box(0.05, 0.14, 0.06, mBlk, 0, -0.03, 0.02), box(0.08, 0.08, 0.12, mBlk, 0.07, 0.17, -0.05), cyl(0.04, 0.1, MS(0x9a3a2a, 0.5, 0.1), 0, 0.1, -0.62, true)); const mz = new THREE.Object3D(); mz.position.set(0, 0.1, -0.6); g.add(mz); g.userData.muzzle = mz; }
     else if (id === 'molotov') { const gl = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.04, 0.2, 8), new THREE.MeshStandardMaterial({ color: 0x3f7a3a, roughness: 0.1, metalness: 0.1, transparent: true, opacity: 0.85 })); gl.position.y = 0.05; const neck = cyl(0.015, 0.08, MS(0x3f7a3a, 0.1, 0.1), 0, 0.19, 0); const cloth = box(0.04, 0.07, 0.04, MS(0xe8e0c8, 0.9, 0), 0, 0.25, 0); g.add(gl, neck, cloth); g.userData.cloth = cloth; }
     if (!g.userData.muzzle) { const mz = new THREE.Object3D(); mz.position.set(0, 0.05, -0.1); g.add(mz); g.userData.muzzle = mz; }
-    return g;
+    g.userData.built = true; return g;
   }
+  // Altes Handmodell freigeben (#120). Die Pistole (makeGun) teilt Geometrie und Material mit der GLB-Vorlage: dort nur das Mündungsfeuer.
+  function freeModel(m) { if (m.userData.built) disposeHierarchy(m); else { const f = m.userData.flash; if (f && f.material) { if (f.material.map) f.material.map.dispose(); f.material.dispose(); } } }
   let model = null;
   function attach() {
     const pm = player.mesh; if (!pm) return; const hand = pm.userData.hand;
-    if (model) hand.remove(model); if (pm.userData.gun && pm.userData.gun !== model) hand.remove(pm.userData.gun);
+    if (model) { hand.remove(model); freeModel(model); } if (pm.userData.gun && pm.userData.gun !== model) { hand.remove(pm.userData.gun); freeModel(pm.userData.gun); }
     model = buildModel(cur); if (cur === 'fists') model.visible = false; hand.add(model); pm.userData.gun = model;
   }
   function select(id, quiet) {
@@ -146,6 +150,8 @@ export function initWeapons(X) {
   }
   function shootPose(snd) { player.aimT = 1.6; const pm = player.mesh.userData; pm.aiming = true; if (pm.mixer && !player.car) { playAnim(player.mesh, 'shoot', { fade: 0.05 }); pm.curAnim = 'shooting'; } if (!player.car) { player.yaw = camYaw.v; player.mesh.rotation.y = camYaw.v; } if (snd) sfx(snd); }
   const _ray = new THREE.Raycaster(), _v = new V3(), _ndc = new THREE.Vector2();
+  const trGeo = new THREE.BoxGeometry(0.035, 0.035, 1); const trPool = []; let trI = 0; // Leuchtspur: höchstens 8 feste Meshes statt Geometrie und Timer je Kugel
+  function tracer(a, b) { let tr = trPool[trI]; if (!tr) { tr = trPool[trI] = new THREE.Mesh(trGeo, tracerMat); scene.add(tr); } trI = (trI + 1) % 8; tr.scale.z = Math.max(0.01, a.distanceTo(b)); tr.position.copy(a).lerp(b, 0.5); tr.lookAt(b); tr.visible = true; tr.userData.t = 0.09; }
   function candidates(range) { const dir = camera.getWorldDirection(new V3()); const cp = camera.position; return shootables.filter(o => { if ((!o.visible && !o.userData.inst) || o === player.car || o.userData.hp <= 0 && !cars.includes(o)) return false; const dx = o.position.x - cp.x, dz = o.position.z - cp.z, dy = o.position.y - cp.y; const L = Math.hypot(dx, dy, dz); if (L > range + 5) return false; return (dx * dir.x + dy * dir.y + dz * dir.z) > -3; }); }
   function wallDist(ray, range) { for (let s = 2.5; s < range; s += 1.25) { const p = ray.at(s, _v); if (p.y <= TH(p.x, p.z) || solidAtH(p.x, p.z, p.y) !== -1) return s; } return range; }
   function owner(o) { while (o && !cars.includes(o) && !peds.includes(o) && !(o.userData && o.userData.pheli)) o = o.parent; return o; }
@@ -168,7 +174,7 @@ export function initWeapons(X) {
       let end; if (hits.length) { end = hits[0].point.clone(); const o = owner(hits[0].object); if (o) hitTarget(o, d.dmg, _ray.ray.direction.clone()); }
       else { end = _ray.ray.at(wd, new V3()); if (wd < d.range) burst(end, 0xc8c0b0, 3, 1.2); }
       if (d.boom) { burst(end, 0xff8a30, 40, 7); burst(end, 0xffe0a0, 20, 4); camShake(0.25); sfx('explosion', 0.9); } // Rakete: Einschlag mit Feuerball
-      if (k < 4) { const len = muzzle.distanceTo(end); const tr = new THREE.Mesh(new THREE.BoxGeometry(0.035, 0.035, len), tracerMat); tr.position.copy(muzzle).lerp(end, 0.5); tr.lookAt(end); scene.add(tr); setTimeout(() => { scene.remove(tr); tr.geometry.dispose(); }, 90); }
+      if (k < 4) tracer(muzzle, end);
     }
     const f = model.userData.flash; if (f) { f.visible = true; f.material.rotation = Math.random() * 6; setTimeout(() => f.visible = false, 60); }
     raiseWanted(d.auto ? 0.08 : 0.15); emit('shot', player.pos, { weapon: cur });
@@ -230,7 +236,7 @@ export function initWeapons(X) {
   function taser(d) {
     const it = inv.taser; if (it.mag <= 0 && !unlimited()) { if (it.res > 0) { it.res--; it.mag = 1; sfx('reload'); cool = 1.0; } else { showMsg('KEINE KARTUSCHEN', 700); cool = 0.4; } return; }
     if (!unlimited()) it.mag--; cool = d.rate; shootPose('taser');
-    const from = muzzlePos(new V3()); const ray = new THREE.Raycaster(); ray.setFromCamera(new THREE.Vector2(0, 0), camera);
+    const from = muzzlePos(new V3()); const ray = _ray; ray.setFromCamera(_ndc.set(0, 0), camera);
     for (const c of cars) if (c !== player.car && c.userData.bike && c.userData.rider && c.position.distanceTo(player.pos) <= d.range && ray.ray.distanceToPoint(c.position.clone().setY(c.position.y + 1)) < 1.2) { X.tipBike && X.tipBike(c, 'player'); }
     let best = null, bd = 1.2; for (const p of peds) { const u = p.userData; if (u.state === 'dead') continue; const c = p.position.clone(); c.y += 1.1; const t = c.clone().sub(ray.ray.origin).dot(ray.ray.direction); if (t < 2 || t > d.range + 4) continue; if (c.distanceTo(player.pos) > d.range) continue; const dd = ray.ray.distanceToPoint(c); if (dd < bd) { bd = dd; best = p; } }
     const end = best ? best.position.clone().setY(best.position.y + 1.1) : ray.ray.at(d.range + 3, new V3());
@@ -246,7 +252,7 @@ export function initWeapons(X) {
     if (pm.mixer) { playAnim(player.mesh, 'Punch_Right', { once: true, fade: 0.05 }); pm.actT = 0.38; } sfx('throw', 0.5);
     const from = new V3(); if (player.car && !player.car.userData.bike) muzzlePos(from); else { pm.hand.getWorldPosition(from); from.y = Math.max(from.y, player.pos.y + 1.45); }
     const dir = camera.getWorldDirection(new V3()); const sp = cur === 'paint' || cur === 'banger' ? 21 : cur === 'tnt' ? 14 : 17; const v = dir.multiplyScalar(sp); v.y += 3.0;
-    spawnProj(cur, from, v, 'player', fuseOf(cur)); if (cur === 'paint') paintIdx++; if (model && cur === 'paint') attach();
+    spawnProj(cur, from, v, 'player', fuseOf(cur)); if (cur === 'paint') paintIdx++; if (model && cur === 'paint') { const b = model.userData.ball; if (b) { const col = PAINT[paintIdx % PAINT.length]; b.material.color.setHex(col); model.userData.col = col; } else attach(); } // nur umfärben statt Modell neu bauen
     if (!unlimited() && it.res <= 0) setTimeout(() => { if (cur === d.id && inv[cur] && inv[cur].res <= 0) select(inv[last] ? last : 'fists', true); }, 400);
   }
   for (const [k, d] of Object.entries(DEF)) d.id = k;
@@ -295,7 +301,7 @@ export function initWeapons(X) {
       }
       if (!gone && p.kind === 'smoke') { if (p.t > 0.8 && p.t < 22) { p.e = (p.e || 0) + dt; while (p.e > 0.06) { p.e -= 0.06; const s = Math.min(1, (p.t - 0.8) / 2); puff(m.position.clone().add(new V3(0, 0.25, 0)), p.col, 0.6 * s + 0.4, 6.5, new V3(rnd(-1.4, 1.4), rnd(0.8, 2.0), rnd(-1.4, 1.4)), 0.95, 0.55); } if (p.t < 1 + dt) { sfx('hiss', 0.6); emit('smoke', m.position, {}); } } if (p.t > 26) gone = true; }
       if (!gone && p.kind === 'flare') { if (p.t > 0.2 && p.t < 28) { flareFx(p, dt); } if (p.t > 29) gone = true; }
-      if (gone) { m.traverse(o => { if (o.isMesh) { o.geometry.dispose(); const ms = Array.isArray(o.material) ? o.material : [o.material]; for (const mm of ms) if (mm && !mm.userData.shared) mm.dispose(); } }); scene.remove(m); projs.splice(i, 1); if (p.light) p.light.busy = 0; }
+      if (gone) { disposeHierarchy(m); scene.remove(m); projs.splice(i, 1); if (p.light) p.light.busy = 0; }
     }
   }
 
@@ -344,8 +350,8 @@ export function initWeapons(X) {
 
   // ---------- Farbe ----------
   const splatTex = canvasTex(128, 128, (ctx, w, h) => { ctx.fillStyle = '#fff'; const blob = (x, y, r) => { ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.fill(); }; blob(64, 64, 30); for (let i = 0; i < 22; i++) { const a = Math.random() * 6.28, d = 26 + Math.random() * 30; blob(64 + Math.cos(a) * d, 64 + Math.sin(a) * d, 2 + Math.random() * 7); } for (let i = 0; i < 7; i++) { const a = Math.random() * 6.28; ctx.save(); ctx.translate(64, 64); ctx.rotate(a); ctx.fillRect(-3, 0, 6, 36 + Math.random() * 22); ctx.restore(); } });
-  const splatMats = {}; const splatGeo = new THREE.PlaneGeometry(1, 1); const splats = [];
-  const splatMat = col => splatMats[col] || (splatMats[col] = new THREE.MeshStandardMaterial({ map: splatTex, color: col, roughness: 0.35, metalness: 0, transparent: true, alphaTest: 0.35, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4, emissive: col, emissiveIntensity: 0.12, side: THREE.DoubleSide }));
+  const splatMats = {}; const splatGeo = new THREE.PlaneGeometry(1, 1); const splats = []; splatGeo.userData.shared = true; splatTex.userData.shared = true; // geteilt: Kleckse hängen an Story-Kulissen, die disposeHierarchy abbaut
+  const splatMat = col => { let m = splatMats[col]; if (!m) { m = splatMats[col] = new THREE.MeshStandardMaterial({ map: splatTex, color: col, roughness: 0.35, metalness: 0, transparent: true, alphaTest: 0.35, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4, emissive: col, emissiveIntensity: 0.12, side: THREE.DoubleSide }); m.userData.shared = true; } return m; };
   function trimSplats() { while (splats.length > 260) { const o = splats.shift(); if (o.parent) o.parent.remove(o); } }
   function addSplat(pos, normal, col, size, parent) {
     const s = new THREE.Mesh(splatGeo, splatMat(col)); s.position.copy(pos).addScaledVector(normal, 0.035); s.lookAt(s.position.clone().add(normal)); s.rotateZ(rnd(0, 6.28)); s.scale.setScalar(size); s.renderOrder = 2;
@@ -375,6 +381,7 @@ export function initWeapons(X) {
     if (meleeT >= 0) { meleeT -= dt; if (meleeT < 0) meleeHit(DEF[cur]); }
     if (model && model.userData.piv) { if (swingT > 0) { swingT -= dt; const k = 1 - swingT / 0.34; model.userData.piv.rotation.x = k < 0.35 ? 0.7 + k / 0.35 * 0.5 : 1.2 - (k - 0.35) / 0.65 * 3.1; } else model.userData.piv.rotation.x += (0.7 - model.userData.piv.rotation.x) * Math.min(1, dt * 10); }
     for (const p of peds) if (p.userData.state === 'stunned') updateStunned(p, dt);
+    for (const tr of trPool) if (tr.visible && (tr.userData.t -= dt) <= 0) tr.visible = false;
     for (let i = wires.length - 1; i >= 0; i--) { wires[i].t -= dt; if (wires[i].t <= 0) { scene.remove(wires[i].l); wires[i].l.geometry.dispose(); wires.splice(i, 1); } }
     updateProj(dt); updateLights(dt); updateFireworks(dt); drawBar();
   }
