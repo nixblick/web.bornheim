@@ -55,6 +55,8 @@
 #phone .ps-pstats table{width:100%;font-size:12px;border-collapse:collapse}#phone .ps-pstats td{padding:3px 0;vertical-align:top}#phone .ps-pstats td:first-child{color:var(--ps-grey);width:42%}#phone .ps-pstats h3{font-size:12px;letter-spacing:2px;color:var(--ps-amber);margin:10px 0 4px}
 #phonebtn{position:fixed;right:10px;top:42%;z-index:18;width:48px;height:48px;border-radius:14px;border:1px solid #f1f3f538;background:#0a0d12c0;font-size:24px;color:#fff}
 @media (max-width:760px){#phone .ps-phone{right:8px;left:8px;bottom:8px;width:auto;height:min(640px,calc(100% - 16px))}#phone .ps-phone__hints{display:none}}
+/* Niedrig (Handy quer): volle Höhe, große Uhr weg (steht in der Statusleiste), zwei Reihen mit vier Apps */
+@media (max-height:520px){#phone .ps-phone{bottom:8px;height:calc(100% - 16px)}#phone .ps-phone__hints{display:none}#phone .ps-phone__home{padding:8px 16px 6px;overflow-y:auto}#phone .ps-phone__date{display:none}#phone .ps-phone__grid{grid-template-columns:repeat(4,1fr);gap:10px 6px}#phone .ps-phone__appicon{width:52px;height:52px;font-size:24px}#phone .ps-phone__header{height:38px}}
 
 /* ---------- Pausenmenü: Blatt links, Inhalt rechts ---------- */
 #menu.sun{align-items:stretch;justify-content:flex-start;background:radial-gradient(90% 70% at 70% 50%,#0a0e1433,#0a0e149e 100%),#0a0d128f;backdrop-filter:blur(7px) saturate(.75);-webkit-backdrop-filter:blur(7px) saturate(.75);font-family:system-ui,sans-serif}
