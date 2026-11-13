@@ -258,7 +258,13 @@ function surfH(x, z) { const g = meshGroundH(x, z), b = bandH(x, z); return b !=
 // Geländenetz; ohne Grenze steckten Bänke und Bäume dort bis 4 m tief (Probe gelaende, Lauf 43470519653)
 // Bänke: Sitzhöhe zählt, hier weiter tiefstes TH (Probe: auf Oberfläche gesetzt steckten sie am Bornheimer Hang bis 80 cm)
 function thMin(x, z, r) { let t = TH(x, z); for (const [a, b] of [[r, r], [r, -r], [-r, r], [-r, -r]]) t = Math.min(t, TH(x + a, z + b)); return t; }
-function footTH(x, z, r) { let m = surfH(x, z), t = TH(x, z); for (const [a, b] of [[r, r], [r, -r], [-r, r], [-r, -r]]) { m = Math.min(m, surfH(x + a, z + b)); t = Math.min(t, TH(x + a, z + b)); } return Math.max(m, t - 0.3); }
+// Untergrenze nur, wo eine eigene Fläche auf TH liegt (Grünfläche, Platz, Hof; 13.11.2026). Sonst folgt der Fuß dem Geländenetz:
+// am Mainufer zieht der tiefere Uferweg das Netz ab, Teile schwebten mit Untergrenze bis 2,2 m (Probe gelaende, 55 von 85)
+const _bb = p => p._bb || (p._bb = p.reduce((b, [x, z]) => [Math.min(b[0], x), Math.max(b[1], x), Math.min(b[2], z), Math.max(b[3], z)], [1e9, -1e9, 1e9, -1e9]));
+function onDrape(x, z) { const inn = p => { const b = _bb(p); return x >= b[0] && x <= b[1] && z >= b[2] && z <= b[3] && pointInPoly(x, z, p); };
+  for (const g of CITY.green || []) if (inn(g.p)) return true; for (const a of CITY.areas || []) if (inn(a.p)) return true;
+  for (const r of CITY.roads || []) if (isPedArea(r) && inn(r.p)) return true; return false; }
+function footTH(x, z, r) { let m = surfH(x, z), t = TH(x, z); for (const [a, b] of [[r, r], [r, -r], [-r, r], [-r, -r]]) { m = Math.min(m, surfH(x + a, z + b)); t = Math.min(t, TH(x + a, z + b)); } return m < t - 0.3 && !onDrape(x, z) ? m : Math.max(m, t - 0.3); }
 function TH(x, z) {
   let tx = Math.floor(x / TS), tz = Math.floor(z / TS); const k = dkey(tx, tz); let H; if (k === thK) H = thH; else { H = DEMN.get(k); if (H) { thK = k; thH = H; } }
   if (!H) {
