@@ -1,68 +1,84 @@
-/* Pausenmenü neu (menu-neu.js): Kopfleiste mit 5 Punkten, Inhalt groß in der Mitte, Farben nach Sunset */
-#menu.mn{container:mn / inline-size;--mn-amber:#f4b544;--mn-ivory:#f1f3f5;--mn-soft:#c9ced6;--mn-grey:#8a93a3;--mn-line:#ffffff1f;--mn-card:#141a23d9;align-items:stretch;justify-content:stretch;background:radial-gradient(120% 90% at 50% 0%,#0a0e1455,#05080cdd),#0a0d12a0;backdrop-filter:blur(8px) saturate(.8);-webkit-backdrop-filter:blur(8px) saturate(.8)}
+/* Pausenmenü im Stil GTA V / Project Sunset (menu-neu.js): schlanke Reiterleiste, Karte groß, Statusblock rechts */
+#menu.mn{container:mn / inline-size;--mn-amber:#f4b544;--mn-ivory:#f1f3f5;--mn-soft:#c9ced6;--mn-grey:#8a93a3;--mn-line:#ffffff1a;--mn-panel:#0f141bf0;align-items:stretch;justify-content:stretch;background:#05080cd0;backdrop-filter:blur(6px) saturate(.8);-webkit-backdrop-filter:blur(6px) saturate(.8)}
+#menu.mn .tabs,#menu.mn .sidetabs,#menu.mn .sidehead,#menu.mn .mside{display:none!important}
 #menu.mn .box{width:100%;height:100%;max-height:none;min-width:0;border:0;border-radius:0;background:none;padding:0;display:flex;flex-direction:column;gap:0;overflow:hidden}
-#menu.mn .mn-top{display:flex;align-items:center;gap:28px;padding:22px clamp(16px,4vw,56px);border-bottom:1px solid var(--mn-line);background:linear-gradient(#0d1117f2,#0d1117c0);flex:none}
-#menu.mn .mn-title{display:flex;flex-direction:column;line-height:1}
-#menu.mn .mn-eyebrow{font-size:11px;font-weight:700;letter-spacing:.3em;text-transform:uppercase;color:var(--mn-amber)}
-#menu.mn .mn-title b{font-size:40px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;margin-top:6px}
-#menu.mn .mn-nav{display:flex;gap:4px;flex:1;justify-content:center}
-#menu.mn .mn-nav button{width:auto;margin:0;padding:14px 18px;background:none;border-radius:0;border-bottom:3px solid transparent;color:var(--mn-soft);font-size:15px;font-weight:700;letter-spacing:.14em;text-transform:uppercase}
-#menu.mn .mn-nav button:hover{color:var(--mn-ivory);background:#ffffff0a}
-#menu.mn .mn-nav button.on{color:var(--mn-ivory);border-bottom-color:var(--mn-amber)}
-#menu.mn .mn-resume{width:auto;margin:0;padding:12px 26px;border-radius:4px;background:var(--mn-amber);color:#111;font-weight:800;letter-spacing:.12em;text-transform:uppercase}
-#menu.mn .opts{flex:1;min-height:0;overflow:auto;border:0;padding:28px clamp(16px,4vw,56px) 16px;box-sizing:border-box;width:100%;max-width:1500px;margin:0 auto}
-#menu.mn .mn-sub{display:flex;flex-wrap:wrap;gap:2px;border-bottom:1px solid var(--mn-line);margin-bottom:20px}
-#menu.mn .mn-sub button{width:auto;margin:0 0 -1px;padding:12px 14px 10px;background:none;border-radius:0;border-bottom:2px solid transparent;color:var(--mn-grey);font-size:12px;font-weight:700;letter-spacing:.16em;text-transform:uppercase}
-#menu.mn .mn-sub button.on{color:var(--mn-ivory);border-bottom-color:var(--mn-ivory);background:linear-gradient(#f1f3f500,#f1f3f512)}
-#menu.mn .pane{font-size:15px}
-#menu.mn .pane:not(.mn-board):not([data-tab=karte]){max-width:900px;margin:0 auto}
-#menu.mn .mn-board{display:grid;grid-template-columns:2fr 1fr;gap:18px}
-#menu.mn .mn-cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;grid-column:1/-1}
-#menu.mn .mn-card{background:var(--mn-card);border:1px solid var(--mn-line);border-top:2px solid var(--mn-amber);padding:20px 22px;display:flex;flex-direction:column;gap:8px;min-width:0}
-#menu.mn .mn-kicker{font-size:11px;font-weight:700;letter-spacing:.24em;text-transform:uppercase;color:var(--mn-grey)}
-#menu.mn .mn-big{font-size:26px;font-weight:800;color:var(--mn-ivory)}
-#menu.mn .mn-obj{color:var(--mn-soft);line-height:1.4}#menu.mn .is-muted{color:var(--mn-grey)}
-#menu.mn .mn-facts{display:flex;gap:14px;color:var(--mn-soft);font-variant-numeric:tabular-nums}
-#menu.mn .mn-vital{display:flex;justify-content:space-between;color:var(--mn-soft)}#menu.mn .mn-vital b{color:var(--mn-ivory)}
-#menu.mn .mn-bar{height:6px;background:#ffffff1a}#menu.mn .mn-bar i{display:block;height:100%;background:#7dd87d;transform-origin:left}#menu.mn .mn-bar.is-low i{background:#e5534b}
-#menu.mn .mn-stars{display:flex;gap:4px}#menu.mn .mn-stars i{width:12px;height:12px;clip-path:polygon(50% 0,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%);background:#ffffff2a}#menu.mn .mn-stars i.is-on{background:var(--mn-amber)}
-#menu.mn .mn-link{margin-top:auto;width:auto;align-self:flex-start;padding:6px 0;background:none;color:var(--mn-amber);font-size:13px;font-weight:700;letter-spacing:.12em;text-transform:uppercase}
-#menu.mn .mn-acts{grid-column:1/-1;flex-direction:row;flex-wrap:wrap;align-items:center;gap:10px}
-#menu.mn .mn-acts .mn-kicker{width:100%}
-#menu.mn .mn-acts button,#menu.mn .mn-acts .row2{width:auto;margin:0}
-#menu.mn .mn-acts .row2{display:flex;gap:10px}
-#menu.mn .mn-acts button{padding:10px 16px;border-radius:4px;background:#ffffff12;font-size:14px}
-#menu.mn .mn-acts details.more{margin:0;display:flex}#menu.mn .mn-acts details.more[open]{width:100%;flex-wrap:wrap;gap:10px}
-#menu.mn .mn-acts details.more[open] > *{margin:0}
-#menu.mn .mn-foot{display:flex;gap:22px;justify-content:center;padding:12px;border-top:1px solid var(--mn-line);color:var(--mn-grey);font-size:12px;flex:none}
-#menu.mn #pmap{height:calc(100vh - 260px)}
-@container mn (max-width:900px){
-  #menu.mn .mn-top{flex-wrap:wrap;gap:10px;padding:12px 16px}
-  #menu.mn .mn-title b{font-size:26px}
-  #menu.mn .mn-nav{order:3;flex-basis:100%;justify-content:stretch;gap:0}
-  #menu.mn .mn-nav button{flex:1 1 0;min-width:0;padding:12px 2px;font-size:11px;letter-spacing:.04em;overflow:hidden;text-overflow:ellipsis}
-  #menu.mn .mn-resume{margin-left:auto}
-  #menu.mn .opts{padding:16px}
-  #menu.mn .mn-board,#menu.mn .mn-cards{grid-template-columns:1fr}
-  #menu.mn .mn-foot{display:none}
-}
-/* Runde 2: Abstände, Knöpfe einzeilig, Einstellungen als Zeilen, kurze Beschriftung schmal */
-#menu.mn .mn-cards{margin-bottom:18px}
-#menu.mn .mn-acts .row2{display:flex!important;grid-template-columns:none}
-#menu.mn .mn-acts button{white-space:nowrap;display:inline-flex;align-items:center;gap:6px}
-#menu.mn .pane:not(.mn-board):not([data-tab=karte]):not(.help) label{margin:0;padding:11px 4px;border-bottom:1px solid var(--mn-line)}
-#menu.mn .mn-nav .s{display:none}
-@container mn (max-width:900px){#menu.mn .mn-nav .l{display:none}#menu.mn .mn-nav .s{display:inline}}
-/* Übersicht zweite Reihe und Missionsseite (missionen.js, gemeinsam mit dem Handy) */
-#menu.mn .mn-extra{grid-column:1/-1;margin-bottom:0}
-#menu.mn .mn-mid{font-size:20px}
-#menu.mn .mn-extra ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
-#menu.mn .mn-extra li{display:flex;align-items:center;gap:8px;color:var(--mn-soft)}#menu.mn .mn-extra li span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-#menu.mn .mn-extra li b{color:var(--mn-ivory);font-variant-numeric:tabular-nums}
-#menu.mn .mn-medals li i{width:12px;height:12px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#ffe08a,var(--mn-amber) 60%,#9a6a12);flex:none}
+/* Kopfleiste */
+#menu.mn .mn-top{display:flex;align-items:flex-end;gap:32px;padding:14px clamp(16px,3vw,40px) 0;background:linear-gradient(#05080cf5,#05080cc0);border-bottom:1px solid var(--mn-line);flex:none}
+#menu.mn .mn-title{display:flex;flex-direction:column;line-height:1;padding-bottom:12px}
+#menu.mn .mn-eyebrow{font-size:10px;font-weight:700;letter-spacing:.32em;text-transform:uppercase;color:var(--mn-amber)}
+#menu.mn .mn-title b{font-size:24px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;margin-top:4px;color:var(--mn-ivory)}
+#menu.mn .mn-nav{display:flex;gap:2px;flex:1}
+#menu.mn .mn-nav button{width:auto;margin:0;padding:12px 18px 13px;background:none;border-radius:0;border-bottom:3px solid transparent;color:var(--mn-grey);font-size:14px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;white-space:nowrap}
+#menu.mn .mn-nav button:hover{color:var(--mn-ivory)}
+#menu.mn .mn-nav button.on{color:var(--mn-ivory);border-bottom-color:var(--mn-amber);background:linear-gradient(#f4b54400,#f4b5441a)}
+#menu.mn .mn-resume{width:auto;margin:0 0 10px;padding:9px 22px;border-radius:3px;background:var(--mn-amber);color:#111;font-size:13px;font-weight:800;letter-spacing:.14em;text-transform:uppercase}
+/* Inhalt */
+#menu.mn .opts{flex:1;min-height:0;overflow:auto;border:0;padding:18px clamp(16px,3vw,40px);box-sizing:border-box;width:100%;max-width:1500px;margin:0 auto}
+#menu.mn .mn-sub{display:flex;flex-wrap:wrap;gap:2px;border-bottom:1px solid var(--mn-line);margin-bottom:18px}
+#menu.mn .mn-sub button{width:auto;margin:0 0 -1px;padding:10px 14px 9px;background:none;border-radius:0;border-bottom:2px solid transparent;color:var(--mn-grey);font-size:12px;font-weight:700;letter-spacing:.16em;text-transform:uppercase}
+#menu.mn .mn-sub button.on{color:var(--mn-ivory);border-bottom-color:var(--mn-ivory)}
+#menu.mn .pane{font-size:15px;min-height:0}
+#menu.mn .pane:not([data-tab=karte]){max-width:900px;margin:0 auto}
+#menu.mn .pane[data-tab=story]{max-width:1100px}
+#menu.mn .pane:not([data-tab=karte]):not(.help) label{margin:0;padding:11px 4px;border-bottom:1px solid var(--mn-line)}
+/* Karte: große Fläche links, Statusblock rechts */
+#menu.mn .mn-status{display:none}
+#menu.mn[data-main=karte] .opts{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:18px;max-width:none;overflow:hidden}
+#menu.mn[data-main=karte] .mn-status{display:flex}
+#menu.mn .pane[data-tab=karte][style*="block"]{display:flex!important;flex-direction:column;gap:8px;min-height:0}
+#menu.mn .pmbar{margin:0;gap:16px;font-size:13px;color:var(--mn-soft)}
+#menu.mn .pmhint{display:none}
+#menu.mn #pm_q{background:#ffffff10;border:1px solid var(--mn-line);border-radius:3px}
+#menu.mn #pmap{flex:1 1 0;height:auto;min-height:240px;border-radius:2px;border:1px solid var(--mn-line);box-shadow:0 10px 40px #0008}
+#menu.mn .mn-status{flex-direction:column;gap:14px;min-height:0;overflow:auto;background:var(--mn-panel);border:1px solid var(--mn-line);border-top:2px solid var(--mn-amber);padding:16px 18px;color:var(--mn-soft);font-size:14px}
+#menu.mn .mn-vals{display:flex;flex-direction:column;gap:9px}
+#menu.mn .mn-ic{width:18px;height:18px;flex:none;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;color:var(--mn-grey)}
+#menu.mn .mn-clock{display:flex;justify-content:space-between;align-items:center;padding-bottom:10px;border-bottom:1px solid var(--mn-line)}
+#menu.mn .mn-clock b{display:block;font-size:38px;font-weight:800;line-height:1;color:var(--mn-ivory);font-variant-numeric:tabular-nums;letter-spacing:.02em}
+#menu.mn .mn-clock span{display:flex;align-items:center;gap:4px;margin-top:6px;font-size:13px}#menu.mn .mn-clock span .mn-ic{width:14px;height:14px}
+#menu.mn .mn-wx{display:flex;flex-direction:column;align-items:center;gap:2px;font-size:12px;letter-spacing:.08em;text-transform:uppercase}
+#menu.mn .mn-wx .mn-ic{width:40px;height:40px;color:var(--mn-amber);stroke-width:1.5}
+#menu.mn .mn-goal{display:flex;gap:10px;align-items:flex-start;padding-bottom:10px;border-bottom:1px solid var(--mn-line)}
+#menu.mn .mn-goal .mn-ic{color:var(--mn-amber);margin-top:2px}
+#menu.mn .mn-goal div{display:flex;flex-direction:column;gap:2px;min-width:0}
+#menu.mn .mn-goal small,#menu.mn .mn-stats small,#menu.mn .mn-kicker{font-size:10px;font-weight:700;letter-spacing:.24em;text-transform:uppercase;color:var(--mn-grey)}
+#menu.mn .mn-goal b{font-size:17px;color:var(--mn-ivory)}#menu.mn .mn-goal span{font-size:13px;line-height:1.35}
+#menu.mn .is-muted{color:var(--mn-grey)!important;font-weight:600}
+#menu.mn .mn-row{display:flex;align-items:center;gap:10px}#menu.mn .mn-row > span:first-of-type{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#menu.mn .mn-row b{color:var(--mn-ivory);font-size:16px;font-variant-numeric:tabular-nums}
+#menu.mn .mn-bar{height:4px;margin:-4px 0 2px 28px;background:#ffffff1a}#menu.mn .mn-bar i{display:block;height:100%;background:#7dd87d;transform-origin:left}#menu.mn .mn-bar.is-low i{background:#e5534b}
+#menu.mn .mn-stars{display:flex;gap:3px}#menu.mn .mn-stars i{width:13px;height:13px;clip-path:polygon(50% 0,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%);background:#ffffff2a}#menu.mn .mn-stars i.is-on{background:var(--mn-amber)}
+#menu.mn .mn-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;padding-top:10px;border-top:1px solid var(--mn-line)}
+#menu.mn .mn-stats div{display:flex;flex-direction:column;gap:3px;min-width:0}#menu.mn .mn-stats small{letter-spacing:.1em}
+#menu.mn .mn-stats b{font-size:18px;color:var(--mn-ivory);font-variant-numeric:tabular-nums}
+#menu.mn .mn-stats i{display:block;height:3px;background:#ffffff1a}#menu.mn .mn-stats em{display:block;height:100%;background:#b07cff}
+/* Spiel-Knöpfe im Statusblock */
+#menu.mn .mn-acts{display:flex;flex-direction:column;gap:6px;margin-top:auto;padding-top:10px;border-top:1px solid var(--mn-line)}
+#menu.mn .mn-acts button{margin:0;padding:9px 12px;border-radius:3px;background:#ffffff10;color:var(--mn-ivory);font-size:13px;font-weight:600;text-align:left;letter-spacing:.03em}
+#menu.mn .mn-acts button:hover{background:#ffffff1f}
+#menu.mn .mn-acts .row2{display:flex;gap:6px}#menu.mn .mn-acts .row2 button{flex:1;text-align:center}
+#menu.mn .mn-acts details.more{margin:0}#menu.mn .mn-acts details.more summary{padding:4px 2px;font-size:12px;color:var(--mn-grey)}
+#menu.mn .mn-acts details.more[open]{display:flex;flex-direction:column;gap:6px}
+#menu.mn .mn-foot{display:flex;gap:22px;justify-content:center;padding:9px;border-top:1px solid var(--mn-line);color:var(--mn-grey);font-size:12px;flex:none;background:#05080cc0}
+/* Missionsseite (missionen.js, gemeinsam mit dem Handy) */
+#menu.mn .mn-card{background:var(--mn-panel);border:1px solid var(--mn-line);border-top:2px solid var(--mn-amber);display:flex;flex-direction:column;min-width:0}
 #menu.mn .mn-mis{margin-bottom:8px}#menu.mn .mn-mis > .mn-kicker{margin:4px 0 10px}
 #menu.mn .mn-misgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px;margin-bottom:22px}
 #menu.mn .mn-misgrid .mn-card{padding:14px 16px;gap:4px}#menu.mn .mn-misgrid b{color:var(--mn-ivory);font-size:16px}
 #menu.mn .mn-misgrid p{margin:0 0 6px;color:var(--mn-soft);font-size:13px;line-height:1.4}
-#menu.mn .mn-misgrid button{margin-top:auto;width:auto;align-self:flex-start;padding:8px 14px;border-radius:4px;background:var(--mn-amber);color:#111;font-weight:800;font-size:12px;letter-spacing:.1em;text-transform:uppercase}
-#menu.mn .pane[data-tab=story]{max-width:1100px!important}
+#menu.mn .mn-misgrid button{margin-top:auto;width:auto;align-self:flex-start;padding:8px 14px;border-radius:3px;background:var(--mn-amber);color:#111;font-weight:800;font-size:12px;letter-spacing:.1em;text-transform:uppercase}
+/* Schmal: Reiter über die volle Breite, Status über der Karte, Seite scrollt */
+@container mn (max-width:900px){
+  #menu.mn .mn-top{flex-wrap:wrap;gap:6px 10px;padding:10px 14px 0;align-items:center}
+  #menu.mn .mn-title{padding-bottom:0}#menu.mn .mn-title b{font-size:20px}
+  #menu.mn .mn-resume{margin:0 0 0 auto}
+  #menu.mn .mn-nav{order:3;flex-basis:100%;gap:0}
+  #menu.mn .mn-nav{justify-content:space-between}#menu.mn .mn-nav button{flex:0 1 auto;min-width:0;padding:10px 4px;font-size:11px;letter-spacing:.02em}
+  #menu.mn .opts{padding:12px 14px}
+  #menu.mn[data-main=karte] .opts{display:flex;flex-direction:column;overflow:auto}
+  #menu.mn .mn-status{order:-1;flex:none;overflow:visible}
+  #menu.mn .mn-acts{margin-top:0}
+  #menu.mn #pmap{flex:none;height:320px}
+  #menu.mn .pmbar label:not(:first-child),#menu.mn .pmlines{display:none}
+  #menu.mn .mn-foot{display:none}
+}
