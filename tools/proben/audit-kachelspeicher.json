@@ -3,66 +3,134 @@
   "n": "kachelspeicher_1_bornheim",
   "x": -196,
   "z": 427,
-  "wait": 8000,
+  "tx": -220,
+  "tz": 432,
+  "pitch": 0.05,
+  "wait": 4000,
   "shot": false,
-  "js": "(async () => { const G = window.G, P = G.PERF; const fertig = P ? await P.settle(15000) : null; await new Promise(r => setTimeout(r, 1500)); const i = G.renderer.info.memory; const K = [...G.TILES.values()].filter(t => t.built); const r = { t: i.textures, g: i.geometries, ct: G.canvasTexCount, bar: G.barrierCount, kacheln: K.length, nah: K.filter(t => t.lod === 'near').length, fertig }; (window.__ks = window.__ks || []).push(r); return JSON.stringify(r); })()"
+  "js": "(async () => { const G = window.G, p = G.player.pos, cx = Math.floor(p.x / G.TS), cz = Math.floor(p.z / G.TS); const t0 = performance.now(); let still = 0, fertig = false; while (performance.now() - t0 < 40000) { let open = 0; for (const [, t] of G.TILES) if (t.data && Math.abs(t.tx - cx) <= 1 && Math.abs(t.tz - cz) <= 1 && (!t.built || t.lod !== 'near')) open++; if (!open) { if (++still >= 8) { fertig = true; break; } } else still = 0; G.streamUpdate(0.5, true); await new Promise(r => setTimeout(r, 250)); } await new Promise(r => setTimeout(r, 2500)); const i = G.renderer.info.memory; const K = [...G.TILES.values()].filter(t => t.built); const r = { t: i.textures, g: i.geometries, ct: G.canvasTexCount, bar: G.barrierCount, kacheln: K.length, nah: K.filter(t => t.lod === 'near').length, fertig, ms: Math.round(performance.now() - t0) }; (window.__ks = window.__ks || []).push(r); return JSON.stringify(r); })()"
  },
  {
   "n": "kachelspeicher_1_messe",
   "x": -3650,
   "z": 2200,
-  "wait": 8000,
+  "tx": -3600,
+  "tz": 1971,
+  "pitch": 0.05,
+  "wait": 4000,
   "shot": false,
-  "js": "(async () => { const G = window.G, P = G.PERF; const fertig = P ? await P.settle(15000) : null; await new Promise(r => setTimeout(r, 1500)); const i = G.renderer.info.memory; const K = [...G.TILES.values()].filter(t => t.built); const r = { t: i.textures, g: i.geometries, ct: G.canvasTexCount, bar: G.barrierCount, kacheln: K.length, nah: K.filter(t => t.lod === 'near').length, fertig }; (window.__ks = window.__ks || []).push(r); return JSON.stringify(r); })()"
+  "js": "(async () => { const G = window.G, p = G.player.pos, cx = Math.floor(p.x / G.TS), cz = Math.floor(p.z / G.TS); const t0 = performance.now(); let still = 0, fertig = false; while (performance.now() - t0 < 40000) { let open = 0; for (const [, t] of G.TILES) if (t.data && Math.abs(t.tx - cx) <= 1 && Math.abs(t.tz - cz) <= 1 && (!t.built || t.lod !== 'near')) open++; if (!open) { if (++still >= 8) { fertig = true; break; } } else still = 0; G.streamUpdate(0.5, true); await new Promise(r => setTimeout(r, 250)); } await new Promise(r => setTimeout(r, 2500)); const i = G.renderer.info.memory; const K = [...G.TILES.values()].filter(t => t.built); const r = { t: i.textures, g: i.geometries, ct: G.canvasTexCount, bar: G.barrierCount, kacheln: K.length, nah: K.filter(t => t.lod === 'near').length, fertig, ms: Math.round(performance.now() - t0) }; (window.__ks = window.__ks || []).push(r); return JSON.stringify(r); })()"
  },
  {
   "n": "kachelspeicher_2_bornheim",
   "x": -196,
   "z": 427,
-  "wait": 8000,
+  "tx": -220,
+  "tz": 432,
+  "pitch": 0.05,
+  "wait": 4000,
   "shot": false,
-  "js": "(async () => { const G = window.G, P = G.PERF; const fertig = P ? await P.settle(15000) : null; await new Promise(r => setTimeout(r, 1500)); const i = G.renderer.info.memory; const K = [...G.TILES.values()].filter(t => t.built); const r = { t: i.textures, g: i.geometries, ct: G.canvasTexCount, bar: G.barrierCount, kacheln: K.length, nah: K.filter(t => t.lod === 'near').length, fertig }; (window.__ks = window.__ks || []).push(r); return JSON.stringify(r); })()"
+  "js": "(async () => { const G = window.G, p = G.player.pos, cx = Math.floor(p.x / G.TS), cz = Math.floor(p.z / G.TS); const t0 = performance.now(); let still = 0, fertig = false; while (performance.now() - t0 < 40000) { let open = 0; for (const [, t] of G.TILES) if (t.data && Math.abs(t.tx - cx) <= 1 && Math.abs(t.tz - cz) <= 1 && (!t.built || t.lod !== 'near')) open++; if (!open) { if (++still >= 8) { fertig = true; break; } } else still = 0; G.streamUpdate(0.5, true); await new Promise(r => setTimeout(r, 250)); } await new Promise(r => setTimeout(r, 2500)); const i = G.renderer.info.memory; const K = [...G.TILES.values()].filter(t => t.built); const r = { t: i.textures, g: i.geometries, ct: G.canvasTexCount, bar: G.barrierCount, kacheln: K.length, nah: K.filter(t => t.lod === 'near').length, fertig, ms: Math.round(performance.now() - t0) }; (window.__ks = window.__ks || []).push(r); return JSON.stringify(r); })()"
  },
  {
   "n": "kachelspeicher_2_messe",
   "x": -3650,
   "z": 2200,
-  "wait": 8000,
+  "tx": -3600,
+  "tz": 1971,
+  "pitch": 0.05,
+  "wait": 4000,
   "shot": false,
-  "js": "(async () => { const G = window.G, P = G.PERF; const fertig = P ? await P.settle(15000) : null; await new Promise(r => setTimeout(r, 1500)); const i = G.renderer.info.memory; const K = [...G.TILES.values()].filter(t => t.built); const r = { t: i.textures, g: i.geometries, ct: G.canvasTexCount, bar: G.barrierCount, kacheln: K.length, nah: K.filter(t => t.lod === 'near').length, fertig }; (window.__ks = window.__ks || []).push(r); return JSON.stringify(r); })()"
+  "js": "(async () => { const G = window.G, p = G.player.pos, cx = Math.floor(p.x / G.TS), cz = Math.floor(p.z / G.TS); const t0 = performance.now(); let still = 0, fertig = false; while (performance.now() - t0 < 40000) { let open = 0; for (const [, t] of G.TILES) if (t.data && Math.abs(t.tx - cx) <= 1 && Math.abs(t.tz - cz) <= 1 && (!t.built || t.lod !== 'near')) open++; if (!open) { if (++still >= 8) { fertig = true; break; } } else still = 0; G.streamUpdate(0.5, true); await new Promise(r => setTimeout(r, 250)); } await new Promise(r => setTimeout(r, 2500)); const i = G.renderer.info.memory; const K = [...G.TILES.values()].filter(t => t.built); const r = { t: i.textures, g: i.geometries, ct: G.canvasTexCount, bar: G.barrierCount, kacheln: K.length, nah: K.filter(t => t.lod === 'near').length, fertig, ms: Math.round(performance.now() - t0) }; (window.__ks = window.__ks || []).push(r); return JSON.stringify(r); })()"
  },
  {
   "n": "kachelspeicher_3_bornheim",
   "x": -196,
   "z": 427,
-  "wait": 8000,
+  "tx": -220,
+  "tz": 432,
+  "pitch": 0.05,
+  "wait": 4000,
   "shot": false,
-  "js": "(async () => { const G = window.G, P = G.PERF; const fertig = P ? await P.settle(15000) : null; await new Promise(r => setTimeout(r, 1500)); const i = G.renderer.info.memory; const K = [...G.TILES.values()].filter(t => t.built); const r = { t: i.textures, g: i.geometries, ct: G.canvasTexCount, bar: G.barrierCount, kacheln: K.length, nah: K.filter(t => t.lod === 'near').length, fertig }; (window.__ks = window.__ks || []).push(r); return JSON.stringify(r); })()"
+  "js": "(async () => { const G = window.G, p = G.player.pos, cx = Math.floor(p.x / G.TS), cz = Math.floor(p.z / G.TS); const t0 = performance.now(); let still = 0, fertig = false; while (performance.now() - t0 < 40000) { let open = 0; for (const [, t] of G.TILES) if (t.data && Math.abs(t.tx - cx) <= 1 && Math.abs(t.tz - cz) <= 1 && (!t.built || t.lod !== 'near')) open++; if (!open) { if (++still >= 8) { fertig = true; break; } } else still = 0; G.streamUpdate(0.5, true); await new Promise(r => setTimeout(r, 250)); } await new Promise(r => setTimeout(r, 2500)); const i = G.renderer.info.memory; const K = [...G.TILES.values()].filter(t => t.built); const r = { t: i.textures, g: i.geometries, ct: G.canvasTexCount, bar: G.barrierCount, kacheln: K.length, nah: K.filter(t => t.lod === 'near').length, fertig, ms: Math.round(performance.now() - t0) }; (window.__ks = window.__ks || []).push(r); return JSON.stringify(r); })()"
  },
  {
   "n": "kachelspeicher_3_messe",
   "x": -3650,
   "z": 2200,
-  "wait": 8000,
+  "tx": -3600,
+  "tz": 1971,
+  "pitch": 0.05,
+  "wait": 4000,
   "shot": false,
-  "js": "(async () => { const G = window.G, P = G.PERF; const fertig = P ? await P.settle(15000) : null; await new Promise(r => setTimeout(r, 1500)); const i = G.renderer.info.memory; const K = [...G.TILES.values()].filter(t => t.built); const r = { t: i.textures, g: i.geometries, ct: G.canvasTexCount, bar: G.barrierCount, kacheln: K.length, nah: K.filter(t => t.lod === 'near').length, fertig }; (window.__ks = window.__ks || []).push(r); return JSON.stringify(r); })()"
+  "js": "(async () => { const G = window.G, p = G.player.pos, cx = Math.floor(p.x / G.TS), cz = Math.floor(p.z / G.TS); const t0 = performance.now(); let still = 0, fertig = false; while (performance.now() - t0 < 40000) { let open = 0; for (const [, t] of G.TILES) if (t.data && Math.abs(t.tx - cx) <= 1 && Math.abs(t.tz - cz) <= 1 && (!t.built || t.lod !== 'near')) open++; if (!open) { if (++still >= 8) { fertig = true; break; } } else still = 0; G.streamUpdate(0.5, true); await new Promise(r => setTimeout(r, 250)); } await new Promise(r => setTimeout(r, 2500)); const i = G.renderer.info.memory; const K = [...G.TILES.values()].filter(t => t.built); const r = { t: i.textures, g: i.geometries, ct: G.canvasTexCount, bar: G.barrierCount, kacheln: K.length, nah: K.filter(t => t.lod === 'near').length, fertig, ms: Math.round(performance.now() - t0) }; (window.__ks = window.__ks || []).push(r); return JSON.stringify(r); })()"
  },
  {
   "n": "kachelspeicher_4_bornheim",
   "x": -196,
   "z": 427,
-  "wait": 8000,
-  "shot": true,
-  "js": "(async () => { const G = window.G, P = G.PERF; const fertig = P ? await P.settle(15000) : null; await new Promise(r => setTimeout(r, 1500)); const i = G.renderer.info.memory; const K = [...G.TILES.values()].filter(t => t.built); const r = { t: i.textures, g: i.geometries, ct: G.canvasTexCount, bar: G.barrierCount, kacheln: K.length, nah: K.filter(t => t.lod === 'near').length, fertig }; (window.__ks = window.__ks || []).push(r); return JSON.stringify(r); })()",
-  "expect": "(() => { const a = window.__ks[2], b = window.__ks[6], k = Math.max(0, b.nah - a.nah); return b.t <= a.t + 25 + 6 * k && b.ct <= a.ct + 12 + 4 * k && b.bar <= a.bar * Math.max(1, b.nah / Math.max(1, a.nah)) * 1.25 + 60; })()"
+  "tx": -220,
+  "tz": 432,
+  "pitch": 0.05,
+  "wait": 4000,
+  "shot": false,
+  "js": "(async () => { const G = window.G, p = G.player.pos, cx = Math.floor(p.x / G.TS), cz = Math.floor(p.z / G.TS); const t0 = performance.now(); let still = 0, fertig = false; while (performance.now() - t0 < 40000) { let open = 0; for (const [, t] of G.TILES) if (t.data && Math.abs(t.tx - cx) <= 1 && Math.abs(t.tz - cz) <= 1 && (!t.built || t.lod !== 'near')) open++; if (!open) { if (++still >= 8) { fertig = true; break; } } else still = 0; G.streamUpdate(0.5, true); await new Promise(r => setTimeout(r, 250)); } await new Promise(r => setTimeout(r, 2500)); const i = G.renderer.info.memory; const K = [...G.TILES.values()].filter(t => t.built); const r = { t: i.textures, g: i.geometries, ct: G.canvasTexCount, bar: G.barrierCount, kacheln: K.length, nah: K.filter(t => t.lod === 'near').length, fertig, ms: Math.round(performance.now() - t0) }; (window.__ks = window.__ks || []).push(r); return JSON.stringify(r); })()"
  },
  {
   "n": "kachelspeicher_4_messe",
   "x": -3650,
   "z": 2200,
-  "wait": 8000,
+  "tx": -3600,
+  "tz": 1971,
+  "pitch": 0.05,
+  "wait": 4000,
+  "shot": false,
+  "js": "(async () => { const G = window.G, p = G.player.pos, cx = Math.floor(p.x / G.TS), cz = Math.floor(p.z / G.TS); const t0 = performance.now(); let still = 0, fertig = false; while (performance.now() - t0 < 40000) { let open = 0; for (const [, t] of G.TILES) if (t.data && Math.abs(t.tx - cx) <= 1 && Math.abs(t.tz - cz) <= 1 && (!t.built || t.lod !== 'near')) open++; if (!open) { if (++still >= 8) { fertig = true; break; } } else still = 0; G.streamUpdate(0.5, true); await new Promise(r => setTimeout(r, 250)); } await new Promise(r => setTimeout(r, 2500)); const i = G.renderer.info.memory; const K = [...G.TILES.values()].filter(t => t.built); const r = { t: i.textures, g: i.geometries, ct: G.canvasTexCount, bar: G.barrierCount, kacheln: K.length, nah: K.filter(t => t.lod === 'near').length, fertig, ms: Math.round(performance.now() - t0) }; (window.__ks = window.__ks || []).push(r); return JSON.stringify(r); })()"
+ },
+ {
+  "n": "kachelspeicher_5_bornheim",
+  "x": -196,
+  "z": 427,
+  "tx": -220,
+  "tz": 432,
+  "pitch": 0.05,
+  "wait": 4000,
+  "shot": false,
+  "js": "(async () => { const G = window.G, p = G.player.pos, cx = Math.floor(p.x / G.TS), cz = Math.floor(p.z / G.TS); const t0 = performance.now(); let still = 0, fertig = false; while (performance.now() - t0 < 40000) { let open = 0; for (const [, t] of G.TILES) if (t.data && Math.abs(t.tx - cx) <= 1 && Math.abs(t.tz - cz) <= 1 && (!t.built || t.lod !== 'near')) open++; if (!open) { if (++still >= 8) { fertig = true; break; } } else still = 0; G.streamUpdate(0.5, true); await new Promise(r => setTimeout(r, 250)); } await new Promise(r => setTimeout(r, 2500)); const i = G.renderer.info.memory; const K = [...G.TILES.values()].filter(t => t.built); const r = { t: i.textures, g: i.geometries, ct: G.canvasTexCount, bar: G.barrierCount, kacheln: K.length, nah: K.filter(t => t.lod === 'near').length, fertig, ms: Math.round(performance.now() - t0) }; (window.__ks = window.__ks || []).push(r); return JSON.stringify(r); })()"
+ },
+ {
+  "n": "kachelspeicher_5_messe",
+  "x": -3650,
+  "z": 2200,
+  "tx": -3600,
+  "tz": 1971,
+  "pitch": 0.05,
+  "wait": 4000,
+  "shot": false,
+  "js": "(async () => { const G = window.G, p = G.player.pos, cx = Math.floor(p.x / G.TS), cz = Math.floor(p.z / G.TS); const t0 = performance.now(); let still = 0, fertig = false; while (performance.now() - t0 < 40000) { let open = 0; for (const [, t] of G.TILES) if (t.data && Math.abs(t.tx - cx) <= 1 && Math.abs(t.tz - cz) <= 1 && (!t.built || t.lod !== 'near')) open++; if (!open) { if (++still >= 8) { fertig = true; break; } } else still = 0; G.streamUpdate(0.5, true); await new Promise(r => setTimeout(r, 250)); } await new Promise(r => setTimeout(r, 2500)); const i = G.renderer.info.memory; const K = [...G.TILES.values()].filter(t => t.built); const r = { t: i.textures, g: i.geometries, ct: G.canvasTexCount, bar: G.barrierCount, kacheln: K.length, nah: K.filter(t => t.lod === 'near').length, fertig, ms: Math.round(performance.now() - t0) }; (window.__ks = window.__ks || []).push(r); return JSON.stringify(r); })()"
+ },
+ {
+  "n": "kachelspeicher_6_bornheim",
+  "x": -196,
+  "z": 427,
+  "tx": -220,
+  "tz": 432,
+  "pitch": 0.05,
+  "wait": 4000,
   "shot": true,
-  "js": "(async () => { const G = window.G, P = G.PERF; const fertig = P ? await P.settle(15000) : null; await new Promise(r => setTimeout(r, 1500)); const i = G.renderer.info.memory; const K = [...G.TILES.values()].filter(t => t.built); const r = { t: i.textures, g: i.geometries, ct: G.canvasTexCount, bar: G.barrierCount, kacheln: K.length, nah: K.filter(t => t.lod === 'near').length, fertig }; (window.__ks = window.__ks || []).push(r); return JSON.stringify(r); })()",
-  "expect": "(() => { const a = window.__ks[3], b = window.__ks[7], k = Math.max(0, b.nah - a.nah); return b.t <= a.t + 25 + 6 * k && b.ct <= a.ct + 12 + 4 * k && b.bar <= a.bar * Math.max(1, b.nah / Math.max(1, a.nah)) * 1.25 + 60; })()"
+  "js": "(async () => { const G = window.G, p = G.player.pos, cx = Math.floor(p.x / G.TS), cz = Math.floor(p.z / G.TS); const t0 = performance.now(); let still = 0, fertig = false; while (performance.now() - t0 < 40000) { let open = 0; for (const [, t] of G.TILES) if (t.data && Math.abs(t.tx - cx) <= 1 && Math.abs(t.tz - cz) <= 1 && (!t.built || t.lod !== 'near')) open++; if (!open) { if (++still >= 8) { fertig = true; break; } } else still = 0; G.streamUpdate(0.5, true); await new Promise(r => setTimeout(r, 250)); } await new Promise(r => setTimeout(r, 2500)); const i = G.renderer.info.memory; const K = [...G.TILES.values()].filter(t => t.built); const r = { t: i.textures, g: i.geometries, ct: G.canvasTexCount, bar: G.barrierCount, kacheln: K.length, nah: K.filter(t => t.lod === 'near').length, fertig, ms: Math.round(performance.now() - t0) }; (window.__ks = window.__ks || []).push(r); return JSON.stringify(r); })()",
+  "expect": "(() => { const a = window.__ks[2], b = window.__ks[10]; return b.t <= a.t + 60 && b.ct <= a.ct + 12 && b.bar <= a.bar * Math.max(1, b.kacheln / Math.max(1, a.kacheln)) * 1.25 + 60; })()"
+ },
+ {
+  "n": "kachelspeicher_6_messe",
+  "x": -3650,
+  "z": 2200,
+  "tx": -3600,
+  "tz": 1971,
+  "pitch": 0.05,
+  "wait": 4000,
+  "shot": true,
+  "js": "(async () => { const G = window.G, p = G.player.pos, cx = Math.floor(p.x / G.TS), cz = Math.floor(p.z / G.TS); const t0 = performance.now(); let still = 0, fertig = false; while (performance.now() - t0 < 40000) { let open = 0; for (const [, t] of G.TILES) if (t.data && Math.abs(t.tx - cx) <= 1 && Math.abs(t.tz - cz) <= 1 && (!t.built || t.lod !== 'near')) open++; if (!open) { if (++still >= 8) { fertig = true; break; } } else still = 0; G.streamUpdate(0.5, true); await new Promise(r => setTimeout(r, 250)); } await new Promise(r => setTimeout(r, 2500)); const i = G.renderer.info.memory; const K = [...G.TILES.values()].filter(t => t.built); const r = { t: i.textures, g: i.geometries, ct: G.canvasTexCount, bar: G.barrierCount, kacheln: K.length, nah: K.filter(t => t.lod === 'near').length, fertig, ms: Math.round(performance.now() - t0) }; (window.__ks = window.__ks || []).push(r); return JSON.stringify(r); })()",
+  "expect": "(() => { const a = window.__ks[3], b = window.__ks[11]; return b.t <= a.t + 60 && b.ct <= a.ct + 12 && b.bar <= a.bar * Math.max(1, b.kacheln / Math.max(1, a.kacheln)) * 1.25 + 60; })()"
  }
 ]
