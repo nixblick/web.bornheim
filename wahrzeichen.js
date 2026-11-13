@@ -105,7 +105,7 @@ export function initWahrzeichen(X) {
     const fr = frame(e, e.p0); if (!fr) return null; const { ob, fx, fz, W, D } = fr;
     let y0 = 1e9; for (const [x, z] of e.p0) y0 = Math.min(y0, TH(x, z));
     const mats = [];
-    const M = (col, o = {}) => { const m = new THREE.MeshLambertMaterial(Object.assign({ color: col, emissive: col, emissiveIntensity: 0.05 }, o)); mats.push(m); return m; };
+    const M = (col, o = {}) => { const m = new THREE.MeshLambertMaterial(Object.assign({ color: col, emissive: col, emissiveIntensity: 0.05, fog: false }, o)); m.userData.c0 = m.color.clone(); m.userData.e0 = m.emissive.clone(); mats.push(m); return m; };
     const T = (w, h, draw, rx = 1, ry = 1) => { const t = canvasTex(w, h, draw, rx, ry); const m = M(0xffffff, { map: t, emissive: 0xffe2b8, emissiveMap: t }); return m; };
     const g = new THREE.Group(); const add = (geo, m, x = 0, y = 0, z = 0, ry = 0) => { const o = new THREE.Mesh(geo, m); o.position.set(x, y, z); o.rotation.y = ry; o.castShadow = true; o.receiveShadow = true; g.add(o); return o; };
     const box = (w, h, d) => new THREE.BoxGeometry(w, h, d);
@@ -150,7 +150,7 @@ export function initWahrzeichen(X) {
       add(prism(W - 0.4, gh * 0.85, D - 1), dach, 0, e1, -0.5);
       if (e.uhr) { add(box(W * 0.8, 0.3, 1.4), M(0x2c2c2c), 0, 5.2, D / 2 + 0.7); // Balkon
         const ut = canvasTex(128, 128, (c, w, h) => { c.fillStyle = '#1f3d6b'; c.beginPath(); c.arc(64, 64, 62, 0, 7); c.fill(); c.fillStyle = '#d9b44a'; c.beginPath(); c.arc(64, 64, 50, 0, 7); c.fill(); c.strokeStyle = '#1b1b1b'; c.lineWidth = 6; c.beginPath(); c.moveTo(64, 64); c.lineTo(64, 26); c.moveTo(64, 64); c.lineTo(90, 72); c.stroke(); });
-        const um = new THREE.MeshBasicMaterial({ map: ut, transparent: true }); mats.push(um); const u = new THREE.Mesh(new THREE.CircleGeometry(1.3, 20), um); u.position.set(0, e1 + gh * 0.45, D / 2 + 0.02); g.add(u); }
+        const um = new THREE.MeshBasicMaterial({ map: ut, transparent: true, fog: false }); um.userData.c0 = um.color.clone(); mats.push(um); const u = new THREE.Mesh(new THREE.CircleGeometry(1.3, 20), um); u.position.set(0, e1 + gh * 0.45, D / 2 + 0.02); g.add(u); }
     } else if (e.id === 'dom') {
       const rot = '#a4503d'; const fac = T(256, 512, (c, w, h) => { c.fillStyle = rot; c.fillRect(0, 0, w, h); c.fillStyle = '#8e4232'; for (let y = 0; y < h; y += 16) c.fillRect(0, y, w, 2);
         c.fillStyle = '#2f3138'; for (let i = 0; i < 2; i++) { const x = 40 + i * 110; c.fillRect(x, 120, 60, 300); c.beginPath(); c.moveTo(x, 120); c.lineTo(x + 30, 60); c.lineTo(x + 60, 120); c.fill(); } c.strokeStyle = '#a4503d'; c.lineWidth = 4; for (let i = 0; i < 2; i++) { c.beginPath(); c.moveTo(70 + i * 110, 70); c.lineTo(70 + i * 110, 420); c.stroke(); } });
@@ -201,7 +201,16 @@ export function initWahrzeichen(X) {
     g.userData.mats = mats; scene.add(g); return g;
   }
   function drop(g) { scene.remove(g); g.traverse(o => { if (o.geometry) o.geometry.dispose(); }); for (const m of g.userData.mats) { if (m.map) m.map.dispose(); m.dispose(); } }
+  // Fernsicht (André 13.11.2026): Der Szenen-Nebel endet je nach Stufe bei 250–700 m, dahinter waren Dom und Skyline weg.
+  // Wahrzeichen nehmen nicht am Nebel teil, sondern bekommen einen eigenen, weiteren Dunst: Farbe gleitet bis FERN zur Nebelfarbe.
+  const FERN = 2200, _fc = new THREE.Color();
+  function haze() { const f = scene.fog; if (!f) return; const cam = X.camera; if (!cam) return;
+    for (const g of built.values()) { const d = Math.hypot(cam.position.x - g.position.x, cam.position.z - g.position.z); const near = Math.max(60, f.near);
+      const k = Math.min(0.85, Math.max(0, (d - near) / (Math.max(FERN, f.far * 3) - near)));
+      if (g.userData.k !== undefined && Math.abs(g.userData.k - k) < 0.01 && g.userData.fc === f.color.getHex()) continue; g.userData.k = k; g.userData.fc = f.color.getHex(); _fc.copy(f.color);
+      for (const m of g.userData.mats) { if (m.userData.c0) m.color.copy(m.userData.c0).lerp(_fc, k); if (m.userData.e0) m.emissive.copy(m.userData.e0).lerp(_fc, k); } } }
   function update(dt) {
+    haze();
     scanT -= dt; if (scanT > 0) return; scanT = 1;
     const night = !!world.night;
     for (const e of LIST) { if (!e.b) continue; const key = e.n; const [cx, cz] = centroid(e.p0); const d = Math.hypot(player.pos.x - cx, player.pos.z - cz); let g = built.get(key);
