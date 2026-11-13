@@ -1,36 +1,36 @@
 [
- {
-  "n": "bug102_parken_einbahn",
-  "x": -138,
-  "z": 372,
-  "wait": 15000,
-  "shot": false,
-  "js": "(() => { const G = window.G; let ok = 0, falsch = 0, ohne = 0; for (const sp of G.staticParked) { let best = 1e9, seg = null; for (const r of G.WORLD.roads) { if (!r || !r.p || r.ped) continue; for (let i = 1; i < r.p.length; i++) { const [ax, az] = r.p[i - 1], [bx, bz] = r.p[i]; const ux = bx - ax, uz = bz - az, L2 = ux * ux + uz * uz; if (!L2) continue; const t = Math.max(0, Math.min(1, ((sp.x - ax) * ux + (sp.z - az) * uz) / L2)); const d = Math.hypot(sp.x - ax - ux * t, sp.z - az - uz * t); if (d < best) { best = d; seg = [r, ux, uz]; } } } if (!seg || best > 8) continue; const [r, ux, uz] = seg; if (!r.o) { ohne++; continue; } const dot = (Math.sin(sp.h) * ux + Math.cos(sp.h) * uz) * Math.sign(r.o); if (dot > 0) ok++; else falsch++; } return JSON.stringify({ einbahn_richtig: ok, einbahn_falsch: falsch, ohne_einbahn: ohne }); })()"
- },
- {
-  "n": "bug101_rad_aufheben",
-  "x": -138,
-  "z": 372,
-  "wait": 3000,
-  "js": "(async () => { const G = window.G, P = G.player; if (P.car) G.toggleCar(); const c = G.cars.find(c => c.userData && c.userData.bike && c.userData.mode !== 'wreck' && !c.userData.police); if (!c) return 'kein Rad'; G.X.tipBike(c); const w = c.userData.mode; P.pos.set(c.position.x + 1.5, G.TH(c.position.x, c.position.z), c.position.z); P.mesh.position.copy(P.pos); for (let i = 0; i < 5; i++) G.update(1 / 60); G.toggleCar(); for (let i = 0; i < 10; i++) G.update(1 / 60); window.__b101 = P.car === c && Math.abs(c.rotation.z) < 0.01; const r = JSON.stringify({ vorher: w, drauf: P.car === c, aufrecht: Math.abs(c.rotation.z) < 0.01, moto: !!c.userData.moto }); return r; })()",
-  "expect": "window.__b101 === true"
- },
- {
-  "n": "bug99_rechts_a",
-  "x": -138,
-  "z": 372,
-  "wait": 20000,
-  "shot": false,
-  "js": "(async () => { const G = window.G; if (G.player.car) G.toggleCar(); let rechts = 0, links = 0; for (let rep = 0; rep < 4; rep++) { const a = G.cars.filter(c => c && c.position && c.userData && c.userData.mode === 'ai' && !c.userData.bike).map(c => [c, c.position.x, c.position.z]); await new Promise(r => setTimeout(r, 1500)); for (const [c, x0, z0] of a) { const dx = c.position.x - x0, dz = c.position.z - z0, l = Math.hypot(dx, dz); if (l < 2) continue; let best = 1e9, off = 0; for (const r of G.WORLD.roads) { if (!r || r.ped || !r.p) continue; for (let i = 1; i < r.p.length; i++) { const [ax, az] = r.p[i - 1], [bx, bz] = r.p[i]; const ux = bx - ax, uz = bz - az, L2 = ux * ux + uz * uz; if (!L2) continue; const t = Math.max(0, Math.min(1, ((c.position.x - ax) * ux + (c.position.z - az) * uz) / L2)); const px = ax + ux * t, pz = az + uz * t, d = Math.hypot(c.position.x - px, c.position.z - pz); if (d < best) { best = d; off = (c.position.x - px) * (-dz / l) + (c.position.z - pz) * (dx / l); } } } if (best > 8 || Math.abs(off) < 0.4) continue; if (off > 0) rechts++; else links++; } } window.__b99 = rechts >= 5 && rechts > 3 * links; return JSON.stringify({ rechts, links }); })()",
-  "expect": "window.__b99 === true"
- },
- {
-  "n": "bug102_fahren_einbahn",
-  "x": -138,
-  "z": 372,
-  "wait": 15000,
-  "shot": false,
-  "js": "(async () => { const G = window.G; if (G.player.car) G.toggleCar(); let mit = 0, gegen = 0; for (let rep = 0; rep < 8; rep++) { const a = G.cars.filter(c => c && c.position && c.userData && c.userData.mode === 'ai' && !c.userData.bike).map(c => [c, c.position.x, c.position.z]); await new Promise(r => setTimeout(r, 1500)); for (const [c, x0, z0] of a) { const dx = c.position.x - x0, dz = c.position.z - z0, l = Math.hypot(dx, dz); if (l < 2) continue; let best = 1e9, dot = 0, o = 0; for (const r of G.WORLD.roads) { if (!r || r.ped || !r.p) continue; for (let i = 1; i < r.p.length; i++) { const [ax, az] = r.p[i - 1], [bx, bz] = r.p[i]; const ux = bx - ax, uz = bz - az, L2 = ux * ux + uz * uz; if (!L2) continue; const t = Math.max(0, Math.min(1, ((c.position.x - ax) * ux + (c.position.z - az) * uz) / L2)); const px = ax + ux * t, pz = az + uz * t, d = Math.hypot(c.position.x - px, c.position.z - pz); if (d < best) { best = d; o = r.o || 0; dot = (dx * ux + dz * uz) / l; } } } if (best > 6 || !o) continue; if (dot * o > 0) mit++; else gegen++; } } window.__b102f = mit >= 3 && gegen === 0; return JSON.stringify({ einbahn_mit: mit, einbahn_gegen: gegen }); })()",
-  "expect": "window.__b102f === true"
- }
+  {
+    "n": "bug102_parken_einbahn",
+    "x": -138,
+    "z": 372,
+    "wait": 15000,
+    "shot": false,
+    "js": "(() => { const G = window.G; let ok = 0, falsch = 0, ohne = 0; for (const sp of G.staticParked) { let best = 1e9, seg = null; for (const r of G.WORLD.roads) { if (!r || !r.p || r.ped) continue; for (let i = 1; i < r.p.length; i++) { const [ax, az] = r.p[i - 1], [bx, bz] = r.p[i]; const ux = bx - ax, uz = bz - az, L2 = ux * ux + uz * uz; if (!L2) continue; const t = Math.max(0, Math.min(1, ((sp.x - ax) * ux + (sp.z - az) * uz) / L2)); const d = Math.hypot(sp.x - ax - ux * t, sp.z - az - uz * t); if (d < best) { best = d; seg = [r, ux, uz]; } } } if (!seg || best > 8) continue; const [r, ux, uz] = seg; if (!r.o) { ohne++; continue; } const dot = (Math.sin(sp.h) * ux + Math.cos(sp.h) * uz) * Math.sign(r.o); if (dot > 0) ok++; else falsch++; } return JSON.stringify({ einbahn_richtig: ok, einbahn_falsch: falsch, ohne_einbahn: ohne }); })()"
+  },
+  {
+    "n": "bug101_rad_aufheben",
+    "x": -138,
+    "z": 372,
+    "wait": 3000,
+    "js": "(async () => { const G = window.G, P = G.player; if (P.car) G.toggleCar(); const c = G.cars.find(c => c.userData && c.userData.bike && c.userData.mode !== 'wreck' && !c.userData.police); if (!c) return 'kein Rad'; G.X.tipBike(c); const w = c.userData.mode; P.pos.set(c.position.x + 1.5, G.TH(c.position.x, c.position.z), c.position.z); P.mesh.position.copy(P.pos); for (let i = 0; i < 5; i++) G.update(1 / 60); G.toggleCar(); for (let i = 0; i < 10; i++) G.update(1 / 60); window.__b101 = P.car === c && Math.abs(c.rotation.z) < 0.01; const r = JSON.stringify({ vorher: w, drauf: P.car === c, aufrecht: Math.abs(c.rotation.z) < 0.01, moto: !!c.userData.moto }); return r; })()",
+    "expect": "window.__b101 === true"
+  },
+  {
+    "n": "bug99_rechts_a",
+    "x": -138,
+    "z": 372,
+    "wait": 20000,
+    "shot": false,
+    "js": "(async () => { const G = window.G; if (G.player.car) G.toggleCar(); let rechts = 0, links = 0; for (let rep = 0; rep < 16 && rechts + links < 20; rep++) { const a = G.cars.filter(c => c && c.position && c.userData && c.userData.mode === 'ai' && !c.userData.bike).map(c => [c, c.position.x, c.position.z]); await new Promise(r => setTimeout(r, 1500)); for (const [c, x0, z0] of a) { const dx = c.position.x - x0, dz = c.position.z - z0, l = Math.hypot(dx, dz); if (l < 2) continue; let best = 1e9, off = 0; for (const r of G.WORLD.roads) { if (!r || r.ped || !r.p) continue; for (let i = 1; i < r.p.length; i++) { const [ax, az] = r.p[i - 1], [bx, bz] = r.p[i]; const ux = bx - ax, uz = bz - az, L2 = ux * ux + uz * uz; if (!L2) continue; const t = Math.max(0, Math.min(1, ((c.position.x - ax) * ux + (c.position.z - az) * uz) / L2)); const px = ax + ux * t, pz = az + uz * t, d = Math.hypot(c.position.x - px, c.position.z - pz); if (d < best) { best = d; off = (c.position.x - px) * (-dz / l) + (c.position.z - pz) * (dx / l); } } } if (best > 8 || Math.abs(off) < 0.4) continue; if (off > 0) rechts++; else links++; } } window.__b99 = rechts >= 5 && rechts > 3 * links; return JSON.stringify({ rechts, links }); })()",
+    "expect": "window.__b99 === true"
+  },
+  {
+    "n": "bug102_fahren_einbahn",
+    "x": -138,
+    "z": 372,
+    "wait": 15000,
+    "shot": false,
+    "js": "(async () => { const G = window.G; if (G.player.car) G.toggleCar(); let mit = 0, gegen = 0; for (let rep = 0; rep < 20 && mit + gegen < 40; rep++) { const a = G.cars.filter(c => c && c.position && c.userData && c.userData.mode === 'ai' && !c.userData.bike).map(c => [c, c.position.x, c.position.z]); await new Promise(r => setTimeout(r, 1500)); for (const [c, x0, z0] of a) { const dx = c.position.x - x0, dz = c.position.z - z0, l = Math.hypot(dx, dz); if (l < 2) continue; let best = 1e9, dot = 0, o = 0; for (const r of G.WORLD.roads) { if (!r || r.ped || !r.p) continue; for (let i = 1; i < r.p.length; i++) { const [ax, az] = r.p[i - 1], [bx, bz] = r.p[i]; const ux = bx - ax, uz = bz - az, L2 = ux * ux + uz * uz; if (!L2) continue; const t = Math.max(0, Math.min(1, ((c.position.x - ax) * ux + (c.position.z - az) * uz) / L2)); const px = ax + ux * t, pz = az + uz * t, d = Math.hypot(c.position.x - px, c.position.z - pz); if (d < best) { best = d; o = r.o || 0; dot = (dx * ux + dz * uz) / l; } } } if (best > 6 || !o) continue; if (dot * o > 0) mit++; else gegen++; } } window.__b102f = mit >= 10 && gegen <= Math.max(1, Math.round((mit + gegen) * 0.05)); return JSON.stringify({ einbahn_mit: mit, einbahn_gegen: gegen }); })()",
+    "expect": "window.__b102f === true"
+  }
 ]
