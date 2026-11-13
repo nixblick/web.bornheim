@@ -16,3 +16,16 @@ eine davon das Spiel im Browser getestet hat (Headless-Chrome mit WebGL, hohe CP
 - Auch nachts läuft immer nur **ein** Browser-Test zur selben Zeit. Am Ende alle Browser und
   Server dieses Laufs beenden.
 - Ausnahme nur auf Andrés ausdrückliches Wort in der laufenden Sitzung („teste jetzt“).
+
+## Werkzeug für gezielte Proben: `tools/probe.mjs`
+
+13.11.2026: Eine Nachtrunde hat die ganze Nacht ihr eigenes Testskript gebaut und nichts getestet.
+Deshalb gibt es ein fertiges Werkzeug; eine Runde schreibt nur eine Schrittdatei unter `tools/proben/`.
+
+```
+node tools/probe.mjs tools/proben/ausstieg.json <ausgabeordner> "$(command -v chromium-browser || command -v google-chrome)"
+```
+
+Es startet selbst Webserver und Chrome auf freien Ports, beendet beides, schreibt `stand.txt` (eine Zeile je
+Schritt) und bricht nach 20 min hart ab. Exit 0 = grün, 1 = rot, 2 = Zeit um. Fehlt dem Werkzeug etwas:
+Befund melden und erweitern ist eine eigene, kurze Runde, kein Umbau mitten in einer Testrunde.
