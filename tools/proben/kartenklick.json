@@ -1,0 +1,16 @@
+[
+  { "n": "start_bornheim", "x": -138, "z": 372, "shot": false },
+  { "n": "a_menue_karte", "wait": 1500,
+    "js": "(() => { window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Escape' })); [...document.querySelectorAll('#menu button[data-tab]')].find(b => b.dataset.tab === 'karte').click(); const h = window.G.pmHits.find(q => q.kind === 'u' && q.s.id === 'konstablerwache'); return h ? h.x + ',' + h.y : 'keine Station'; })()",
+    "expect": "document.getElementById('menu').style.display === 'flex' && window.G.pmHits.some(q => q.kind === 'u' && q.s.id === 'konstablerwache')" },
+  { "n": "a_klick", "wait": 20000,
+    "js": "(() => { const cv = document.getElementById('pmap'), r = cv.getBoundingClientRect(), h = window.G.pmHits.find(q => q.kind === 'u' && q.s.id === 'konstablerwache'); const cx = r.left + h.x * r.width / cv.width, cy = r.top + h.y * r.height / cv.height; window.__lockSeen = false; document.addEventListener('pointerlockchange', () => { if (document.pointerLockElement && document.getElementById('menu').style.display === 'flex') window.__lockSeen = true; }); for (const t of ['mousedown', 'mouseup']) cv.dispatchEvent(new MouseEvent(t, { bubbles: true, clientX: cx, clientY: cy, button: 0 })); return [cx, cy].map(Math.round).join(','); })()",
+    "expect": "Math.hypot(window.G.player.pos.x + 138, window.G.player.pos.z - 372) > 500 || window.G.INTERIORS.inside" },
+  { "n": "zurueck_bornheim", "x": -138, "z": 372, "shot": false },
+  { "n": "b_zu_und_auf", "wait": 1500,
+    "js": "(() => { if (window.G.INTERIORS.inside) window.G.INTERIORS.leave(); window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Escape' })); document.getElementById('m_resume').click(); window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Escape' })); [...document.querySelectorAll('#menu button[data-tab]')].find(b => b.dataset.tab === 'karte').click(); return 'menue=' + document.getElementById('menu').style.display; })()",
+    "expect": "document.getElementById('menu').style.display === 'flex' && !document.pointerLockElement && !window.__lockSeen" },
+  { "n": "b_klick", "wait": 20000,
+    "js": "(() => { const cv = document.getElementById('pmap'), r = cv.getBoundingClientRect(), h = window.G.pmHits.find(q => q.kind === 'u' && q.s.id === 'konstablerwache'); const cx = r.left + h.x * r.width / cv.width, cy = r.top + h.y * r.height / cv.height; for (const t of ['mousedown', 'mouseup']) cv.dispatchEvent(new MouseEvent(t, { bubbles: true, clientX: cx, clientY: cy, button: 0 })); return 'lock=' + !!document.pointerLockElement + ' lockSeen=' + window.__lockSeen; })()",
+    "expect": "(Math.hypot(window.G.player.pos.x + 138, window.G.player.pos.z - 372) > 500 || window.G.INTERIORS.inside) && !window.__lockSeen" }
+]
