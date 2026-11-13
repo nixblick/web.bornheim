@@ -31,6 +31,9 @@ const LIST = [
   { id: 'euro', n: 'Eurotower', c: [-2550, 2211], h: 148, t: null, r: 1500 },
   // Trianon: 186 m, dreieckiger Grundriss, auf die Spitze gestellte Pyramide als Kopf
   { id: 'trianon', n: 'Trianon', c: [-3062, 1858], h: 186, t: null, r: 1800 },
+  // Messeturm (https://de.wikipedia.org/wiki/Messeturm): 257 m, rotbrauner Granit, quadratischer Schaft, Glaszylinder unter der Pyramidenspitze.
+  // Seit 13.11.2026 hier statt im Kachelbau (game.js kindOf 'messeturm'), damit er wie die Skyline bis 2 km steht, auch wenn seine Kachel nicht gebaut ist.
+  { id: 'messe', n: 'Messeturm', c: [-4061, 1898], h: 257, t: null, r: 2000 },
 ];
 
 function centroid(p) { let x = 0, z = 0; for (const q of p) { x += q[0]; z += q[1]; } return [x / p.length, z / p.length]; }
@@ -79,6 +82,7 @@ function core(e, W, D) {
   if (e.id === 'main') { const rr = Math.min(r, D / 2) * 0.95, zc = D / 2 - rr, hw = W * 0.45, z0 = -D / 2 - 2, z1 = zc - rr + 4; // Glaszylinder und Steinturm wie mk()
     const inside = (x, z) => (x * x + (z - zc) ** 2 <= rr * rr) || (Math.abs(x) <= hw && z >= z0 && z <= z1);
     return [star(inside, 0, Math.min(z1, zc) - 1, Math.max(W, D) + 10), H]; }
+  if (e.id === 'messe') return [rect(W * 0.95, D * 0.95), 170];
   if (e.id === 'westend') return [rect(W * 0.85, D * 0.85), H - 16];
   if (e.id === 'euro') return [rect(W * 0.9, D * 0.75), H];
   return null;
@@ -171,7 +175,10 @@ export function initWahrzeichen(X) {
     } else { // Hochhäuser
       const glas = (base, band, rx, ry) => T(256, 256, (c, w, h) => { c.fillStyle = base; c.fillRect(0, 0, w, h); c.fillStyle = band; for (let y = 0; y < h; y += 16) c.fillRect(0, y, w, 4); c.fillStyle = 'rgba(255,255,255,0.10)'; for (let x = 0; x < w; x += 16) c.fillRect(x, 0, 2, h); c.fillStyle = 'rgba(255,236,190,0.35)'; for (let i = 0; i < 60; i++) c.fillRect(((i * 97) % 16) * 16 + 3, ((i * 53) % 16) * 16 + 5, 10, 9); }, rx, ry);
       const H = e.h, r = Math.min(W, D) / 2;
-      if (e.id === 'coba') { const f = glas('#7f96a8', '#c9d0d4', 6, 60); const t = new THREE.CylinderGeometry(r * 1.12, r * 1.12, H, 3, 1); add(t, f, 0, H / 2 - 1, 0, Math.PI / 6);
+      if (e.id === 'messe') { const s = Math.min(W, D) * 0.95; const gr = T(256, 256, (c, w, h) => { c.fillStyle = '#8a5a4e'; c.fillRect(0, 0, w, h); for (let r = 0; r < 12; r++) for (let q = 0; q < 8; q++) { const x = q * w / 8, y = r * h / 12; if (q === 0 || q === 7) { c.fillStyle = '#1e2733'; c.fillRect(x, y, w / 8, h / 12); continue; } c.fillStyle = '#6e443b'; c.fillRect(x + 6, y + 4, w / 8 - 12, h / 12 - 8); c.fillStyle = '#26303c'; c.fillRect(x + 9, y + 7, w / 8 - 18, h / 12 - 14); } }, 2, 12);
+        add(box(s, 171, s), gr, 0, 84.5, 0); add(box(s * 0.83, 20, s * 0.83), M(0x8a5a4e), 0, 180, 0, Math.PI / 4); // gestufte Krone
+        add(new THREE.CylinderGeometry(s * 0.44, s * 0.47, 31, 24), M(0x2a3340), 0, 205.5, 0); add(new THREE.ConeGeometry(s * 0.44, 36, 4), M(0x7a4a40), 0, 239, 0, Math.PI / 4);
+      } else if (e.id === 'coba') { const f = glas('#7f96a8', '#c9d0d4', 6, 60); const t = new THREE.CylinderGeometry(r * 1.12, r * 1.12, H, 3, 1); add(t, f, 0, H / 2 - 1, 0, Math.PI / 6);
         const gr = M(0x5b8a4a); for (let k = 1; k < 5; k++) add(new THREE.CylinderGeometry(r * 1.13, r * 1.13, 6, 3, 1, true), gr, 0, k * H / 5, 0, Math.PI / 6); // Himmelsgärten
         add(new THREE.CylinderGeometry(r * 0.35, r * 0.5, 8, 3), M(0xd0d4d8), 0, H + 4, 0, Math.PI / 6); add(new THREE.CylinderGeometry(0.5, 1.2, 41, 6), M(0xe8e8e8), 0, H + 20.5, 0);
       } else if (e.id === 'main') { const f = glas('#4d6f8e', '#93a6b6', 8, 50); const rr = Math.min(r, D / 2) * 0.95, zc = D / 2 - rr; add(new THREE.CylinderGeometry(rr, rr, H, 24), f, 0, H / 2 - 1, zc);
