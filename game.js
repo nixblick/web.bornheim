@@ -25,7 +25,7 @@ import { autolack } from './autolack.js';
 import { initVokabaum } from './vokabaum.js';
 import { initLaufrunden } from './laufrunden.js';
 import { initNebenjobs } from './nebenjobs.js';
-import { installDunst, initDunst } from './dunst.js';
+import { installDunst, initDunst } from './dunst.js'; import { makeHimmel } from './himmel.js';
 import { weather, initWetter } from './wetter.js';
 import { initRasen, rasenMat, RASEN_KINDS } from './rasen.js';
 import { initLandmarks } from './landmarks.js';
@@ -60,7 +60,7 @@ const camera = new THREE.PerspectiveCamera(65, (innerWidth > 0 && innerHeight > 
 
 const hemi = new THREE.HemisphereLight(0x8a90c8, 0x4a4038, 1.1); scene.add(hemi);
 const world = { hour: 8, speed: 0.25 / 60, headlights: true }; /* Start 8 Uhr, 1 Spielstunde = 4 Minuten (12.11.2026, André) */
-let skyU = null, skyDome = null, sunDisk = null, skylineMesh = null, skylineBeacons = null; const clouds = [];
+let skyU = null, HIMMEL = null, skyDome = null, sunDisk = null, skylineMesh = null, skylineBeacons = null; const clouds = [];
 let WET = null, roadMatRef = null; const lampSpots = []; let streaks = null, streakT = 0;
 function updateStreaks(dt) {
   const night = (world.hour < 6.5 || world.hour > 19.8) ? 1 : 0; const k = opts.quality === 'niedrig' ? 0 : (weather.wet || 0) * night;
@@ -999,15 +999,9 @@ const SKYLINE_TOWERS = [
 ];
 const _skyO = new THREE.Object3D(), _skyC1 = new THREE.Color(), _skyC2 = new THREE.Color(), _skyTint = new THREE.Color();
 function buildSky() {
-  skyU = { top: { value: new THREE.Color(0x6a8fd0) }, bot: { value: new THREE.Color(0xb9cde6) } };
-  const mat = new THREE.ShaderMaterial({ uniforms: skyU, side: THREE.BackSide, depthWrite: false, fog: false,
-    vertexShader: 'varying vec3 vW; void main(){ vW = normalize(position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
-    fragmentShader: 'uniform vec3 top; uniform vec3 bot; varying vec3 vW; void main(){ float h = clamp(vW.y * 1.8 + 0.04, 0.0, 1.0); gl_FragColor = vec4(mix(bot, top, pow(h, 0.65)), 1.0);\n#include <colorspace_fragment>\n}' });
-  skyDome = new THREE.Mesh(new THREE.SphereGeometry(850, 24, 12), mat); skyDome.renderOrder = -1; skyDome.userData.noChunk = true; skyDome.frustumCulled = false; scene.add(skyDome);
+  HIMMEL = makeHimmel(THREE, !LOW_GFX); skyU = HIMMEL.uniforms; skyDome = HIMMEL.dome; scene.add(skyDome); // Verlauf und Wolkendecke in einem Shader (himmel.js, #152)
   const sunTex = canvasTex(128, 128, (ctx, w, h) => { const gr = ctx.createRadialGradient(64, 64, 4, 64, 64, 64); gr.addColorStop(0, 'rgba(255,255,240,1)'); gr.addColorStop(0.15, 'rgba(255,245,210,0.95)'); gr.addColorStop(0.35, 'rgba(255,220,160,0.25)'); gr.addColorStop(1, 'rgba(255,200,120,0)'); ctx.fillStyle = gr; ctx.fillRect(0, 0, w, h); });
   sunDisk = new THREE.Sprite(new THREE.SpriteMaterial({ map: sunTex, fog: false, depthWrite: false, transparent: true, blending: THREE.AdditiveBlending })); sunDisk.scale.set(140, 140, 1); scene.add(sunDisk);
-  const cloudTex = canvasTex(256, 128, (ctx, w, h) => { for (let i = 0; i < 22; i++) { const x = rnd(40, 216), y = rnd(45, 90), r = rnd(18, 44); const gr = ctx.createRadialGradient(x, y, 2, x, y, r); gr.addColorStop(0, 'rgba(255,255,255,0.55)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.fill(); } });
-  for (let i = 0; i < 26; i++) { const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: cloudTex, fog: false, depthWrite: false, transparent: true })); const a = Math.random() * Math.PI * 2, d = rnd(150, 680); sp.userData = { ox: Math.cos(a) * d, oz: Math.sin(a) * d, y: rnd(170, 290) }; const sc = rnd(140, 260); sp.scale.set(sc, sc * 0.45, 1); scene.add(sp); clouds.push(sp); }
   // Frankfurter Skyline-Horizontschicht: ein einziges InstancedMesh (1 Draw-Call) für alle fernen Wolkenkratzer
   const twTex = canvasTex(64, 128, (ctx, w, h) => {
     ctx.fillStyle = '#8fa0b5'; ctx.fillRect(0, 0, w, h);
@@ -1037,8 +1031,7 @@ function updateSky(dt) {
   if (BAU_LAMP_MAT) BAU_LAMP_MAT.color.setHex(world.night && Math.floor(performance.now() / 500) % 2 ? 0x4a3a10 : 0xffc21a); // Baustellen-Warnleuchten blinken nachts
   if (!skyDome) return; skyDome.position.copy(camera.position);
   const sd = _sunV.copy(world.sunDir).normalize(); sunDisk.position.copy(camera.position).addScaledVector(sd, 700); sunDisk.material.opacity = clamp(world.day * 1.2 - weather.cloud * 0.9, 0, 1); sunDisk.visible = sunDisk.material.opacity > 0.02;
-  const bright = 0.25 + 0.75 * world.day; const grey = 1 - weather.cloud * 0.45; const cov = 0.25 + 0.75 * weather.cloud;
-  for (const c of clouds) { c.userData.ox += dt * 2.5; if (c.userData.ox > 700) c.userData.ox -= 1400; const x = camera.position.x + c.userData.ox, z = camera.position.z + c.userData.oz; c.position.set(x, c.userData.y, z); c.material.opacity = cov * (0.55 + 0.45 * world.day); c.material.color.setScalar(bright * grey); }
+  HIMMEL.update(dt, { day: world.day, cloud: weather.cloud, flash: weather.flash, night: !!world.night, sunColor: sun.color, sunDir: world.sunDir });
   if (skylineMesh) {
     const showSkyline = !POCKET;
     skylineMesh.visible = showSkyline;
