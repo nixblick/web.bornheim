@@ -2,6 +2,8 @@
 
 ## 2026-11-13
 
+- **Laufrunden (#128):** Passanten mit grünem Läufer-Symbol laden ab und zu zu einer Runde ein („Läufst du ’ne Runde mit?“, F). Die Runde führt über 4–6 Wegpunkte auf Gehwegen rund um den Startpunkt zurück (etwa 1–3 km, grüne Ringe), der Passant läuft hinter dir mit. Gehen und Rennen zählen, Auto oder Rad bricht ab. Belohnung: Fitness (3 Punkte je km, 2–10 je Runde; bis +20 % Laufgeschwindigkeit) und EP. Höchstens eine Einladung je Ingame-Stunde, nicht bei Fahndung, im Auto oder während der Vokabaum-Mission. Neue Datei `laufrunden.js`, Probe `tools/proben/laufrunden.json` (Spieltest grün: 1,8 km, 7 Wegpunkte, Fitness +5).
+
 - **Sicherheit: Banner maskiert alle Texte:** `banner()` in `progress.js` setzte Medaillen- und Gebietsnamen ungeprüft per innerHTML. Medaillennamen können aus Streckennamen von frischlufteulen.de kommen, also von außen. Jetzt werden alle drei Texte maskiert (Hinweis der Sitzung „programmierer bornheim“).
 - **Doku:** `docs/vergleich-project-sunset.md`, der Vergleich Project Sunset vs. Bornheim aus Andrés Google Drive, als Markdown abgelegt.
 
