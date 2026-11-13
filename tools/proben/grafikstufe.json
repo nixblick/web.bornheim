@@ -1,0 +1,38 @@
+[
+ {
+  "n": "alt-hoch-vorbelegen",
+  "js": "localStorage.setItem('notgta.opts', JSON.stringify({ quality: 'hoch', zeitV2: true })); setTimeout(() => location.reload(), 200); 'neu laden'",
+  "wait": 1000,
+  "shot": false
+ },
+ {
+  "n": "alt-hoch-wird-auto",
+  "wait": 20000,
+  "js": "new Promise(r => { const t0 = Date.now(); const f = () => { const G = window.G; if (G && G.opts) r(JSON.stringify({ q: G.opts.quality, auto: G.QUALITY_AUTO, m: !!G.opts.qualityManuell, info: (document.getElementById('gpuinfo') || {}).textContent })); else if (Date.now() - t0 > 55000) r('kein G'); else setTimeout(f, 500); }; f(); })",
+  "expect": "window.G.QUALITY_AUTO === true && window.G.opts.quality !== 'hoch' && !window.G.opts.qualityManuell"
+ },
+ {
+  "n": "alt-niedrig-vorbelegen",
+  "js": "localStorage.setItem('notgta.opts', JSON.stringify({ quality: 'niedrig', zeitV2: true })); setTimeout(() => location.reload(), 200); 'neu laden'",
+  "wait": 1000,
+  "shot": false
+ },
+ {
+  "n": "alt-niedrig-wird-auto",
+  "wait": 20000,
+  "js": "new Promise(r => { const t0 = Date.now(); const f = () => { const G = window.G; if (G && G.opts) r(JSON.stringify({ q: G.opts.quality, auto: G.QUALITY_AUTO, m: !!G.opts.qualityManuell, info: (document.getElementById('gpuinfo') || {}).textContent })); else if (Date.now() - t0 > 55000) r('kein G'); else setTimeout(f, 500); }; f(); })",
+  "expect": "window.G.QUALITY_AUTO === true && !window.G.opts.qualityManuell"
+ },
+ {
+  "n": "manuell-vorbelegen",
+  "js": "localStorage.setItem('notgta.opts', JSON.stringify({ quality: 'hoch', qualityManuell: true, zeitV2: true })); setTimeout(() => location.reload(), 200); 'neu laden'",
+  "wait": 1000,
+  "shot": false
+ },
+ {
+  "n": "manuell-bleibt",
+  "wait": 20000,
+  "js": "new Promise(r => { const t0 = Date.now(); const f = () => { const G = window.G; if (G && G.opts) r(JSON.stringify({ q: G.opts.quality, auto: G.QUALITY_AUTO, m: !!G.opts.qualityManuell, info: (document.getElementById('gpuinfo') || {}).textContent })); else if (Date.now() - t0 > 55000) r('kein G'); else setTimeout(f, 500); }; f(); })",
+  "expect": "window.G.QUALITY_AUTO === false && window.G.opts.quality === 'hoch' && window.G.opts.qualityManuell === true"
+ }
+]
