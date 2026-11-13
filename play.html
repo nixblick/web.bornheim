@@ -33,8 +33,8 @@
   #cross{position:absolute;left:50%;top:50%;width:26px;height:26px;transform:translate(-50%,-50%);display:none;border:2px solid #fff9;border-radius:50%;box-shadow:0 0 4px #000}
   #cross:before,#cross:after{content:"";position:absolute;background:#fffc}
   #cross:before{left:11px;top:11px;width:4px;height:4px;border-radius:50%;background:#ffd84a}#cross:after{display:none}
-  #start{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:radial-gradient(ellipse at center,#1b2030,#07080c 70%);z-index:10}
-  #start .box{text-align:center;max-width:560px;padding:30px}
+  #start{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:radial-gradient(ellipse at center,#1b2030,#07080c 70%);z-index:10;overflow:auto}
+  #start .box{text-align:center;max-width:560px;padding:30px;margin:auto}
   #start h1{font-size:56px;margin:0;letter-spacing:2px}
   #start h1 small{display:block;font-size:16px;letter-spacing:6px;opacity:.7;font-weight:400}
   .who{display:flex;gap:18px;justify-content:center;margin:28px 0}
@@ -42,6 +42,8 @@
   .who button.sel{border-color:#ffd84a;background:#2a2a1e}
   #go{background:#ffd84a;color:#111;border:0;padding:14px 40px;border-radius:30px;font-size:18px;font-weight:700;cursor:pointer}
   #start p{opacity:.75;font-size:14px;line-height:1.6}
+  /* Kleine Schirme (Handy quer oder hochkant): Startkasten kompakt, der Rest scrollt */
+  @media (max-width:480px),(max-height:480px){#start h1{font-size:34px}#start h1 span{font-size:14px!important;border-width:2px!important;margin-left:6px!important}.who{margin:12px 0;gap:10px}.who button{min-width:0;padding:12px 18px}#start .box{padding:14px;box-sizing:border-box}}
   #loadwrap{margin-top:22px;background:#161a24;border:1px solid #333a4a;border-radius:12px;padding:14px 18px;text-align:left}
   #loadwrap .bar{height:14px;background:#0008;border-radius:7px;overflow:hidden;margin-bottom:8px}
   #loadwrap .bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,#ffd84a,#ffb020);border-radius:7px;transition:width .25s}
@@ -105,10 +107,9 @@
   #start .sub a{color:#9aa0ad;font-size:13px;text-decoration:none;margin-left:6px}
   #gpuinfo{opacity:.45;font-size:11px;margin-top:10px}
   #menu .row2{display:flex;gap:8px}#menu .row2 button{flex:1}
-  #mobile{position:fixed;inset:0;z-index:50;background:#0b0d12;display:none;align-items:center;justify-content:center;text-align:center;padding:30px}
   #fps{position:absolute;left:16px;top:72px;font:12px monospace;color:#9f9;text-shadow:0 1px 2px #000;display:none}
   #weapon{font-size:13px;margin-top:6px;opacity:.95}#weapon b{font-size:16px;margin-right:4px}#weapon span{opacity:.75;margin-left:6px;font-variant-numeric:tabular-nums}
-  #wbar{position:absolute;left:50%;top:92px;transform:translateX(-50%);display:none;gap:4px;background:#000b;padding:6px;border-radius:12px}
+  #wbar{position:absolute;left:50%;top:92px;transform:translateX(-50%);display:none;gap:4px;background:#000b;padding:6px;border-radius:12px;flex-wrap:wrap;justify-content:center;max-width:calc(100vw - 16px);width:max-content;box-sizing:border-box}
   #wbar div{width:64px;height:58px;border:2px solid #444;border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;font-size:9px;color:#ccc;text-align:center;line-height:1.1}
   #wbar div i{font-style:normal;font-size:20px;margin-bottom:3px}#wbar div small{position:absolute;left:4px;top:2px;color:#888}#wbar div.sel{border-color:#ffd84a;background:#2a2a1e;color:#fff}#wbar div.off{opacity:.25}
   #hotbar .slot i{font-style:normal;font-size:20px;background:none!important;width:auto;height:auto}#hotbar .slot.sp{border-color:#5a3d7a}#hotbar .slot.sp.sel{border-color:#c86bff;background:#2a1e33}#hotbar .slot{width:52px;height:56px}#hotbar{pointer-events:auto;flex-wrap:wrap;justify-content:center;max-width:calc(100vw - 32px);width:max-content;box-sizing:border-box}#hotbar .slot{cursor:pointer}#hotbar .slot b{color:#ffd84a;font-weight:700}
@@ -141,10 +142,9 @@
   <div id="loadwrap"><div class="bar"><i id="loadbar"></i></div><div id="loading">Lade Stadt …</div><small>Beim ersten Mal etwa 25 MB. Die Stadt baut sich danach beim Laufen und Fahren weiter auf.</small></div>
   <div class="sub"><button id="s_opts">Einstellungen</button><button id="s_import">Spielstand importieren</button><button id="s_feedback">🐞 Fehler melden</button><a href="./">← Startseite</a></div>
   <div id="gpuinfo"></div>
-  <p>WASD laufen · Maus umschauen · Shift rennen · Leertaste springen · E Auto klauen / aussteigen<br>
-     Linksklick angreifen · 1–0 / Mausrad Waffen · R nachladen · F Geschäft, U-Bahn, Hauseingang, Dach · M große Karte · N Minikarte drehen<br>G Leute sammeln / Sprechchor · V filmen · X Dialog weiter · C Kreativmodus · Esc Menü (Story, Einstellungen)</p>
+  <p id="starthelp">WASD laufen · Maus umschauen · Shift rennen · Leertaste springen · E Auto klauen / aussteigen<br>
+     Linksklick angreifen · 1–0 / Mausrad Waffen · R nachladen · F Geschäft, U-Bahn, Hauseingang, Dach · M große Karte · N Minikarte drehen<br>G Leute sammeln / Sprechchor · V filmen · X Dialog weiter · C Kreativmodus · H Handy (zu Fuß) · F1 Hilfe · Esc Menü (Missionen, Einstellungen)</p>
 </div></div>
-<div id="mobile"><div><h2>Bornheim braucht Tastatur und Maus</h2><p>Öffne das Spiel am Rechner. Auf Handys und Tablets ist es nicht spielbar.</p><p><a href="./" style="color:#ffd84a">Zur Startseite</a> · <a href="#" id="mobile_anyway" style="color:#9aa0ad">Trotzdem laden</a></p></div></div>
 <div id="loaderr"><div class="box"><h2 id="loaderr_t">Das Spiel konnte nicht starten</h2><p id="loaderr_p"></p><code id="loaderr_c"></code><button onclick="location.reload()">Neu laden</button> <a class="b" href="./">Zur Startseite</a> <button id="loaderr_fb">🐞 Fehler melden</button></div></div>
 <div id="flash"></div><div class="fx" id="fx_spray"></div><div class="fx" id="fx_water"></div><div class="fx" id="fx_paint"></div><div id="card"></div>
 <canvas id="bigmap"></canvas>
@@ -217,7 +217,8 @@
       <label>Sprechchöre und Durchsagen vorlesen <input id="o_tts" type="checkbox"></label>
     </div>
     <div class="pane help" data-tab="hilfe" style="display:none">
-      <p class="start"><kbd>WASD</kbd> laufen · <kbd>E</kbd> einsteigen · <kbd>F</kbd> benutzen · <kbd>M</kbd> Karte</p>
+      <p class="start"><kbd>WASD</kbd> laufen · <kbd>E</kbd> einsteigen · <kbd>F</kbd> benutzen · <kbd>M</kbd> Karte · <kbd>H</kbd> Handy (zu Fuß): Missionen, Nebenjobs, Speichern</p>
+      <p id="touchhelp" style="display:none;font-size:13px;line-height:1.6;margin:0 0 12px">Stick links: laufen und lenken, ganz nach vorn: rennen · rechts wischen: umsehen · Knöpfe rechts wechseln je nach Lage · 📱 Handy (zu Fuß): Missionen, Speichern · Untertitel antippen: Dialog weiter · Munition antippen: nachladen · Minikarte antippen: große Karte · Ziel antippen: ausblenden · ☰ Menü</p>
       <details><summary>🚗 Fahrzeuge</summary><p>Neben Auto, Fahrrad oder Motorrad stellen und <kbd>E</kbd>. Räder stehen an Fahrradständern.</p></details>
       <details><summary>🚁 Christoph 2 fliegen</summary><p>BG Unfallklinik Seckbach: am Eingang <kbd>F</kbd> (Aufzug), oben <kbd>E</kbd>. <kbd>Leertaste</kbd> hoch, <kbd>Shift</kbd> runter, <kbd>WASD</kbd> lenken.</p></details>
       <details><summary>🚇 U-Bahn</summary><p>Am Eingang <kbd>F</kbd>, Ziel wählen, losfahren.</p></details>
@@ -257,7 +258,7 @@
   var mobile = matchMedia('(pointer: coarse)').matches && !matchMedia('(pointer: fine)').matches;
   function start() { var s = document.createElement('script'); s.type = 'module'; s.src = 'game.js?v=2'; s.onerror = function () { fail('Das Spiel konnte nicht laden', 'Eine Spieldatei fehlt oder ließ sich nicht laden (game.js oder eines seiner Module). Neu laden hilft oft. Bleibt es, melde den Fehler bitte mit dem Knopf unten.'); }; document.body.appendChild(s); }
   // Handy und Tablet: Touch-Steuerung (touch.js) und beim ersten Start sparsame Einstellungen
-  if (mobile) { window.__touch = true; try { if (!localStorage.getItem('notgta.opts')) localStorage.setItem('notgta.opts', JSON.stringify({ quality: 'niedrig', view: 300, scale: 0.8, shadows: false, ao: false, bloom: 0, peds: 0.6, traffic: 0.6, dynres: true, lod: true, minimap: true })); } catch (e) {} var ts = document.createElement('script'); ts.src = 'touch.js'; document.body.appendChild(ts); }
+  if (mobile) { window.__touch = true; try { if (!localStorage.getItem('notgta.opts')) localStorage.setItem('notgta.opts', JSON.stringify({ quality: 'niedrig', view: 300, scale: 0.8, shadows: false, ao: false, bloom: 0, peds: 0.6, traffic: 0.6, dynres: true, lod: true, minimap: true })); } catch (e) {} var ts = document.createElement('script'); ts.src = 'touch.js'; document.body.appendChild(ts); var th = document.getElementById('touchhelp'), sh = document.getElementById('starthelp'); if (th) { th.style.display = ''; if (sh) sh.textContent = th.textContent; } }
   if ('serviceWorker' in navigator && location.protocol !== 'file:') { navigator.serviceWorker.register('./sw.js').catch(function () {}); }
   start();
 })();
