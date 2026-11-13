@@ -61,7 +61,7 @@ export function initPhone(X, S) {
   function appMap(p) { p.innerHTML = '<p class="ps-pempty">Karte öffnet sich …</p>'; close(); if (X.openMenu) { X.openMenu(); if (X.menuTab) X.menuTab('karte'); } }
   function appStats(p) { p.innerHTML = `<div class="ps-pstats">${S.PROGRESS && S.PROGRESS.html ? S.PROGRESS.html(true) : ''}</div>`; }
   function appSave(p) { p.innerHTML = `<div class="ps-pbtns"><button class="ps-pbtn is-amber" data-a="save">💾 Schnellspeichern (F6)</button><button class="ps-pbtn" data-a="menu">Pausenmenü öffnen</button></div>`;
-    p.querySelector('[data-a=save]').onclick = () => { try { X.saveGame(true); toast('Gespeichert', 'success'); } catch (e) { toast('Speichern fehlgeschlagen', 'error'); } };
+    p.querySelector('[data-a=save]').onclick = () => { try { X.saveGame(true, true); /* bewusst gespeichert */ toast('Gespeichert', 'success'); } catch (e) { toast('Speichern fehlgeschlagen', 'error'); } };
     p.querySelector('[data-a=menu]').onclick = () => { close(); X.openMenu && X.openMenu(); }; }
   function appCam(p) { p.innerHTML = `<div class="ps-pbtns"><p class="ps-pempty">Foto vom Spielbild, ohne Handy. Wird als PNG heruntergeladen.</p><button class="ps-pbtn is-amber" data-a="shot">📷 Foto machen</button></div>`;
     p.querySelector('[data-a=shot]').onclick = () => { root.style.visibility = 'hidden'; requestAnimationFrame(() => { try { const G = /** @type {any} */ (window).G, cv = X.renderer.domElement; const c = G && G.composerRef && G.composerRef(); if (c && c.render) c.render(); else X.renderer.render(X.scene, X.camera); const a = document.createElement('a'); a.href = cv.toDataURL('image/png'); a.download = 'bornheim-' + new Date().toISOString().slice(0, 19).replace(/[T:]/g, '-') + '.png'; a.click(); toast('Foto gespeichert', 'success'); } catch (e) { toast('Foto nicht möglich', 'error'); } root.style.visibility = ''; }); }; }
@@ -81,7 +81,7 @@ export function initPhone(X, S) {
   // ---------- Öffnen / Schließen ----------
   let tick = 0;
   function show(id) { if (!X.started || open) return false; if (X.menuOpen()) X.closeMenu(); open = true; for (const k in X.keys) X.keys[k] = false; /* gehaltene Taste läuft sonst weiter */ root.style.display = 'block'; /** @type {any} */ (window).__noAutoMenu = true; try { document.exitPointerLock(); } catch (e) {} home(); if (id) openApp(id); tick = window.setInterval(() => { root.querySelector('.ps-phone__clock').textContent = clock(); const bc = root.querySelector('.ps-phone__bigclock'); if (bc) bc.textContent = clock(); }, 1000); root.querySelector('.ps-phone__clock').textContent = clock(); sfx && sfx('click', 0.5); return true; }
-  function close() { if (!open) return; open = false; app = null; root.style.display = 'none'; clearInterval(tick); /** @type {any} */ (window).__noAutoMenu = false; if (X.started && !X.menuOpen() && X.lockMouse) X.lockMouse(); }
+  function close() { if (!open) return; open = false; app = null; root.style.display = 'none'; clearInterval(tick); const vk = !!(S.VOKA && S.VOKA.mission); /* Vokabaum-Fenster gerade aus dem Handy gestartet: Maus frei lassen */ /** @type {any} */ (window).__noAutoMenu = vk; if (X.started && !X.menuOpen() && !vk && X.lockMouse) X.lockMouse(); }
   function toggle() { return open ? (close(), false) : show(); }
   addEventListener('keydown', e => {
     if (open && e.code === 'Escape') { e.preventDefault(); e.stopImmediatePropagation(); back(); return; }

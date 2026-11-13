@@ -45,7 +45,7 @@ export function initSpielstaende(X) {
     if (!alt && l.length >= MAX) { msg('HÖCHSTENS ' + MAX + ' SPIELSTÄNDE'); return false; }
     let nid = '';
     try {
-      A.saveGame(true); // schreibt notgta.save frisch; Fortschritt und Story speichern sich selbst
+      A.saveGame(true, true); // schreibt notgta.save frisch (bewusst, auch nach „Neues Spiel“); Fortschritt und Story speichern sich selbst
       nid = alt ? alt.id : Date.now().toString(36) + Math.floor(performance.now() % 1000).toString(36);
       localStorage.setItem(PRE + nid, JSON.stringify(snapshot()));
       const m = { id: nid, ...meta(name || (alt && alt.name)) };
