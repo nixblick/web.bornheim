@@ -29,7 +29,7 @@ function rauschen(N) {
 
 const VERT = 'varying vec3 vW; void main(){ vW = position; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }';
 const FRAG = `uniform vec3 top; uniform vec3 bot; uniform sampler2D wolkenTex;
-uniform vec4 wolken; // x Bedeckung 0..1, y Deckkraft, z/w Windversatz (je 0..1)
+uniform vec4 wolken; // x Schwelle im Rauschen (klein = dichte Decke), y Deckkraft, z/w Windversatz (je 0..1)
 uniform vec3 wolkenHell; uniform vec3 wolkenDunkel; uniform vec3 sonneRicht; uniform vec3 sonneGlanz;
 varying vec3 vW;
 void main(){
@@ -43,7 +43,7 @@ void main(){
 #ifdef HIMMEL_FEIN
     n = n * 0.72 + texture2D(wolkenTex, uv * 3.0 + wolken.zw * 3.0).r * 0.28;
 #endif
-    float lo = mix(0.80, 0.22, wolken.x);
+    float lo = wolken.x;
     float a = smoothstep(lo, lo + 0.2, n) * smoothstep(0.01, 0.17, d.y) * wolken.y;
     float dick = smoothstep(lo + 0.05, lo + 0.5, n);
     vec3 wc = mix(wolkenHell, wolkenDunkel, dick * 0.75);
@@ -77,14 +77,15 @@ export function makeHimmel(THREE, fein) {
   function update(dt, s) {
     // Zug der Wolken: rund 2,5 m/s in 230 m Höhe wie die alten Sprites; je Achse auf 0..1 gefaltet (Oktave 2 nimmt das Dreifache, bleibt nahtlos)
     wx = (wx + dt * 0.0012) % 1; wz = (wz + dt * 0.0004) % 1;
-    const w = U.wolken.value; w.x = 0.25 + 0.75 * s.cloud; w.y = (0.6 + 0.4 * s.day) * (0.55 + 0.45 * s.cloud); w.z = wx; w.w = wz;
-    const hell = (0.2 + 0.8 * s.day) * (1 - s.cloud * 0.4) + s.flash * 1.5;
+    // Schwelle: klar rund 15 % Himmel bedeckt, bewölkt (0,7) rund 80 %, Regen und Gewitter (ab 0,9) geschlossene Decke ohne blaue Löcher
+    const c = Math.max(0, Math.min(1, s.cloud)); const w = U.wolken.value; w.x = c < 0.7 ? 0.56 - 0.414 * c : 0.27 - (c - 0.7) * 1.57; w.y = (0.6 + 0.4 * s.day) * (0.55 + 0.45 * c); w.z = wx; w.w = wz;
+    const hell = (0.14 + 0.86 * s.day) * (1 - c * 0.55) + s.flash * 1.5; // Regendecke deutlich dunkler
     // Wolkenfarbe: Weiß, zur Hälfte in der Lichtfarbe der Sonne (abends warm, nachts kühl)
-    U.wolkenHell.value.setRGB(1, 1, 1).lerp(s.sunColor, 0.5).multiplyScalar(hell);
+    U.wolkenHell.value.setRGB(1, 1, 1).lerp(s.sunColor, 0.5 - 0.3 * c).multiplyScalar(hell);
     // Unterseite: dunkler, je dichter die Decke, leicht in Himmelsfarbe
-    U.wolkenDunkel.value.copy(U.wolkenHell.value).multiplyScalar(0.8 - 0.32 * s.cloud).lerp(_c.copy(U.top.value), 0.18);
+    U.wolkenDunkel.value.copy(U.wolkenHell.value).multiplyScalar(0.8 - 0.32 * c).lerp(_c.copy(U.top.value), 0.18);
     U.sonneRicht.value.copy(s.sunDir).normalize();
-    const g = s.night ? 0 : Math.max(0, Math.min(1, U.sonneRicht.value.y * 4)) * (1 - s.cloud * 0.7) * 0.6; // nachts trägt sun das Mondlicht: kein Rand
+    const g = s.night ? 0 : Math.max(0, Math.min(1, U.sonneRicht.value.y * 4)) * (1 - c * 0.7) * 0.6; // nachts trägt sun das Mondlicht: kein Rand
     U.sonneGlanz.value.copy(s.sunColor).multiplyScalar(g);
   }
   return { dome, uniforms: U, update };
