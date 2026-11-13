@@ -8,9 +8,9 @@
 // Die Kuppel liegt auf der fernsten Tiefe und wird als letztes deckendes Objekt gezeichnet: der Shader läuft nur dort,
 // wo wirklich Himmel zu sehen ist (Early-Z), nicht mehr unter Häusern und Boden.
 
-/** Kachelbares Werterauschen, fünf Oktaven, fester Zufall (Bilder der Proben bleiben vergleichbar). @param {number} N */
-function rauschen(N) {
-  let s = 0x9e3779b9; const rand = () => { s |= 0; s = s + 0x6d2b79f5 | 0; let t = Math.imul(s ^ s >>> 15, 1 | s); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+/** Kachelbares Werterauschen, fünf Oktaven, fester Zufall (Bilder der Proben bleiben vergleichbar); auch von wasser.js genutzt. @param {number} N @param {number} [seed] */
+export function rauschen(N, seed = 0x9e3779b9) {
+  let s = seed; const rand = () => { s |= 0; s = s + 0x6d2b79f5 | 0; let t = Math.imul(s ^ s >>> 15, 1 | s); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
   const f = new Float32Array(N * N); let amp = 1;
   for (const p of [4, 8, 16, 32, 64]) {
     const g = new Float32Array(p * p); for (let i = 0; i < g.length; i++) g[i] = rand();
