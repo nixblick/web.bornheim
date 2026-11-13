@@ -1,3 +1,4 @@
+import { disposeHierarchy } from './dispose.js';
 // Wahrzeichen, von Hand ausgearbeitet (12.11.2026): das Uhrtürmchen auf der Berger Straße.
 // Ein einziges Objekt aus wenigen Dreh- und Kastenkörpern, eine geteilte Zifferblatt-Textur, die einmal
 // pro Minute die echte Uhrzeit zeigt. Gebaut wird erst, wenn der Spieler in der Nähe ist (Gelände ist dann
@@ -46,7 +47,7 @@ export function initLandmarks(X) {
     g.position.set(poi.x, TH(poi.x, poi.z), poi.z);
     scene.add(g); return g;
   }
-  function drop() { scene.remove(grp); grp.traverse(o => { if (o.geometry) o.geometry.dispose(); if (o.material) { if (o.material.map) o.material.map.dispose(); o.material.dispose(); } }); grp = null; clockTex = null; }
+  function drop() { scene.remove(grp); disposeHierarchy(grp); grp = null; clockTex = null; }
 
   // Standort (12.11.2026): Mitten auf dem Bornheimer Wochenmarkt-Platz vor der Arnsburger Straße (~50 m nordöstlich,
   // x: -196, z: 427, 12,9 m Abstand zu den Häuserfassaden auf beiden Seiten).

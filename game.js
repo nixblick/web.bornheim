@@ -21,6 +21,7 @@ import { initEulen } from './eulen.js';
 import { initVokabaum } from './vokabaum.js';
 import { initLandmarks } from './landmarks.js';
 import { initWahrzeichen, markLandmark } from './wahrzeichen.js';
+import { disposeHierarchy } from './dispose.js';
 const GradeShader = { uniforms: { tDiffuse: { value: null }, vig: { value: 0.32 }, wet: { value: 0 }, night: { value: 0 } }, vertexShader: 'varying vec2 vUv; void main(){ vUv=uv; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0); }',
   fragmentShader: 'uniform sampler2D tDiffuse; uniform float vig, wet, night; varying vec2 vUv; void main(){ vec4 c=texture2D(tDiffuse,vUv); vec3 col=c.rgb; float l=dot(col,vec3(0.299,0.587,0.114)); col=mix(vec3(l),col,1.12-wet*0.25); col=(col-0.5)*1.06+0.5; col*=mix(vec3(1.0),vec3(0.92,0.97,1.06),wet*0.7+night*0.5); col=mix(col,col*vec3(1.04,1.0,0.94),0.6*(1.0-night)); vec2 d=vUv-0.5; col*=1.0-vig*dot(d,d)*2.2; gl_FragColor=vec4(clamp(col,0.0,1.0),c.a); }' };
 let aoPass = null, gradePass = null;
@@ -2918,7 +2919,7 @@ function cancelJob() { if (!job) return; const t = { built: true, grp: job.grp, 
 function unbuildTile(t) { barrierDrop(t);
   if (!t.built) return; scene.remove(t.grp); const L = OWN_LISTS();
   L.forEach((l, i) => { const own = t.owned[i]; if (!own.length) return; const s = new Set(own); let w = 0; for (let r = 0; r < l.length; r++) if (!s.has(l[r])) l[w++] = l[r]; l.length = w; });
-  t.grp.traverse(o => { if (o.geometry && !o.geometry.userData.shared) o.geometry.dispose(); if (o.isInstancedMesh) o.dispose(); const ms = Array.isArray(o.material) ? o.material : o.material ? [o.material] : []; for (const m of ms) if (!m.userData.shared) { if (m.userData.ownTex && m.map) m.map.dispose(); m.dispose(); } });
+  disposeHierarchy(t.grp, { keep: x => x.isTexture && !(x.userData && x.userData.own) }); /* Kachel-Texturen kommen aus Caches (TEX, Fassaden, Gehweg), Speicherprobe #120: Zahl bleibt stabil; eigene markiert userData.own */
   t.grp = null; t.owned = null; t.built = false;
 }
 function rebuildAllTiles() { let n = 0; for (const [, t] of TILES) if (t.built && (t.mul !== groundMul() || !!t.potato !== !!opts.potato)) { unbuildTile(t); n++; } if (n) refreshActive(); }

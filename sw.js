@@ -14,6 +14,7 @@ const CORE_ASSETS = [
   './story.js',
   './shops.js',
   './interiors.js',
+  './dispose.js',
   './progress.js',
   './fire.js',
   './heli.js',

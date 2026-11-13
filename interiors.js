@@ -1,3 +1,4 @@
+import { disposeHierarchy } from './dispose.js';
 // Innenräume: U-Bahn (echte Stationen, Eingänge und Linien aus OSM, Fahrt quer durch Frankfurt), Läden und Treppenhäuser.
 // Ein Innenraum wird bei Bedarf weit außerhalb der Stadt aufgebaut (Taschenraum) und beim Verlassen wieder abgebaut.
 export function initInteriors(X, W, D, SH) {
@@ -44,7 +45,7 @@ export function initInteriors(X, W, D, SH) {
     player.pos.set(PX + spawn[0], 0, PZ + spawn[1]); player.vy = 0; if (player.mesh) player.mesh.position.copy(player.pos); camYaw.v = yaw; camPitch.v = 0.12;
     const mm = $('minimap'); if (mm) mm.style.visibility = 'hidden'; sfx('click', 0.4);
   }
-  function leaveSilent() { if (!inside) return; scene.remove(inside.g); for (const n of inside.npc || []) inside.g.remove(n); /* Figurenmodelle teilen Geometrie, nicht freigeben */ inside.g.traverse(o => { if (o.geometry) o.geometry.dispose(); if (o.material) { if (o.material.map && o.material.map.isCanvasTexture) o.material.map.dispose(); o.material.dispose(); } }); inside = null; X.setPocket(null); const mm = $('minimap'); if (mm) mm.style.visibility = ''; }
+  function leaveSilent() { if (!inside) return; scene.remove(inside.g); for (const n of inside.npc || []) inside.g.remove(n); /* Figurenmodelle teilen Geometrie, nicht freigeben */ disposeHierarchy(inside.g, { preserveShared: false, keep: x => x.isTexture && !x.isCanvasTexture }); /* wie bisher: nur eigene Canvas-Texturen frei, Bild-Texturen aus Caches bleiben */ inside = null; X.setPocket(null); const mm = $('minimap'); if (mm) mm.style.visibility = ''; }
   function leave() { if (!inside) return; const e = inside.exit; if (e.fix) e.fix(); leaveSilent(); const y = e.y ?? TH(e.x, e.z); player.pos.set(e.x, y, e.z); player.vy = 0; if (player.mesh) player.mesh.position.copy(player.pos); camYaw.v = e.yaw ?? camYaw.v; sfx('click', 0.4); }
   const trig = (R, x, z, r, label, act) => R.triggers.push({ x, z, r, label, act });
 

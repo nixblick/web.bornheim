@@ -1,3 +1,4 @@
+import { disposeHierarchy } from './dispose.js';
 // Wahrzeichen der Innenstadt nach Wikipedia (#73, André 12.11.2026): Alte Oper, Römer, Kaiserdom, Paulskirche und die
 // Hochhäuser. Vorbild landmarks.js: je Bau eine Gruppe aus wenigen Grundkörpern und eine Canvas-Textur, gebaut erst in
 // Spielernähe, beim Weggehen mit dispose wieder abgebaut. Lage und Größe kommen aus dem OSM-Footprint (data/tiles), den
@@ -186,7 +187,7 @@ export function initWahrzeichen(X) {
     g.position.set(ob.cx, y0, ob.cz); g.rotation.y = Math.atan2(fx, fz);
     g.userData.mats = mats; scene.add(g); return g;
   }
-  function drop(g) { scene.remove(g); g.traverse(o => { if (o.geometry) o.geometry.dispose(); }); for (const m of g.userData.mats) { if (m.map) m.map.dispose(); m.dispose(); } }
+  function drop(g) { scene.remove(g); disposeHierarchy(g); for (const m of g.userData.mats) { if (m.map) m.map.dispose(); m.dispose(); } /* auch Materialien, die gerade an keinem Mesh hängen */ }
   // Fernsicht (André 13.11.2026): Der Szenen-Nebel endet je nach Stufe bei 250–700 m, dahinter waren Dom und Skyline weg.
   // Wahrzeichen nehmen nicht am Nebel teil, sondern bekommen einen eigenen, weiteren Dunst: Farbe gleitet bis FERN zur Nebelfarbe.
   const FERN = 2200, _fc = new THREE.Color();
