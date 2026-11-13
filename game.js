@@ -2968,7 +2968,7 @@ function streamUpdate(dt, force = false) {
   let best = null, bd = 1e9; for (let a = -R_MESH; a <= R_MESH; a++) for (let b = -R_MESH; b <= R_MESH; b++) { const t = TILES.get(tkey(ptx + a, ptz + b)); if (!t || t.built || !neighborsReady(t.tx, t.tz)) continue; const d = a * a + b * b; if (d < bd) { bd = d; best = t; } }
   const lod = opts.lod !== false;
   if (!best && lod) { for (let a = -1; a <= 1 && !best; a++) for (let b = -1; b <= 1; b++) { const t = TILES.get(tkey(ptx + a, ptz + b)); if (t && t.built && t.lod === 'far') { best = t; break; } } if (best) { job = makeUpgrade(best); stepJob(); buildT = 0.05; return; } }
-  if (best) { const far = lod && Math.max(Math.abs(best.tx - ptx), Math.abs(best.tz - ptz)) >= 2; job = makeJob(best, far); stepJob(); /* auch die Kachel unter dem Spieler in Stücken: am Stück lag ein Bild bei mehreren 100 ms (#173); hereReady hält das Spiel solange an */ buildT = 0.05; }
+  if (best) { const far = lod && Math.max(Math.abs(best.tx - ptx), Math.abs(best.tz - ptz)) >= 2; if (bd === 0) { const t0 = performance.now(); buildTileNow(best); refreshActive(); BUILD_STAT.ms += performance.now() - t0; } /* Kachel unter dem Spieler am Stück: das Spiel steht ohnehin (hereReady); in Stücken hing die Probe wettbewerb (#173) */ else { job = makeJob(best, far); stepJob(); } buildT = 0.05; }
 }
 // Großer Hinweis mit Balken, solange der Boden unter dem Spieler noch nicht gebaut ist (Fortschritt: Kacheln im Umkreis)
 const buildEl = $('build');
