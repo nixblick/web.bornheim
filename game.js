@@ -3018,7 +3018,7 @@ const quickPairs = [];
     const push = () => { if (c.type === 'checkbox') o.checked = c.checked; else o.value = c.value; o.dispatchEvent(new Event('input', { bubbles: true })); o.dispatchEvent(new Event('change', { bubbles: true })); show(); };
     c.addEventListener('input', push); c.addEventListener('change', push); quickPairs.push([o, c, show]); } } }
 function quickSync() { for (const [o, c, show] of quickPairs) { if (c.type === 'checkbox') c.checked = o.checked; else c.value = o.value; show(); } }
-MENU_HOOKS.push(() => setTimeout(() => { quickSync(); MENU_TAB('schnell'); }, 0));
+MENU_HOOKS.push(() => setTimeout(quickSync, 0)); /* #150: Startseite setzt menu.js (Übersicht), damit F1 und Handy-Karte ihren Reiter behalten */
 // Karte im Menü: springen, U-Bahn und Bus fahren
 let pmX = 0, pmZ = 0, pmSpan = 3000; const PM_OFF = new Set(); const pmHits = [];
 // Übersicht der ganzen Stadt (data/overview.json, tools/build_overview.py): Hintergrund für Gegenden ohne geladene Kachel
