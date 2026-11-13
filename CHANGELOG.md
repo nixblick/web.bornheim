@@ -2,6 +2,8 @@
 
 ## 2026-11-13
 
+- Frischlufteulen (#61): Strecken werden auf das Spielgebiet zugeschnitten (längster zusammenhängender Abschnitt in vorhandenen Kacheln), je Strecke eine Startsäule am ersten Punkt, Wegpunkte von der Fahrbahn geschoben; Text nennt ehrlich „Abschnitt im Spielgebiet: N km von M km“; unter 1 km keine Mission (Konsole). Marathon 42,9 km ganz im Gebiet, Megamarsch 15,8 km von 101,8 km. Probe tools/proben/eulen.json, Spieltest auf GitHub.
+
 - **Eschenheimer Turm als Wahrzeichen (#92):** Statt des 16-m-Klotzes aus OSM jetzt Rundturm (10,2 m Durchmesser) mit Wehrgang in 31 m, vier Scharwachttürmchen und Spitzhelm bis 48 m (Maße aus de.wikipedia). Dom (#93, Westturm 94,8 m laut Wikipedia, Modell 95 m) und Paulskirche (#95, Modell 56 m, Wikipedia nennt keine Turmhöhe) unverändert. Neue Proben in `tools/proben/wahrzeichen.json` (Rundum-Strahlen Eschenheimer Turm, Höhe je Modell, Dom und Paulskirche aus 200 m Entfernung und 60 m Höhe, Eschenheimer Turm vom Boden aus 90 m).
 - **Messeturm im Fern-Dunst:** Fassade, Krone, Glaszylinder und Pyramide nehmen wie die Wahrzeichen nicht mehr am Szenen-Nebel teil, sondern am weiten Dunst aus `wahrzeichen.js` (Liste `FAR_HAZE`, für weitere Bauten offen). Grenze: In der Sparstufe baut das Spiel nur Kacheln im Umkreis von etwa 500–750 m; weiter entfernte Bauten fehlen ganz, Dunst hin oder her. Spieltest GitHub: fernsicht/wahrzeichen ohne Fehler, Messeturm angemeldet; Sichtprüfung im Bild steht noch aus (Probe blickt am Turm vorbei).
 

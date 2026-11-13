@@ -10,7 +10,15 @@ export function initEulen(X) {
   const load = async () => { for (const u of ['https://frischlufteulen.de/api/spiel/strecken.json']) { try { const r = await fetch(u); if (!r.ok) continue; const d = await r.json(); if (d && d.strecken && d.strecken.length) return d.strecken; } catch (e) { /* nächste Quelle */ } } return []; };
   // API-Daten landen per innerHTML in card(): Name ohne HTML-Zeichen, Länge als Zahl, Link nur auf frischlufteulen.de (Nachttest 13.11.)
   const clean = r => { const l = String(r.link || ''); return { name: String(r.name || 'Strecke').replace(/[<>&"'`]/g, '').slice(0, 80), laenge_km: Math.round((Number(r.laenge_km) || 0) * 10) / 10, link: /^https:\/\/frischlufteulen\.de(\/[^"'<>\s]*)?$/.test(l) ? l : 'https://frischlufteulen.de/' }; };
-  load().then(s => { routes = s.map(r => ({ ...r, ...clean(r), marathon: r.marathon || /marathon/i.test(r.name || ''), pts: (r.linie || []).map(xy) })).filter(r => r.pts.length > 1); if (routes.length) { for (const p of posters) scene.remove(p); posters = []; /* Säulen neu verteilen, jetzt mit Eulen-Motiv */ } buildStart(); });
+  // Zuschnitt auf das Spielgebiet (#61): nur Punkte in vorhandenen Kacheln (Index wie interiors.js reachable), längster zusammenhängender Abschnitt
+  const inArea = ([x, z]) => !!(X.WIDX && X.WIDX.tiles[Math.floor(x / X.TS) + '_' + Math.floor(z / X.TS)]);
+  const plen = a => { let s = 0; for (let i = 1; i < a.length; i++) s += Math.hypot(a[i][0] - a[i - 1][0], a[i][1] - a[i - 1][1]); return s; };
+  const section = all => { let best = [], cur = []; for (const q of all) { if (inArea(q)) cur.push(q); else { if (plen(cur) > plen(best)) best = cur; cur = []; } } if (plen(cur) > plen(best)) best = cur; return best; };
+  const prep = r => { const all = (r.linie || []).map(xy).filter(q => q.every(Number.isFinite)); const pts = section(all); const km = Math.round(plen(pts) / 100) / 10;
+    const full = pts.length === all.length; const endIn = all.length > 1 && inArea(all[all.length - 1]);
+    if (pts.length < 2 || km < 1) { console.info(`Frischlufteulen: „${r.name}“ nicht angeboten, im Spielgebiet nur ${km} km`); return null; }
+    return { ...r, pts, km_gebiet: km, ganz: full, ziel: endIn ? all[all.length - 1] : pts[pts.length - 1], info: full ? `${r.laenge_km} km` : `Abschnitt im Spielgebiet: ${String(km).replace('.', ',')} km von ${String(r.laenge_km).replace('.', ',')} km` }; };
+  load().then(s => { routes = s.map(r => prep({ ...r, ...clean(r), marathon: r.marathon || /marathon/i.test(r.name || '') })).filter(Boolean); if (routes.length) { for (const p of posters) scene.remove(p); posters = []; /* Säulen neu verteilen, jetzt mit Eulen-Motiv */ } buildStart(); });
 
   // ---------- Plakat (gezeichnet): Eule, Titel, Streckenname ----------
   const posterTex = name => canvasTex(256, 384, (c, w, h) => { const g = c.createLinearGradient(0, 0, 0, h); g.addColorStop(0, '#1f5b3a'); g.addColorStop(1, '#0f2f20'); c.fillStyle = g; c.fillRect(0, 0, w, h);
@@ -38,20 +46,23 @@ export function initEulen(X) {
     for (const s of stops.slice(0, 4 - posters.length)) { for (const [ox, oz] of [[3, 3], [-3, 3], [3, -3], [-3, -3]]) { const x = s.x + ox, z = s.z + oz; if (solidAt(x, z) >= 0 || (X.nearestRoadDir && (() => { const n = X.nearestRoadDir(x, z, 8); return n && Math.hypot(n.x - x, n.z - z) < n.w / 2 + 0.8; })())) continue; posters.push(litfass(x, z, nextMotif())); break; } } }
 
   // ---------- Start-Markierung des Marathons (grüne Eulen-Säule) ----------
-  function buildStart() { const m = routes.find(r => r.marathon); if (!m || startMark) return; const [x, z] = m.pts[0]; startMark = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 1.2, 60, 16, 1, true), new THREE.MeshBasicMaterial({ color: 0x3ad17a, transparent: true, opacity: 0.25, depthWrite: false })); startMark.position.set(x, TH(x, z) + 30, z); scene.add(startMark); startMark.userData.route = m; }
+  // je angebotener Strecke eine Säule am ersten Punkt des Abschnitts im Spielgebiet, von der Fahrbahn geschoben, sobald die Kachel steht
+  const offRoad = q => { if (q.off || !X.pushOffRoads) return q; const [nx, nz] = X.pushOffRoads(q[0], q[1], 1.0); if (!Number.isNaN(nx) && Math.hypot(nx - q[0], nz - q[1]) < 25) { q[0] = nx; q[1] = nz; } q.off = true; return q; };
+  function buildStart() { if (startMark) return; startMark = []; for (const r of routes) { r.pts[0] = r.pts[0].slice(); const [x, z] = r.pts[0]; const m = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 1.2, 60, 16, 1, true), new THREE.MeshBasicMaterial({ color: 0x3ad17a, transparent: true, opacity: 0.25, depthWrite: false })); m.position.set(x, TH(x, z) + 30, z); scene.add(m); m.userData.route = r; startMark.push(m); } }
+  function placeMarks() { for (const m of startMark || []) { const q = m.userData.route.pts[0]; if (q.off || Math.hypot(q[0] - player.pos.x, q[1] - player.pos.z) > 200) continue; offRoad(q); m.position.set(q[0], TH(q[0], q[1]) + 30, q[1]); } }
 
   // ---------- Lauf ----------
   const ringMat = new THREE.MeshBasicMaterial({ color: 0x3ad17a, transparent: true, opacity: 0.8 }); let ring = null;
-  function wps(r) { const out = [r.pts[0]]; let acc = 0; for (let i = 1; i < r.pts.length; i++) { const a = r.pts[i - 1], b = r.pts[i]; acc += Math.hypot(b[0] - a[0], b[1] - a[1]); if (acc > (r.marathon ? 900 : 300) || i === r.pts.length - 1) { out.push(b); acc = 0; } } return out; }
+  function wps(r) { if (r.W) return r.W; const out = r.W = [r.pts[0]]; let acc = 0; for (let i = 1; i < r.pts.length; i++) { const a = r.pts[i - 1], b = r.pts[i]; acc += Math.hypot(b[0] - a[0], b[1] - a[1]); if (acc > (r.marathon ? 900 : 300) || i === r.pts.length - 1) { out.push(b.slice()); acc = 0; } } return out; }
   function start(r, resume) { const W = wps(r); const saved = resume ? readSave() : null; run = { r, W, i: saved && saved.name === r.name ? saved.i : 1, t0: performance.now() - (saved && saved.name === r.name ? saved.ms : 0), last: player.pos.clone() };
-    if (!ring) { ring = new THREE.Mesh(new THREE.TorusGeometry(3, 0.25, 8, 32), ringMat); scene.add(ring); } ring.visible = true; if (r.marathon) buildFinish(r.pts[r.pts.length - 1]);
-    card(r.marathon ? 'EULEN-MARATHON' : 'EULEN-LAUF', `${r.name} · ${r.laenge_km} km · zu Fuß, ohne Auto, Rad oder Bahn` + (r.marathon ? ' · Verpflegungsstationen speichern' : ''), 5); sfx('bell', 0.5); }
+    if (!ring) { ring = new THREE.Mesh(new THREE.TorusGeometry(3, 0.25, 8, 32), ringMat); scene.add(ring); } ring.visible = true; if (r.marathon) buildFinish(r.ziel);
+    card(r.marathon ? 'EULEN-MARATHON' : 'EULEN-LAUF', `${r.name} · ${r.info} · zu Fuß, ohne Auto, Rad oder Bahn` + (r.marathon ? ' · Verpflegungsstationen speichern' : ''), 5); sfx('bell', 0.5); }
   function stop(msg) { run = null; if (ring) ring.visible = false; const o = document.getElementById('obj'); if (o) o.textContent = ''; if (msg) showMsg(msg, 2600); }
   const readSave = () => { try { return JSON.parse(localStorage.getItem(SPAR) || 'null'); } catch (e) { return null; } };
   const writeSave = v => { try { if (v) localStorage.setItem(SPAR, JSON.stringify(v)); else localStorage.removeItem(SPAR); } catch (e) { /* ohne Speicher weiterlaufen */ } };
   const fmt = ms => { const s = Math.floor(ms / 1000); return Math.floor(s / 3600) + ':' + String(Math.floor(s / 60) % 60).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0'); };
   function runUpdate() { const u = run; if (player.car) { stop('DISQUALIFIZIERT: NUR ZU FUSS'); return; } if (player.pos.distanceTo(u.last) > 60) { stop('DISQUALIFIZIERT: KEINE ABKÜRZUNG PER BAHN ODER SPRUNG'); return; } u.last.copy(player.pos);
-    const [x, z] = u.W[u.i]; ring.position.set(x, TH(x, z) + 3, z); ring.rotation.y += 0.03; const d = Math.hypot(player.pos.x - x, player.pos.z - z); const ms = performance.now() - u.t0;
+    if (Math.hypot(u.W[u.i][0] - player.pos.x, u.W[u.i][1] - player.pos.z) < 200) offRoad(u.W[u.i]); const [x, z] = u.W[u.i]; ring.position.set(x, TH(x, z) + 3, z); ring.rotation.y += 0.03; const d = Math.hypot(player.pos.x - x, player.pos.z - z); const ms = performance.now() - u.t0;
     const o = document.getElementById('obj'); if (o) o.textContent = `🦉 ${u.r.name}: Wegpunkt ${u.i}/${u.W.length - 1} · ${Math.round(d)} m · ${fmt(ms)}`;
     if (d < 7) { u.i++; sfx('click', 0.6); if (u.r.marathon && u.i % 5 === 0 && u.i < u.W.length) { writeSave({ name: u.r.name, i: u.i, ms }); showMsg('VERPFLEGUNG: STAND GESPEICHERT', 1500); player.hp = Math.min(100, player.hp + 30); }
       if (u.i >= u.W.length) done(ms); } }
@@ -70,10 +81,10 @@ export function initEulen(X) {
   // ---------- F-Aktionen und Update ----------
   X.fHooks = X.fHooks || [];
   X.fHooks.push(() => { if (run) return null; for (const p of posters) if (Math.hypot(p.position.x - player.pos.x, p.position.z - player.pos.z) < 2.2) { if (p.userData.motif === 'vokabaum') return { label: 'F · Vokabaum-Plakat lesen', act: () => card('VOKABAUM', 'Vokabeln lernen, Wald wachsen lassen · <a href="https://vokabaum.hinjas.de/?von=bornheim" target="_blank" rel="noopener" style="color:#9fe08a">vokabaum.hinjas.de</a>', 8) }; if (!routes.length) continue; const r = routes.find(q => !q.marathon) || routes[0]; return { label: `F · Eulen-Lauf „${r.name}“ starten`, act: () => { const [sx, sz] = r.pts[0]; if (Math.hypot(sx - player.pos.x, sz - player.pos.z) > 40) { showMsg('ZUM START: GRÜNE MARKIERUNG AUF DER KARTE', 2000); pendingStart = r; } else start(r); } }; }
-    if (startMark) { const [x, z] = startMark.userData.route.pts[0]; if (Math.hypot(x - player.pos.x, z - player.pos.z) < 5) { const sv = readSave(); return { label: sv ? 'F · Eulen-Marathon fortsetzen' : 'F · Eulen-Marathon starten (42 km)', act: () => start(startMark.userData.route, !!sv) }; } }
+    for (const m of startMark || []) { const r = m.userData.route, [x, z] = r.pts[0]; if (Math.hypot(x - player.pos.x, z - player.pos.z) < 5) { const sv = r.marathon ? readSave() : null; const goes = sv && sv.name === r.name; return { label: r.marathon ? (goes ? 'F · Eulen-Marathon fortsetzen' : `F · Eulen-Marathon starten (${r.km_gebiet} km)`) : `F · Eulen-Lauf „${r.name}“ starten (${r.km_gebiet} km)`, act: () => { pendingStart = null; start(r, goes); } }; } }
     if (pendingStart) { const [x, z] = pendingStart.pts[0]; if (Math.hypot(x - player.pos.x, z - player.pos.z) < 5) { const r = pendingStart; return { label: `F · Eulen-Lauf „${r.name}“ starten`, act: () => { pendingStart = null; start(r); } }; } }
     return null; });
-  function update(dt) { t += dt; if (Math.floor(t) !== Math.floor(t - dt)) updatePosters(); if (run) runUpdate();
+  function update(dt) { t += dt; if (Math.floor(t) !== Math.floor(t - dt)) { updatePosters(); placeMarks(); } if (run) runUpdate();
     if (finish) for (const [i, f] of finish.fans.entries()) f.position.y = 0.8 + Math.abs(Math.sin(t * 6 + i)) * 0.35; }
-  return { update, get posters() { return posters; }, get routes() { return routes; }, get run() { return run; }, start, stop };
+  return { update, get posters() { return posters; }, get routes() { return routes; }, get run() { return run; }, get marks() { return startMark || []; }, wps, start, stop };
 }

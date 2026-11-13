@@ -1,0 +1,17 @@
+[
+  { "n": "eulen_geladen", "x": -3595, "z": 2185, "wait": 12000, "shot": false,
+    "js": "JSON.stringify(window.G.EULEN.routes.map(r => ({ name: r.name, km: r.km_gebiet, von: r.laenge_km, ganz: r.ganz, info: r.info, wp: window.G.EULEN.wps(r).length })))",
+    "expect": "(() => { const G = window.G, E = G.EULEN; if (E.routes.length !== 2) return false; return E.routes.every(r => E.wps(r).every(([x, z]) => G.WIDX.tiles[Math.floor(x / G.TS) + '_' + Math.floor(z / G.TS)])); })()" },
+  { "n": "marathon_saeule", "x": -3595, "z": 2175, "tx": -3595, "tz": 2153, "pitch": 0.05, "wait": 9000,
+    "js": "(() => { const G = window.G, E = G.EULEN, r = E.routes.find(q => q.marathon), m = E.marks.find(k => k.userData.route === r), w = E.wps(r)[1]; return JSON.stringify({ saeule: [Math.round(m.position.x), Math.round(m.position.z)], aufStrasse: G.onOtherRoad(r.pts[0][0], r.pts[0][1], null, 0.5), wp1: w.map(Math.round), wp1fest: G.solidAt(w[0], w[1]), ziel: r.ziel.map(Math.round) }); })()",
+    "expect": "(() => { const G = window.G, E = G.EULEN, r = E.routes.find(q => q.marathon); if (!r) return false; const m = E.marks.find(k => k.userData.route === r); const w = E.wps(r)[1]; const fx = (8.6527 - 8.7096938) * Math.PI / 180 * 6371000 * Math.cos(50.129441 * Math.PI / 180), fz = -(50.1115 - 50.129441) * Math.PI / 180 * 6371000; return !!m && Math.hypot(m.position.x + 3595, m.position.z - 2153) < 30 && G.solidAt(w[0], w[1]) < 0 && Math.hypot(r.ziel[0] - fx, r.ziel[1] - fz) < 500; })()" },
+  { "n": "marathon_start", "x": -3595, "z": 2153, "wait": 4000, "shot": false,
+    "js": "(() => { const G = window.G, r = G.EULEN.routes.find(q => q.marathon); G.player.pos.x = r.pts[0][0]; G.player.pos.z = r.pts[0][1]; G.EULEN.start(r); return G.EULEN.run && G.EULEN.run.r.name; })()",
+    "expect": "window.G.EULEN.run && window.G.EULEN.run.i === 1" },
+  { "n": "marathon_lauf", "wait": 3000, "tx": -3595, "tz": 2100,
+    "js": "document.getElementById('obj') && document.getElementById('obj').textContent",
+    "expect": "(() => { const G = window.G, u = G.EULEN.run; G.EULEN.stop(); return !!u; })()" },
+  { "n": "megamarsch_saeule", "x": 3104, "z": -7068, "tx": 3104, "tz": -7090, "pitch": 0.05, "wait": 15000,
+    "js": "(() => { const G = window.G, E = G.EULEN, r = E.routes.find(q => !q.marathon), m = E.marks.find(k => k.userData.route === r), w = E.wps(r)[1]; return JSON.stringify({ info: r.info, saeule: [Math.round(m.position.x), Math.round(m.position.z)], wp1: w.map(Math.round), wp1fest: G.solidAt(w[0], w[1]) }); })()",
+    "expect": "(() => { const G = window.G, E = G.EULEN, r = E.routes.find(q => !q.marathon); const m = E.marks.find(k => k.userData.route === r); const w = E.wps(r)[1]; return !!m && Math.hypot(m.position.x - r.pts[0][0], m.position.z - r.pts[0][1]) < 1 && G.solidAt(w[0], w[1]) < 0 && /Abschnitt im Spielgebiet/.test(r.info); })()" }
+]
