@@ -121,8 +121,8 @@ function applyTime() {
   if (skyU) { skyU.top.value.copy(_cSky).multiplyScalar(0.78); skyU.bot.value.copy(_cFog); }
   scene.environmentIntensity = 0.15 + day * 0.65;
   scene.background.copy(_cSky); scene.fog.color.copy(_cFog); const VW = (typeof opts !== 'undefined' && opts.view) || 700; scene.fog.near = Math.min(180, VW * 0.25) - weather.fog * 150 - weather.rain * 60; scene.fog.far = Math.max(120, VW - weather.fog * (VW - 140) - weather.rain * VW * 0.35);
-  lerpC2(hemi.color, 0x6c78c0, 0xdde8ff, day); lerpC2(hemi.groundColor, 0x3a3028, 0x8a8070, day); hemi.intensity = (1.0 + day * 0.35 + dusk * 0.25) * (1 - weather.cloud * 0.25) + weather.flash * 3;
-  if (day < 0.15 && dusk < 0.3) sun.color.setHex(0x8fa6ff); else lerpC2(sun.color, 0xffa860, 0xfff2dd, Math.max(0, day - dusk * 0.6));
+  lerpC2(hemi.color, 0x646c8a, 0xdde8ff, day) /* Nacht weniger blau (#152 Nachbesserung) */; lerpC2(hemi.groundColor, 0x3a3028, 0x8a8070, day); hemi.intensity = (1.0 + day * 0.35 + dusk * 0.25) * (1 - weather.cloud * 0.25) + weather.flash * 3;
+  if (day < 0.15 && dusk < 0.3) sun.color.setHex(0x9ea8c4); else lerpC2(sun.color, 0xffa860, 0xfff2dd, Math.max(0, day - dusk * 0.6));
   sun.intensity = (0.45 * (1 - day) * (1 - dusk) + day * 2.0 + dusk * 0.6) * (1 - weather.cloud * 0.7) + weather.flash * 6;
   const ang = ((h - 6) / 12) * Math.PI; // 6 Uhr Osten, 18 Uhr Westen
   if (!world.sunDir) world.sunDir = new THREE.Vector3();

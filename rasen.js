@@ -82,6 +82,10 @@ export function initRasen(X) {
         float gust = 0.6 + 0.4 * sin(uTime * 0.7 + gO.x * 0.05 - gO.z * 0.03);
         transformed.x += h * sway * gust * uWind; transformed.z += h * sway * gust * uWind * 0.45; }
       #endif`);
+    // Schwarze Flecken (#152 Nachbesserung): DoubleSide dreht auf der Rückseite die Normale um (faceDirection), die nach oben
+    // gekippte Halmnormale zeigt dann nach unten und bekommt nur das dunkle Bodenlicht der Hemisphäre. Halme sind dünn,
+    // beide Seiten sollen gleich hell sein: Umkehr wieder aufheben (faceDirection² = 1).
+    sh.fragmentShader = sh.fragmentShader.replace('#include <normal_fragment_begin>', '#include <normal_fragment_begin>\n  normal *= faceDirection;');
   };
   mat.customProgramCacheKey = () => 'rasen-halme';
   const maxCap = Math.round(Math.PI * STUFE.ultra.r ** 2 * STUFE.ultra.d * 0.75);

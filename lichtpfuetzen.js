@@ -7,7 +7,7 @@ export function initLichtpfuetzen(X) {
   const { THREE } = X;
   // Form wie Sunset jt(): (1-r)^2.2 als Kern, (1-r²)² als Schulter
   const N = 64, data = new Uint8Array(N * N * 4), c = (N - 1) / 2;
-  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) { const r = Math.min(1, Math.hypot((x - c) / c, (y - c) / c)); const v = Math.min(1, (1 - r) ** 2.2 * 0.8 + (1 - r * r) ** 2 * 0.35); const i = (y * N + x) * 4; data[i] = data[i + 1] = data[i + 2] = Math.round(v * 255); data[i + 3] = 255; }
+  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) { const r = Math.min(1, Math.hypot((x - c) / c, (y - c) / c)); const v = Math.min(1, (1 - r) ** 2.2 * 0.55 + (1 - r * r) ** 2 * 0.4); const i = (y * N + x) * 4; data[i] = data[i + 1] = data[i + 2] = Math.round(v * 255); data[i + 3] = 255; }
   const tex = new THREE.DataTexture(data, N, N, THREE.RGBAFormat); tex.magFilter = THREE.LinearFilter; tex.minFilter = THREE.LinearMipmapLinearFilter; tex.generateMipmaps = true; tex.needsUpdate = true;
   const uni = { uMap: { value: tex }, uNight: { value: 0 }, uWet: { value: 0 }, uMaxDistance: { value: 260 } };
   const material = new THREE.ShaderMaterial({
@@ -23,11 +23,11 @@ void main(){ float s = texture2D(uMap, vUv).r; vec3 col = vColor * s * (1.0 + uW
   material.userData.shared = true;
   // je Laterne: Farbe und Einschaltschwelle aus der Position (stabil über Neuladen)
   const hash = (x, z) => { const s = Math.sin(x * 12.9898 + z * 78.233) * 43758.5453; return s - Math.floor(s); };
-  const SODIUM = [1.0, 0.62, 0.28], LED = [0.95, 0.88, 0.74];
+  const SODIUM = [1.0, 0.56, 0.22], LED = [1.0, 0.82, 0.6];
   /** spotM: InstancedMesh mit Kreisgeometrie, lamps: [[x,z],…] in derselben Reihenfolge */
   function attach(spotM, lamps) {
     const a = new Float32Array(lamps.length * 4);
-    lamps.forEach(([x, z], i) => { const h = hash(x, z), led = h < 0.35, b = 0.42 + hash(z, x) * 0.12, col = led ? LED : SODIUM; a[i * 4] = col[0] * b; a[i * 4 + 1] = col[1] * b; a[i * 4 + 2] = col[2] * b; a[i * 4 + 3] = 0.45 + h * 0.3; });
+    lamps.forEach(([x, z], i) => { const h = hash(x, z), led = h < 0.35, b = 0.32 + hash(z, x) * 0.1 /* Nachbesserung #152: Kern war fast weiß, jetzt wärmer und weniger überstrahlt */, col = led ? LED : SODIUM; a[i * 4] = col[0] * b; a[i * 4 + 1] = col[1] * b; a[i * 4 + 2] = col[2] * b; a[i * 4 + 3] = 0.45 + h * 0.3; });
     spotM.geometry = spotM.geometry.clone(); spotM.geometry.setAttribute('aPool', new THREE.InstancedBufferAttribute(a, 4)); spotM.material = material; spotM.renderOrder = 1;
   }
   // day: 0 Nacht … 1 Tag; wet: 0…1
