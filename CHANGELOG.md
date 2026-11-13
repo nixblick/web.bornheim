@@ -2,6 +2,8 @@
 
 ## 2026-11-13
 
+- **Gräber und Haltestelle nachgebessert:** Mustergrabanlage dreht die Steinvorderseiten zum nächsten OSM-Weg (bis 60 m). Tramhalte mit neuem Haltestellenmodell (Gleis in 20 m) bekommen den alten blauen Halte-Mast nicht mehr. Glas der Wartehalle als Milchglas mit deutlichem weißen Punktraster (Foto Wasserpark). Spieltest per CI mit `graeber`.
+
 - **Doku privat:** `docs/vergleich-project-sunset.md` liegt nur noch lokal (gitignore), auf Andrés Wunsch. In der Git-Historie bleibt die frühere Fassung.
 
 - Typprüfung für `graeber.js` repariert (`window.GRAEBER` als any), Deploy war rot.
