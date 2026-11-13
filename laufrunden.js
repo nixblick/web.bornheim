@@ -51,6 +51,6 @@ export function initLaufrunden(X) {
     if (ped) { const u = ped.userData; offerT -= dt; if (!peds.includes(ped) || u.state !== 'walk' || offerT <= 0 || blocked() || ped.position.distanceTo(player.pos) > 60) { release(true); return; } mark.position.set(ped.position.x, ped.position.y + 2.3 + Math.sin(performance.now() / 250) * 0.08, ped.position.z); }
     scanT -= dt; if (scanT <= 0) { scanT = 2; if (Math.random() < 0.2) tryOffer(); } }
   // Testhilfe: G.LAUF.force() setzt die Stunden-Sperre zurück, sucht einen Passanten und startet
-  function force() { lastHour = null; release(false); tryOffer(); return start(); }
+  function force() { lastHour = null; release(false); tryOffer(); if (!ped) { let best = null, bd = 1e9; for (const p of peds) { if (!okPed(p)) continue; const d = p.position.distanceTo(player.pos); if (d < bd) { bd = d; best = p; } } if (best && bd < 120) offer(best); } return start(); }
   return { update, force, tryOffer, start, get run() { return run; }, get ped() { return ped; } };
 }
