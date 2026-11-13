@@ -51,6 +51,7 @@ export interface City extends TileData { origin?: any; [more: string]: any; }
 /** Kontextobjekt X aus game.js (`const X = {…}` plus Object.assign) – Schlüssel bewusst ohne Index-Signatur */
 export interface Ctx {
   FAR_HAZE: any;
+  sun: any;
   THREE: any;
   scene: any;
   camera: any;
