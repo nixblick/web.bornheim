@@ -2,6 +2,7 @@
 
 ## 2026-11-13
 
+- **U-Bahn: zweiter Ausgang (#97):** In der Station gab es nur eine Treppe nach oben. Jetzt hat jede Station mit mindestens zwei OSM-Eingängen (`entr`) am anderen Bahnsteigende eine zweite Treppe; sie führt zum Eingang, der am weitesten vom ersten Ausgang liegt (bei S-Tunnelstationen am Ende der S-Ebene). Die Minikarte zeigt alle Eingänge statt nur des ersten. Stationen mit einem Eingang bleiben bei einem. Ungetestet, Test im Nachtfenster.
 - **Rechtsverkehr (#99):** Autos, Räder und Polizei fuhren links. Die Straßennormale (-dz, dx) zeigt bei x = Ost, z = Süd nach rechts (belegt: Hauptwache liegt westlich der Konstablerwache und südlich von Bornheim), der Spurversatz war negativ. Vorzeichen an allen vier Stellen gedreht, Wandprüfung (sideGuard) mit. Ungetestet, Test im Nachtfenster.
 - **HUD oben links (#100):** „Stufe“ stand fest bei 84 px und überlagerte die Waffenzeile. Jetzt im selben Block unter der Waffe, auf Touch ebenso. Ungetestet, Test im Nachtfenster.
 - **Spieltest nimmt Proben immer von main:** Ältere Zweige ohne neue Probendatei lassen sich so trotzdem testen.
