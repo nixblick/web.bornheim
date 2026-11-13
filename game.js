@@ -1482,7 +1482,7 @@ function* buildCity() { CITY_PART = 'c0';
       }
     }
   }
-  yield; CITY_PART = 'c1'; const facByKind = FAC_CACHE || (FAC_CACHE = (() => { const f = {}; for (const k of ['res', 'house', 'public', 'hall', 'small', 'church']) f[k] = [facadeTextures(k), facadeTextures(k)]; for (const k of ['wache', 'school', 'altschule', 'nk', 'nb', 'zi', 'fw', 'schiefer', 'messeturm', 'barock', 'sandstein', 'gruender', 'zwanziger', 'abg', 'ezb']) { const s = facadeStyle(k); f[k] = [s, k === 'nk' || k === 'zi' ? facadeStyle(k) : s]; } return f; })());
+  yield; CITY_PART = 'c1'; if (!FAC_CACHE) { const f = {}; /* einmalig: Fassaden-Texturen je Art, ein Stück je Art (#173) */ for (const k of ['res', 'house', 'public', 'hall', 'small', 'church']) { f[k] = [facadeTextures(k), facadeTextures(k)]; yield; } for (const k of ['wache', 'school', 'altschule', 'nk', 'nb', 'zi', 'fw', 'schiefer', 'messeturm', 'barock', 'sandstein', 'gruender', 'zwanziger', 'abg', 'ezb']) { const s = facadeStyle(k); f[k] = [s, k === 'nk' || k === 'zi' ? facadeStyle(k) : s]; yield; } FAC_CACHE = f; } const facByKind = FAC_CACHE;
   const counters = {};
   const groups = new Map(); const tmpC = new THREE.Color();
   yield; CITY_PART = 'c2'; for (const [key, geos] of byKey) { yield;
