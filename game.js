@@ -386,6 +386,9 @@ function moveWithCollision(pos, dx, dz, r, y, extra) {
 // ---------- Texturen (prozedural, keine Assets nötig) ----------
 const _allCanvasTex = [];
 const _lamCache = new Map(), _basCache = new Map(), WALL_MATS = new Map(), GF_MATS = new Map(), sharedEmissiveMats = [];
+let VCOL_MAT = null; // ein Material für alles, was nur über Vertexfarben gefärbt ist (Spielgeräte, Flächen ohne Rasentextur)
+const vcolMat = () => VCOL_MAT || (VCOL_MAT = Object.assign(new THREE.MeshLambertMaterial({ vertexColors: true }), { userData: { shared: true } }));
+const vcol = (g, c) => { const n = g.attributes.position.count, a = new Float32Array(n * 3); for (let i = 0; i < n; i++) { a[i * 3] = c.r; a[i * 3 + 1] = c.g; a[i * 3 + 2] = c.b; } g.setAttribute('color', new THREE.BufferAttribute(a, 3)); return g; };
 let ROOF_MAT = null, TILE_ROOF_MAT = null, WALK_MAT = null, PATH_MAT = null, SIG_LENS_MAT = null, SPOT_GLOW_MAT = null, PTS_GLOW_MAT = null, SHELTER_GLASS_MAT = null, DORMER_GLASS_MAT = null;
 const BUSLINES = []; fetch('data/busroutes.json').then(r => r.ok ? r.json() : []).then(d => { BUSLINES.push(...d); }).catch(() => {}); const BUS_DISP = new Map(); // echte Buslinien (OSM, 12.11.2026)
 const WEGZIELE = []; fetch('data/districts.json').then(r => r.ok ? r.json() : []).then(d => { for (const z of d) if (z.n && z.c) WEGZIELE.push({ n: z.n, c: z.c }); }).catch(() => {}); let KLEID_MAT = null; let WARN_MAT = null, ATRIUM_MAT = null; let ARCH_ID = 1; const ARCH_RIDES = new Map(); let ARCH_LAST = 0, ARCH_COUNT = 0; let SCHAUF_TEX = null, GRANIT_MAT = null, OBST_MAT = null, STREIF_MAT = null; let WEGW_MAT = null, TOR_MAT = null; const GARAGE_MATS = []; let WALL_WASH_MAT = null, BAUZAUN_MAT = null, BAU_LAMP_MAT = null, LAUB_MAT = null; let TRUNK_G = null, CROWN_LOW_G = null, CROWN_HI_G = null, LAMP_G = null, LAMP_HEAD_G = null, LAMP_SPOT_G = null, SIG_LENS_G = null, SIG_POLE_G = null, SIG_BOX_G = null, BUSH_LOW_G = null, BUSH_HI_G = null;
@@ -1556,7 +1559,9 @@ function* buildCity() { CITY_PART = 'c0';
     const col = g.k === 'pitch' ? (sportCol[g.s] || 0x7a7f86) : (greenCol[g.k] || 0x6f9a52); const bk = lawn ? 'r' + col : col; /* Rasen: Bodentextur aus rasen.js (uv in Weltmetern) */
     if (!byCol.has(bk)) byCol.set(bk, []); byCol.get(bk).push(geo);
   }
-  yield; CITY_PART = 'c9'; for (const [col, geos] of byCol) { const m = new THREE.Mesh(mergeGeometries(geos), typeof col === 'string' ? rasenMat(THREE, +col.slice(1)) : shLambert(col)); m.receiveShadow = true; scene.add(m); }
+  yield; CITY_PART = 'c9'; { const flat = []; // Flächen ohne Rasentextur: Farbe als Vertexfarbe, ein Mesh statt eines je Farbe
+    for (const [col, geos] of byCol) { if (typeof col !== 'string') { const c = new THREE.Color(col); for (const g of geos) flat.push(vcol(g, c)); continue; } const m = new THREE.Mesh(mergeGeometries(geos), rasenMat(THREE, +col.slice(1))); m.receiveShadow = true; scene.add(m); }
+    if (flat.length) { const m = new THREE.Mesh(mergeGeometries(flat), vcolMat()); m.receiveShadow = true; scene.add(m); } }
   // Spielplatzgeräte und Sportplatz-Linien
   const propGeos = { red: [], blue: [], yellow: [], wood: [], white: [], steel: [] };
   const bx = (w, h, d, x, y, z, ry, bucket) => { const g = new THREE.BoxGeometry(w, h, d); if (ry) g.rotateY(ry); g.translate(x, y + TH(x, z), z); propGeos[bucket].push(g); };
@@ -1586,7 +1591,8 @@ function* buildCity() { CITY_PART = 'c0';
     }
   }
   const propMat = { red: 0xc0392b, blue: 0x2980b9, yellow: 0xe3c98a, wood: 0x8b5a2b, white: 0xf4f4f4, steel: 0x8a8f94 };
-  yield; CITY_PART = 'c10'; for (const k in propGeos) if (propGeos[k].length) { const m = new THREE.Mesh(mergeGeometries(propGeos[k]), shLambert(propMat[k])); m.castShadow = true; scene.add(m); }
+  yield; CITY_PART = 'c10'; { const all = []; for (const k in propGeos) { const c = new THREE.Color(propMat[k]); for (const g of propGeos[k]) all.push(vcol(g, c)); } // ein Mesh für alle Geräte: Farbe als Vertexfarbe statt sechs Farb-Meshes
+    if (all.length) { const m = new THREE.Mesh(mergeGeometries(all), vcolMat()); m.castShadow = true; scene.add(m); } }
   const waters = [];
   yield; CITY_PART = 'c11'; for (const w of CITY.water) { const shape = new THREE.Shape(w.p.map(([x, z]) => new THREE.Vector2(x, -z))); const geo = new THREE.ShapeGeometry(shape); geo.rotateX(-Math.PI / 2); geo.translate(0, Math.min(...w.p.map(([x, z]) => TH(x, z))) + 0.2, 0); waters.push(geo); }
   if (waters.length) scene.add(new THREE.Mesh(mergeGeometries(waters), shLambert(0x4f7fa0)));
