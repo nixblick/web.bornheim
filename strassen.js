@@ -75,7 +75,7 @@ export function initStrassen(X) {
       c.fillStyle = '#34332f'; c.beginPath(); c.arc(128, 128, 44, 0, 7); c.fill(); c.fillStyle = '#56544e'; c.font = 'bold 20px sans-serif'; c.textAlign = 'center'; c.fillText('STADT', 128, 122); c.fillText('FFM', 128, 146);
       c.strokeStyle = '#8a867c'; c.lineWidth = 3; c.beginPath(); c.arc(128, 128, 112, 0, 7); c.stroke(); });
     cell(1, () => { c.fillStyle = '#5f5c56'; c.fillRect(48, 8, 160, 240); c.fillStyle = '#151514'; for (let x = 62; x < 196; x += 18) c.fillRect(x, 24, 9, 208); c.strokeStyle = '#86827a'; c.lineWidth = 6; c.strokeRect(51, 11, 154, 234); });
-    cell(2, () => { c.fillStyle = 'rgba(28,28,30,0.55)'; c.fillRect(10, 10, 236, 236); for (let i = 0; i < 2500; i++) { c.fillStyle = r() < 0.5 ? 'rgba(10,10,10,0.35)' : 'rgba(140,140,135,0.25)'; c.fillRect(10 + r() * 236, 10 + r() * 236, 2, 2); } c.strokeStyle = 'rgba(12,12,12,0.7)'; c.lineWidth = 5; c.strokeRect(10, 10, 236, 236); });
+    cell(2, () => { c.fillStyle = 'rgba(28,28,30,0.3)'; c.fillRect(10, 10, 236, 236); for (let i = 0; i < 2500; i++) { c.fillStyle = r() < 0.5 ? 'rgba(10,10,10,0.35)' : 'rgba(140,140,135,0.25)'; c.fillRect(10 + r() * 236, 10 + r() * 236, 2, 2); } c.strokeStyle = 'rgba(12,12,12,0.7)'; c.lineWidth = 5; c.strokeRect(10, 10, 236, 236); });
     cell(3, () => { for (let k = 0; k < 4; k++) { const g = c.createRadialGradient(128 + (r() - 0.5) * 60, 128 + (r() - 0.5) * 60, 4, 128, 128, 70 + r() * 40); g.addColorStop(0, 'rgba(8,8,12,0.35)'); g.addColorStop(1, 'rgba(8,8,12,0)'); c.fillStyle = g; c.fillRect(0, 0, C, C); } });
     cell(4, () => { c.strokeStyle = 'rgba(16,16,15,0.8)'; c.lineCap = 'round'; for (let i = 0; i < 3; i++) { let x = 20 + r() * 40, y = 30 + r() * 200, a = (r() - 0.5) * 0.6; c.lineWidth = 6 + r() * 4; c.beginPath(); c.moveTo(x, y); while (x < 236) { a += (r() - 0.5) * 0.7; x += Math.cos(a) * 14; y += Math.sin(a) * 14; c.lineTo(x, y); } c.stroke(); } });
     cell(5, () => { for (const x0 of [70, 186]) { const g = c.createLinearGradient(0, 0, 0, C); g.addColorStop(0, 'rgba(10,10,10,0)'); g.addColorStop(0.3, 'rgba(10,10,10,0.45)'); g.addColorStop(1, 'rgba(10,10,10,0.6)'); c.fillStyle = g; c.fillRect(x0 - 16, 0, 32, C); } });
@@ -115,8 +115,8 @@ if (sPm > 0.0) { normal = normalize(mix(normal, nonPerturbedNormal, sPm));
   function belagMat(so, normalMap) { if (MATS[so]) return MATS[so]; const T = texs();
     const m = new THREE.MeshStandardMaterial({ map: so === 1 ? T.neu : so === 2 ? T.sett : T.paving, normalMap: so === 1 ? normalMap : null, color: 0xffffff, roughness: so === 1 ? 0.9 : 0.82, metalness: 0 });
     m.userData.shared = true; m.userData.sorte = so; nass(m); return (MATS[so] = m); }
-  function markMat(markTex) { if (MATS.mark) return MATS.mark; const m = new THREE.MeshLambertMaterial({ map: markTex, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -2, side: THREE.DoubleSide }); m.userData.shared = true; return (MATS.mark = m); }
-  function atlasMat() { if (MATS.atlas) return MATS.atlas; const m = new THREE.MeshLambertMaterial({ map: texs().atlas, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -3, side: THREE.DoubleSide }); m.userData.shared = true; return (MATS.atlas = m); }
+  function markMat(markTex) { if (MATS.mark) return MATS.mark; const m = new THREE.MeshLambertMaterial({ map: markTex, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -2}); m.userData.shared = true; return (MATS.mark = m); }
+  function atlasMat() { if (MATS.atlas) return MATS.atlas; const m = new THREE.MeshLambertMaterial({ map: texs().atlas, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -3}); m.userData.shared = true; return (MATS.atlas = m); }
   function eckMat() { if (MATS.eck) return MATS.eck; const m = new THREE.MeshLambertMaterial({ vertexColors: true }); m.userData.shared = true; return (MATS.eck = m); }
 
   // ---------- Geometrie-Helfer ----------
@@ -125,7 +125,7 @@ if (sPm > 0.0) { normal = normalize(mix(normal, nonPerturbedNormal, sPm));
     // Viereck auf der Fahrbahn: Mitte (x,z), Längsrichtung (ux,uz), Länge a, Breite b, uv-Rechteck, Höhen-Funktion
     quad(x, z, ux, uz, a, b, uv, hf, dy = 0.06) { const nx = -uz, nz = ux, A = a / 2, B = b / 2; const P = [[-B, -A], [B, -A], [B, A], [-B, A]].map(([s, t]) => { const px = x + nx * s + ux * t, pz = z + nz * s + uz * t; return [px, hf(px, pz) + dy, pz]; });
       const [u0, v0, u1, v1] = uv; const UV = [[u0, v0], [u1, v0], [u1, v1], [u0, v1]];
-      for (const k of [0, 2, 1, 0, 3, 2]) { this.p.push(...P[k]); this.u.push(...UV[k]); } }
+      for (const k of [0, 1, 2, 0, 2, 3]) { this.p.push(...P[k]); this.u.push(...UV[k]); } }
     mesh(mat) { if (!this.p.length) return null; const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(this.p, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(this.u, 2)); const n = new Float32Array(this.p.length); for (let i = 1; i < n.length; i += 3) n[i] = 1; g.setAttribute('normal', new THREE.BufferAttribute(n, 3)); g.computeBoundingSphere(); const m = new THREE.Mesh(g, mat); m.receiveShadow = true; return m; } }
   const near = (x, z, list, d) => { if (!list) return null; for (const s of list) { const sx = s[0] ?? s.x, sz = s[1] ?? s.z; if (sx === undefined) continue; if ((sx - x) ** 2 + (sz - z) ** 2 < d * d) return [sx, sz]; } return null; };
 
