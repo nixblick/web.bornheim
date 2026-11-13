@@ -1,5 +1,6 @@
 // Läden: mit Geld einkaufen. Supermärkte führen alles, was das Spiel kennt, Fachläden einen Teil.
 // Läden kommen aus den OSM-Daten (Shop-Punkte und Gebäude mit Laden), Eingang = nächste Hauswand.
+/** @param {import('./types').Ctx} X */
 export function initShops(X, W) {
   const { player, CITY, sfx, showMsg, nearestEdge, edgeNormal, keys, solidAt } = X;
   const $ = id => document.getElementById(id);
@@ -60,6 +61,7 @@ export function initShops(X, W) {
       list.map(([id, it]) => { const no = player.money < price(it) || owned(it) || (it.hp && player.hp >= 100); return `<div class="it${no ? ' no' : ''}" data-id="${id}"><span>${it.n}${owned(it) ? ' · hast du' : ''}</span><b>${price(it)} €</b></div>`; }).join('') +
       `<div class="row"><span class="sub">Klick zum Kaufen · Esc schließt</span><button id="shop_x">Fertig</button></div></div>`;
     $('shop_x').onclick = close;
+    // @ts-ignore -- Baseline #119: DOM-/Zahl-String-Typen, kein X-Fehler
     for (const d of el.querySelectorAll('.it')) d.onclick = () => buy(d.dataset.id);
   }
   function buy(id) {

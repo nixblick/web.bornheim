@@ -44,6 +44,17 @@
   "expect": "(() => { try { const r = JSON.parse(window.__last); return r.strahlen >= 16 && r.unsichtbar + r.begehbar <= 3; } catch (e) { return false; } })()"
  },
  {
+  "n": "eschenheim_rundum",
+  "x": -2138,
+  "z": 1479,
+  "tx": -2138,
+  "tz": 1389,
+  "pitch": 0.45,
+  "wait": 6000,
+  "js": "(async () => { window.__last = await (async () => { const G = window.G, T = G.THREE; await new Promise(r => setTimeout(r, 2500));\n const i0 = G.solidAt(-2138, 1389); if (i0 < 0) return 'kein Bau';\n const b = G.WORLD.buildings[i0]; let cx = 0, cz = 0; for (const q of b.p) { cx += q[0]; cz += q[1]; } cx /= b.p.length; cz /= b.p.length;\n let R = 0; for (const q of b.p) R = Math.max(R, Math.hypot(q[0] - cx, q[1] - cz)); R += 15;\n const y = G.TH(cx, cz) + 1.6, rc = new T.Raycaster(); rc.camera = G.camera; let unsicht = 0, begehbar = 0, n = 0, worst = 0;\n for (let k = 0; k < 32; k++) { const a = k / 32 * Math.PI * 2, dx = -Math.sin(a), dz = -Math.cos(a), sx = cx - dx * R, sz = cz - dz * R;\n  let dc = null; for (let s = 0; s < R; s += 0.25) { if (G.solidAt(sx + dx * s, sz + dz * s) === i0) { dc = s; break; } } if (dc === null) continue;\n  rc.set(new T.Vector3(sx, y, sz), new T.Vector3(dx, 0, dz)); rc.far = R;\n  const dyn = new Set([...(G.cars || []), ...((G.peds || []).map(p => p.mesh || p))]); const mobil = o => { for (let q = o; q; q = q.parent) if (dyn.has(q) || q.isSkinnedMesh) return true; return false; }; const hit = rc.intersectObjects(G.scene.children, true).find(h => !mobil(h.object) && h.object.isMesh && !h.object.isSprite && !h.object.isInstancedMesh && h.object.visible && h.distance > dc - 6);\n  if (!hit) continue; { const j = G.solidAt(hit.point.x + dx * 0.4, hit.point.z + dz * 0.4); if (j >= 0 && j !== i0) continue; } n++; const d = hit.distance - dc; worst = Math.max(worst, Math.abs(d)); if (d > 1.5) unsicht++; else if (d < -1.5) begehbar++; }\n return JSON.stringify({ bau: b.lm, strahlen: n, unsichtbar: unsicht, begehbar, max_m: +worst.toFixed(1) }); })(); return window.__last; })()",
+  "expect": "(() => { try { const r = JSON.parse(window.__last); return r.strahlen >= 16 && r.unsichtbar + r.begehbar <= 3; } catch (e) { return false; } })()"
+ },
+ {
   "n": "coba_rundum",
   "x": -2518,
   "z": 2115,
@@ -130,5 +141,40 @@
   "wait": 8000,
   "js": "(() => { const G = window.G, i = G.solidAt(948, 174); return i >= 0 ? 'Klotz im Innenraum h=' + G.WORLD.buildings[i].h : 'Innenraum frei'; })()",
   "expect": "window.G.solidAt(948, 174) < 0"
+ },
+ {
+  "n": "eschenheim_hoehe",
+  "x": -2138,
+  "z": 1479,
+  "tx": -2138,
+  "tz": 1389,
+  "pitch": 0.2,
+  "wait": 6000,
+  "js": "(async () => { window.__last = await (async () => { const G = window.G, T = G.THREE; await new Promise(r => setTimeout(r, 2500)); const g = G.scene.children.find(o => o.isGroup && o.userData.mats && Math.hypot(o.position.x - (-2138), o.position.z - (1389)) < 60); if (!g) return 'kein Modell'; const bb = new T.Box3().setFromObject(g); return JSON.stringify({ hoehe_m: +(bb.max.y - g.position.y).toFixed(1) }); })(); return window.__last; })()",
+  "expect": "(() => { try { const h = JSON.parse(window.__last).hoehe_m; return h >= 47 && h <= 49; } catch (e) { return false; } })()"
+ },
+ {
+  "n": "dom_hoehe",
+  "x": -1735,
+  "z": 2287,
+  "tx": -1735,
+  "tz": 2087,
+  "pitch": 0.1,
+  "wait": 6000,
+  "js": "(async () => { window.__last = await (async () => { const G = window.G, T = G.THREE; await new Promise(r => setTimeout(r, 2500)); const g = G.scene.children.find(o => o.isGroup && o.userData.mats && Math.hypot(o.position.x - (-1735), o.position.z - (2087)) < 60); if (!g) return 'kein Modell'; const bb = new T.Box3().setFromObject(g); return JSON.stringify({ hoehe_m: +(bb.max.y - g.position.y).toFixed(1) }); })(); return window.__last; })()",
+  "expect": "(() => { try { const h = JSON.parse(window.__last).hoehe_m; return h >= 94 && h <= 96; } catch (e) { return false; } })()",
+  "y": 60
+ },
+ {
+  "n": "pauls_hoehe",
+  "x": -2066,
+  "z": 2231,
+  "tx": -2066,
+  "tz": 2031,
+  "pitch": 0.1,
+  "wait": 6000,
+  "js": "(async () => { window.__last = await (async () => { const G = window.G, T = G.THREE; await new Promise(r => setTimeout(r, 2500)); const g = G.scene.children.find(o => o.isGroup && o.userData.mats && Math.hypot(o.position.x - (-2066), o.position.z - (2031)) < 60); if (!g) return 'kein Modell'; const bb = new T.Box3().setFromObject(g); return JSON.stringify({ hoehe_m: +(bb.max.y - g.position.y).toFixed(1) }); })(); return window.__last; })()",
+  "expect": "(() => { try { const h = JSON.parse(window.__last).hoehe_m; return h >= 50 && h <= 60; } catch (e) { return false; } })()",
+  "y": 60
  }
 ]
