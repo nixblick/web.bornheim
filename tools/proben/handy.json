@@ -1,32 +1,67 @@
 [
- { "n": "handy_auf", "x": -138, "z": 372, "wait": 8000,
-   "js": "(() => { const G = window.G; if (G.player.car) G.toggleCar(); dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyH', key: 'h' })); return JSON.stringify({ offen: G.PHONE.isOpen, apps: G.PHONE.apps }); })()",
-   "expect": "window.G.PHONE.isOpen && document.getElementById('phone').style.display === 'block' && document.querySelectorAll('#phone .ps-phone__app').length >= 7" },
- { "n": "handy_zu", "wait": 800, "shot": false,
-   "js": "(() => { dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyH', key: 'h' })); return String(window.G.PHONE.isOpen); })()",
-   "expect": "!window.G.PHONE.isOpen && document.getElementById('phone').style.display === 'none'" },
- { "n": "handy_apps", "wait": 800, "shot": false,
-   "js": "(() => { const P = window.G.PHONE, err = []; window.G.DEMO.sub('Kim', 'Probe-Nachricht', 2); for (const id of P.apps.filter(a => a !== 'karte' && a !== 'kamera')) { P.open(); if (!P.openApp(id)) err.push(id + ':nicht da'); const pg = document.querySelector('#phone .ps-phone__page'); if (!pg || /nicht verfügbar/.test(pg.textContent)) err.push(id); P.close(); } P.open(); P.openApp('kamera'); P.close(); return JSON.stringify({ fehler: err, msgs: P.msgs.length }); })()",
-   "expect": "(() => { const P = window.G.PHONE; return !P.isOpen && P.msgs.some(m => /Probe-Nachricht/.test(m.text)); })()" },
- { "n": "handy_nachrichten", "wait": 800,
-   "js": "(() => { const P = window.G.PHONE; P.open(); P.openApp('nachrichten'); return document.querySelector('#phone .ps-phone__page').textContent.slice(0, 200); })()",
-   "expect": "/Probe-Nachricht/.test(document.querySelector('#phone .ps-phone__page').textContent)" },
- { "n": "handy_missionen", "wait": 1200,
-   "js": "(() => { const P = window.G.PHONE; P.close(); P.open(); P.openApp('missionen'); return document.querySelector('#phone .ps-phone__page').textContent.slice(0, 300); })()",
-   "expect": "/Laufrunde/.test(document.querySelector('#phone .ps-phone__page').textContent)" },
- { "n": "handy_laufrunde_start", "wait": 1500,
-   "js": "(() => { const b = [...document.querySelectorAll('#phone .ps-pbtn')].find(x => /Laufrunde starten/.test(x.textContent)); if (!b) return 'kein Knopf'; b.click(); const L = window.G.LAUF; return JSON.stringify({ laeuft: !!L.run, handy: window.G.PHONE.isOpen }); })()",
-   "expect": "!!window.G.LAUF.run && !window.G.PHONE.isOpen" },
- { "n": "handy_karte", "wait": 1500,
-   "js": "(() => { const P = window.G.PHONE; P.open(); P.openApp('karte'); return JSON.stringify({ menu: document.getElementById('menu').style.display }); })()",
-   "expect": "document.getElementById('menu').style.display === 'flex' && document.querySelector('#menu .pane[data-tab=karte]').style.display === 'block'" },
- { "n": "menu_esc", "wait": 1500,
-   "js": "(() => { window.G.X.closeMenu(); dispatchEvent(new KeyboardEvent('keydown', { code: 'Escape', key: 'Escape' })); return document.getElementById('menu').style.display; })()",
-   "expect": "document.getElementById('menu').style.display === 'flex' && document.getElementById('menu').classList.contains('mn') && document.querySelector('#menu .pane[data-tab=uebersicht]').style.display === 'block' && /Laufrunde/.test(document.querySelector('#menu .mn-board').textContent)" },
- { "n": "menu_grafik", "wait": 800,
-   "js": "(() => { document.querySelector('#menu button[data-tab=grafik]').click(); return document.querySelector('#menu .pane[data-tab=grafik]').style.display; })()",
-   "expect": "document.querySelector('#menu .pane[data-tab=grafik]').style.display === 'block' && !!document.getElementById('o_quality')" },
- { "n": "menu_f1", "wait": 800, "shot": false,
-   "js": "(() => { window.G.X.closeMenu(); dispatchEvent(new KeyboardEvent('keydown', { code: 'F1', key: 'F1' })); return 'ok'; })()",
-   "expect": "document.getElementById('menu').style.display === 'flex' && document.querySelector('#menu .pane[data-tab=hilfe]').style.display === 'block'" }
+ {
+  "n": "handy_auf",
+  "x": -138,
+  "z": 372,
+  "wait": 8000,
+  "js": "(() => { const G = window.G; if (G.player.car) G.toggleCar(); dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyH', key: 'h' })); return JSON.stringify({ offen: G.PHONE.isOpen, apps: G.PHONE.apps }); })()",
+  "expect": "window.G.PHONE.isOpen && document.getElementById('phone').style.display === 'block' && document.querySelectorAll('#phone .ps-phone__app').length >= 7"
+ },
+ {
+  "n": "handy_zu",
+  "wait": 800,
+  "shot": false,
+  "js": "(() => { dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyH', key: 'h' })); return String(window.G.PHONE.isOpen); })()",
+  "expect": "!window.G.PHONE.isOpen && document.getElementById('phone').style.display === 'none'"
+ },
+ {
+  "n": "handy_apps",
+  "wait": 800,
+  "shot": false,
+  "js": "(() => { const P = window.G.PHONE, err = []; window.G.DEMO.sub('Kim', 'Probe-Nachricht', 2); for (const id of P.apps.filter(a => a !== 'karte' && a !== 'kamera')) { P.open(); if (!P.openApp(id)) err.push(id + ':nicht da'); const pg = document.querySelector('#phone .ps-phone__page'); if (!pg || /nicht verfügbar/.test(pg.textContent)) err.push(id); P.close(); } P.open(); P.openApp('kamera'); P.close(); return JSON.stringify({ fehler: err, msgs: P.msgs.length }); })()",
+  "expect": "(() => { const P = window.G.PHONE; return !P.isOpen && P.msgs.some(m => /Probe-Nachricht/.test(m.text)); })()"
+ },
+ {
+  "n": "handy_nachrichten",
+  "wait": 800,
+  "js": "(() => { const P = window.G.PHONE; P.open(); P.openApp('nachrichten'); return document.querySelector('#phone .ps-phone__page').textContent.slice(0, 200); })()",
+  "expect": "/Probe-Nachricht/.test(document.querySelector('#phone .ps-phone__page').textContent)"
+ },
+ {
+  "n": "handy_missionen",
+  "wait": 1200,
+  "js": "(() => { const P = window.G.PHONE; P.close(); P.open(); P.openApp('missionen'); return document.querySelector('#phone .ps-phone__page').textContent.slice(0, 300); })()",
+  "expect": "/Laufrunde/.test(document.querySelector('#phone .ps-phone__page').textContent)"
+ },
+ {
+  "n": "handy_laufrunde_start",
+  "wait": 1500,
+  "js": "(async () => { const G = window.G, w = ms => new Promise(r => setTimeout(r, ms)); let n = 0; for (; n < 12 && !G.LAUF.run; n++) { G.PHONE.close(); await w(2000); G.PHONE.open(); G.PHONE.openApp('missionen'); await w(400); const b = [...document.querySelectorAll('#phone .ps-pbtn')].find(x => /Laufrunde starten/.test(x.textContent)); if (b) b.click(); await w(800); } return JSON.stringify({ laeuft: !!G.LAUF.run, versuche: n, handy: G.PHONE.isOpen }); })()",
+  "expect": "!!window.G.LAUF.run && !window.G.PHONE.isOpen"
+ },
+ {
+  "n": "handy_karte",
+  "wait": 1500,
+  "js": "(() => { const P = window.G.PHONE; P.open(); P.openApp('karte'); return JSON.stringify({ menu: document.getElementById('menu').style.display }); })()",
+  "expect": "document.getElementById('menu').style.display === 'flex' && document.querySelector('#menu .pane[data-tab=karte]').style.display === 'block'"
+ },
+ {
+  "n": "menu_esc",
+  "wait": 1500,
+  "js": "(() => { window.G.X.closeMenu(); dispatchEvent(new KeyboardEvent('keydown', { code: 'Escape', key: 'Escape' })); return document.getElementById('menu').style.display; })()",
+  "expect": "document.getElementById('menu').style.display === 'flex' && document.getElementById('menu').classList.contains('mn') && document.querySelector('#menu .pane[data-tab=uebersicht]').style.display === 'block' && /Laufrunde/.test(document.querySelector('#menu .mn-board').textContent)"
+ },
+ {
+  "n": "menu_grafik",
+  "wait": 800,
+  "js": "(() => { document.querySelector('#menu button[data-tab=grafik]').click(); return document.querySelector('#menu .pane[data-tab=grafik]').style.display; })()",
+  "expect": "document.querySelector('#menu .pane[data-tab=grafik]').style.display === 'block' && !!document.getElementById('o_quality')"
+ },
+ {
+  "n": "menu_f1",
+  "wait": 800,
+  "shot": false,
+  "js": "(() => { window.G.X.closeMenu(); dispatchEvent(new KeyboardEvent('keydown', { code: 'F1', key: 'F1' })); return 'ok'; })()",
+  "expect": "document.getElementById('menu').style.display === 'flex' && document.querySelector('#menu .pane[data-tab=hilfe]').style.display === 'block'"
+ }
 ]
