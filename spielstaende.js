@@ -46,7 +46,7 @@ export function initSpielstaende(X) {
     let nid = '';
     try {
       const w0 = localStorage.getItem('notgta.save'); // saveGame fängt Fehler selbst ab und liefert nichts zurück: am Feld "when" erkennen, ob es geschrieben hat
-      A.saveGame(true); // schreibt notgta.save frisch; Fortschritt und Story speichern sich selbst
+      A.saveGame(true, true); // schreibt notgta.save frisch (bewusst, auch nach „Neues Spiel“); Fortschritt und Story speichern sich selbst
       const w1 = localStorage.getItem('notgta.save'); const wh = s => { try { return JSON.parse(s).when || 0; } catch (_) { return 0; } };
       if (!w1 || (w1 === w0 && Date.now() - wh(w1) > 2000)) throw new Error('notgta.save nicht geschrieben'); // unverändert und alt = Speichern ist fehlgeschlagen
       nid = alt ? alt.id : Date.now().toString(36) + Math.floor(performance.now() % 1000).toString(36);
