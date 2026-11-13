@@ -5,6 +5,8 @@
 // Ohne url startet es selbst einen Webserver im Repo (freier Port) und beendet ihn am Ende.
 // Harte Grenzen: 20 min gesamt, 60 s je Auswertung. Exit 0 = alles ok, 1 = Fehler/Erwartung verfehlt, 2 = Zeit um.
 // Lokal NUR im Nachtfenster 22–06 Uhr (CLAUDE.md).
+// Kompakt (#121): ergebnis.json = { passed, failed: [{ step, error, pos }], letzte } (letzte = die 10 Schritte vor dem
+// ersten Fehler, nur bei Fehler) und am Ende eine Zeile ERGEBNIS. Bekannte harmlose Chrome-/WebGL-Meldungen siehe HARMLOS.
 //
 // Schritt (alle Felder optional außer n):
 //   n      Name, zugleich Bildname
@@ -23,8 +25,18 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
 const log = s => { const l = new Date().toTimeString().slice(0, 5) + ' ' + s; console.log(l); appendFileSync(`${OUT}/stand.txt`, l + '\n'); };
 const freePort = () => new Promise(r => { const s = createServer(); s.listen(0, () => { const p = s.address().port; s.close(() => r(p)); }); });
 const kids = []; let code = 0;
-const ende = c => { for (const k of kids) try { k.kill(); } catch (e) { /* schon weg */ } process.exit(c); };
-setTimeout(() => { log('ZEIT UM (20 min)'); ende(2); }, 20 * 60 * 1000).unref();
+// Bekannte harmlose Meldungen von Headless-Chrome/SwiftShader/WebGL: zählen nicht als Fehler, landen nur gezählt in ergebnis.json.
+const HARMLOS = [/GPU stall due to ReadPixels/i, /GL_CLOSE_PATH_NV/i, /WebGL: INVALID_ENUM: getParameter/i, /Automatic fallback to software WebGL/i,
+  /WebGL: too many errors, no more errors will be reported/i, /THREE\.WebGLRenderer: .*extension not supported/i, /texImage2D: Tex(Sub)?Image.*(format|type)/i,
+  /\[\.WebGL-[0-9a-fx]+\]/i, /favicon\.ico/i];
+const harmlos = s => HARMLOS.some(re => re.test(s));
+const ergebnis = { passed: [], failed: [], letzte: [], harmlos: 0 }; const verlauf = [];
+const fail = (step, error, pos = null) => { if (!ergebnis.failed.length) ergebnis.letzte = verlauf.slice(-10); ergebnis.failed.push({ step, error, pos }); code = Math.max(code, 1); };
+const bericht = () => { try { const e = { ...ergebnis, passed: ergebnis.passed.length, passedSteps: ergebnis.passed }; if (!e.failed.length) delete e.letzte;
+  writeFileSync(`${OUT}/ergebnis.json`, JSON.stringify(e, null, 1));
+  console.log(`ERGEBNIS: ${e.passed} ok, ${e.failed.length} rot${e.failed.length ? ' – ' + e.failed.slice(0, 3).map(f => `${f.step}: ${String(f.error).slice(0, 120)}`).join(' | ') : ''}`); } catch (x) { /* Bericht darf Exit-Code nicht ändern */ } };
+const ende = c => { bericht(); for (const k of kids) try { k.kill(); } catch (e) { /* schon weg */ } process.exit(c); };
+setTimeout(() => { log('ZEIT UM (20 min)'); fail('zeit', 'ZEIT UM (20 min)'); ende(2); }, 20 * 60 * 1000).unref();
 let URL = URL0;
 if (!URL) { const port = await freePort(); const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
   kids.push(spawn('python3', ['-m', 'http.server', String(port), '--bind', '127.0.0.1'], { cwd: root, stdio: 'ignore' })); URL = `http://127.0.0.1:${port}/play.html`; }
@@ -56,13 +68,17 @@ try {
     if (s.leave) { await ev('window.G.INTERIORS.inside && window.G.INTERIORS.leave()'); await sleep(6000); }
     await sleep(s.wait ?? 5000);
     if (s.tx !== undefined) await ev(`window.G.camYaw.v = Math.atan2(${s.tx} - window.G.player.pos.x, ${s.tz} - window.G.player.pos.z); window.G.camPitch.v = ${s.pitch ?? 0.2};`);
-    let zeile = `${s.n}: ${await ev(pos)}`;
-    if (s.js) { const r = await ev(s.js); zeile += ` js=${JSON.stringify(r)}`; if (typeof r === 'string' && /^(EXC|TIMEOUT)/.test(r)) { zeile += ' ROT (Ausnahme)'; code = 1; } }
-    if (s.expect) { const ok = await ev(`!!(${s.expect})`) === true; zeile += ok ? ' OK' : ` ROT (${s.expect})`; if (!ok) code = 1; }
+    const p = await ev(pos); let zeile = `${s.n}: ${p}`; let pj = null; try { pj = JSON.parse(p); } catch (x) { pj = p; }
+    let rot = null;
+    if (s.js) { const r = await ev(s.js); zeile += ` js=${JSON.stringify(r)}`; if (typeof r === 'string' && /^(EXC|TIMEOUT)/.test(r)) { zeile += ' ROT (Ausnahme)'; rot = r; } }
+    if (s.expect) { const ok = await ev(`!!(${s.expect})`) === true; zeile += ok ? ' OK' : ` ROT (${s.expect})`; if (!ok) rot = rot ? `${rot}; expect: ${s.expect}` : `expect: ${s.expect}`; }
     if (s.shot !== false) await shot(s.n);
     log(zeile);
+    if (rot) fail(s.n, rot, pj); else ergebnis.passed.push(s.n);
+    verlauf.push(zeile);
   }
-  const e = [...new Set(errs)]; writeFileSync(`${OUT}/fehler.txt`, e.join('\n')); if (e.length) code = 1;
+  const alle = [...new Set(errs)]; const e = alle.filter(x => !harmlos(String(x))); ergebnis.harmlos = alle.length - e.length;
+  writeFileSync(`${OUT}/fehler.txt`, e.join('\n')); for (const x of e) fail('konsole', String(x).slice(0, 500));
   log(e.length ? `FEHLER (${e.length}):\n${e.slice(0, 10).join('\n')}` : 'keine Fehler'); ws.close();
-} catch (e) { log('ABBRUCH: ' + e.message); code = 1; }
+} catch (e) { log('ABBRUCH: ' + e.message); fail('abbruch', e.message); }
 ende(code);
