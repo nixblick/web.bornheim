@@ -2,6 +2,8 @@
 
 ## 2026-11-13
 
+- **Handy auf H und Pausenmenü nach Sunset (#150):** Zu Fuß öffnet H (Touch: 📱 am rechten Rand) ein Hochkant-Handy unten rechts im Aufbau von Project Sunset (Statuszeile, große Uhr, App-Raster, Zurück, Home-Balken); im Fahrzeug bleibt H Hupe/Sondersignal. Apps: Nachrichten (Story-Untertitel und Einblendkarten als Verlauf), Feed, Karte (Pausenkarte), Missionen (Laufrunde, Frischlufteulen inkl. Marathon/Megamarsch, Vokabaum, Storys starten), Statistik (progress.js), Kamera (PNG-Foto), Speichern; Cheats nur im Kreativmodus. Das ESC-Menü ist wie in Sunset gegliedert: Blatt links (PAUSE, Navigation Spiel/Einstellungen, Tastenhinweise), rechts Inhalt; neue Startseite „Übersicht“ mit Standort, aktueller Mission und Spielfigur. Alle bisherigen Einstellungen bleiben. Neu: `phone.js`, `menu.js`, `ui-sunset.css`, Probe `tools/proben/handy.json`.
+
 - **Gräber und Haltestelle nachgebessert:** Mustergrabanlage dreht die Steinvorderseiten zum nächsten OSM-Weg (bis 60 m). Tramhalte mit neuem Haltestellenmodell (Gleis in 20 m) bekommen den alten blauen Halte-Mast nicht mehr. Glas der Wartehalle als Milchglas mit deutlichem weißen Punktraster (Foto Wasserpark). Spieltest per CI mit `graeber`.
 
 - **Doku privat:** `docs/vergleich-project-sunset.md` liegt nur noch lokal (gitignore), auf Andrés Wunsch. In der Git-Historie bleibt die frühere Fassung.
