@@ -1,6 +1,41 @@
 [
- { "n": "fern_schaumainkai_altstadt", "x": -2250, "z": 2640, "tx": -2350, "tz": 2000, "pitch": -0.12, "wait": 12000,
-   "js": "JSON.stringify({ fog: [window.G.scene.fog.near, window.G.scene.fog.far], far: window.G.camera.far })" },
- { "n": "fern_hauptbahnhof_skyline", "x": -3300, "z": 2500, "tx": -2600, "tz": 2000, "pitch": -0.2, "wait": 12000 },
- { "n": "fern_dom_vom_osthafen", "x": -1000, "z": 2300, "tx": -1735, "tz": 2087, "pitch": -0.1, "wait": 12000 }
+ {
+  "n": "fern_schaumainkai_altstadt",
+  "x": -2250,
+  "z": 2640,
+  "tx": -2350,
+  "tz": 2000,
+  "pitch": -0.12,
+  "wait": 12000,
+  "js": "JSON.stringify({ fog: [window.G.scene.fog.near, window.G.scene.fog.far], far: window.G.camera.far })"
+ },
+ {
+  "n": "fern_hauptbahnhof_skyline",
+  "x": -3300,
+  "z": 2500,
+  "tx": -2600,
+  "tz": 2000,
+  "pitch": -0.2,
+  "wait": 12000
+ },
+ {
+  "n": "fern_dom_vom_osthafen",
+  "x": -1000,
+  "z": 2300,
+  "tx": -1735,
+  "tz": 2087,
+  "pitch": -0.1,
+  "wait": 12000
+ },
+ {
+  "n": "fern_messeturm_450m",
+  "x": -3650,
+  "z": 2200,
+  "tx": -4061,
+  "tz": 1898,
+  "pitch": -0.25,
+  "wait": 12000,
+  "js": "JSON.stringify({ haze: (window.G.X.FAR_HAZE || []).length })",
+  "expect": "(window.G.X.FAR_HAZE || []).length >= 1"
+ }
 ]
