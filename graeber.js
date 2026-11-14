@@ -137,7 +137,7 @@ export function initGraeber(X) {
     let na = 0; for (const gp of CITY.green || []) { if (gp.k !== 'cemetery' || na >= MAX_ANL || !gp.p || gp.p.length < 3) continue; let best = null, bd = 1e18; // Punkt am Rand innen, nah am Spieler
       for (let i = 0; i < gp.p.length - 1; i++) { const [ax, az] = gp.p[i], [bx, bz] = gp.p[i + 1]; for (let t = 0.2; t < 0.9; t += 0.3) { const ex = ax + (bx - ax) * t, ez = az + (bz - az) * t, l = Math.hypot(bx - ax, bz - az) || 1, nx = -(bz - az) / l, nz = (bx - ax) / l;
         for (const s of [12, -12]) { const x = ex + nx * s, z = ez + nz * s; if (!pointInPoly(x, z, gp.p)) continue; const d = (x - px) ** 2 + (z - pz) ** 2; if (d < bd) { bd = d; best = { x, z, ang: Math.atan2(bz - az, bx - ax) }; } } } }
-      if (best && bd < NAH * NAH) { na++; out.push({ key: 'a' + best.x.toFixed(0) + ',' + best.z.toFixed(0), a: best }); } }
+      if (best && bd < NAH * NAH) { na++; out.push({ key: 'a' + gp.p[0][0].toFixed(0) + ',' + gp.p[0][1].toFixed(0), a: best }); /* Schlüssel je Friedhof, nicht je nächstem Randpunkt: sonst entstand beim Entlanglaufen alle paar Meter eine neue Anlage */ } }
     return out;
   }
   function update(dt) {

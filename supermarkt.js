@@ -98,10 +98,11 @@ export function initSupermarkt(X) {
     g.position.set(x, TH(x + en.nx * 1.5, z + en.nz * 1.5), z); g.rotation.y = Math.atan2(en.nx, en.nz); g.updateMatrixWorld(true);
     return g;
   }
+  const leerVers = new Map(); // Schlüssel → bisherige Versuche für leere Eingänge
   function update() {
     const w = wanted(), keys = new Set(w.map(e => e.key));
-    for (const [k, g] of built) { if (keys.has(k)) continue; const d2 = (g.userData.x - player.pos.x) ** 2 + (g.userData.z - player.pos.z) ** 2; if (d2 > WEG * WEG) { scene.remove(g); disposeHierarchy(g); built.delete(k); } }
-    for (const e of w) { if (built.has(e.key)) continue; const g = bauen(e.p) || new THREE.Group(); g.userData.x = e.p.x; g.userData.z = e.p.z; g.userData.noChunk = true; built.set(e.key, g); scene.add(g); }
+    for (const [k, g] of built) { if (keys.has(k)) { /* leer, weil die Hauskachel noch nicht geladen war: alle 6 s neu versuchen, höchstens zehnmal */ if (!g.children.length && (g.userData.vers = (g.userData.vers | 0) + 1) % 4 === 0 && g.userData.vers <= 40) { scene.remove(g); built.delete(k); leerVers.set(k, g.userData.vers); } continue; } const d2 = (g.userData.x - player.pos.x) ** 2 + (g.userData.z - player.pos.z) ** 2; if (d2 > WEG * WEG) { scene.remove(g); disposeHierarchy(g); built.delete(k); } }
+    for (const e of w) { if (built.has(e.key)) continue; const g = bauen(e.p) || new THREE.Group(); g.userData.vers = leerVers.get(e.key) | 0; g.userData.x = e.p.x; g.userData.z = e.p.z; g.userData.noChunk = true; built.set(e.key, g); scene.add(g); }
     const nacht = !!(A.world && A.world.night); for (const g of built.values()) for (const o of g.children) if (o.userData.nacht) o.visible = nacht;
   }
   setInterval(() => { try { update(); } catch (e) { console.warn('supermarkt', e); } }, 1500); // eigener Takt, keine Zeile in der Spielschleife
