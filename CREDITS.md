@@ -32,6 +32,19 @@ Alle 3D-Modelle und Texturen sind frei nutzbar. Herkunft:
 |---|---|---|---|---|
 | pistol.glb | Pistol | Quaternius | CC0 | https://poly.pizza/m/J3i9KDQ3kt |
 
+## Geräusche (`assets/sfx/`)
+51 kurze Aufnahmen, alle CC0 1.0 (Public Domain), auf Mono 32 kHz OGG verkleinert. Zuordnung in `assets/sfx/manifest.json`. Alle übrigen Geräusche erzeugt das Spiel selbst (`klang.js`).
+
+| Dateien | Inhalt | Paket | Autor | Lizenz | Quelle |
+|---|---|---|---|---|---|
+| step_*, step_gras_*, step_holz_*, punch_*, hit_*, bump_*, splat_* | Schritte (Beton, Gras, Holz), Schläge, Blech, weicher Aufprall | Impact Sounds 1.0 | Kenney | CC0 | https://kenney.nl/assets/impact-sounds |
+| door_* | Tür schließen | RPG Audio | Kenney | CC0 | https://kenney.nl/assets/rpg-audio |
+| click_* | Klicks | UI Audio | Kenney | CC0 | https://kenney.nl/assets/ui-audio |
+| pickup_* | Bestätigung | Interface Sounds 1.0 | Kenney | CC0 | https://kenney.nl/assets/interface-sounds |
+| reload_* | Nachladen (Pistole, Gewehr, Vorderschaft) | Gun reload sounds | SpringySpringo | CC0 | https://opengameart.org/content/gun-reload-sounds |
+
+Geprüft am 14.11.2026: Lizenzangabe auf der jeweiligen Seite und, wo vorhanden, in der beiliegenden License.txt. Nicht übernommen wurde ein Schuss-Paket, dessen Seite CC0 nennt, dessen beiliegende Datei aber CC-BY 3.0.
+
 ## Texturen (`assets/textures/`)
 Alle von Poly Haven (https://polyhaven.com), CC0: painted_plaster_wall, asphalt_02, grey_cartago_02, clay_roof_tiles_02, red_brick_03, cobblestone_floor_04.
 
