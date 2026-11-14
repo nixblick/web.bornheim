@@ -401,12 +401,14 @@ export function initKlang(X) {
   const AUFN_PEGEL = { step: 0.2, step_innen: 0.2, punch: 0.5, hit: 0.5, bump: 0.5, splat: 0.45, door: 0.4, click: 0.3, pickup: 0.35, reload: 0.4 }, AUFN_NAME = { step_holz: 'step_innen' };
   async function ladeAufnahmen(manifest) {
     const OC = offline(); let n = 0; if (!OC || !manifest) return 0;
-    try { if (!document.createElement('audio').canPlayType('audio/ogg; codecs="vorbis"')) return 0; } catch (e) { return 0; } // Safari vor 18.4 kann kein Ogg: nicht 46 Dateien umsonst laden
+    let ogg = false, m4a = false; // Safari vor 18.4 kann kein Ogg: dann die AAC-Zwillinge (.m4a, gleicher Name); kann er beides nicht, gar nichts laden
+    try { const a = document.createElement('audio'); ogg = !!a.canPlayType('audio/ogg; codecs="vorbis"'); m4a = !ogg && !!a.canPlayType('audio/mp4; codecs="mp4a.40.2"'); } catch (e) { return 0; }
+    if (!ogg && !m4a) return 0;
     const dek = new OC(1, 1, 44100);
     for (const key of Object.keys(manifest)) {
       const kind = AUFN_NAME[key] || key; if (!R[kind]) continue; // unbekannt (z. B. step_gras: das Spiel kennt den Untergrund nicht)
       const urls = [].concat(manifest[key] || []), bs = [];
-      for (const url of urls) { try { const r = await fetch(url); if (!r.ok) continue; bs.push(normalisieren(await dek.decodeAudioData(await r.arrayBuffer()), AUFN_PEGEL[kind] || 0.4)); } catch (e) { console.warn('klang aufnahme', url, e); } }
+      for (const url0 of urls) { const url = ogg ? url0 : String(url0).replace(/\.ogg$/i, '.m4a'); try { const r = await fetch(url); if (!r.ok) continue; bs.push(normalisieren(await dek.decodeAudioData(await r.arrayBuffer()), AUFN_PEGEL[kind] || 0.4)); } catch (e) { console.warn('klang aufnahme', url, e); } }
       if (bs.length) { AUFN[kind] = bs; n += bs.length; }
     }
     return n;
