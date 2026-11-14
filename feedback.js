@@ -108,7 +108,7 @@ function shotDataUrl() {
   return null;
 }
 function showAlt(msg) { $('fb_hint').textContent = msg; $('fb_alt').style.display = ''; }
-export function openFeedback() { if (document.pointerLockElement) { wasLocked = true; document.exitPointerLock(); } takeShot(); $('fb_hint').textContent = ''; $('fb_alt').style.display = 'none'; $('fb_send').disabled = false; $('fb_share').style.display = navigator.share ? '' : 'none'; /* GitHub ist der Hauptweg, Mail nur Ausweich (André 13.11.2026) */ el.style.display = 'flex'; setTimeout(() => $('fb_title').focus(), 50); }
+export function openFeedback() { delete el.dataset.gesendet; if (document.pointerLockElement) { wasLocked = true; document.exitPointerLock(); } takeShot(); $('fb_hint').textContent = ''; $('fb_alt').style.display = 'none'; $('fb_send').disabled = false; $('fb_close').textContent = 'Abbrechen'; $('fb_share').style.display = navigator.share ? '' : 'none'; /* GitHub ist der Hauptweg, Mail nur Ausweich (André 13.11.2026) */ el.style.display = 'flex'; setTimeout(() => $('fb_title').focus(), 50); }
 function close() { el.style.display = 'none'; }
 $('fb_close').onclick = close; el.addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Escape') close(); }); el.addEventListener('keyup', e => e.stopPropagation());
 function download(f) { const a = document.createElement('a'); a.href = URL.createObjectURL(f); a.download = f.name; document.body.appendChild(a); a.click(); a.remove(); }
@@ -126,6 +126,8 @@ $('fb_mail').onclick = ev => { ev.preventDefault();
 };
 $('fb_send').onclick = async ev => {
   ev.preventDefault(); const b = $('fb_send'); if (b.disabled) return;
+  if (el.dataset.gesendet && !$('fb_title').value.trim() && !$('fb_text').value.trim()) { $('fb_hint').textContent = 'Schon gesendet. Für eine weitere Meldung bitte kurz beschreiben, was los ist.'; return; } // leeres Doppel nach dem Senden verhindern
+  delete el.dataset.gesendet;
   const kind = $('fb_kind').value;
   const payload = { kind: 'feedback', typ: kind === 'Fehler' ? 'bug' : 'idee', titel: ($('fb_title').value.trim() || (kind === 'Fehler' ? 'Fehler im Spiel' : 'Idee')).slice(0, 120),
     text: ($('fb_text').value.trim() || '(keine Beschreibung)').slice(0, 5000), zustand: $('fb_info').checked ? info().slice(0, 4000) : '' };
@@ -143,7 +145,8 @@ $('fb_send').onclick = async ev => {
     if (url) { h.append('Danke! Gemeldet: '); const a = document.createElement('a'); a.href = url; a.target = '_blank'; a.rel = 'noopener'; a.style.color = '#ffd84a'; a.textContent = url.replace('https://github.com/nixblick/web.bornheim/issues/', 'Issue #'); h.append(a); }
     else h.textContent = 'Danke! Deine Meldung ist angekommen.';
     $('fb_title').value = ''; $('fb_text').value = '';
-    return;
+    // #236/#237: nach dem Senden „Schließen“ statt „Abbrechen“, und eine neue Meldung lässt sich gleich wieder senden (der Knopf blieb gesperrt)
+    $('fb_close').textContent = 'Schließen'; b.disabled = false; el.dataset.gesendet = '1'; return;
   }
   b.disabled = false;
   showAlt(res.status === 429 ? 'Gerade kommen zu viele Meldungen an, bitte später noch einmal oder einen der anderen Wege nehmen:' : 'Senden ging nicht (Fehler ' + res.status + '). Bitte einen der anderen Wege nehmen:');
