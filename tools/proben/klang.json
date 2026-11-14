@@ -49,5 +49,12 @@
   "shot": false,
   "js": "(() => { const K = window.KLANG; K.aus = true; const a = K.sfx('shot', 0.01); K.aus = false; window.__ka = a; return String(a); })()",
   "expect": "window.__ka === false"
+ },
+ {
+  "n": "klang_aufnahmen",
+  "wait": 300,
+  "shot": false,
+  "js": "(async () => { const K = window.KLANG || window.G.KLANG, w = ms => new Promise(q => setTimeout(q, ms)); for (let i = 0; i < 300 && !(K.aufnahmen >= 30); i++) await w(100); window.__ka = { n: K.aufnahmen, step: K.sfx('step', 0.5), tuer: K.sfx('door', 0.5) }; return JSON.stringify(window.__ka); })()",
+  "expect": "(() => { const r = window.__ka; return !!r && r.n >= 30 && r.step === true && r.tuer === true; })()"
  }
 ]
