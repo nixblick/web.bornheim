@@ -2799,7 +2799,7 @@ function driveCar(c, dt, ctrl) {
   const want = _want.set(Math.sin(u.heading) * u.speed, Math.cos(u.heading) * u.speed);
   const grip = (hand ? 1.6 : 7.5) * (opts.grip || 1) * (1 - weather.rain * 0.35) * (u.bike ? 2.5 : 1); u.vel.lerp(want, Math.min(1, grip * dt));
   const slip = Math.hypot(want.x - u.vel.x, want.y - u.vel.y);
-  if (slip > 3.2 && sp > 6 && !u.bike) { u.skidT = (u.skidT || 0) + dt; if (u.skidT > 0.035) { u.skidT = 0; const rx = Math.cos(u.heading) * 0.8, rz = -Math.sin(u.heading) * 0.8, bx = -Math.sin(u.heading) * 1.4, bz = -Math.cos(u.heading) * 1.4; addSkid(c.position.x + bx + rx, c.position.z + bz + rz, u.heading); addSkid(c.position.x + bx - rx, c.position.z + bz - rz, u.heading); }
+  if (slip > 3.2 && sp > 6 && !u.bike) { u.skidAt = performance.now(); u.skidT = (u.skidT || 0) + dt; if (u.skidT > 0.035) { u.skidT = 0; const rx = Math.cos(u.heading) * 0.8, rz = -Math.sin(u.heading) * 0.8, bx = -Math.sin(u.heading) * 1.4, bz = -Math.cos(u.heading) * 1.4; addSkid(c.position.x + bx + rx, c.position.z + bz + rz, u.heading); addSkid(c.position.x + bx - rx, c.position.z + bz - rz, u.heading); }
     if (c === player.car) { u.scrT = (u.scrT || 0) - dt; if (u.scrT <= 0) { u.scrT = 0.16; sfx('screech', clamp(slip / 10, 0.2, 0.7)); } } }
   // Karosserie neigt sich in Kurven und beim Bremsen/Beschleunigen
   const body = c.children[0]; if (body) { const acc = (u.speed - prev) / Math.max(dt, 1e-3); if (u.by0 === undefined) { u.by0 = body.position.y; u.rollS = u.pitchS = u.heave = u.rv = u.pv = u.hv = 0; }

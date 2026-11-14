@@ -51,7 +51,7 @@ body{overscroll-behavior:none;-webkit-touch-callout:none;-webkit-user-select:non
   const G = () => window.G; const key = (code, down) => dispatchEvent(new KeyboardEvent(down ? 'keydown' : 'keyup', { code, bubbles: true }));
 
   // WebAudio auf iOS/Safari nach Tab-Wechsel oder erstem Tippen automatisch aufwecken
-  function resumeAudio() { const g = G(); if (g && g.SND && g.SND.ctx && g.SND.ctx.state === 'suspended') g.SND.ctx.resume().catch(() => {}); }
+  function resumeAudio() { const g = G(); if (g && g.SND && g.SND.ctx && g.SND.ctx.state !== 'running') g.SND.ctx.resume().catch(() => {}); }
   for (const ev of ['touchstart', 'touchend', 'click']) addEventListener(ev, resumeAudio, { passive: true }); // iOS lässt Ton erst nach touchend/click zu
   // iOS meldet die neue Größe nach dem Drehen und beim Ein-/Ausblenden der Adressleiste verspätet: Größe nachziehen
   const nachziehen = () => { for (const ms of [120, 450, 900]) setTimeout(() => dispatchEvent(new Event('resize')), ms); };

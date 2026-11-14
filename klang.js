@@ -310,7 +310,7 @@ export function initKlang(X) {
     const k = Math.min(1, sp / 32), wt = A.weather || {}, rain = wt.rain || 0;
     ziel(w.reifen.g.gain, car && !u.heli ? Math.pow(k, 1.4) * (u.bike && !u.moto ? 0.03 : 0.12) : 0); ziel(w.reifen.f.frequency, 300 + k * 700);
     ziel(w.wind.g.gain, car ? k * k * 0.09 : 0); ziel(w.wind.f.frequency, 600 + k * 900);
-    const skid = !!(u && !u.bike && u.skidT !== undefined && w.skidAlt !== undefined && u.skidT !== w.skidAlt && sp > 6); w.skidAlt = u ? u.skidT : undefined;
+    const skid = !!(u && !u.bike && performance.now() - (u.skidAt || -1e9) < 150 && sp > 6); // Zeitstempel statt Zählervergleich: der Zähler stand bei unter 28 Bildern/s immer auf 0
     ziel(w.rutsch.g.gain, skid ? 2.2 * Math.min(1, sp / 20) : 0, skid ? 0.04 : 0.12); if (skid) w.rutsch.b.forEach((b, i) => ziel(b.frequency, (i ? 2 : 1) * zufall(1150, 1450), 0.1));
     ziel(w.nass.g.gain, car && !u.heli && rain > 0.05 ? rain * Math.pow(k, 1.2) * 0.09 : 0, 0.2); // nasse Straße zischt mit dem Tempo
     // Kulisse: Überblendung über 3-4 s; drinnen gedämpft durch Tiefpass statt nur leiser, Regen und Donner etwas heller
@@ -360,6 +360,7 @@ export function initKlang(X) {
     try {
       const C = w.C, o = ort(kind, pos); api.letzter = { kind, gain: +o.gain.toFixed(4), pan: +o.pan.toFixed(3), delay: +o.delay.toFixed(3), lp: Math.round(o.lp), d: Math.round(o.d) };
       if (o.gain <= 0.0005) return true; // außer Hörweite
+      if (C.state !== 'running') return true; // Ton angehalten (Handy gesperrt, Anruf): nichts einplanen, sonst spielt nach dem Aufwecken alles auf einmal
       const bs = aufn || VAR[art], v = vol * o.gain, laut = v * (bs ? 1 : PEGEL[art] || 1);
       if (!platz(laut)) return true;
       const t = C.currentTime + o.delay, kette = [], g = C.createGain(); kette.push(g); let n = g;
@@ -400,6 +401,7 @@ export function initKlang(X) {
   const AUFN_PEGEL = { step: 0.2, step_innen: 0.2, punch: 0.5, hit: 0.5, bump: 0.5, splat: 0.45, door: 0.4, click: 0.3, pickup: 0.35, reload: 0.4 }, AUFN_NAME = { step_holz: 'step_innen' };
   async function ladeAufnahmen(manifest) {
     const OC = offline(); let n = 0; if (!OC || !manifest) return 0;
+    try { if (!document.createElement('audio').canPlayType('audio/ogg; codecs="vorbis"')) return 0; } catch (e) { return 0; } // Safari vor 18.4 kann kein Ogg: nicht 46 Dateien umsonst laden
     const dek = new OC(1, 1, 44100);
     for (const key of Object.keys(manifest)) {
       const kind = AUFN_NAME[key] || key; if (!R[kind]) continue; // unbekannt (z. B. step_gras: das Spiel kennt den Untergrund nicht)
@@ -415,5 +417,8 @@ export function initKlang(X) {
     /** Stand des Vorrechnens: arten = Geräusche mit allen Fassungen, fertig = Warteschlange leer */
     get vorab() { const arten = Object.keys(R).filter(k => VAR[k] && VAR[k].length >= anzahl(k)).length; return { arten, gesamt: Object.keys(R).length, betten: Object.keys(BETT).length, aufgaben: V.q.length, erledigt: V.i, fertig: V.i >= V.q.length && !V.busy }; },
     get gruppen() { return w ? w.gruppen : null; } };
-  /** @type {any} */ (window).KLANG = api; return api;
+  /** @type {any} */ (window).KLANG = api; // Ton wieder aufwecken: iOS hält ihn nach Anruf, Sperrbildschirm oder App-Wechsel an ('suspended' oder 'interrupted')
+  const wecken = () => { const c = A.SND && A.SND.ctx; if (c && c.state !== 'running' && c.state !== 'closed') { try { const q = c.resume(); if (q && q.catch) q.catch(() => { /* erst nach einer Geste erlaubt */ }); } catch (e) { /* bleibt aus */ } } };
+  for (const ev of ['pointerdown', 'touchend', 'keydown']) addEventListener(ev, wecken, { passive: true });
+  return api;
 }
