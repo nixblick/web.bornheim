@@ -3522,6 +3522,18 @@ function respawn() { const w = player.wanted; player.dead = false; player.hp = 1
 window.G = { STR, BUILD_STAT, LOAD_STAT, VERY_WEAK, CAR_INST_STAT, get CAR_INST() { return CAR_INST; }, IGPU, isIGPU, optsToSave, get PHONE() { return PHONE; }, barrierHit, HELI, get EULEN() { return EULEN; }, get VOKA() { return VOKA; }, get LAUF() { return LAUF; }, get NEBENJOBS() { return NEBENJOBS; }, get RASEN() { return RASEN; }, get ZIVIL() { return ZIVIL; }, makeMoto, makeAmbulance, updateBikeRacks, onMotorway, PROGRESS, INTERIORS, explode, makeBike, FX, puff, burst, smoke, LOW_GFX, WEAK_GPU, get canvasTexCount() { return _allCanvasTex.length; }, get ANISO() { return ANISO; }, get roadMat() { return roadMatRef; }, DEMN, DEMT, R_DATA, unregisterTile, SHOPS, TILES, WORLD, WIDX, streamUpdate, streamInit, buildTileNow, TS, WPN, DEMO, STORY, FIRE, X, card, hurtPlayer, composerRef: () => composer,  autoQuality, get QUALITY_AUTO() { return QUALITY_AUTO; }, groundH, footTH, thMin, FOOT_SINK, dentCar, deckAt, surfAt, signalPoles, treeSpots, lampSpots, pushOffRoads, onOtherRoad, floorAt, solidAtH, solidAt, roofHeight, camShake,  CHAR, CAR_TPL, playAnim, makeHuman, makeCar, makeGun, applyQuality,  staticParked, chunkStatic,  saveGame, loadGame, world, opts, pickups, weather, trams, scene, cars, peds, player, camera, camYaw, camPitch, keys, CITY, DEM, TH, renderer, sun, hemi, THREE, shoot, toggleCar, update, toggleCreative, creative, creativePlace, creativeSpawnerActive, get barrierCount() { let n = 0; for (const v of barrierGrid.values()) n += v.length; return n; }, spawnOfficer, get MINI() { return MINI; } };
 try { initDebugOverlay(window.G); } catch (e) { console.warn('Debug-Overlay aus', e); } // F3 und G.PERF (#162), muss vor setAnimationLoop stehen
 let fpsN = 0, fpsT = 0;
+// Weltmatrizen nur für Sichtbares (14.11.2026, gemessen auf Intel UHD): three.js rechnete je Bild alle rund 8 800 Objekte der Szene neu,
+// auch unsichtbare Kacheln, ferne Passanten samt Knochen und Autos (3,9 ms von 39 ms). Sichtbar sind etwa 1 500. Unsichtbare Teilbäume
+// bleiben stehen und werden im ersten Bild, in dem sie wieder sichtbar sind, vor dem Zeichnen nachgezogen. Instanzierte Autos (userData.inst)
+// laufen mit, weil sie unsichtbar sind, aber getroffen werden können. Skelett-Netze und Kameras behalten ihre eigene Methode.
+scene.matrixWorldAutoUpdate = false;
+function mwSichtbar(o, pm) {
+  if (o.isSkinnedMesh || o.isCamera || o.matrixWorldAutoUpdate === false) { o.updateMatrixWorld(true); return; }
+  if (o.matrixAutoUpdate) o.updateMatrix();
+  if (pm) o.matrixWorld.multiplyMatrices(pm, o.matrix); else o.matrixWorld.copy(o.matrix);
+  o.matrixWorldNeedsUpdate = false;
+  const ch = o.children; for (let i = 0, n = ch.length; i < n; i++) { const c = ch[i]; if (c.visible || c.userData.inst) mwSichtbar(c, o.matrixWorld); }
+}
 renderer.setAnimationLoop(() => {
   fpsN++; const tn = performance.now(); if (tn - fpsT > 500) { const fe = document.getElementById('fps'); if (fe && opts.fps) fe.textContent = Math.round(fpsN * 1000 / (tn - fpsT)) + ' fps'; fpsN = 0; fpsT = tn; }
   const now = performance.now() / 1000; const dt = Math.min(now - lastT, 0.05); lastT = now;
@@ -3531,6 +3543,6 @@ renderer.setAnimationLoop(() => {
   // Ein Fehler in einem Bild darf das Spiel nicht einfrieren (three fordert den nächsten Frame erst nach dem Callback an)
   try { update(dt); audioUpdate(dt); } catch (e) { loopErrors++; if (loopErrors <= 3 || loopErrors % 300 === 0) console.error('update-Fehler', loopErrors, e); if (loopErrors === 3) showMsg('FEHLER IM SPIEL – bitte melden (Esc › Fehler melden)', 4000); }
   // Render-Fehler getrennt zählen (aufeinanderfolgend): nach 5 Bildern in Folge Effekte abschalten und direkt zeichnen
-  try { if (composer) composer.render(); else renderer.render(scene, camera); renderErrors = 0; } catch (e) { renderErrors++; if (renderLogs++ < 3) console.error('render-Fehler', e); if (renderErrors === 5) { if (composer) { composerBroken = true; try { disposeComposer(); } catch (e2) { composer = null; } try { if (HIMMEL) HIMMEL.setStufe(himmelStufe(), true); } catch (e3) { } renderErrors = 0; showMsg('EFFEKTE ABGESCHALTET (RENDER-FEHLER)', 4000); } else if (!renderWarned) { renderWarned = true; showMsg('FEHLER BEI DER GRAFIK – bitte melden (Esc › Fehler melden)', 4000); } } }
+  try { { const ch = scene.children; for (let i = 0, n = ch.length; i < n; i++) { const c = ch[i]; if (c.visible || c.userData.inst) mwSichtbar(c, null); } } if (composer) composer.render(); else renderer.render(scene, camera); renderErrors = 0; } catch (e) { renderErrors++; if (renderLogs++ < 3) console.error('render-Fehler', e); if (renderErrors === 5) { if (composer) { composerBroken = true; try { disposeComposer(); } catch (e2) { composer = null; } try { if (HIMMEL) HIMMEL.setStufe(himmelStufe(), true); } catch (e3) { } renderErrors = 0; showMsg('EFFEKTE ABGESCHALTET (RENDER-FEHLER)', 4000); } else if (!renderWarned) { renderWarned = true; showMsg('FEHLER BEI DER GRAFIK – bitte melden (Esc › Fehler melden)', 4000); } } }
 });
 let loopErrors = 0, renderErrors = 0, renderLogs = 0, renderWarned = false; var ruheBild = 0, bildNr = 0, _emAlt = -1, _emNacht = null, _emN = -1;
