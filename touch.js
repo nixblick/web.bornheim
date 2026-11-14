@@ -19,6 +19,7 @@
 #tc .ctx1{right:calc(5vw + 33vmin);bottom:calc(5vh + 13vmin);width:10.5vmin;height:10.5vmin;max-width:68px;max-height:68px;font-size:15px}
 #tc .ctx2{right:calc(5vw + 45vmin);bottom:5vh;width:10.5vmin;height:10.5vmin;max-width:68px;max-height:68px;font-size:15px}
 #tc .top{top:8px;width:40px;height:40px;border-radius:10px;font-size:17px}#tcx{position:fixed;z-index:70;top:calc(8px + env(safe-area-inset-top,0px));right:calc(8px + env(safe-area-inset-right,0px));width:46px;height:46px;border-radius:12px;border:2px solid #ffffffb0;background:#000000c0;color:#fff;font:800 20px system-ui;display:none}#tc .b *{pointer-events:none}#menu .box,#start,#shop .box,#metromenu,#tabov .box,#phone .ps-phone__page,#phone .ps-phone__home{touch-action:pan-y;-webkit-overflow-scrolling:touch}#tc .top.x{display:none}#tc.mehr .top.x{display:flex}
+#tc .tip{position:absolute;pointer-events:none;background:#000000b0;border:1px solid #ffd84a;color:#fff;font:600 13px system-ui;padding:6px 10px;border-radius:10px;max-width:42vw;text-align:center;transition:opacity .6s}#tc.tipaus .tip{opacity:0}
 body{overscroll-behavior:none;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}#hud{inset:env(safe-area-inset-top,0px) env(safe-area-inset-right,0px) env(safe-area-inset-bottom,0px) env(safe-area-inset-left,0px)!important}
 #phonebtn{top:calc(8px + env(safe-area-inset-top,0px))!important;right:calc(146px + env(safe-area-inset-right,0px))!important;width:40px!important;height:40px!important;font-size:19px!important;border-radius:10px!important;padding:0!important}#hud .tl{left:26px!important}#vehname{right:auto!important;left:50%!important;bottom:auto!important;top:26%!important;transform:translateX(-50%);font-size:22px!important}#hint{opacity:0!important}
 #minimap{position:fixed!important;left:calc(8px + env(safe-area-inset-left, 0px))!important;top:calc(78px + env(safe-area-inset-top, 0px))!important;bottom:auto!important;width:96px!important;height:96px!important;pointer-events:auto!important}
@@ -42,6 +43,13 @@ body{overscroll-behavior:none;-webkit-touch-callout:none;-webkit-user-select:non
 <div class="b ctx1 hide" data-k="ctx1">↻</div><div class="b ctx2 hide" data-k="ctx2">💡</div>
 <div class="b top" data-k="Escape" style="right:8px">☰</div><div class="b top" data-k="KeyM" style="right:54px">🗺</div><div class="b top" data-k="mehr" style="right:100px">⋯</div><div class="b top x" data-k="KeyV" style="right:100px;top:54px">🎥</div><div class="b top x" data-k="stats" style="right:100px;top:100px">📊</div><div class="b top x" data-k="KeyG" style="right:100px;top:146px">📣</div><div class="b top x" data-k="KeyC" style="right:100px;top:192px">🛠</div>`;
   document.body.appendChild(el);
+  // Einstiegshilfe: bei den ersten drei Starts vier kurze Hinweise an den Stellen, um die es geht; weg nach 12 s oder sobald man läuft und sich umsieht
+  let tipN = 3; try { tipN = +localStorage.getItem('notgta.touchTipp') || 0; } catch (e) { /* ohne Speicher: nicht zeigen */ }
+  let tipAn = false, tipT = 0, tipLief = false, tipSah = false;
+  function tipZeigen() { if (tipAn || tipN >= 3) return; tipAn = true; try { localStorage.setItem('notgta.touchTipp', String(tipN + 1)); } catch (e) { /* egal */ }
+    for (const [css, txt] of [['left:4vw;bottom:calc(8vh + 32vmin)', '👆 Hier aufsetzen und ziehen: laufen'], ['left:50%;top:38%;transform:translateX(-50%)', '↔ Wischen: umsehen'], ['right:5vw;bottom:calc(9vh + 34vmin)', 'Knöpfe wechseln je nach Lage'], ['right:8px;top:54px', '☰ Menü · 📱 Handy']]) { const t = document.createElement('div'); t.className = 'tip'; t.style.cssText = css; t.textContent = txt; el.appendChild(t); }
+    tipT = setTimeout(tipWeg, 12000); }
+  function tipWeg() { if (!tipAn) return; clearTimeout(tipT); el.classList.add('tipaus'); setTimeout(() => { for (const t of el.querySelectorAll('.tip')) t.remove(); }, 700); tipAn = false; tipN = 3; }
   // Schließen-Knopf für Handy und Statistik: beide decken auf kleinen Bildschirmen alles ab, Tasten zum Schließen gibt es nicht
   const zu = document.createElement('button'); zu.id = 'tcx'; zu.textContent = '✕'; zu.setAttribute('aria-label', 'Schließen'); document.body.appendChild(zu);
   const tabOffen = () => { const o = document.getElementById('tabov'); return !!o && o.style.display === 'flex'; }, handyOffen = () => { const o = document.getElementById('phone'); return !!o && o.style.display === 'block'; };
@@ -212,6 +220,7 @@ body{overscroll-behavior:none;-webkit-touch-callout:none;-webkit-user-select:non
     const pb = document.getElementById('phonebtn');
     if (pb) { const ph = document.getElementById('phone'), offen = !!ph && ph.style.display === 'block'; const v = on && g && g.player && (offen || (!g.player.car && !g.player.dead)) ? '' : 'none'; if (pb.style.display !== v) pb.style.display = v; }
     if (!on || !g || !g.player) return;
+    if (tipN < 3 && !tipAn) tipZeigen(); if (tipAn) { if (held.KeyW || held.KeyS || held.KeyA || held.KeyD) tipLief = true; if (lid !== null) tipSah = true; if (tipLief && tipSah) tipWeg(); }
     const p = g.player, car = p.car, cu = car && car.userData;
     const isHeli = !!(cu && cu.heli), isCannon = !!(cu && cu.cannon), isCreat = !!(g.creative && g.creative.on);
     const spawner = !!(g.creativeSpawnerActive && g.creativeSpawnerActive());
