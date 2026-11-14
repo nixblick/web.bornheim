@@ -2,7 +2,7 @@
 // Statistik und Befehlsübersicht (Tab gedrückt halten). Spielstand im Browser (localStorage).
 export const KEYS_HELP = [
   ['WASD', 'laufen / fahren'], ['Shift', 'rennen'], ['Leertaste', 'springen, im Auto Handbremse'], ['B', 'im Wasser tauchen, im Kreativmodus sinken (Strg geht auch)'], ['Maus', 'umsehen, Linksklick angreifen, Rechtsklick zielen'],
-  ['E', 'einsteigen / aussteigen: Auto, Fahrrad, Motorrad (Fahrradständer!), Christoph 2'], ['F', 'Laden, U-Bahn, Hauseingang, Dach, Aufzug zum Landeplatz (BG Unfallklinik, Seckbach)'], ['Christoph 2', 'W/S vor/zurück · A/D drehen · Leertaste steigen · Shift sinken · E nur gelandet'], ['H', 'zu Fuß: Handy (Missionen, Nebenjobs, Speichern); im Fahrzeug Hupe, in Polizei-, Feuerwehr-, Wasserwerferfahrzeugen Sondersignal an/aus'], ['L', 'Licht an/aus (im Fahrzeug)'],
+  ['E', 'einsteigen / aussteigen: Auto, Fahrrad, Motorrad (Fahrradständer!), Christoph 2'], ['F', 'Laden, U-Bahn, Hauseingang, Dach, Aufzug zum Landeplatz (BG Unfallklinik, Seckbach)'], ['Christoph 2', 'W/S vor/zurück · A/D drehen · Leertaste steigen · Shift sinken · E nur gelandet'], ['H', 'zu Fuß: Handy (Missionen, Nebenjobs, Speichern); im Fahrzeug Hupe, in Polizei-, Feuerwehr-, Wasserwerferfahrzeugen Sondersignal an/aus'], ['L', 'Licht an/aus (im Fahrzeug)'], ['U', 'Autoradio: Sender wechseln / aus (nur im Auto)'],
   ['1–0, Mausrad', 'Waffe wählen'], ['Q', 'letzte Waffe'], ['R', 'nachladen'], ['G', 'Leute sammeln / Sprechchor'], ['V', 'filmen'], ['X', 'Dialog weiter'],
   ['M', 'große Karte'], ['N', 'Minikarte nach Norden'], ['C', 'Kreativmodus'], ['Tab', 'Statistik, Fortschritt, Befehle'], ['F6 / F9', 'speichern / laden'], ['Esc', 'Menü'], ['F1', 'Hilfe: was geht wo'],
 ];
