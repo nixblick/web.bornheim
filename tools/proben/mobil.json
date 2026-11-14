@@ -8,13 +8,26 @@
   "x": -138,
   "z": 372,
   "wait": 6000,
-  "js": "(() => { const G = window.G; if (G.player.car) G.toggleCar(); const tc = document.getElementById('tc'); return JSON.stringify({ touch: !!window.__touch, grob: matchMedia('(pointer: coarse)').matches, fein: matchMedia('(pointer: fine)').matches, tc: tc && tc.style.display, w: innerWidth, h: innerHeight, q: G.opts.quality }); })()",
-  "expect": "window.__touch === true && document.getElementById('tc').style.display === 'block'"
+  "js": "(() => { const G = window.G; if (G.player.car) G.toggleCar(); const tc = document.getElementById('tc'); window.__m1 = { touch: !!window.__touch, grob: matchMedia('(pointer: coarse)').matches, tc: tc && tc.style.display, w: innerWidth, h: innerHeight, q: G.opts.quality, pr: +G.renderer.getPixelRatio().toFixed(2), fov: Math.round(G.camera.fov) }; return JSON.stringify(window.__m1); })()",
+  "expect": "window.__touch === true && document.getElementById('tc').style.display === 'block' && window.__m1.pr >= 0.6 && window.__m1.fov <= 80"
+ },
+ {
+  "n": "quer_stick",
+  "wait": 500,
+  "shot": false,
+  "js": "(async () => { const G = window.G, c = G.renderer.domElement, w = ms => new Promise(q => setTimeout(q, ms)); const tip = (typ, x, y, ziel) => { const t = new Touch({ identifier: 7, target: ziel, clientX: x, clientY: y }); ziel.dispatchEvent(new TouchEvent(typ, { bubbles: true, cancelable: true, touches: typ === 'touchend' ? [] : [t], changedTouches: [t] })); }; const z0 = G.player.pos.clone(); tip('touchstart', 150, 300, c); tip('touchmove', 150, 230, c); const vor = !!G.keys.KeyW; await w(2500); const weg = +G.player.pos.distanceTo(z0).toFixed(2); tip('touchend', 150, 230, c); const y0 = G.camYaw.v; tip('touchstart', 600, 150, c); tip('touchmove', 520, 150, c); tip('touchend', 520, 150, c); window.__m2 = { vor, weg, nach: !!G.keys.KeyW, dreh: +(G.camYaw.v - y0).toFixed(3) }; return JSON.stringify(window.__m2); })()",
+  "expect": "window.__m2.vor && !window.__m2.nach && window.__m2.weg > 0.3 && Math.abs(window.__m2.dreh) > 0.1"
+ },
+ {
+  "n": "quer_mehr",
+  "wait": 800,
+  "js": "(() => { const b = document.querySelector('#tc .top[data-k=mehr]'); const tip = (typ, x, y, ziel) => { const t = new Touch({ identifier: 7, target: ziel, clientX: x, clientY: y }); ziel.dispatchEvent(new TouchEvent(typ, { bubbles: true, cancelable: true, touches: typ === 'touchend' ? [] : [t], changedTouches: [t] })); }; const x = document.querySelector('#tc .top.x'); const vorher = getComputedStyle(x).display; tip('touchstart', 5, 5, b); tip('touchend', 5, 5, b); window.__m3 = { vorher, nachher: getComputedStyle(x).display }; return JSON.stringify(window.__m3); })()",
+  "expect": "window.__m3.vorher === 'none' && window.__m3.nachher === 'flex'"
  },
  {
   "n": "quer_auto",
-  "wait": 3000,
-  "js": "(() => { const G = window.G; if (!G.player.car) G.toggleCar(); return String(!!G.player.car); })()"
+  "wait": 4000,
+  "js": "(() => { const G = window.G; document.getElementById('tc').classList.remove('mehr'); const c = G.cars.find(c => c.visible && !c.userData.inst && !c.userData.police); if (c && !G.player.car) { G.player.pos.set(c.position.x + 2, c.position.y, c.position.z); dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyE' })); dispatchEvent(new KeyboardEvent('keyup', { code: 'KeyE' })); } return String(!!c); })()"
  },
  {
   "n": "quer_menu",
@@ -22,22 +35,36 @@
   "js": "(() => { const G = window.G; if (G.player.car) G.toggleCar(); dispatchEvent(new KeyboardEvent('keydown', { code: 'Escape', key: 'Escape' })); return document.getElementById('menu').style.display; })()"
  },
  {
-  "n": "quer_handy",
-  "wait": 1500,
-  "js": "(() => { const G = window.G; G.X.closeMenu(); G.PHONE.open(); return String(G.PHONE.isOpen); })()"
- },
- {
   "n": "hoch_zu_fuss",
   "geraet": [
    390,
    844
   ],
-  "wait": 3000,
-  "js": "(() => { window.G.PHONE.close(); return JSON.stringify({ w: innerWidth, h: innerHeight, rot: document.getElementById('tcrot').style.display }); })()"
+  "wait": 4000,
+  "js": "(() => { const G = window.G; G.X.closeMenu(); window.__m5 = { w: innerWidth, h: innerHeight, rot: !!document.getElementById('tcrot'), fov: Math.round(G.camera.fov), asp: +G.camera.aspect.toFixed(2), cw: G.renderer.domElement.clientWidth, ch: G.renderer.domElement.clientHeight }; return JSON.stringify(window.__m5); })()"
+ },
+ {
+  "n": "hoch_bild",
+  "wait": 2500,
+  "js": "(() => { const G = window.G, m = window.__m5 = { rot: !!document.getElementById('tcrot'), fov: Math.round(G.camera.fov), asp: +G.camera.aspect.toFixed(2), cw: G.renderer.domElement.clientWidth, ch: G.renderer.domElement.clientHeight, tc: document.getElementById('tc').style.display }; return JSON.stringify(m); })()",
+  "expect": "!window.__m5.rot && window.__m5.tc === 'block' && window.__m5.asp < 0.6 && window.__m5.fov > 80 && window.__m5.cw === 390"
+ },
+ {
+  "n": "hoch_stick",
+  "wait": 500,
+  "shot": false,
+  "js": "(async () => { const G = window.G, c = G.renderer.domElement, w = ms => new Promise(q => setTimeout(q, ms)); const tip = (typ, x, y, ziel) => { const t = new Touch({ identifier: 7, target: ziel, clientX: x, clientY: y }); ziel.dispatchEvent(new TouchEvent(typ, { bubbles: true, cancelable: true, touches: typ === 'touchend' ? [] : [t], changedTouches: [t] })); }; const z0 = G.player.pos.clone(); tip('touchstart', 120, 650, c); tip('touchmove', 120, 590, c); await w(2500); const weg = +G.player.pos.distanceTo(z0).toFixed(2); tip('touchend', 120, 590, c); window.__m6 = { weg, nach: !!G.keys.KeyW }; return JSON.stringify(window.__m6); })()",
+  "expect": "window.__m6.weg > 0.3 && !window.__m6.nach"
+ },
+ {
+  "n": "hoch_handy",
+  "wait": 1500,
+  "js": "(() => { window.G.PHONE.open(); return String(window.G.PHONE.isOpen); })()"
  },
  {
   "n": "hoch_menu",
   "wait": 1500,
-  "js": "(() => { dispatchEvent(new KeyboardEvent('keydown', { code: 'Escape', key: 'Escape' })); return document.getElementById('menu').style.display; })()"
+  "js": "(() => { window.G.PHONE.close(); dispatchEvent(new KeyboardEvent('keydown', { code: 'Escape', key: 'Escape' })); return document.getElementById('menu').style.display; })()",
+  "expect": "document.getElementById('menu').style.display === 'flex'"
  }
 ]

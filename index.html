@@ -98,7 +98,7 @@
     <tr><td>Hoch</td><td>Dedizierte Grafikkarte</td><td>Feines Gelände, Leuchteffekte, Umgebungsverdeckung, Blattkronen</td></tr>
     <tr><td>Ultra</td><td>Aktuelle Gaming-Grafikkarte</td><td>4K-Schatten, 8× Kantenglättung, volle Pixeldichte</td></tr>
   </table>
-  <p class="sub" style="margin-top:22px">Voraussetzungen: aktueller Chrome, Edge oder Firefox mit WebGL 2, Tastatur und Maus oder Touch: Auf Handy und Tablet mit Bildschirm-Stick und Knöpfen im Querformat (sparsame Grafik).</p>
+  <p class="sub" style="margin-top:22px">Voraussetzungen: aktueller Chrome, Edge oder Firefox mit WebGL 2, Tastatur und Maus oder Touch: Auf Handy und Tablet mit Bildschirm-Stick und Knöpfen, hochkant oder quer (sparsame Grafik).</p>
 </div></section>
 
 <section id="steuerung"><div class="wrap">
@@ -138,7 +138,7 @@
 </div></footer>
 <script>
   // Hinweis für Handys: das Spiel braucht Tastatur und Maus
-  if (matchMedia('(pointer: coarse)').matches && !matchMedia('(pointer: fine)').matches) document.getElementById('devhint').textContent = 'Auf dem Handy: Gerät quer halten, links laufen, rechts wischen zum Umsehen. Läuft mit sparsamer Grafik.';
+  if (matchMedia('(pointer: coarse)').matches && !matchMedia('(pointer: fine)').matches) document.getElementById('devhint').textContent = 'Auf dem Handy: hochkant oder quer, links laufen, rechts wischen zum Umsehen. Läuft mit sparsamer Grafik.';
 </script>
 </body>
 </html>
