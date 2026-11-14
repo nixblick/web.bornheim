@@ -17,7 +17,7 @@ export function initFire(X, W, D) {
     else if (target && target.userData && target.userData.bin) { const b = target; if (b.userData.fire) { b.userData.fire.I = Math.max(b.userData.fire.I, o.I ?? 0.6); return b.userData.fire; } f = { bin: b, I: o.I ?? 0.6, t: 0, g: makeFlames(5, 0.25, 0.25), h: 1.0 }; b.userData.fire = f; }
     else { const p = target.isVector3 ? target.clone() : new V3(target.x, target.y ?? 0, target.z); p.y = floorAt(p.x, p.z, p.y + 0.5); f = { pos: p, I: o.I ?? 0.85, t: 0, life: o.life ?? 10, g: makeFlames(7, 0.9, 0.9), h: 0.05, ground: true }; }
     // @ts-ignore -- Baseline #119: DOM-/Zahl-String-Typen, kein X-Fehler
-    f.by = o.by || 'npc'; f.spreadT = rnd(1.5, 3); fires.push(f); emit('fireStart', fireAt(f), { fire: f, by: f.by }); sfx('whoosh', clamp(1 - fireAt(f).distanceTo(player.pos) / 80, 0.1, 0.7)); return f;
+    f.by = o.by || 'npc'; f.spreadT = rnd(1.5, 3); fires.push(f); emit('fireStart', fireAt(f), { fire: f, by: f.by }); sfx('whoosh', clamp(1 - fireAt(f).distanceTo(player.pos) / 80, 0.1, 0.7), fireAt(f)); return f;
   }
   function douse(x, y, z, amt) { let hit = false; for (const f of fires) { const p = fireAt(f); const dx = p.x - x, dz = p.z - z; if (dx * dx + dz * dz > 10 || y > p.y + 4) continue; f.I -= amt; f.wetT = 0.4; hit = true; } return hit; }
   function endFire(f, i) { scene.remove(f.g); f.g.userData.mat.dispose(); if (f.car) f.car.userData.fire = null; if (f.bin) f.bin.userData.fire = null; fires.splice(i, 1); const p = fireAt(f); for (let k = 0; k < 8; k++) W.puff(p.clone().setY(p.y + 1), 0xdddddd, 0.8, 3, new V3(rnd(-0.6, 0.6), rnd(1.5, 2.6), rnd(-0.6, 0.6)), 1.6, 0.5); emit('fireOut', p, { fire: f }); }
@@ -49,7 +49,7 @@ export function initFire(X, W, D) {
     }
     lit.sort((a, b) => a[0] - b[0]); const T = performance.now() / 1000;
     lights.forEach((l, k) => { const e = lit[k]; if (!e) { l.intensity = 0; l.visible = false; return; } l.position.set(e[2].x, e[2].y + e[1].h + 1.5, e[2].z); l.intensity = 70 * e[1].I * (0.8 + 0.2 * Math.sin(T * 17 + k) + 0.1 * Math.sin(T * 41)); l.visible = l.intensity > 0.5; });
-    crackT -= dt; if (crackT <= 0 && lit.length && lit[0][0] < 40) { crackT = rnd(0.4, 1.2); sfx('crackle', clamp(0.5 - lit[0][0] / 80, 0.05, 0.45)); }
+    crackT -= dt; if (crackT <= 0 && lit.length && lit[0][0] < 40) { crackT = rnd(0.4, 1.2); sfx('crackle', clamp(0.5 - lit[0][0] / 80, 0.05, 0.45), lit[0][2]); }
   }
 
   // ---------- Mülltonnen ----------
