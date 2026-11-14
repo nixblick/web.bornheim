@@ -172,7 +172,7 @@ window.openFeedback = openFeedback;
 { const b = document.createElement('button'); b.id = 'fbbtn'; b.textContent = '🐞'; b.title = 'Fehler melden (mit Bildschirmfoto dieser Stelle)'; b.setAttribute('aria-label', 'Fehler melden');
   const touch = !!(/** @type {any} */ (window).__touch);
   b.style.cssText = 'position:fixed;z-index:19;width:38px;height:38px;border-radius:10px;border:1px solid #ffffff55;background:#000000a0;color:#fff;font-size:18px;cursor:pointer;display:none;padding:0;' +
-    (touch ? 'top:calc(8px + env(safe-area-inset-top,0px));right:calc(192px + env(safe-area-inset-right,0px));' : 'right:18px;bottom:64px;');
+    (touch ? 'top:calc(8px + env(safe-area-inset-top,0px));right:calc(192px + env(safe-area-inset-right,0px));' : 'right:18px;bottom:96px;');
   const auf = e => { e.preventDefault(); e.stopPropagation(); openFeedback(); };
   b.addEventListener('click', auf); if (touch) b.addEventListener('touchend', auf, { passive: false }); b.addEventListener('mousedown', e => e.stopPropagation());
   document.body.appendChild(b);
