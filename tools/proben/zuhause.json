@@ -31,7 +31,7 @@
  {
   "n": "zh_5_schlafen",
   "wait": 3500,
-  "js": "(async () => { const G = window.G, Z = G.X.ZUHAUSE; window.__t0 = Date.now(); window.__h0 = G.world.hour; G.player.hp = 40; const ok = Z.menu('bett'); await new Promise(r => setTimeout(r, 300)); const b = document.querySelector('#zuhausemenu button[data-h=\"3\"]'); if (b) b.click(); return JSON.stringify({ ok, knopf: !!b, h0: window.__h0 }); })()",
+  "js": "(async () => { const G = window.G, Z = G.X.ZUHAUSE; window.__t0 = Date.now(); window.__h0 = G.world.hour; G.player.hp = 40; const ok = Z.menu('bett'); await new Promise(r => setTimeout(r, 300)); const b = document.querySelector('#zuhausemenu button[data-h=\"3\"]'); if (b) b.click(); await new Promise(r => setTimeout(r, 3000)); return JSON.stringify({ ok, knopf: !!b, h0: window.__h0, h: G.world.hour, hp: G.player.hp }); })()",
   "expect": "(() => { const G = window.G, d = (G.world.hour - window.__h0 + 24) % 24, s = JSON.parse(localStorage.getItem('notgta.save') || 'null'); return d > 2.9 && d < 3.5 && !!s && s.when >= window.__t0 && Math.abs(s.hour - G.world.hour) < 0.5 && Math.abs(s.pos[0]) < 50000 && G.player.hp >= 99; })()"
  },
  {
