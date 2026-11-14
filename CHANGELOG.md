@@ -2,6 +2,7 @@
 
 ## 2026-11-14
 
+- **Weitere Höhen nach gesundem Menschenverstand:** Kleine Hallen und Nebengebäude unter 25 m² ohne Etagenangabe (Vorgabe 10 m, rund 880 Fälle) sind jetzt 3,5 m hoch, Kirchen und Kapellen unter 60 m² (Vorgabe 25 m) 8 m.
 - **Feedback-Knopf im Spielbild:** Kleiner 🐞-Knopf (Desktop unten rechts, Touch oben in der Knopfreihe) öffnet das Feedback mit Bildschirmfoto genau dieser Stelle. Nach dem Senden schließt sich das Fenster nach 2,5 s von selbst.
 - **Keine Türmchen mehr in Parks und Gärten:** Gebäude ohne Etagenangabe bekamen pauschal 16 m. Bei sehr kleinen Grundrissen (Schuppen, Kioske, Toilettenhäuschen, Garagen) entstanden so rund 24 000 fünfgeschossige Türmchen. Unter 25 m² sind es jetzt 3 m, unter 40 m² 4 m.
 - **Litfaßsäulen nicht mehr auf Gleisen (#254):** An der Friedberger Landstraße stand eine Säule auf der gemeinsamen Tram- und Busspur. Säulen halten jetzt 2,8 m Abstand zu jedem Gleis und stehen auf keiner Fahrbahn mehr (bisher wurde nur die nächste Straße geprüft). Nachgerechnet für alle 2 357 Bushaltestellen: vorher 33 Säulen auf einem Gleis und 3 auf einer Querstraße, jetzt keine; an 219 Halten passt keine Säule hin.
