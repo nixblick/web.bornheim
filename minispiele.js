@@ -85,8 +85,8 @@ export function initMinispiele(X, SHOPS) {
   const tt = { auto: false, tempo: 1, last: null, start, abbruch, get spiel() { return m; }, nahe: () => !!naheTisch(),
     get tische() { let n = 0; for (const g of built.values()) if (g.children.length) n++; return n; }, get platten() { return platten().length; } };
   const busy = () => { const W = A.WEG && A.WEG.cur; if (W) return 'LÄUFT NOCH: ' + String(W.label || 'STRECKE').toUpperCase() + ' · ERST BEENDEN';
-    if (A.storyBusy && A.storyBusy()) return 'ERST DIE STORY BEENDEN'; return null; }; // Vokabaum-Fragen sind selbst ein Fenster, F kommt dann nicht an
-  const blocked = () => player.car || player.dead || player.wanted > 0 || (A.creative && A.creative.on) || A.shopOpen || !!offen;
+    if (A.storyBusy && A.storyBusy()) return 'ERST DIE STORY BEENDEN'; return null; };
+  const blocked = () => player.car || player.dead || player.wanted > 0 || (A.creative && A.creative.on) || A.shopOpen || !!offen || !!(A.VOKA_BUSY && A.VOKA_BUSY()); // Vokabaum-Aktivität läuft
   function naheTisch() { let best = null, bd = REICH * REICH; for (const g of built.values()) { if (!g.children.length) continue; const d = (g.userData.x - player.pos.x) ** 2 + (g.userData.z - player.pos.z) ** 2; if (d < bd) { bd = d; best = g; } } return best; }
   const fAkt = { label: 'F · Tischtennis: ein Satz bis 11 gegen einen Passanten', act: () => { start(); } };
   A.fHooks = A.fHooks || [];
@@ -149,10 +149,10 @@ export function initMinispiele(X, SHOPS) {
   function stop() { cancelAnimationFrame(raf); m = null; cv = null; schliessen(); }
   function abbruch(msg) { if (!m) return; tt.last = { ich: m.ich, er: m.er, abgebrochen: true }; stop(); if (msg) showMsg(msg, 1400); }
   function ende() {
-    const sieg = m.ich > m.er, tag = heute('tischtennisTag'), ep = tag.n < 3 ? (sieg ? 40 : 10) : 5; // volle EP für die ersten drei Sätze am Tag
-    const r = { ich: m.ich, er: m.er, sieg, ep }; tt.last = r; stop(); tag.inc(); if (sieg) stats.siege++; gain(ep, 'Tischtennis');
+    const sieg = m.ich > m.er, tag = heute('tischtennisTag'), ep = tag.n < 3 ? (sieg ? 40 : 10) : 0; // EP nur für die ersten drei Sätze am Tag
+    const r = { ich: m.ich, er: m.er, sieg, ep }; tt.last = r; stop(); tag.inc(); if (sieg) stats.siege++; if (ep) gain(ep, 'Tischtennis');
     sfx(r.sieg ? 'pickup' : 'click', 0.6);
-    card(r.sieg ? 'SATZ GEWONNEN' : 'SATZ VERLOREN', `${r.ich}:${r.er} gegen den Passanten · +${ep} EP · ${r.sieg ? '„Starker Rückhand!“' : '„Revanche wann immer du willst.“'}`, 5);
+    card(r.sieg ? 'SATZ GEWONNEN' : 'SATZ VERLOREN', `${r.ich}:${r.er} gegen den Passanten${ep ? ` · +${ep} EP` : ' · heute keine EP mehr'} · ${r.sieg ? '„Starker Rückhand!“' : '„Revanche wann immer du willst.“'}`, 5);
   }
 
   // ======================= Rubbellos =======================
@@ -197,15 +197,17 @@ export function initMinispiele(X, SHOPS) {
   // Kiosk-Sortiment um das Los erweitern; Kauf zieht den Preis über shops.js ab, das Los öffnet nach dem Schließen des Ladens
   if (SHOPS && SHOPS.ITEMS && SHOPS.TYPES && SHOPS.TYPES.kiosk) { SHOPS.ITEMS.los = { n: 'Rubbellos (nur Spielgeld)', p: PREIS }; if (!SHOPS.TYPES.kiosk.items.includes('los')) SHOPS.TYPES.kiosk.items.unshift('los'); }
   A.listeners.push((ev, pos, data) => { if (ev !== 'bought' || !data || data.id !== 'los') return;
-    window.__noAutoMenu = true; setTimeout(() => { try { if (SHOPS && SHOPS.close) SHOPS.close(); losAuf(); } catch (e) { console.warn('Rubbellos', e); } }, 0); });
+    window.__noAutoMenu = true; setTimeout(() => { try { if (SHOPS && SHOPS.close) SHOPS.close(); if (!losAuf()) player.money = (player.money || 0) + PREIS; /* Los konnte nicht öffnen: Preis zurück */ } catch (e) { console.warn('Rubbellos', e); } }, 0); });
 
   // ---------- Tasten: solange ein Fenster offen ist, laufen keine Spieltasten (wie vokabaum.js, Capture) ----------
-  addEventListener('keydown', e => { if (!offen) return; const c = e.code;
+  const TASTEN = /^(Space|Enter|NumpadEnter|KeyF|Escape|Digit[1-3]|Numpad[1-3])$/; // nur diese Tasten verbraucht das Fenster
+  const STRG = e => e.ctrlKey || e.metaKey || e.altKey || /^F([1-9]|1[0-2])$/.test(e.code);
+  addEventListener('keydown', e => { if (!offen || STRG(e)) return; const c = e.code;
     if (offen === 'tt') { if (c === 'Escape') abbruch('SPIEL ABGEBROCHEN'); else if (!e.repeat && (c === 'Space' || c === 'Enter' || c === 'KeyF' || c === 'NumpadEnter')) schlag(); }
     else if (offen === 'los') { const n = c.startsWith('Digit') ? +c.slice(5) : c.startsWith('Numpad') ? +c.slice(6) : 0;
       if (c === 'Escape' || (los && los.fertig && (c === 'Enter' || c === 'Space'))) losZu(); else if (n >= 1 && n <= 3) rubbeln(n - 1); else if (c === 'Space' || c === 'Enter') alles(); }
-    e.preventDefault(); e.stopImmediatePropagation(); }, true);
-  addEventListener('keyup', e => { if (offen) e.stopImmediatePropagation(); }, true);
+    if (TASTEN.test(c)) e.preventDefault(); e.stopImmediatePropagation(); }, true);
+  addEventListener('keyup', e => { if (offen && !STRG(e)) e.stopImmediatePropagation(); }, true);
 
   // Testhilfen: G.MINI.tt.start() an einer Platte, tt.auto = true trifft immer, tt.tempo beschleunigt; G.MINI.los.seed(n) macht Lose reproduzierbar
   const api = { update, stats, tt, los: lo, get offen() { return offen; } };
