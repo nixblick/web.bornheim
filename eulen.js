@@ -59,7 +59,23 @@ export function initEulen(X) {
 
   // ---------- Lauf ----------
   const WEG = X.WEG || (X.WEG = initWegweiser(X)); // Strahl, Kartenlinie, Richtung (wegweiser.js)
-  function wps(r) { if (r.W) return r.W; const out = r.W = [r.pts[0]]; let acc = 0; for (let i = 1; i < r.pts.length; i++) { const a = r.pts[i - 1], b = r.pts[i]; acc += Math.hypot(b[0] - a[0], b[1] - a[1]); if (acc > (big(r) ? 900 : 300) || i === r.pts.length - 1) { out.push(b.slice()); acc = 0; } } return out; }
+  // Wegpunkte großer Strecken alle ~250 m statt 900 m (André 14.11.2026: gern mehr Punkte, alle auf der Straße): die Linie auf
+  // der Karte folgt so dem Track, statt Häuserblöcke zu schneiden. Alte Spielstände zählten in 900-m-Punkten (wpsAlt).
+  const WP_GROSS = 250;
+  function wpsAlt(r) { const out = [r.pts[0]]; let acc = 0; for (let i = 1; i < r.pts.length; i++) { const a = r.pts[i - 1], b = r.pts[i]; acc += Math.hypot(b[0] - a[0], b[1] - a[1]); if (acc > (big(r) ? 900 : 300) || i === r.pts.length - 1) { out.push(b); acc = 0; } } return out; }
+  /** Wegpunkt auf die nächste echte Straße setzen, sobald deren Kachel geladen ist (einmal je Punkt). Erst breite Straßen
+   *  (ab 6 m, bis 70 m entfernt), sonst jede befahrbare ab 4 m (bis 40 m); keine Gleise, keine Autobahn. Vorher wurden die
+   *  Punkte von der Fahrbahn weggeschoben und landeten dabei in Innenhöfen. */
+  function aufStrasse(q) {
+    if (q.str) return q; const RD = X.WORLD && X.WORLD.roads; if (!RD) return q; let geladen = false;
+    for (const [minW, maxD] of [[6, 70], [4, 40]]) { let bd = maxD * maxD, bx = 0, bz = 0, hit = false;
+      for (const r of RD) { if (!r || !r.p || r.ry || r.mw || !(r.w >= minW)) continue; const p0 = r.p[0]; if (Math.abs(p0[0] - q[0]) > 450 || Math.abs(p0[1] - q[1]) > 450) continue; geladen = true;
+        for (let i = 0; i < r.p.length - 1; i++) { const ax = r.p[i][0], az = r.p[i][1], dx = r.p[i + 1][0] - ax, dz = r.p[i + 1][1] - az, l2 = dx * dx + dz * dz || 1, t = Math.max(0, Math.min(1, ((q[0] - ax) * dx + (q[1] - az) * dz) / l2)), cx = ax + dx * t, cz = az + dz * t, d = (cx - q[0]) ** 2 + (cz - q[1]) ** 2; if (d < bd) { bd = d; bx = cx; bz = cz; hit = true; } } }
+      if (hit) { q[0] = bx; q[1] = bz; q.str = true; return q; } }
+    if (geladen) q.str = true; // Straßen sind da, aber keine in Reichweite (Parkweg): Punkt bleibt, wo der Track ihn hat
+    return q;
+  }
+  function wps(r) { if (r.W) return r.W; const out = r.W = [r.pts[0]]; let acc = 0; for (let i = 1; i < r.pts.length; i++) { const a = r.pts[i - 1], b = r.pts[i]; acc += Math.hypot(b[0] - a[0], b[1] - a[1]); if (acc > (big(r) ? WP_GROSS : 300) || i === r.pts.length - 1) { out.push(b.slice()); acc = 0; } } return out; }
   // ---------- Wettbewerbe (#127, André 13.11.2026): Marathon und Megamarsch zu Fuß (gehen oder rennen) und als zweiter Wettbewerb nur mit dem Rad ----------
   // Etappen à ~10,5 km mit Speichern an der Etappengrenze (Verpflegung); je Etappe eine Zeit, Gesamtzeit = Summe. Fortsetzen startet an der Grenze.
   const STAGE_M = 10500;
@@ -85,8 +101,10 @@ export function initEulen(X) {
   const G = () => /** @type {any} */ (window).G;
   function giveBike(x, z) { const g = G(); if (!g || !g.makeBike) return false; const c = g.makeBike(); c.position.set(x, TH(x, z), z); g.scene.add(c); g.cars.push(c); player.pos.set(x + 0.5, TH(x, z), z); g.toggleCar(); return !!(player.car && player.car.userData.bike); }
   function start(r, resume, mode = 'lauf', opt = {}) { if (!WEG.frei()) return false; /* vor Teleport und Rad: abgelehnter Start ohne Nebenwirkung */ const W = wps(r); const B = big(r) ? stages(r) : []; const sv = resume ? readSave(mode) : null; const go = sv && sv.name === r.name;
-    const i = go ? sv.i : 1; const stage = B.filter(b => b < i).length;
-    if (go && mode === 'lauf' && !player.car) { const [x, z] = W[i - 1]; player.pos.set(x, TH(x, z), z); }
+    let i = go ? sv.i : 1; if (go && sv.n !== W.length) { const alt = big(r) && !sv.n ? wpsAlt(r) : null, q = alt && alt[Math.min(alt.length - 1, sv.i - 1)]; /* Stand aus der Zeit mit 900-m-Punkten: nächstgelegenen neuen Punkt suchen */
+      if (q) { let bd = 1e18; for (let k = 0; k < W.length; k++) { const d = (W[k][0] - q[0]) ** 2 + (W[k][1] - q[1]) ** 2; if (d < bd) { bd = d; i = k + 1; } } } else i = Math.max(1, Math.min(W.length - 1, Math.round(sv.i / (sv.n || W.length) * W.length))); }
+    i = Math.max(1, Math.min(W.length - 1, i)); const stage = B.filter(b => b < i).length;
+    if (go && mode === 'lauf' && !player.car) { const [x, z] = aufStrasse(W[i - 1]); player.pos.set(x, TH(x, z), z); }
     if (mode === 'rad' && !(player.car && player.car.userData.bike && !player.car.userData.moto)) { const [x, z] = W[go ? i - 1 : 0]; if (!giveBike(x, z)) { showMsg('KEIN RAD VERFÜGBAR', 1500); return false; } }
     run = { r, W, B, mode, i, stage, times: go ? sv.times.slice() : [], st0: performance.now(), grace: performance.now() + 3000, last: player.pos.clone(), test: !!opt.test };
     WEG.route({ pts: W, get i() { return run ? run.i : 1; }, off: 1, big: big(r), label: (mode === 'rad' ? '🚲 ' : '🦉 ') + kind(r) }); if (r.marathon) buildFinish(r.ziel);
@@ -98,11 +116,11 @@ export function initEulen(X) {
     if (u.mode === 'lauf' && player.car) { stop('DISQUALIFIZIERT: NUR ZU FUSS'); return; }
     if (u.mode === 'rad' && performance.now() > u.grace && !(player.car && player.car.userData.bike && !player.car.userData.moto)) { stop('UNGÜLTIG: RAD-WETTBEWERB NUR AUF DEM FAHRRAD'); return; }
     const here = player.car ? player.car.position : player.pos; if (!u.test && here.distanceTo(u.last) > 60) { stop('DISQUALIFIZIERT: KEINE ABKÜRZUNG PER BAHN ODER SPRUNG'); return; } u.last.copy(here);
-    if (Math.hypot(u.W[u.i][0] - here.x, u.W[u.i][1] - here.z) < 200) offRoad(u.W[u.i]); const [x, z] = u.W[u.i]; WEG.update(dt); const d = Math.hypot(here.x - x, here.z - z); const ms = performance.now() - u.st0;
+    for (let k = u.i; k < Math.min(u.W.length, u.i + 3); k++) if (Math.hypot(u.W[k][0] - here.x, u.W[k][1] - here.z) < 420) aufStrasse(u.W[k]); const [x, z] = u.W[u.i]; WEG.update(dt); const d = Math.hypot(here.x - x, here.z - z); const ms = performance.now() - u.st0;
     const o = objEl || (objEl = document.getElementById('obj')); if (o) { const s = `${u.mode === 'rad' ? '🚲' : '🦉'} ${u.r.name}${u.B.length ? ` · Etappe ${u.stage + 1}/${u.B.length + 1}` : ''}: Wegpunkt ${u.i}/${u.W.length - 1} · ${Math.round(d)} m · ${fmt(ms)}`; if (o.textContent !== s) o.textContent = s; } // nur schreiben, wenn sich der Text ändert
     if (d < (u.mode === 'rad' ? 9 : 7)) { u.i++; sfx('click', 0.6);
       if (u.B.includes(u.i - 1) || u.i >= u.W.length) { u.times.push(ms); u.st0 = performance.now(); u.stage++;
-        if (u.i < u.W.length) { writeSave(u.mode, { name: u.r.name, i: u.i, times: u.times }); player.hp = Math.min(100, player.hp + 30); showMsg(`ETAPPE ${u.stage} GESCHAFFT · ${fmt(ms)} · GESPEICHERT`, 2200); } }
+        if (u.i < u.W.length) { writeSave(u.mode, { name: u.r.name, i: u.i, n: u.W.length, times: u.times }); player.hp = Math.min(100, player.hp + 30); showMsg(`ETAPPE ${u.stage} GESCHAFFT · ${fmt(ms)} · GESPEICHERT`, 2200); } }
       if (u.i >= u.W.length) done(); } }
   function best(key, ms) { let a = []; try { a = JSON.parse(localStorage.getItem('eulenBest') || '{}')[key] || []; } catch (e) { /* leer */ } a.push({ ms, am: new Date().toISOString().slice(0, 10) }); a.sort((p, q) => p.ms - q.ms); a = a.slice(0, 5);
     try { const all = JSON.parse(localStorage.getItem('eulenBest') || '{}'); all[key] = a; localStorage.setItem('eulenBest', JSON.stringify(all)); } catch (e) { /* nur Anzeige */ } return a; }
