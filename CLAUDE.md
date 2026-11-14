@@ -40,3 +40,15 @@ node tools/probe.mjs tools/proben/ausstieg.json <ausgabeordner> "$(command -v ch
 Es startet selbst Webserver und Chrome auf freien Ports, beendet beides, schreibt `stand.txt` (eine Zeile je
 Schritt) und bricht nach 20 min hart ab. Exit 0 = grün, 1 = rot, 2 = Zeit um. Fehlt dem Werkzeug etwas:
 Befund melden und erweitern ist eine eigene, kurze Runde, kein Umbau mitten in einer Testrunde.
+
+## Sparsam lesen (Token)
+
+14.11.2026: `game.js` hat über 500 KB (rund 150 000 Token), `CHANGELOG.md` über 100 KB. Wer sie ganz liest, verbraucht
+das halbe Kontextfenster für nichts.
+
+- Zuerst `python tools/codekarte.py` (Module mit Zweck, Abschnitte von `game.js` mit Zeilen; `-f` zeigt Funktionsnamen).
+- `game.js` nie ganz lesen. Gezielt: `grep -n -o -E '.{0,200}NAME.{0,300}' game.js` oder `sed -n 'A,Bp' game.js | cut -c1-600`.
+  Ein `grep` ohne `-o` gibt Zeilen mit über 2000 Zeichen zurück.
+- `CHANGELOG.md`: nur der Kopf (`head -20`), neue Einträge oben unter dem Tagesdatum.
+- Neue Funktionen kommen in ein eigenes Modul (`initXyz(X)`), nicht in `game.js`. Module importieren kein `three`.
+- Agenten und Workflows: Prüfen und Suchen mit dem kleineren Modell, Bauen mit dem großen. Agenten ändern `CHANGELOG.md` nicht.
