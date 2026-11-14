@@ -87,7 +87,8 @@ const R = {
 
 // Pegelabgleich nach der stummen Messung (Probe klang, 14.11.2026): Schüsse und Knall lagen vor dem Begrenzer über 1,
 // Schritte, Würfe, Husten und Reifenquietschen kaum hörbar unter 0,1. Faktor je Geräusch, 1 = unverändert.
-const PEGEL = { shot: 0.75, bang: 0.78, smg: 0.85, explosion: 0.85, rifle: 0.95, shotgun: 0.95, step: 2.6, step_innen: 2.6, step_nass: 2.4, throw: 3, cough: 3, swing: 2.6, screech: 3, whoosh: 2.2, splat: 2.4, reload: 2, notify: 1.6, click: 1.3 };
+// Zweiter Abgleich (Probe klang, PR 233): Gewehr und Blech streuten live bis 1,38, Schritte vorgerechnet bis 0,08.
+const PEGEL = { shot: 0.75, bang: 0.78, smg: 0.85, explosion: 0.75, rifle: 0.8, shotgun: 0.85, crash: 0.85, step: 4, step_innen: 2.6, step_nass: 2.4, throw: 3, cough: 3, swing: 2.6, screech: 3, whoosh: 2.2, splat: 2.4, reload: 2, notify: 1.6, click: 1.3 };
 
 // ---------- Vorrechnen ----------
 const SR = 32000, FASSUNGEN = 3, MAXV = 24;
@@ -120,11 +121,12 @@ function impuls(O, sek) {
   for (let i = 0; i < n; i++) { const t = i / n, k = 0.04 + 0.86 * Math.pow(0.06, t); y += k * ((Math.random() * 2 - 1) - y); d[i] = y * Math.exp(-6.9 * t) * (i < 96 ? i / 96 : 1); }
   IMPULS.set(key, b); return b;
 }
-/** Stille am Ende abschneiden, letzte 10 ms ausblenden. */
+/** Stille am Ende abschneiden, letzte 10 ms ausblenden, Spitze höchstens 1 (der Begrenzer bekommt keine Übersteuerung). */
 function kuerzen(O, b) {
-  const d = b.getChannelData(0); let last = d.length - 1; while (last > 0 && Math.abs(d[last]) < 0.0005) last--;
+  const d = b.getChannelData(0); let last = d.length - 1, peak = 0; while (last > 0 && Math.abs(d[last]) < 0.0005) last--;
   const n = Math.max(1, Math.min(d.length, last + 64)), f = Math.min(n, Math.floor(SR * 0.01)), o = O.createBuffer(1, n, SR), e = o.getChannelData(0);
-  for (let i = 0; i < n; i++) e[i] = d[i];
+  for (let i = 0; i < n; i++) peak = Math.max(peak, Math.abs(d[i]));
+  const k = peak > 1 ? 1 / peak : 1; for (let i = 0; i < n; i++) e[i] = d[i] * k;
   for (let i = 0; i < f; i++) e[n - 1 - i] *= i / f;
   return o;
 }
