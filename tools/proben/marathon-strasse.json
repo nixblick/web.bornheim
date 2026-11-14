@@ -1,0 +1,18 @@
+[
+ {
+  "n": "ms_strecke",
+  "x": -3599,
+  "z": 2158,
+  "hour": 13,
+  "wait": 7000,
+  "shot": false,
+  "js": "(async () => { const G = window.G, E = G.EULEN; E.use([{ name: 'Frankfurt Marathon Probe', laenge_km: 42.9, link: 'https://frischlufteulen.de/', linie: [[8.65926,50.11008],[8.66011,50.10975],[8.66041,50.10965],[8.66303,50.11077],[8.66321,50.11074],[8.66474,50.11136],[8.66622,50.11188],[8.66832,50.11325],[8.66861,50.11325],[8.66929,50.11216],[8.67008,50.11156],[8.67068,50.1108],[8.67094,50.11034],[8.67221,50.10925],[8.67235,50.10945],[8.67387,50.11021],[8.67317,50.1107],[8.67303,50.11105],[8.67255,50.11147],[8.67163,50.11227],[8.67175,50.11223],[8.67173,50.11302],[8.67162,50.11313],[8.66934,50.11396],[8.66916,50.1136],[8.6691,50.11324],[8.66816,50.11273],[8.66738,50.11213],[8.6662,50.11135],[8.66537,50.11109],[8.66498,50.11099],[8.66361,50.11037],[8.66353,50.11027],[8.66115,50.10972],[8.66073,50.1097],[8.6595,50.11007],[8.65893,50.11022],[8.65782,50.11086],[8.65748,50.11111],[8.65635,50.11182],[8.65246,50.11458],[8.65229,50.11538],[8.65265,50.11594],[8.65311,50.11745],[8.65336,50.11843]] }]); await new Promise(r => setTimeout(r, 500)); const r = E.routes[0]; return JSON.stringify({ strecken: E.routes.length, name: r && r.name, km: r && r.km_gebiet }); })()",
+  "expect": "window.G.EULEN.routes.length === 1 && window.G.EULEN.routes[0].km_gebiet >= 3"
+ },
+ {
+  "n": "ms_wegpunkte_auf_strasse",
+  "wait": 1000,
+  "js": "(async () => { const G = window.G, E = G.EULEN, r = E.routes[0], P = G.player; localStorage.removeItem('eulenMarathon'); if (P.car) G.toggleCar(); E.start(r, false, 'lauf', { test: true }); const W = E.run.W, n = Math.min(9, W.length - 2); const roh = W.slice(0, n + 1).map(q => [q[0], q[1]]); const t0 = performance.now(); while (E.run && E.run.i <= n && performance.now() - t0 < 120000) { const [x, z] = E.run.W[E.run.i]; await G.streamInit(x, z); P.pos.set(x, G.TH(x, z), z); if (P.mesh) P.mesh.position.copy(P.pos); await new Promise(res => setTimeout(res, 350)); } const strasse = q => { let bd = 1e9; for (const s of G.WORLD.roads) { if (!s || !s.p || s.ry || s.mw) continue; for (let i = 0; i < s.p.length - 1; i++) { const ax = s.p[i][0], az = s.p[i][1], dx = s.p[i + 1][0] - ax, dz = s.p[i + 1][1] - az, l2 = dx * dx + dz * dz || 1, t = Math.max(0, Math.min(1, ((q[0] - ax) * dx + (q[1] - az) * dz) / l2)), d = Math.hypot(ax + dx * t - q[0], az + dz * t - q[1]); if (d < bd) bd = d; } } return bd; }; const out = { punkte: W.length, geprueft: n, erreicht: E.run ? E.run.i - 1 : n, eingerastet: 0, imHaus: 0, maxAbstand: 0, verschoben: [] }; for (let k = 1; k <= n; k++) { const q = W[k]; if (q.str) out.eingerastet++; await G.streamInit(q[0], q[1]); if (G.solidAt(q[0], q[1]) >= 0) out.imHaus++; out.maxAbstand = Math.max(out.maxAbstand, Math.round(strasse(q))); out.verschoben.push(Math.round(Math.hypot(q[0] - roh[k][0], q[1] - roh[k][1]))); } if (E.run) E.stop(); window.__ms = out; return JSON.stringify(out); })()",
+  "expect": "window.__ms && window.__ms.punkte >= 12 && window.__ms.erreicht >= window.__ms.geprueft && window.__ms.eingerastet === window.__ms.geprueft && window.__ms.imHaus === 0 && window.__ms.maxAbstand <= 3"
+ }
+]
