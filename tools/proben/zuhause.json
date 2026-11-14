@@ -1,0 +1,50 @@
+[
+ {
+  "n": "zh_1_haus_gefunden",
+  "x": -138,
+  "z": 372,
+  "hour": 13,
+  "wait": 8000,
+  "shot": false,
+  "js": "(async () => { const G = window.G, Z = G.X.ZUHAUSE; for (let i = 0; i < 10 && !Z.home; i++) { Z.find(); await new Promise(r => setTimeout(r, 500)); } return JSON.stringify({ home: Z.home, zeile: !!Z.OUTFITS }); })()",
+  "expect": "!!window.G.X.ZUHAUSE && !!window.G.X.ZUHAUSE.home && Math.hypot(window.G.X.ZUHAUSE.home.x + 138, window.G.X.ZUHAUSE.home.z - 372) < 160"
+ },
+ {
+  "n": "zh_2_tuer_betreten",
+  "wait": 2500,
+  "js": "(async () => { const G = window.G, Z = G.X.ZUHAUSE, h = Z.home; if (G.player.car) G.toggleCar(); G.player.wanted = 0; if (G.STORY && G.STORY.busy) G.STORY.stop(); G.player.pos.set(h.ex, G.TH(h.ex, h.ez), h.ez); if (G.player.mesh) G.player.mesh.position.copy(G.player.pos); await new Promise(r => setTimeout(r, 1500)); const t = (G.X.fHooks || []).map(f => f()).find(r => r && /Nach Hause/.test(r.label)); if (t) t.act(); await new Promise(r => setTimeout(r, 600)); return JSON.stringify({ tuer: t ? t.label : null, drin: G.INTERIORS.inside ? G.INTERIORS.inside.label : null }); })()",
+  "expect": "!!window.G.INTERIORS.inside && window.G.INTERIORS.inside.label === 'Zuhause' && window.G.X.ZUHAUSE.inside"
+ },
+ {
+  "n": "zh_3_kleiderschrank",
+  "wait": 1500,
+  "js": "(async () => { const G = window.G, Z = G.X.ZUHAUSE; const ok = Z.menu('schrank'); await new Promise(r => setTimeout(r, 300)); const b = document.querySelector('#zuhausemenu button[data-o=lauf]'); if (b) b.click(); await new Promise(r => setTimeout(r, 300)); return JSON.stringify({ ok, knopf: !!b, look: Z.look(), gespeichert: localStorage.getItem('notgta.outfit'), offen: document.getElementById('zuhausemenu').style.display }); })()",
+  "expect": "localStorage.getItem('notgta.outfit') === 'lauf' && window.G.X.ZUHAUSE.look().id === 'lauf' && window.G.X.ZUHAUSE.look().n > 0 && document.getElementById('zuhausemenu').style.display === 'none' && !window.G.X.shopOpen"
+ },
+ {
+  "n": "zh_4_kein_schlaf_mit_fahndung",
+  "wait": 500,
+  "shot": false,
+  "js": "(async () => { const G = window.G, Z = G.X.ZUHAUSE; window.__h0 = G.world.hour; G.player.wanted = 2; const r = await Z.sleep(1); G.player.wanted = 0; return JSON.stringify({ r, h: G.world.hour }); })()",
+  "expect": "Math.abs(window.G.world.hour - window.__h0) < 0.2"
+ },
+ {
+  "n": "zh_5_schlafen",
+  "wait": 3500,
+  "js": "(async () => { const G = window.G, Z = G.X.ZUHAUSE; window.__t0 = Date.now(); window.__h0 = G.world.hour; G.player.hp = 40; const ok = Z.menu('bett'); await new Promise(r => setTimeout(r, 300)); const b = document.querySelector('#zuhausemenu button[data-h=\"3\"]'); if (b) b.click(); await new Promise(r => setTimeout(r, 3000)); return JSON.stringify({ ok, knopf: !!b, h0: window.__h0, h: G.world.hour, hp: G.player.hp }); })()",
+  "expect": "(() => { const G = window.G, d = (G.world.hour - window.__h0 + 24) % 24, s = JSON.parse(localStorage.getItem('notgta.save') || 'null'); return d > 2.9 && d < 3.5 && !!s && s.when >= window.__t0 && Math.abs(s.hour - G.world.hour) < 0.5 && Math.abs(s.pos[0]) < 50000 && G.player.hp >= 99; })()"
+ },
+ {
+  "n": "zh_6_raus",
+  "wait": 2500,
+  "js": "(async () => { const G = window.G, Z = G.X.ZUHAUSE, h = Z.home; G.INTERIORS.leave(); await new Promise(r => setTimeout(r, 1500)); return JSON.stringify({ drin: !!G.INTERIORS.inside, d: Math.hypot(G.player.pos.x - h.ex, G.player.pos.z - h.ez) }); })()",
+  "expect": "!window.G.INTERIORS.inside && Math.hypot(window.G.player.pos.x - window.G.X.ZUHAUSE.home.ex, window.G.player.pos.z - window.G.X.ZUHAUSE.home.ez) < 5"
+ },
+ {
+  "n": "zh_7_weg_und_alltag",
+  "wait": 1500,
+  "shot": false,
+  "js": "(async () => { const G = window.G, Z = G.X.ZUHAUSE; G.player.pos.set(-60, G.TH(-60, 300), 300); const g = Z.guide(true); await new Promise(r => setTimeout(r, 500)); const an = Z.guiding; Z.guide(false); Z.outfit('alltag'); return JSON.stringify({ g, an, aus: !Z.guiding, outfit: localStorage.getItem('notgta.outfit') }); })()",
+  "expect": "!window.G.X.ZUHAUSE.guiding && !(window.G.X.WEG && window.G.X.WEG.cur) && localStorage.getItem('notgta.outfit') === 'alltag'"
+ }
+]

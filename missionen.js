@@ -17,6 +17,9 @@ export function missionList(X, S, close, toast, o = {}) {
   const NJ = S.NEBENJOBS; // Zivile Nebenjobs (#148, nebenjobs.js)
   if (NJ && NJ.job) row('Läuft', NJ.job.J.name, `${NJ.job.done}/${NJ.job.J.n} erledigt`, 'Feierabend', () => { NJ.stop(); close(); });
   else if (NJ) for (const [id, J] of Object.entries(NJ.JOBS)) row('Nebenjob', J.name, `${J.info} ${J.geld} € je Auftrag.`, 'Schicht starten', frei(() => { if (NJ.start(id)) close(); else toast('Gerade nicht möglich', 'error'); }));
+  const ZH = X.ZUHAUSE; // Zuhause (#149, zuhause.js): Weg über den Wegweiser, zählt wie eine Strecke
+  if (ZH && ZH.guiding) row('Läuft', 'Weg nach Hause', 'Dem grünen Strahl folgen', 'Abbrechen', () => { ZH.guide(false); toast('Abgebrochen'); });
+  else if (ZH) row('Ort', 'Zuhause', 'Deine Wohnung in Bornheim am Wochenmarkt: Kleiderschrank und Bett (schlafen speichert).', ZH.inside ? '' : 'Weg zeigen', ZH.inside ? null : frei(() => { if (ZH.guide(true)) close(); }));
   const sv = resumable();
   if (E && !E.run) for (const r of (E.routes || []).slice(0, 12)) { const big = r.marathon || r.mega, goes = big && sv && sv.name === r.name; row(big ? (r.mega ? 'Megamarsch' : 'Marathon') : 'Frischlufteulen', r.name, (goes ? `Fortsetzen ab Wegpunkt ${sv.i + 1} · ` : '') + (r.info || (r.km_gebiet + ' km')), goes ? 'Fortsetzen' : 'Lauf starten', foot(frei(() => { if (E.start(r, !!goes, 'lauf')) close(); }))); }
   if (V && !V.mission && V.request) { const ok = V.ready; row('Hilfe', 'Vokabaum', ok ? 'Ein Passant braucht Hilfe mit Vokabeln.' : 'Gerade fragt niemand – höchstens einmal je Stunde, zu Fuß und ohne Fahndung.', ok ? 'Mission starten' : '', ok ? () => { if (V.request()) close(); else toast('Gerade fragt niemand – später wieder', 'error'); } : null); }

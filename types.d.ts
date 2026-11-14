@@ -157,6 +157,8 @@ export interface Ctx {
   objDirty?: () => void;
   PROGRESS_GAIN?: (n: number, why?: string) => void;
   SHOPS_LIST?: () => { x: number, z: number }[];
+  // Zuhause (#149, zuhause.js): von game.js nach initSupermarkt gesetzt
+  ZUHAUSE?: any;
   // Rasen (rasen.js): vor initRasen per Object.assign gesetzt
   LOW_GFX?: boolean;
   WEAK_GPU?: boolean;
