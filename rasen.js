@@ -205,9 +205,9 @@ void RE_Direct_Rasen( const in IncidentLight directLight, const in vec3 geometry
       tc.setHex(e.col); const dry = dryP * 0.38 + (1 - patch) * 0.06, B = 1.7; /* Spieltest 43419847797: Halme ohne Aufhellung deutlich dunkler als der Boden */ C[k * 3] = B * (0.55 + tc.r * 1.2) * lv * (1 + dry * 0.5); C[k * 3 + 1] = B * (0.55 + tc.g * 0.9) * lv * (1 + dry * 0.15); C[k * 3 + 2] = B * (0.55 + tc.b * 1.0) * lv * (1 - dry * 0.25); k++; }
     out.m = M.subarray(0, k * 16); out.c = C.subarray(0, k * 3); out.n = k; return out;
   }
-  function assemble() { let n = 0; for (const c of cells.values()) n += c.n; ensureMesh(n); let liste = cells.values();
+  function assemble() { let n = 0; for (const c of cells.values()) n += c.n; ensureMesh(n); const liste = [...cells.values()];
     // mehr Halme als Platz: die nächsten Zellen zuerst, sonst fehlt der Rasen direkt vor der Kamera
-    if (n > cap) { const p = camera.position, qx = p.x / CELL, qz = p.z / CELL; liste = [...cells.values()].sort((a, b) => ((a.cx - qx) ** 2 + (a.cz - qz) ** 2) - ((b.cx - qx) ** 2 + (b.cz - qz) ** 2)); }
+    if (n > cap) { const p = camera.position, qx = p.x / CELL, qz = p.z / CELL; liste.sort((a, b) => ((a.cx - qx) ** 2 + (a.cz - qz) ** 2) - ((b.cx - qx) ** 2 + (b.cz - qz) ** 2)); }
     n = Math.min(n, cap); let o = 0; const M = mesh.instanceMatrix.array, C = mesh.instanceColor.array;
     for (const c of liste) { if (!c.n) continue; const take = Math.min(c.n, cap - o); if (take <= 0) break; M.set(c.m.subarray(0, take * 16), o * 16); C.set(c.c.subarray(0, take * 3), o * 3); o += take; }
     mesh.count = o; total = o; dirty = false; lastAsm = performance.now(); if (!o) return;
