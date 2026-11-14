@@ -13,7 +13,7 @@ export function initProgress(X) {
   const KEY = 'notgta.progress';
   let P = { xp: 0, lvl: 1, seen: {}, st: { drive: 0, walk: 0, time: 0, metro: 0, buy: 0, demo: 0, film: 0, crash: 0, schicht: 0 } };
   P.karma = 0; P.fit = 0; P.medals = []; // Karma (Zivilcourage, #129), Fitness (Laufrunden, #128), Medaillen (Marathon/Megamarsch, #127), Basis 13.11.2026
-  try { const o = JSON.parse(localStorage.getItem(KEY) || 'null'); if (o) { P = Object.assign(P, o); P.st = Object.assign({ drive: 0, walk: 0, time: 0, metro: 0, buy: 0, demo: 0, film: 0, crash: 0, schicht: 0 }, o.st || {}); P.seen = o.seen || {}; P.karma = +o.karma || 0; P.fit = +o.fit || 0; P.medals = Array.isArray(o.medals) ? o.medals : []; } } catch (e) {}
+  try { const o = JSON.parse(localStorage.getItem(KEY) || 'null'); if (o) { P = Object.assign(P, o); P.st = Object.assign({ drive: 0, walk: 0, time: 0, metro: 0, buy: 0, demo: 0, film: 0, crash: 0, schicht: 0 }, o.st || {}); P.seen = o.seen || {}; P.karma = +o.karma || 0; P.fit = +o.fit || 0; P.medals = Array.isArray(o.medals) ? o.medals : []; P.xp = Math.max(0, Math.min(+o.xp || 0, 1e7)); P.lvl = Math.max(1, Math.min(Math.floor(+o.lvl || 1), 200)); /* importierte Stände: unsinnige Zahlen ließen die Stufen-Schleife endlos laufen */ } } catch (e) {}
   const save = () => { try { localStorage.setItem(KEY, JSON.stringify(P)); } catch (e) {} };
   const need = l => Math.round(100 * Math.pow(l, 1.45)); // EP bis zur nächsten Stufe
   function perks() { const l = P.lvl - 1; X.perks = { car: Math.max(0.55, 1 - 0.04 * l), shop: Math.max(0.7, 1 - 0.02 * l), run: Math.min(1.3, 1 + 0.02 * l) * (1 + Math.min(0.2, (P.fit || 0) * 0.002)) }; } /* Fitness: bis +20 % Laufgeschwindigkeit bei 100 Punkten */

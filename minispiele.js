@@ -89,6 +89,7 @@ export function initMinispiele(X, SHOPS) {
   }
   const built = new Map(); // key -> Group (leer = hier nichts bauen)
   function update() {
+    if (offen === 'los' && player.dead) losZu(); // Rubbellos blieb nach dem Tod offen und schluckte die Neustart-Taste
     const px = player.pos.x, pz = player.pos.z, want = [];
     for (const t of platten()) { if (want.length >= MAX) break; if ((t.x - px) ** 2 + (t.z - pz) ** 2 < NAH * NAH) want.push(t); }
     for (const t of JZ) { if (want.length >= MAX + 2) break; if ((t.x - px) ** 2 + (t.z - pz) ** 2 < 120 * 120) want.push(t); } // näher als die Platten: die Fassade muss schon geladen sein
