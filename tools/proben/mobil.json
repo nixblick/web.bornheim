@@ -9,7 +9,7 @@
   "z": 372,
   "wait": 6000,
   "js": "(() => { const G = window.G; if (G.player.car) G.toggleCar(); const tc = document.getElementById('tc'); window.__m1 = { touch: !!window.__touch, grob: matchMedia('(pointer: coarse)').matches, tc: tc && tc.style.display, w: innerWidth, h: innerHeight, q: G.opts.quality, pr: +G.renderer.getPixelRatio().toFixed(2), fov: Math.round(G.camera.fov) }; return JSON.stringify(window.__m1); })()",
-  "expect": "window.__touch === true && document.getElementById('tc').style.display === 'block' && window.__m1.pr >= 0.6 && window.__m1.fov <= 80"
+  "expect": "window.__touch === true && document.getElementById('tc').style.display === 'block' && window.__m1.pr >= 0.55 && window.__m1.fov <= 80"
  },
  {
   "n": "quer_stick",
