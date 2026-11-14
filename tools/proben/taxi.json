@@ -1,0 +1,27 @@
+[
+ {
+  "n": "start_bornheim",
+  "x": -138,
+  "z": 372,
+  "shot": false
+ },
+ {
+  "n": "taxi_bereit",
+  "wait": 1500,
+  "js": "(async () => { const G = window.G, p = G.player; for (let i = 0; i < 40 && !window.TAXI; i++) await new Promise(r => setTimeout(r, 500)); G.player.wanted = 0; let c = G.cars.find(c => c.userData && (c.userData.type === 'taxi' || c.userData.type === 'evtaxi') && !c.userData.driver); if (!c) { c = G.makeCar(false, 'taxi'); if (G.cars.indexOf(c) < 0) { p.mesh.parent.add(c); G.cars.push(c); } } c.userData.mode = 'parked'; c.position.set(p.pos.x + 3, p.pos.y, p.pos.z); for (let i = 0; i < 20 && !window.TAXI.anbieten(); i++) await new Promise(r => setTimeout(r, 300)); return JSON.stringify({ typ: c.userData.type, angebot: window.TAXI.anbieten() }); })()",
+  "expect": "window.TAXI && window.TAXI.anbieten() === true"
+ },
+ {
+  "n": "taxi_fahrt",
+  "wait": 500,
+  "js": "(async () => { const G = window.G, p = G.player; const st = G.INTERIORS.metro.stations.map(s => ({ x: s.p[0], z: s.p[1], d: Math.hypot(s.p[0] - p.pos.x, s.p[1] - p.pos.z) })).filter(s => s.d > 800 && s.d < 3000).sort((a, b) => a.d - b.d)[0]; const z = st || { x: p.pos.x + 900, z: p.pos.z }; window.__tz = z; window.__tp = window.TAXI.preis(z.x, z.z); p.money = 500; window.__tm0 = p.money; const t0 = performance.now(); const ok = await window.TAXI.buchen(z.x, z.z); while (window.TAXI.faehrt && performance.now() - t0 < 120000) await new Promise(r => setTimeout(r, 500)); await new Promise(r => setTimeout(r, 800)); window.__tr = { ok, preis: window.__tp, geld: p.money, d: Math.hypot(p.pos.x - z.x, p.pos.z - z.z), solid: G.solidAt ? G.solidAt(p.pos.x, p.pos.z) : -1, menu: document.getElementById('menu').style.display, ov: !!document.getElementById('taxifahrt'), pick: window.TAXI.pick }; return JSON.stringify(window.__tr); })()",
+  "expect": "window.__tr && window.__tr.ok === true && Math.abs(window.__tm0 - window.__tr.geld - window.__tp) < 0.001 && window.__tp >= 4 && window.__tr.d < 60 && !(window.__tr.solid >= 0) && window.__tr.menu !== 'flex' && !window.__tr.ov && !window.__tr.pick"
+ },
+ {
+  "n": "taxi_fahndung",
+  "wait": 300,
+  "shot": false,
+  "js": "(async () => { const G = window.G; G.player.wanted = 2; const m0 = G.player.money; const ok = await window.TAXI.buchen(G.player.pos.x + 500, G.player.pos.z); G.player.wanted = 0; window.__tf = { ok, diff: m0 - G.player.money }; return JSON.stringify(window.__tf); })()",
+  "expect": "window.__tf && window.__tf.ok === false && window.__tf.diff === 0"
+ }
+]
