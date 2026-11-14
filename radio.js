@@ -151,6 +151,7 @@ export function initRadio(X) {
       if (kind !== lastWx) { if (WX_NEU[kind]) melde(WX_NEU[kind]); else if (kind === 'clear' && SCHLECHT[lastWx]) melde('Wetter: Es klart auf, die Straßen trocknen.'); }
     }
     lastStars = stars; lastWx = kind;
+    { const S = A.SND; if (playing >= 0 && AU && S && S.ctx && S.master && AU.ctx !== S.ctx) { stopMusic(); audio(); } } // Spiel-Kontext ist da: alte Knoten stoppen, Sender startet unten neu
     const hear = on && !(X.menuOpen && X.menuOpen()) && !document.hidden;
     if (hear && !stumm) { if (playing !== st) { if (playing >= 0) stopMusic(); try { startMusic(st); } catch (e) { stumm = true; stopMusic(); console.warn('Autoradio ohne Ton', e); } } } else if (playing >= 0) stopMusic();
     if (AU && AU.eigen) { const v = vol(); if (Math.abs(AU.eigen.gain.value - v) > 0.01) AU.eigen.gain.value = v; }
