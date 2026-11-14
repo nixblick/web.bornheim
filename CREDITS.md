@@ -33,7 +33,7 @@ Alle 3D-Modelle und Texturen sind frei nutzbar. Herkunft:
 | pistol.glb | Pistol | Quaternius | CC0 | https://poly.pizza/m/J3i9KDQ3kt |
 
 ## Geräusche (`assets/sfx/`)
-51 kurze Aufnahmen, alle CC0 1.0 (Public Domain), auf Mono 32 kHz OGG verkleinert. Zuordnung in `assets/sfx/manifest.json`. Alle übrigen Geräusche erzeugt das Spiel selbst (`klang.js`).
+51 kurze Aufnahmen, alle CC0 1.0 (Public Domain), auf Mono 32 kHz OGG verkleinert. Zuordnung in `assets/sfx/manifest.json`. Die `.m4a`-Dateien daneben (AAC, Mono, 64 kbit/s, für iPhone/Safari ohne Ogg) sind Umwandlungen derselben CC0-Aufnahmen. Alle übrigen Geräusche erzeugt das Spiel selbst (`klang.js`).
 
 | Dateien | Inhalt | Paket | Autor | Lizenz | Quelle |
 |---|---|---|---|---|---|

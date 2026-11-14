@@ -235,7 +235,7 @@ export function initWeapons(X) {
       const wd = wallDist(_ray.ray, d.range); const hits = _ray.intersectObjects(cands, true).filter(h => h.distance > 2.5 && h.distance < wd);
       let end; if (hits.length) { end = hits[0].point.clone(); const o = owner(hits[0].object); if (o) { const up = !(o.userData.hp <= 0); hitTarget(o, d.dmg * falloff(d, hits[0].distance), _ray.ray.direction.clone()); hitN++; if (up && (o.userData.hp <= 0 || o.userData.state === 'dead')) down = true; if (cars.includes(o) && hitN <= 2) sparks(end, 0xffe6b0, 3, 2.5); } }
       else { end = _ray.ray.at(wd, new V3()); if (wd < d.range && k < 5) burst(end, end.y - TH(end.x, end.z) < 0.4 ? 0x7a5c3e : 0x9c9a96, 3 + Math.floor(Math.random() * 3), 1.2); } // Staub: braun am Boden, grau an Häusern
-      if (d.boom) { burst(end, 0xff8a30, 40, 7); burst(end, 0xffe0a0, 20, 4); camShake(0.25); sfx('explosion', 0.9); } // Rakete: Einschlag mit Feuerball
+      if (d.boom) { burst(end, 0xff8a30, 40, 7); burst(end, 0xffe0a0, 20, 4); camShake(0.25); sfx('explosion', 0.9, end); } // Rakete: Einschlag mit Feuerball
       if (k < 4 && showTr) tracer(muzzle, end);
     }
     if (hitN) markHit(down); kickCam(d); ejectCase();
@@ -314,7 +314,7 @@ export function initWeapons(X) {
     let best = null, bd = 1.2; for (const p of peds) { const u = p.userData; if (u.state === 'dead') continue; const c = p.position.clone(); c.y += 1.1; const t = c.clone().sub(ray.ray.origin).dot(ray.ray.direction); if (t < 2 || t > d.range + 4) continue; if (c.distanceTo(player.pos) > d.range) continue; const dd = ray.ray.distanceToPoint(c); if (dd < bd) { bd = dd; best = p; } }
     const end = best ? best.position.clone().setY(best.position.y + 1.1) : ray.ray.at(d.range + 3, new V3());
     for (const off of [-0.06, 0.06]) { const g = new THREE.BufferGeometry().setFromPoints([from.clone().setY(from.y + off), end.clone().setY(end.y + off)]); const l = new THREE.Line(g, wireMat); scene.add(l); wires.push({ l, t: 1.4 }); }
-    if (best) { stun(best, 'taser', 6); sfx('taser', 0.8); if (best.userData.cop) { raiseWanted(0.6, 3); emit('taserCop', best.position, { ped: best }); } else emit('taserPed', best.position, { ped: best }); }
+    if (best) { stun(best, 'taser', 6); sfx('taser', 0.8, best.position); if (best.userData.cop) { raiseWanted(0.6, 3); emit('taserCop', best.position, { ped: best }); } else emit('taserPed', best.position, { ped: best }); }
   }
 
   // ---------- Wurfsachen ----------
@@ -359,7 +359,7 @@ export function initWeapons(X) {
         } else if (!gone) m.position.set(nx, ny, nz);
         if (!gone) { const gy = floorAt(m.position.x, m.position.z, Math.max(m.position.y, oy) + 0.3); /* Höhe vor der Bewegung mitprüfen: sonst fällt ein schnelles Geschoss bei niedriger Bildrate durch Brückendecks */
           if (m.position.y <= gy + 0.06) { m.position.y = gy + 0.06; if (p.kind === 'molotov') { molotovHit(m.position.clone(), null, p); gone = true; } else if (p.kind === 'paint') { addSplat(m.position.clone().setY(gy + 0.01), new V3(0, 1, 0), p.col, rnd(1.5, 2.2)); emit('paintGround', m.position, {}); gone = true; }
-            else if (Math.abs(p.v.y) < 1.6) { p.rest = Math.hypot(p.v.x, p.v.z) < 1; p.v.y = 0; p.v.x *= 0.7; p.v.z *= 0.7; } else { p.v.y = -p.v.y * 0.3; p.v.x *= 0.6; p.v.z *= 0.6; if (p.kind !== 'paint') sfx('bump', 0.15); } }
+            else if (Math.abs(p.v.y) < 1.6) { p.rest = Math.hypot(p.v.x, p.v.z) < 1; p.v.y = 0; p.v.x *= 0.7; p.v.z *= 0.7; } else { p.v.y = -p.v.y * 0.3; p.v.x *= 0.6; p.v.z *= 0.6; if (p.kind !== 'paint') sfx('bump', 0.15, m.position); } }
           m.rotation.x += p.spin.x * dt; m.rotation.z += p.spin.z * dt; if (p.rest) { m.rotation.x = Math.PI / 2; } }
       }
       if (!gone && p.kind === 'molotov' && Math.random() < 0.6) { const q = new V3(); (m.userData.cloth || m).getWorldPosition(q); puff(q, 0xff8a2a, 0.22, 0.25, new V3(rnd(-0.3, 0.3), 1, rnd(-0.3, 0.3)), 0.4, 1, true); }
@@ -372,14 +372,14 @@ export function initWeapons(X) {
         if (on && !p.beepOn) { p.beepOn = true; if (m.position.distanceTo(player.pos) < 35) sfx('click', rem < 1.2 ? 0.55 : 0.25); } else if (!on) p.beepOn = false;
         if (p.t >= p.fuse) { boom(m.position.clone(), p.who, 1.55); gone = true; }
       }
-      if (!gone && p.kind === 'smoke') { if (p.t > 0.8 && p.t < 22) { p.e = (p.e || 0) + dt; while (p.e > 0.06) { p.e -= 0.06; const s = Math.min(1, (p.t - 0.8) / 2); puff(m.position.clone().add(new V3(0, 0.25, 0)), p.col, 0.6 * s + 0.4, 6.5, new V3(rnd(-1.4, 1.4), rnd(0.8, 2.0), rnd(-1.4, 1.4)), 0.95, 0.55); } if (p.t < 1 + dt) { sfx('hiss', 0.6); emit('smoke', m.position, {}); } } if (p.t > 26) gone = true; }
+      if (!gone && p.kind === 'smoke') { if (p.t > 0.8 && p.t < 22) { p.e = (p.e || 0) + dt; while (p.e > 0.06) { p.e -= 0.06; const s = Math.min(1, (p.t - 0.8) / 2); puff(m.position.clone().add(new V3(0, 0.25, 0)), p.col, 0.6 * s + 0.4, 6.5, new V3(rnd(-1.4, 1.4), rnd(0.8, 2.0), rnd(-1.4, 1.4)), 0.95, 0.55); } if (p.t < 1 + dt) { sfx('hiss', 0.6, m.position); emit('smoke', m.position, {}); } } if (p.t > 26) gone = true; }
       if (!gone && p.kind === 'flare') { if (p.t > 0.2 && p.t < 28) { flareFx(p, dt); } if (p.t > 29) gone = true; }
       if (gone) { disposeHierarchy(m); scene.remove(m); projs.splice(i, 1); if (p.light) p.light.busy = 0; }
     }
   }
 
   function molotovHit(pos, hitObj, p) {
-    sfx('glass', clamp(1.2 - pos.distanceTo(player.pos) / 70, 0.1, 1)); sparks(pos, 0xffa040, 18, 5); flashLight(pos, 0xff8a2a, 90, 0.4);
+    sfx('glass', clamp(1.2 - pos.distanceTo(player.pos) / 70, 0.1, 1), pos); sparks(pos, 0xffa040, 18, 5); flashLight(pos, 0xff8a2a, 90, 0.4);
     if (X.wakeParked && !(hitObj && cars.includes(hitObj))) { const w = X.wakeParked(pos, 3.5); if (w.length && !hitObj) hitObj = w[0]; }
     if (X.ignite) { if (hitObj && hitObj !== 'player' && cars.includes(hitObj)) X.ignite(hitObj, { I: 0.6, by: p.who }); else X.ignite(pos, { I: 0.9, life: 9, by: p.who }); for (const c of cars) if (c !== hitObj && !c.userData.fire && c.position.distanceTo(pos) < 2.4) X.ignite(c, { I: 0.4, by: p.who }); }
     if (hitObj === 'player') X.hurtPlayer('fire', 20); else if (hitObj && peds.includes(hitObj)) { damage(hitObj, 35, new V3(0, 0, 1), p.who === 'player' ? 'player' : 'npc'); }
@@ -394,14 +394,14 @@ export function initWeapons(X) {
   function updateLights(dt) { for (const L of lights) { if (L.busy) continue; L.t = Math.max(0, L.t - dt); L.l.intensity = L.peak * (L.t / L.dur) ** 1.5; L.l.visible = L.l.intensity > 0.05; } }
   function flareFx(p, dt) {
     const pos = p.m.position; const fl = 0.75 + Math.random() * 0.5;
-    if (!p.light) { const L = lights.find(x => !x.busy) || lights[0]; L.busy = 1; p.light = L; sfx('hiss', 0.7); emit('flare', pos, {}); }
+    if (!p.light) { const L = lights.find(x => !x.busy) || lights[0]; L.busy = 1; p.light = L; sfx('hiss', 0.7, pos); emit('flare', pos, {}); }
     p.light.l.position.set(pos.x, pos.y + 0.6, pos.z); p.light.l.color.setHex(0xff3018); p.light.l.intensity = 60 * fl * (p.t > 26 ? (28 - p.t) / 2 : 1); p.light.l.visible = p.light.l.intensity > 0.05;
     p.e = (p.e || 0) + dt; while (p.e > 0.05) { p.e -= 0.05; puff(pos.clone().setY(pos.y + 0.15), 0xff5a2a, 0.35, 0.35, new V3(rnd(-1.5, 1.5), rnd(1.5, 3.5), rnd(-1.5, 1.5)), 0.2, 1, true); if (Math.random() < 0.4) puff(pos.clone().setY(pos.y + 0.4), 0xc8504a, 0.8, 5, new V3(rnd(-0.5, 0.5), rnd(0.8, 1.6), rnd(-0.5, 0.5)), 1.4, 0.5); }
-    if (Math.random() < dt * 4) sfx('crackle', 0.15);
+    if (Math.random() < dt * 4) sfx('crackle', 0.15, pos);
   }
   function sparks(pos, color, n, sp) { for (let i = 0; i < n; i++) puff(pos.clone(), color, 0.25, rnd(0.25, 0.6), new V3(rnd(-1, 1), rnd(-0.2, 1.2), rnd(-1, 1)).normalize().multiplyScalar(rnd(sp * 0.4, sp)), 0, 1, true); }
   function bang(pos, who) {
-    const d = pos.distanceTo(player.pos); sfx('bang', clamp(1.2 - d / 90, 0.15, 1.2)); flashLight(pos, 0xfff0c0, 120, 0.18); sparks(pos, 0xfff0b0, 26, 9); for (let i = 0; i < 5; i++) puff(pos.clone(), 0x9a9a9a, 0.6, 2.5, new V3(rnd(-1, 1), rnd(0.5, 1.5), rnd(-1, 1)), 1.6, 0.6);
+    const d = pos.distanceTo(player.pos); sfx('bang', clamp(1.2 - d / 90, 0.15, 1.2), pos); flashLight(pos, 0xfff0c0, 120, 0.18); sparks(pos, 0xfff0b0, 26, 9); for (let i = 0; i < 5; i++) puff(pos.clone(), 0x9a9a9a, 0.6, 2.5, new V3(rnd(-1, 1), rnd(0.5, 1.5), rnd(-1, 1)), 1.6, 0.6);
     if (d < 25) camShake(0.25 * (1 - d / 25)); if (d < 2.5 && !player.car) X.hurtPlayer('bang', 12);
     for (const p of peds) { const u = p.userData; const dd = p.position.distanceTo(pos); if (dd < 2.5 && u.state !== 'dead') damage(p, 18, new V3().subVectors(p.position, pos).setY(0).normalize(), who === 'player' ? 'player' : 'npc'); else if (dd < 16 && u.state === 'walk') { u.state = 'flee'; u.fleeT = rnd(3, 6); } }
     if (who === 'player') { const cop = peds.some(p => p.userData.cop && p.position.distanceTo(pos) < 30); if (cop) raiseWanted(0.4); }
@@ -409,7 +409,7 @@ export function initWeapons(X) {
   }
   const scorchMat = new THREE.MeshBasicMaterial({ map: null, color: 0x111111, transparent: true, opacity: 0.75, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4 });
   function boom(pos, who, scale = 1) {
-    const R = 8 * scale, d = pos.distanceTo(player.pos); sfx('explosion', clamp((1.3 - d / (160 * scale)) * Math.min(1.3, scale), 0.15, 1.5)); flashLight(pos, 0xffa040, 260 * scale, 0.45 * scale); burst(pos.clone().setY(pos.y + 0.5), 0xff7a1a, Math.round(30 * scale), 6 * scale); burst(pos.clone().setY(pos.y + 1), 0x222222, Math.round(14 * scale), 3 * scale);
+    const R = 8 * scale, d = pos.distanceTo(player.pos); sfx('explosion', clamp((1.3 - d / (160 * scale)) * Math.min(1.3, scale), 0.15, 1.5), pos); flashLight(pos, 0xffa040, 260 * scale, 0.45 * scale); burst(pos.clone().setY(pos.y + 0.5), 0xff7a1a, Math.round(30 * scale), 6 * scale); burst(pos.clone().setY(pos.y + 1), 0x222222, Math.round(14 * scale), 3 * scale);
     for (let i = 0; i < Math.round(10 * scale); i++) puff(pos.clone().setY(pos.y + 0.6), i < 4 ? 0xffa040 : 0x3a3530, (i < 4 ? 1.2 : 1.6) * scale, i < 4 ? 0.5 : 4, new V3(rnd(-2, 2) * scale, rnd(1, 4) * scale, rnd(-2, 2) * scale), i < 4 ? 6 : 2.2, i < 4 ? 1 : 0.8, i < 4);
     if (d < 45 * scale) camShake(0.7 * scale * (1 - d / (45 * scale)));
     const los = (q, h) => X.losFactor(pos.x, pos.y + 0.5, pos.z, q.x, q.y + h, q.z); // Wand dazwischen: Wirkung ×0,2
@@ -428,7 +428,7 @@ export function initWeapons(X) {
   function trimSplats() { while (splats.length > 260) { const o = splats.shift(); if (o.parent) o.parent.remove(o); } }
   function addSplat(pos, normal, col, size, parent) {
     const s = new THREE.Mesh(splatGeo, splatMat(col)); s.position.copy(pos).addScaledVector(normal, 0.035); s.lookAt(s.position.clone().add(normal)); s.rotateZ(rnd(0, 6.28)); s.scale.setScalar(size); s.renderOrder = 2;
-    scene.add(s); if (parent) parent.attach(s); splats.push(s); trimSplats(); sfx('splat', clamp(1 - pos.distanceTo(player.pos) / 60, 0.1, 0.9)); burst(pos, col, 5, 1.2); return s;
+    scene.add(s); if (parent) parent.attach(s); splats.push(s); trimSplats(); sfx('splat', clamp(1 - pos.distanceTo(player.pos) / 60, 0.1, 0.9), pos); burst(pos, col, 5, 1.2); return s;
   }
   function splatBody(o, pt, p) {
     if (o === 'player') { X.hurtPlayer('paint', 0); return; }
@@ -441,9 +441,9 @@ export function initWeapons(X) {
   function firework(pos) { const base = new THREE.Group(); base.add(box(0.5, 0.35, 0.5, MS(0x8a1c1c, 0.7, 0), 0, 0.18, 0), box(0.52, 0.04, 0.52, MS(0xe0c040, 0.5, 0.2), 0, 0.36, 0)); base.position.copy(pos); base.position.y = floorAt(pos.x, pos.z, pos.y + 1); scene.add(base); fws.push({ base, n: 18, t: 0.5, rockets: [] }); sfx('hiss', 0.4); }
   function updateFireworks(dt) {
     for (let i = fws.length - 1; i >= 0; i--) { const f = fws[i]; f.t -= dt;
-      if (f.n > 0 && f.t <= 0) { f.n--; f.t = rnd(0.35, 0.8); const r = { p: f.base.position.clone().setY(f.base.position.y + 0.4), v: new V3(rnd(-1.5, 1.5), rnd(17, 22), rnd(-1.5, 1.5)), t: 0, col: pick([0xff3060, 0x40ff90, 0x40a0ff, 0xffd040, 0xff70ff, 0xffffff]) }; f.rockets.push(r); sfx('whoosh', clamp(1 - r.p.distanceTo(player.pos) / 150, 0.1, 0.6)); }
+      if (f.n > 0 && f.t <= 0) { f.n--; f.t = rnd(0.35, 0.8); const r = { p: f.base.position.clone().setY(f.base.position.y + 0.4), v: new V3(rnd(-1.5, 1.5), rnd(17, 22), rnd(-1.5, 1.5)), t: 0, col: pick([0xff3060, 0x40ff90, 0x40a0ff, 0xffd040, 0xff70ff, 0xffffff]) }; f.rockets.push(r); sfx('whoosh', clamp(1 - r.p.distanceTo(player.pos) / 150, 0.1, 0.6), r.p); }
       for (let j = f.rockets.length - 1; j >= 0; j--) { const r = f.rockets[j]; r.t += dt; r.v.y -= 9.8 * dt; r.p.addScaledVector(r.v, dt); puff(r.p.clone(), 0xffd8a0, 0.3, 0.4, new V3(rnd(-0.3, 0.3), -1, rnd(-0.3, 0.3)), 0, 0.9, true);
-        if (r.v.y < 4) { for (let k = 0; k < 46; k++) puff(r.p.clone(), r.col, 0.7, rnd(1.0, 1.8), new V3(rnd(-1, 1), rnd(-1, 1), rnd(-1, 1)).normalize().multiplyScalar(rnd(9, 15)), 0, 1, true); flashLight(r.p, r.col, 160, 0.5); sfx('bang', clamp(1 - r.p.distanceTo(player.pos) / 200, 0.1, 0.7)); setTimeout(() => sfx('crackle', 0.35), 350); f.rockets.splice(j, 1); emit('firework', r.p, {}); } }
+        if (r.v.y < 4) { for (let k = 0; k < 46; k++) puff(r.p.clone(), r.col, 0.7, rnd(1.0, 1.8), new V3(rnd(-1, 1), rnd(-1, 1), rnd(-1, 1)).normalize().multiplyScalar(rnd(9, 15)), 0, 1, true); flashLight(r.p, r.col, 160, 0.5); sfx('bang', clamp(1 - r.p.distanceTo(player.pos) / 200, 0.1, 0.7), r.p); setTimeout(() => sfx('crackle', 0.35), 350); f.rockets.splice(j, 1); emit('firework', r.p, {}); } }
       if (f.n <= 0 && !f.rockets.length) { f.age = (f.age || 0) + dt; if (f.age > 20) { scene.remove(f.base); fws.splice(i, 1); } } }
   }
 
