@@ -146,7 +146,9 @@ $('fb_send').onclick = async ev => {
     else h.textContent = 'Danke! Deine Meldung ist angekommen.';
     $('fb_title').value = ''; $('fb_text').value = '';
     // #236/#237: nach dem Senden „Schließen“ statt „Abbrechen“, und eine neue Meldung lässt sich gleich wieder senden (der Knopf blieb gesperrt)
-    $('fb_close').textContent = 'Schließen'; b.disabled = false; el.dataset.gesendet = '1'; return;
+    $('fb_close').textContent = 'Schließen'; b.disabled = false; el.dataset.gesendet = '1';
+    setTimeout(() => { if (el.style.display === 'flex' && el.dataset.gesendet) close(); }, 2500); // nach dem Senden schließt sich das Fenster von selbst (André 14.11.2026)
+    return;
   }
   b.disabled = false;
   showAlt(res.status === 429 ? 'Gerade kommen zu viele Meldungen an, bitte später noch einmal oder einen der anderen Wege nehmen:' : 'Senden ging nicht (Fehler ' + res.status + '). Bitte einen der anderen Wege nehmen:');
@@ -164,3 +166,15 @@ window.openFeedback = openFeedback;
 // Spielzeit-Marken für die anonyme Zählung (nixblick Analytics zählt Klicks auf Elemente mit data-track)
 { const marks = [10, 30, 60]; let sec = 0; const btn = document.createElement('button'); btn.style.display = 'none'; document.body.appendChild(btn);
   setInterval(() => { const G = window.G; if (!G || !G.player || !G.player.mesh || document.hidden) return; sec += 15; const m = marks.find(m => sec === m * 60); if (m) { btn.setAttribute('data-track', 'spielzeit-' + m); btn.click(); } }, 15000); }
+
+// Kleiner Feedback-Knopf im Spielbild (André 14.11.2026: „gleich an der Stelle, wo man ist, draufklicken: Bildschirmfoto und Feedback“).
+// Desktop unten rechts über dem Straßennamen, Touch oben in der Knopfreihe. Nur im laufenden Spiel, nicht im Menü und nicht im Handy.
+{ const b = document.createElement('button'); b.id = 'fbbtn'; b.textContent = '🐞'; b.title = 'Fehler melden (mit Bildschirmfoto dieser Stelle)'; b.setAttribute('aria-label', 'Fehler melden');
+  const touch = !!(/** @type {any} */ (window).__touch);
+  b.style.cssText = 'position:fixed;z-index:19;width:38px;height:38px;border-radius:10px;border:1px solid #ffffff55;background:#000000a0;color:#fff;font-size:18px;cursor:pointer;display:none;padding:0;' +
+    (touch ? 'top:calc(8px + env(safe-area-inset-top,0px));right:calc(192px + env(safe-area-inset-right,0px));' : 'right:18px;bottom:96px;');
+  const auf = e => { e.preventDefault(); e.stopPropagation(); openFeedback(); };
+  b.addEventListener('click', auf); if (touch) b.addEventListener('touchend', auf, { passive: false }); b.addEventListener('mousedown', e => e.stopPropagation());
+  document.body.appendChild(b);
+  setInterval(() => { const m = document.getElementById('menu'), ph = document.getElementById('phone'); const an = !!(/** @type {any} */ (window).__started) && !(m && m.style.display === 'flex') && !(ph && ph.style.display === 'block') && el.style.display !== 'flex'; const v = an ? 'block' : 'none'; if (b.style.display !== v) b.style.display = v; }, 500);
+}
