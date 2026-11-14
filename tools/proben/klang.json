@@ -16,6 +16,34 @@
   "expect": "window.__kv.unbekannt === false && (!window.__kv.ctx || (window.__kv.bereit === true && window.__kv.schuss === true))"
  },
  {
+  "n": "klang_vorab",
+  "wait": 12000,
+  "shot": false,
+  "js": "(async () => { const K = window.KLANG; for (let i = 0; i < 45 && !K.vorab.fertig; i++) await new Promise(r => setTimeout(r, 1000)); window.__kva = K.vorab; return JSON.stringify(K.vorab); })()",
+  "expect": "window.__kva.fertig === true && window.__kva.arten === window.__kva.gesamt && window.__kva.gesamt >= 32 && window.__kva.betten === 4"
+ },
+ {
+  "n": "klang_vorab_messen",
+  "wait": 500,
+  "shot": false,
+  "js": "(async () => { const m = await window.KLANG.messen(); window.__kvm = m; const z = {}; for (const k of Object.keys(m)) { const v = m[k].vor; z[k] = v ? [v.n, v.peakMin, v.peakMax, v.rms, v.ms, v.diff] : null; } return JSON.stringify(z); })()",
+  "expect": "(m => window.KLANG.kinds.every(k => m[k] && m[k].vor && m[k].vor.n >= 3 && m[k].vor.peakMin > 0.1 && m[k].vor.peakMax < 1.2 && m[k].vor.diff > 0 && m[k].vor.ms > 5) && m.step.vor.n === 4 && m.step_innen.vor.n === 4 && m.explosion.vor.ms > m.shot.vor.ms && m.click.vor.ms < 200)(window.__kvm)"
+ },
+ {
+  "n": "klang_ort",
+  "wait": 500,
+  "shot": false,
+  "js": "(() => { const K = window.KLANG, G = window.G, p = G.player.pos, e = G.X.camera.matrixWorld.elements, r = {}; const nah = { x: p.x + 3, z: p.z }, weit = { x: p.x + 300, z: p.z }, rechts = { x: p.x + e[0] * 40, z: p.z + e[2] * 40 }; if (K.bereit) { K.sfx('shot', 0.001, weit); r.weit = K.letzter; K.sfx('shot', 0.001, nah); r.nah = K.letzter; K.sfx('glass', 0.001, rechts); r.rechts = K.letzter; } else { r.weit = K.ort('shot', weit); r.nah = K.ort('shot', nah); r.rechts = K.ort('glass', rechts); } r.ausserHoerweite = K.ort('click', { x: p.x + 100, z: p.z }).gain; r.mitte = K.ort('shot', null).gain; window.__kort = r; return JSON.stringify(r); })()",
+  "expect": "(o => o.weit.gain > 0 && o.weit.gain < o.nah.gain && o.weit.delay > 0.8 && o.nah.delay < 0.05 && o.weit.lp < o.nah.lp && o.rechts.pan > 0.5 && o.ausserHoerweite === 0 && o.mitte === 1)(window.__kort)"
+ },
+ {
+  "n": "klang_stimmen",
+  "wait": 500,
+  "shot": false,
+  "js": "(() => { const K = window.KLANG, p = window.G.player.pos; let ok = 0; for (let i = 0; i < 60; i++) if (K.sfx(i % 2 ? 'shot' : 'glass', 0.0005 + i * 0.00001, i % 3 ? { x: p.x + i, z: p.z } : null)) ok++; window.__kst = { ok, stimmen: K.stimmen, bereit: K.bereit, max: K.MAXV }; return JSON.stringify(window.__kst); })()",
+  "expect": "!window.__kst.bereit || (window.__kst.ok === 60 && window.__kst.stimmen <= 24 && window.__kst.stimmen >= 12)"
+ },
+ {
   "n": "klang_aus_schalter",
   "wait": 500,
   "shot": false,
