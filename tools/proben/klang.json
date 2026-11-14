@@ -40,8 +40,8 @@
   "n": "klang_stimmen",
   "wait": 500,
   "shot": false,
-  "js": "(() => { const K = window.KLANG, p = window.G.player.pos; let ok = 0; for (let i = 0; i < 60; i++) if (K.sfx(i % 2 ? 'shot' : 'glass', 0.0005 + i * 0.00001, i % 3 ? { x: p.x + i, z: p.z } : null)) ok++; window.__kst = { ok, stimmen: K.stimmen, bereit: K.bereit, max: K.MAXV }; return JSON.stringify(window.__kst); })()",
-  "expect": "!window.__kst.bereit || (window.__kst.ok === 60 && window.__kst.stimmen <= 24 && window.__kst.stimmen >= 12)"
+  "js": "(() => { const K = window.KLANG, p = window.G.player.pos; let ok = 0; for (let i = 0; i < 60; i++) if (K.sfx(i % 2 ? 'shot' : 'glass', 0.0005 + i * 0.00001, i % 3 ? { x: p.x + i, z: p.z } : null)) ok++; window.__kst = { ok, stimmen: K.stimmen, bereit: K.bereit, max: K.MAXV, laeuft: !!(window.G.X.SND && window.G.X.SND.ctx && window.G.X.SND.ctx.state === 'running') }; return JSON.stringify(window.__kst); })()",
+  "expect": "!window.__kst.bereit || (window.__kst.ok === 60 && window.__kst.stimmen <= 24 && (window.__kst.laeuft ? window.__kst.stimmen >= 12 : window.__kst.stimmen === 0))"
  },
  {
   "n": "klang_aus_schalter",
