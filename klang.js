@@ -11,7 +11,7 @@
 //   liefert Drehzahl und Last. Reifen: Quietschen beim Rutschen, Zischen auf nasser Straße.
 // - Kulisse: Stadt (Tag, Nacht), Wind und Regen als vorgerechnete Schleifen, überblendet nach Tageszeit, Wetter und
 //   drinnen/draußen. Vögel und Grillen als einzelne Ereignisse, mal näher, mal ferner.
-// - ladeAufnahmen(manifest) kann später echte Aufnahmen je Geräusch laden (noch nirgends aufgerufen).
+// - ladeAufnahmen(manifest) lädt echte Aufnahmen (CC0, assets/sfx) je Geräusch; sie gehen der Synthese vor. game.js ruft es nach dem Start.
 // KLANG.aus = true schaltet zurück auf die alten Töne. Hören kann die Entwicklung den Ton nicht (kein Ton über Andrés
 // Lautsprecher): messen() rechnet jedes Geräusch stumm und liefert Spitze, Mittelwert und Länge, dazu die Zahlen der
 // vorgerechneten Fassungen; die Probe `klang` prüft sie.
@@ -355,7 +355,7 @@ export function initKlang(X) {
 
   /** Geräusch spielen; false = dieses Geräusch kennt das Modul nicht oder der Ton ist noch nicht bereit (dann spielt game.js es wie bisher). */
   function sfx(kind, vol = 1, pos = null) {
-    const art = kind === 'step' ? schrittArt() : kind, aufn = AUFN[kind];
+    const art = kind === 'step' ? schrittArt() : kind, aufn = AUFN[art];
     if ((!R[art] && !aufn) || !verdrahten() || api.aus) return false;
     try {
       const C = w.C, o = ort(kind, pos); api.letzter = { kind, gain: +o.gain.toFixed(4), pan: +o.pan.toFixed(3), delay: +o.delay.toFixed(3), lp: Math.round(o.lp), d: Math.round(o.d) };
@@ -396,18 +396,21 @@ export function initKlang(X) {
   }
   /** Aufnahmen laden: { kind: [url, …] }. Holt und dekodiert jede Datei, normalisiert die Spitze auf 0,9 und nimmt sie ab dann
    *  als Fassungen dieses Geräuschs (gleicher Weg wie die vorgerechneten: Ort, Stimmenzahl, Gruppen). Liefert die Zahl der Puffer. */
+  // Spitzenpegel je Aufnahme, passend zu den vorgerechneten Geräuschen; Schlüssel der Datei → Geräusch im Spiel
+  const AUFN_PEGEL = { step: 0.2, step_innen: 0.2, punch: 0.5, hit: 0.5, bump: 0.5, splat: 0.45, door: 0.4, click: 0.3, pickup: 0.35, reload: 0.4 }, AUFN_NAME = { step_holz: 'step_innen' };
   async function ladeAufnahmen(manifest) {
     const OC = offline(); let n = 0; if (!OC || !manifest) return 0;
     const dek = new OC(1, 1, 44100);
-    for (const kind of Object.keys(manifest)) {
-      const urls = [].concat(manifest[kind] || []), bs = [];
-      for (const url of urls) { try { const r = await fetch(url); if (!r.ok) continue; bs.push(normalisieren(await dek.decodeAudioData(await r.arrayBuffer()), 0.9)); } catch (e) { console.warn('klang aufnahme', url, e); } }
+    for (const key of Object.keys(manifest)) {
+      const kind = AUFN_NAME[key] || key; if (!R[kind]) continue; // unbekannt (z. B. step_gras: das Spiel kennt den Untergrund nicht)
+      const urls = [].concat(manifest[key] || []), bs = [];
+      for (const url of urls) { try { const r = await fetch(url); if (!r.ok) continue; bs.push(normalisieren(await dek.decodeAudioData(await r.arrayBuffer()), AUFN_PEGEL[kind] || 0.4)); } catch (e) { console.warn('klang aufnahme', url, e); } }
       if (bs.length) { AUFN[kind] = bs; n += bs.length; }
     }
     return n;
   }
   const api = { sfx, messen, ort, ladeAufnahmen, aus: false, kinds: Object.keys(R), letzter: null, MAXV,
-    get bereit() { return !!w; },
+    get bereit() { return !!w; }, get aufnahmen() { let n = 0; for (const k in AUFN) n += AUFN[k].length; return n; },
     get stimmen() { aufraeumen(); return stimmen.length; },
     /** Stand des Vorrechnens: arten = Geräusche mit allen Fassungen, fertig = Warteschlange leer */
     get vorab() { const arten = Object.keys(R).filter(k => VAR[k] && VAR[k].length >= anzahl(k)).length; return { arten, gesamt: Object.keys(R).length, betten: Object.keys(BETT).length, aufgaben: V.q.length, erledigt: V.i, fertig: V.i >= V.q.length && !V.busy }; },
