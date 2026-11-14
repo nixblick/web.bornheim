@@ -3238,7 +3238,9 @@ function pmPlaces() { const out = new Map(); const M = INTERIORS && INTERIORS.me
   q.addEventListener('change', go); q.addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter') { go(); const v = q.value.trim().toLowerCase(); const p = [...P].find(([k]) => k.toLowerCase().includes(v)); if (p && e.shiftKey) pmJump(p[1].x, p[1].z, '📍 Springe …', 0, 0); } }); } }
 /* F1: Menü direkt auf der Hilfe öffnen */ addEventListener('keydown', e => { if (e.code !== 'F1' || !started) return; e.preventDefault(); if (!menuOpen) openMenu(); MENU_TAB('hilfe'); });
 if ($('m_creative')) $('m_creative').onclick = () => { closeMenu(); if (started) toggleCreative(); };
-$('o_quality').onchange = () => { const before = opts.quality; opts.quality = $('o_quality').value; opts.qualityManuell = true; applyOpts(); if ((before === 'niedrig') !== (opts.quality === 'niedrig')) showMsg('Texturdetails nach Neustart', 1800); };
+$('o_quality').onchange = () => { const before = opts.quality; opts.quality = $('o_quality').value; opts.qualityManuell = true; applyOpts(); if ((before === 'niedrig') !== (opts.quality === 'niedrig')) { /* Umgebungslicht, Autolack, Fahrbahn, Wasser und Dunst hängen am Stand beim Laden (LOW_GFX): ohne Neuladen bleibt die Stufe halb */ saveOpts(); setTimeout(() => { if (started && confirm('Die neue Grafikstufe wirkt erst nach dem Neuladen vollständig (Licht, Lack, Wasser, Dunst).
+
+Jetzt speichern und neu laden?')) { try { saveGame(true); } catch (e) { /* trotzdem neu laden */ } location.reload(); } else showMsg('Grafikstufe wirkt voll nach dem Neuladen', 3000); }, 50); } };
 $('o_weather').onchange = () => { opts.weather = $('o_weather').value; if (opts.weather !== 'auto') weather.kind = opts.weather; applyOpts(); };
 $('o_traffic').oninput = () => { opts.traffic = +$('o_traffic').value; applyOpts(); };
 WET = initWetter({ THREE, scene, camera, get opts() { return opts; }, get pocket() { return POCKET; }, sfx: (k, v) => sfx(k, v) });

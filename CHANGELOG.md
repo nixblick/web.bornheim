@@ -2,6 +2,8 @@
 
 ## 2026-11-14
 
+- **Grafikstufe wechseln:** Beim Wechsel von oder nach „Niedrig“ fragt das Spiel jetzt, ob es speichern und neu laden soll. Licht, Autolack, Fahrbahn, Wasser und Dunst hängen am Stand beim Laden; ohne Neuladen blieb die neue Stufe halb (vorher nur ein kurzer Hinweis „Texturdetails nach Neustart“).
+- **Handy, Einstiegshilfe:** Bei den ersten drei Starts zeigen vier kurze Hinweise, wo man aufsetzt (laufen), wischt (umsehen) und wo Menü und Handy sind. Sie verschwinden nach 12 s oder sobald man gelaufen ist und sich umgesehen hat.
 - **Raketenwerfer:** Ein Treffer sprengt ein Auto sofort (brauchte zwei wie die Pistole), dazu Druckwelle wie bei der Granate.
 - **Ton am iPhone und Ton mit Ort:** Die Aufnahmen liegen zusätzlich als AAC vor (51 Dateien, 189 KB) und spielen damit auch in Safari ohne Ogg. Explosionen, Glas, Einschläge, Feuer, Taser und Feuerwerk klingen von dort, wo sie passieren.
 - **Leistung, kleine Stufe:** Ton schreibt Zielwerte nur noch bei Änderung, Sirenensuche fünfmal je Sekunde, KI-Autos ab 80 m lesen Höhe und Neigung nur jedes zweite Bild. Die Modul-Updates blieben, wie sie sind: sie drosseln sich schon selbst.
