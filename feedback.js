@@ -46,6 +46,25 @@ el.innerHTML = `<div class="box"><h3>Fehler melden oder Idee schicken</h3>
 <p id="fb_alt" style="display:none;margin-top:12px">Andere Wege: <a href="#" id="fb_gh" style="color:#ffd84a">auf GitHub melden</a> (Bild liegt dann in der Zwischenablage, mit Strg+V einfügen), <a href="#" id="fb_share" style="color:#ffd84a">teilen</a> oder <a href="#" id="fb_mail" style="color:#ffd84a">per E-Mail</a>.</p></div>`;
 document.body.appendChild(el);
 const $ = id => document.getElementById(id);
+// Diagnose (André 14.11.2026: „besser verstehen, was bei Usern schiefläuft“): einmal je Sekunde prüft ein Wächter, ob etwas
+// offensichtlich nicht stimmt (Figur oder Auto steht in einem Haus, Bildrate bricht ein), und merkt sich Ort und Uhrzeit.
+// Das bleibt im Browser und geht nur mit dem Feedback raus, wenn „Spielzustand mitschicken“ angehakt ist – wie die Fehlermeldungen.
+const diag = [], dSeen = new WeakSet(); let dRaf = 0, dRaf0 = 0, dT = performance.now(), dFpsSum = 0, dFpsN = 0, dFpsMin = 1e9, dImHaus = 0, dLangsam = 0;
+function dlog(msg) { diag.push(new Date().toTimeString().slice(0, 8) + ' ' + msg); if (diag.length > 20) diag.shift(); }
+(function dTick() { dRaf++; requestAnimationFrame(dTick); })();
+setInterval(() => { try {
+  const G = /** @type {any} */ (window).G, now = performance.now(), menu = document.getElementById('menu');
+  const pause = !G || !G.player || !(/** @type {any} */ (window).__started) || document.hidden || (menu && menu.style.display === 'flex');
+  const fps = (dRaf - dRaf0) * 1000 / Math.max(1, now - dT); dRaf0 = dRaf; dT = now; if (pause) { dLangsam = 0; return; }
+  dFpsSum += fps; dFpsN++; if (dFpsN > 5 && fps < dFpsMin) dFpsMin = fps;
+  if (fps < 12) { if (++dLangsam === 5) dlog(`Bildrate seit 5 s unter 12 (jetzt ${fps.toFixed(0)}/s, Stufe ${G.opts.quality})`); } else dLangsam = 0;
+  const p = G.player, P = p.pos, ort = (x, z) => `x ${x.toFixed(0)}, z ${z.toFixed(0)}`;
+  if ((G.INTERIORS && G.INTERIORS.inside) || (G.creative && G.creative.on) || (G.X && G.X.inPocket && G.X.inPocket(P.x, P.z))) return;
+  if (!p.car) { if (G.solidAt(P.x, P.z) >= 0 && P.y - G.TH(P.x, P.z) < 2) { if (++dImHaus === 2) dlog('Figur steht in einem Haus: ' + ort(P.x, P.z)); } else dImHaus = 0; }
+  else if (!dSeen.has(p.car) && Math.abs(p.car.userData.speed || 0) < 2) { const c = p.car, h = c.userData.heading || 0, L = 1.6; let n = 0; for (const s of [-L, 0, L]) if (G.solidAt(c.position.x + Math.sin(h) * s, c.position.z + Math.cos(h) * s) >= 0) n++; if (n >= 2) { dSeen.add(c); dlog('Eigenes Fahrzeug steckt in einem Haus: ' + ort(c.position.x, c.position.z)); } }
+  for (const c of G.cars) { if (c === p.car || !c.visible || dSeen.has(c)) continue; const dx = c.position.x - P.x, dz = c.position.z - P.z; if (dx * dx + dz * dz > 3600) continue;
+    if (G.solidAt(c.position.x, c.position.z) >= 0) { dSeen.add(c); dlog(`Auto (${c.userData.mode || '?'}) steht in einem Haus: ` + ort(c.position.x, c.position.z)); } }
+} catch (e) { /* Diagnose darf das Spiel nie stören */ } }, 1000);
 function info() {
   const G = window.G; const lines = [];
   lines.push('- Seite: ' + location.href.split('?')[0]);
@@ -53,6 +72,8 @@ function info() {
   try { if (G) { const gl = G.renderer.getContext(); const ext = gl.getExtension('WEBGL_debug_renderer_info'); lines.push('- Grafik: ' + (ext ? gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) : '?') + ', Stufe ' + G.opts.quality + ', ' + innerWidth + 'x' + innerHeight); } } catch (e) {}
   try { if (G) { const p = G.player.pos; lines.push(`- Position: x ${p.x.toFixed(0)}, z ${p.z.toFixed(0)} (${document.getElementById('street')?.textContent || '?'})` + (G.player.car ? ', im Fahrzeug' : '') + (G.creative?.on ? ', Kreativmodus' : '')); lines.push(`- Waffe: ${G.WPN?.cur || '?'}, Uhrzeit ${G.world.hour.toFixed(1)}, Wetter ${G.weather.kind}`); const s = G.STORY?.S; if (s && s.state === 'active') lines.push('- Story: ' + (G.STORY.sid || '') + ' Kapitel ' + ((s.ch ?? 0) + 1)); } } catch (e) {}
   const list = (h, a) => { if (a.length) { lines.push(h); for (const e of a) lines.push('  - `' + e.replace(/`/g, "'") + '`'); } };
+  try { if (G) lines.push(`- Gerät: ${/** @type {any} */ (window).__touch ? 'Touch' : 'Maus/Tastatur'}, Pixelverhältnis ${devicePixelRatio || 1} (gerendert ${G.renderer.getPixelRatio().toFixed(2)}), Sichtweite ${G.opts.view}, Bildrate Ø ${dFpsN ? (dFpsSum / dFpsN).toFixed(0) : '?'}/s, schlechteste Sekunde ${dFpsMin < 1e9 ? dFpsMin.toFixed(0) : '?'}/s`); } catch (e) {}
+  list('- Automatisch erkannt:', diag);
   list('- Letzte Fehlermeldungen:', errors); list('- Vorige Sitzung (vor Neustart/Absturz):', prevErrors);
   return lines.join('\n');
 }
