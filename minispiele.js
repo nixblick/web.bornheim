@@ -6,7 +6,10 @@ import { disposeHierarchy } from './dispose.js';
 // Leertaste, Klick oder Tippen im grünen Feld schlägt zurück, zu früh oder zu spät kostet den Punkt. Esc gibt auf.
 // Belohnung nur EP (progress.js), kein Geld. Zählt als Aktivität: nicht neben Laufrunde, Eulen-Lauf, Nebenjob oder Story.
 // Rubbellos: neuer Artikel im Kiosk (shops.js), drei Felder, kleine Gewinntabelle, „nur Spielgeld“. Erwartungswert deutlich
-// unter dem Preis; EP nur für die ersten drei Lose am Tag. Tischkicker fehlt bewusst: kein Jugendhaus in den Kartendaten.
+// unter dem Preis; EP nur für die ersten drei Lose am Tag.
+// Tischkicker: an den Jugendhäusern aus OSM (data/jugend.json, tools/jugend.py; die Kacheln kennen sie nicht) steht vor der
+// Fassade ein Kickertisch. F startet ein Spiel bis 6 Tore: im Angriff schießen, wenn der Torwart nicht davorsteht, in der
+// Abwehr halten, wenn der Ball im grünen Feld ist. Nur EP, wie beim Tischtennis.
 /** @param {import('./types').Ctx} X @param {any} SHOPS */
 export function initMinispiele(X, SHOPS) {
   const A = /** @type {any} */ (X);
@@ -21,7 +24,7 @@ export function initMinispiele(X, SHOPS) {
     return { get n() { return o.n; }, inc() { o.n++; try { localStorage.setItem(key, JSON.stringify(o)); } catch (e) { /* nur diese Sitzung */ } } }; }
 
   // ---------- Fenster (gemeinsam für beide Spiele) ----------
-  let ui = null, wasLocked = false, offen = null; // offen: 'tt' | 'los' | null
+  let ui = null, wasLocked = false, offen = null; // offen: 'tt' | 'kick' | 'los' | null
   function buildUi() { const el = document.createElement('div'); el.id = 'minispiel'; el.style.cssText = 'position:fixed;inset:0;display:none;align-items:center;justify-content:center;z-index:61;background:#0008;font-family:system-ui,sans-serif;touch-action:none';
     el.innerHTML = '<div style="background:#16181d;color:#eee;border:1px solid #333;border-radius:14px;padding:14px 16px;width:min(92vw,380px);box-shadow:0 8px 30px #0008;text-align:center"><div class="ms_t" style="font-size:13px;color:#aab"></div><div class="ms_s" style="font-size:24px;font-weight:700;margin:6px 0"></div><div class="ms_b"></div><div class="ms_m" style="min-height:20px;font-size:15px;margin-top:6px;color:#ffd84a"></div><div class="ms_f" style="font-size:12px;color:#99a;margin-top:6px"></div><button type="button" class="ms_x" style="margin-top:8px;background:#2a2d35;color:#eee;border:1px solid #444;border-radius:8px;padding:7px 14px;font:600 14px system-ui;cursor:pointer"></button></div>';
     for (const ev of ['mousedown', 'pointerdown', 'touchstart', 'touchend', 'click', 'wheel']) el.addEventListener(ev, e => e.stopPropagation());
@@ -36,7 +39,7 @@ export function initMinispiele(X, SHOPS) {
   let M = null;
   function mats() {
     if (M) return M;
-    M = { platte: new THREE.MeshLambertMaterial({ color: 0x2f6b4f }), linie: new THREE.MeshLambertMaterial({ color: 0xf2f2ee }), beton: new THREE.MeshLambertMaterial({ color: 0x8a8a84 }) };
+    M = { platte: new THREE.MeshLambertMaterial({ color: 0x2f6b4f }), linie: new THREE.MeshLambertMaterial({ color: 0xf2f2ee }), beton: new THREE.MeshLambertMaterial({ color: 0x8a8a84 }), holz: new THREE.MeshLambertMaterial({ color: 0x8a5a2b }) };
     for (const k in M) M[k].userData.shared = true; // Cache für alle Platten: disposeHierarchy darf ihn nicht freigeben
     return M;
   }
@@ -55,6 +58,25 @@ export function initMinispiele(X, SHOPS) {
     for (const [geos, mat] of [[platte, m.platte], [linie, m.linie], [beton, m.beton]]) { const me = new THREE.Mesh(merge(geos), mat); me.castShadow = mat !== m.linie; me.receiveShadow = true; g.add(me); }
     return g;
   }
+  /** Kickertisch im lokalen Rahmen: x = Längsachse (1,4 m), z quer (0,75 m): Korpus auf vier Beinen, Spielfeld, vier Stangen */
+  function makeKicker() {
+    const m = mats(), g = new THREE.Group();
+    const holz = [box(1.4, 0.28, 0.75, 0, 0.8, 0)]; for (const sx of [-0.6, 0.6]) for (const sz of [-0.3, 0.3]) holz.push(box(0.08, 0.66, 0.08, sx, 0.33, sz));
+    const feld = [box(1.24, 0.01, 0.6, 0, 0.945, 0)];
+    const metall = [-0.45, -0.15, 0.15, 0.45].map(x => box(0.02, 0.02, 1.05, x, 1.0, 0));
+    for (const [geos, mat] of [[holz, m.holz], [feld, m.platte], [metall, m.beton]]) { const me = new THREE.Mesh(merge(geos), mat); me.castShadow = mat !== m.platte; me.receiveShadow = true; g.add(me); }
+    return g;
+  }
+  // Jugendhäuser: kleine eigene Liste [[x, z], …]; fällt sie aus, gibt es schlicht keine Kickertische
+  let JZ = [];
+  fetch('data/jugend.json').then(r => r.ok ? r.json() : null).then(d => { if (d && Array.isArray(d.jugend)) JZ = d.jugend.filter(q => Array.isArray(q) && Number.isFinite(q[0]) && Number.isFinite(q[1])).map(q => ({ key: 'k' + q[0].toFixed(0) + ',' + q[1].toFixed(0), x: q[0], z: q[1], art: 'kick' })); }).catch(() => { /* ohne Datei: kein Kicker */ });
+  /** Platz für den Kickertisch: 2 m vor der nächsten Fassade des Jugendhauses, sonst der Punkt selbst, wenn er frei ist */
+  function kickerOrt(t) {
+    const ne = A.nearestEdge && A.nearestEdge(t.x, t.z, 18);
+    if (ne && ne.b) { const en = A.edgeNormal(ne.b.p, ne.e), t0 = Math.max(0.2, Math.min(0.8, ((t.x - en.ax) * en.dx + (t.z - en.az) * en.dz) / (en.l * en.l)));
+      const x = en.ax + en.dx * t0 + en.nx * 2, z = en.az + en.dz * t0 + en.nz * 2; if (A.solidAt(x, z) < 0) return { x, z, ang: Math.atan2(en.dz, en.dx) }; }
+    return A.solidAt && A.solidAt(t.x, t.z) >= 0 ? null : { x: t.x, z: t.z, ang: 0 };
+  }
   // Platten aus den geladenen Grünflächen; Liste nur neu, wenn sich die Grünflächen ändern (greenVer)
   let ver = -1, PL = [];
   function platten() {
@@ -69,12 +91,14 @@ export function initMinispiele(X, SHOPS) {
   function update() {
     const px = player.pos.x, pz = player.pos.z, want = [];
     for (const t of platten()) { if (want.length >= MAX) break; if ((t.x - px) ** 2 + (t.z - pz) ** 2 < NAH * NAH) want.push(t); }
+    for (const t of JZ) { if (want.length >= MAX + 2) break; if ((t.x - px) ** 2 + (t.z - pz) ** 2 < 120 * 120) want.push(t); } // näher als die Platten: die Fassade muss schon geladen sein
     const keysW = new Set(want.map(t => t.key));
     for (const [k, g] of built) { if (keysW.has(k)) continue; if ((g.userData.x - px) ** 2 + (g.userData.z - pz) ** 2 > WEG * WEG) { scene.remove(g); disposeHierarchy(g); built.delete(k); } }
-    for (const t of want) { if (built.has(t.key)) continue; let g;
-      if (A.solidAt && A.solidAt(t.x, t.z) >= 0) g = new THREE.Group(); // Fläche liegt im Haus (Datenfehler): nichts bauen
+    for (const t of want) { if (built.has(t.key)) continue; let g, x = t.x, z = t.z;
+      if (t.art === 'kick') { const o = kickerOrt(t); if (!o) g = new THREE.Group(); else { x = o.x; z = o.z; g = makeKicker(); g.position.set(x, TH(x, z), z); g.rotation.y = -o.ang; g.updateMatrixWorld(true); } }
+      else if (A.solidAt && A.solidAt(t.x, t.z) >= 0) g = new THREE.Group(); // Fläche liegt im Haus (Datenfehler): nichts bauen
       else { g = makeTisch(); g.position.set(t.x, TH(t.x, t.z), t.z); g.rotation.y = -t.ang; g.updateMatrixWorld(true); }
-      g.userData.x = t.x; g.userData.z = t.z; g.userData.noChunk = true; built.set(t.key, g); scene.add(g); }
+      g.userData.x = x; g.userData.z = z; g.userData.art = t.art || 'tt'; g.userData.noChunk = true; built.set(t.key, g); scene.add(g); }
   }
   setInterval(() => { try { update(); } catch (e) { console.warn('minispiele', e); } }, 1500); // eigener Takt, keine Zeile in der Spielschleife
 
@@ -83,14 +107,16 @@ export function initMinispiele(X, SHOPS) {
   let m = null, cv = null, raf = 0, tLast = 0;
   // Testhilfen: tt.auto = true trifft immer genau, tt.tempo beschleunigt das Spiel
   const tt = { auto: false, tempo: 1, last: null, start, abbruch, get spiel() { return m; }, nahe: () => !!naheTisch(),
-    get tische() { let n = 0; for (const g of built.values()) if (g.children.length) n++; return n; }, get platten() { return platten().length; } };
+    get tische() { let n = 0; for (const g of built.values()) if (g.children.length && g.userData.art === 'tt') n++; return n; }, get platten() { return platten().length; } };
   const busy = () => { const W = A.WEG && A.WEG.cur; if (W) return 'LÄUFT NOCH: ' + String(W.label || 'STRECKE').toUpperCase() + ' · ERST BEENDEN';
     if (A.storyBusy && A.storyBusy()) return 'ERST DIE STORY BEENDEN'; return null; };
   const blocked = () => player.car || player.dead || player.wanted > 0 || (A.creative && A.creative.on) || A.shopOpen || !!offen || !!(A.VOKA_BUSY && A.VOKA_BUSY()); // Vokabaum-Aktivität läuft
-  function naheTisch() { let best = null, bd = REICH * REICH; for (const g of built.values()) { if (!g.children.length) continue; const d = (g.userData.x - player.pos.x) ** 2 + (g.userData.z - player.pos.z) ** 2; if (d < bd) { bd = d; best = g; } } return best; }
+  function naheTisch(art = 'tt') { let best = null, bd = REICH * REICH; for (const g of built.values()) { if (!g.children.length || g.userData.art !== art) continue; const d = (g.userData.x - player.pos.x) ** 2 + (g.userData.z - player.pos.z) ** 2; if (d < bd) { bd = d; best = g; } } return best; }
   const fAkt = { label: 'F · Tischtennis: ein Satz bis 11 gegen einen Passanten', act: () => { start(); } };
   A.fHooks = A.fHooks || [];
   A.fHooks.push(() => (blocked() || !naheTisch()) ? null : fAkt);
+  const fKick = { label: 'F · Tischkicker: bis 6 Tore gegen jemanden aus dem Jugendhaus', act: () => { kickStart(); } };
+  A.fHooks.push(() => (blocked() || !naheTisch('kick')) ? null : fKick);
 
   function start() {
     if (blocked()) return false; const b = busy(); if (b) { showMsg(b, 1800); return false; }
@@ -155,6 +181,90 @@ export function initMinispiele(X, SHOPS) {
     card(r.sieg ? 'SATZ GEWONNEN' : 'SATZ VERLOREN', `${r.ich}:${r.er} gegen den Passanten${ep ? ` · +${ep} EP` : ' · heute keine EP mehr'} · ${r.sieg ? '„Starker Rückhand!“' : '„Revanche wann immer du willst.“'}`, 5);
   }
 
+  // ======================= Tischkicker =======================
+  // Feld von oben: gegnerisches Tor oben, eigenes unten; x und y jeweils 0..1. Angriff: der Ball liegt an der eigenen
+  // Stürmerreihe und wandert quer, der gegnerische Torwart pendelt; Schuss geht gerade nach oben. Abwehr: der Ball kommt
+  // herunter, halten, wenn er im grünen Feld vor dem eigenen Tor ist.
+  const KTOR = 0.2, KWART = 0.11, KZONE0 = 0.82, KZONE1 = 0.94, KZIEL = 6;
+  let k = null, kcv = null, kraf = 0, kLast = 0;
+  // Testhilfen wie beim Tischtennis: kick.auto spielt fehlerfrei, kick.tempo beschleunigt
+  const kick = { auto: false, tempo: 1, last: null, start: kickStart, abbruch: kickAbbruch, get spiel() { return k; }, nahe: () => !!naheTisch('kick'),
+    get tische() { let n = 0; for (const g of built.values()) if (g.children.length && g.userData.art === 'kick') n++; return n; }, get haeuser() { return JZ.length; },
+    /** nächster gebauter Kickertisch (für Proben) */ ort() { let best = null, bd = 1e12; for (const g of built.values()) { if (!g.children.length || g.userData.art !== 'kick') continue; const d = (g.userData.x - player.pos.x) ** 2 + (g.userData.z - player.pos.z) ** 2; if (d < bd) { bd = d; best = [g.userData.x, g.userData.z]; } } return best; } };
+  function kickStart() {
+    if (blocked()) return false; const b = busy(); if (b) { showMsg(b, 1800); return false; }
+    oeffnen('kick'); stats.spiele++;
+    k = { ich: 0, er: 0, phase: 'pause', t: 1.0, next: 'angriff', bx: 0.5, by: 0.72, dir: 1, wx: 0.5, wdir: 1, x0: 0.5, ziel: 0.5, warte: 0, gedrueckt: false };
+    q('.ms_t').textContent = 'Tischkicker · bis ' + KZIEL + ' Tore';
+    q('.ms_b').innerHTML = '<canvas width="240" height="300" style="width:min(60vw,240px);height:auto;border-radius:8px;background:#3a2a1a;touch-action:none"></canvas>';
+    kcv = q('.ms_b canvas'); kcv.addEventListener('pointerdown', e => { e.preventDefault(); kickDruck(); });
+    q('.ms_f').textContent = 'Angriff: schießen, wenn der Torwart nicht davorsteht · Abwehr: halten im grünen Feld · Leertaste, Klick oder Tippen · Esc gibt auf';
+    const x = q('.ms_x'); x.textContent = 'Aufgeben'; x.onclick = () => kickAbbruch('SPIEL ABGEBROCHEN');
+    kickZeigen('Anstoß'); sfx('click', 0.5); kLast = performance.now(); kraf = requestAnimationFrame(kickLoop); return true;
+  }
+  function kickZeigen(msg) { q('.ms_s').textContent = `Du ${k.ich} : ${k.er} Haus`; q('.ms_m').textContent = msg; } // nur bei Tor oder Wechsel, nicht je Bild
+  const kickTempo = () => 1 + 0.06 * (k.ich + k.er); // wird mit jedem Tor etwas schneller
+  function kickPause(next, msg) { k.phase = 'pause'; k.t = 0.9; k.next = next; kickZeigen(msg); }
+  function kickTor(ich, msg) {
+    if (ich) k.ich++; else k.er++; sfx('click', ich ? 0.6 : 0.3);
+    if (k.ich >= KZIEL || k.er >= KZIEL) { kickZeigen(msg); return kickEnde(); }
+    kickPause(ich ? 'abwehr' : 'angriff', msg); // nach einem Tor hat die andere Seite den Ball
+  }
+  function kickDruck() {
+    if (!k) return;
+    if (k.phase === 'angriff') { k.phase = 'schuss'; sfx('click', 0.5); q('.ms_m').textContent = 'Schuss!'; }
+    else if (k.phase === 'abwehr' && !k.gedrueckt) { k.gedrueckt = true;
+      if (k.by >= KZONE0 && k.by <= KZONE1) { sfx('click', 0.5); kickPause('angriff', 'Gehalten!'); }
+      else q('.ms_m').textContent = k.by < KZONE0 ? 'Zu früh' : 'Zu spät'; }
+  }
+  function kickTick(dt) {
+    const v = kickTempo();
+    if (k.phase === 'pause') { k.t -= dt; if (k.t > 0) return; k.gedrueckt = false; k.warte = 0;
+      if (k.next === 'angriff') { k.phase = 'angriff'; k.bx = 0.2 + Math.random() * 0.6; k.by = 0.72; k.dir = Math.random() < 0.5 ? -1 : 1; q('.ms_m').textContent = 'Dein Ball'; }
+      else { k.phase = 'abwehr'; k.bx = 0.5 + (Math.random() - 0.5) * 0.3; k.by = 0.28; k.x0 = k.bx; k.ziel = Math.random() < 0.22 ? (Math.random() < 0.5 ? 0.12 : 0.88) : 0.5 + (Math.random() - 0.5) * 0.3; q('.ms_m').textContent = 'Achtung, Schuss!'; }
+      return; }
+    k.wx += k.wdir * 0.55 * v * dt; if (k.wx > 0.5 + KTOR) { k.wx = 0.5 + KTOR; k.wdir = -1; } else if (k.wx < 0.5 - KTOR) { k.wx = 0.5 - KTOR; k.wdir = 1; } // gegnerischer Torwart pendelt vor dem Tor
+    if (k.phase === 'angriff') {
+      k.bx += k.dir * 0.42 * v * dt; if (k.bx > 0.85) { k.bx = 0.85; k.dir = -1; } else if (k.bx < 0.15) { k.bx = 0.15; k.dir = 1; }
+      k.warte += dt; if (k.warte > 7) return kickPause('abwehr', 'Ball verloren'); // zu lange gezögert
+      if (kick.auto && Math.abs(k.bx - 0.5) < KTOR - 0.05 && Math.abs(k.bx - k.wx) > KWART + 0.07) kickDruck(); // Testhilfe
+      return; }
+    if (k.phase === 'schuss') { k.by -= 1.9 * v * dt; if (k.by > 0.1) return;
+      if (Math.abs(k.bx - k.wx) < KWART) return kickPause('abwehr', 'Gehalten');
+      if (Math.abs(k.bx - 0.5) < KTOR) return kickTor(true, 'Tor!');
+      return kickPause('abwehr', 'Vorbei'); }
+    if (k.phase === 'abwehr') {
+      const y0 = k.by, mitte = (KZONE0 + KZONE1) / 2; k.by += 0.62 * v * dt; k.bx = k.x0 + (k.ziel - k.x0) * Math.min(1, (k.by - 0.28) / 0.7);
+      if (kick.auto && !k.gedrueckt && y0 < mitte && k.by >= mitte) { k.by = mitte; return kickDruck(); } // Testhilfe: hält immer genau
+      if (k.by < 0.98) return;
+      if (Math.abs(k.bx - 0.5) < KTOR) return kickTor(false, 'Gegentor');
+      return kickPause('angriff', 'Vorbei, dein Ball'); }
+  }
+  function kickZeichne() {
+    const c = kcv.getContext('2d'), w = kcv.width, h = kcv.height, mx = 18, my = 16, fw = w - 2 * mx, fh = h - 2 * my, PX = u => mx + fw * u, PY = u => my + fh * u;
+    c.clearRect(0, 0, w, h); c.fillStyle = '#2f6b4f'; c.fillRect(mx, my, fw, fh); c.strokeStyle = '#f2f2ee'; c.lineWidth = 2; c.strokeRect(mx, my, fw, fh);
+    c.lineWidth = 1; c.beginPath(); c.moveTo(mx, PY(0.5)); c.lineTo(mx + fw, PY(0.5)); c.stroke(); c.beginPath(); c.arc(PX(0.5), PY(0.5), 18, 0, 7); c.stroke();
+    c.fillStyle = '#111'; c.fillRect(PX(0.5 - KTOR), my - 6, fw * 2 * KTOR, 6); c.fillRect(PX(0.5 - KTOR), h - my, fw * 2 * KTOR, 6); // Tore
+    c.fillStyle = 'rgba(120,255,150,0.28)'; c.fillRect(mx, PY(KZONE0), fw, fh * (KZONE1 - KZONE0)); // Feld zum Halten
+    c.strokeStyle = '#c8ccd2'; c.lineWidth = 2; for (const y of [0.1, 0.36, 0.64, 0.9]) { c.beginPath(); c.moveTo(mx - 6, PY(y)); c.lineTo(mx + fw + 6, PY(y)); c.stroke(); } // Stangen
+    c.fillStyle = '#3d6fd8'; c.fillRect(PX(k.wx) - fw * KWART, PY(0.1) - 5, fw * 2 * KWART, 10); for (const u of [0.25, 0.5, 0.75]) c.fillRect(PX(u) - 7, PY(0.36) - 5, 14, 10); // Haus: Torwart und Mittelreihe
+    c.fillStyle = '#d84a3d'; c.fillRect(PX(0.5) - fw * KWART, PY(0.9) - 5, fw * 2 * KWART, 10); for (const u of [0.25, 0.5, 0.75]) c.fillRect(PX(u) - 7, PY(0.64) - 5, 14, 10); // eigene Reihen
+    if (k.phase === 'pause') return;
+    c.fillStyle = '#ffffff'; c.beginPath(); c.arc(PX(k.bx), PY(k.by), 5, 0, 7); c.fill();
+  }
+  function kickLoop() {
+    if (!k) return; const now = performance.now(), dt = Math.min(0.25, (now - kLast) / 1000) * kick.tempo; kLast = now;
+    if (player.dead) return kickAbbruch(); for (let r = dt; r > 0 && k; r -= 1 / 30) kickTick(Math.min(r, 1 / 30)); /* kleine Schritte: auch bei wenigen Bildern je Sekunde springt der Ball nicht über Torwart oder Haltefeld */ if (!k) return; kickZeichne(); kraf = requestAnimationFrame(kickLoop);
+  }
+  function kickStop() { cancelAnimationFrame(kraf); k = null; kcv = null; schliessen(); }
+  function kickAbbruch(msg) { if (!k) return; kick.last = { ich: k.ich, er: k.er, abgebrochen: true }; kickStop(); if (msg) showMsg(msg, 1400); }
+  function kickEnde() {
+    const sieg = k.ich > k.er, tag = heute('kickerTag'), ep = tag.n < 3 ? (sieg ? 40 : 10) : 0; // EP nur für die ersten drei Spiele am Tag
+    const r = { ich: k.ich, er: k.er, sieg, ep }; kick.last = r; kickStop(); tag.inc(); if (sieg) stats.siege++; if (ep) gain(ep, 'Tischkicker');
+    sfx(r.sieg ? 'pickup' : 'click', 0.6);
+    card(r.sieg ? 'KICKER GEWONNEN' : 'KICKER VERLOREN', `${r.ich}:${r.er} am Tisch vor dem Jugendhaus${ep ? ` · +${ep} EP` : ' · heute keine EP mehr'} · ${r.sieg ? '„Nochmal? Diesmal ohne Kurbeln.“' : '„Übung macht den Meister.“'}`, 5);
+  }
+
   // ======================= Rubbellos =======================
   // Gewinntabelle, Wahrscheinlichkeit je Los. Erwartungswert 0,01·20 + 0,03·6 + 0,05·4 + 0,08·2 = 0,74 € bei 3 € Preis.
   const PREIS = 3, SYM = ['🍏 Äppler', '🥨 Brezel', '🌿 Grie Soß', '⭐ Stern'];
@@ -204,12 +314,13 @@ export function initMinispiele(X, SHOPS) {
   const STRG = e => e.ctrlKey || e.metaKey || e.altKey || /^F([1-9]|1[0-2])$/.test(e.code);
   addEventListener('keydown', e => { if (!offen || STRG(e)) return; const c = e.code;
     if (offen === 'tt') { if (c === 'Escape') abbruch('SPIEL ABGEBROCHEN'); else if (!e.repeat && (c === 'Space' || c === 'Enter' || c === 'KeyF' || c === 'NumpadEnter')) schlag(); }
+    else if (offen === 'kick') { if (c === 'Escape') kickAbbruch('SPIEL ABGEBROCHEN'); else if (!e.repeat && (c === 'Space' || c === 'Enter' || c === 'KeyF' || c === 'NumpadEnter')) kickDruck(); }
     else if (offen === 'los') { const n = c.startsWith('Digit') ? +c.slice(5) : c.startsWith('Numpad') ? +c.slice(6) : 0;
       if (c === 'Escape' || (los && los.fertig && (c === 'Enter' || c === 'Space'))) losZu(); else if (n >= 1 && n <= 3) rubbeln(n - 1); else if (c === 'Space' || c === 'Enter') alles(); }
     if (TASTEN.test(c)) e.preventDefault(); e.stopImmediatePropagation(); }, true);
   addEventListener('keyup', e => { if (offen && !STRG(e)) e.stopImmediatePropagation(); }, true);
 
   // Testhilfen: G.MINI.tt.start() an einer Platte, tt.auto = true trifft immer, tt.tempo beschleunigt; G.MINI.los.seed(n) macht Lose reproduzierbar
-  const api = { update, stats, tt, los: lo, get offen() { return offen; } };
+  const api = { update, stats, tt, kick, los: lo, get offen() { return offen; } };
   return api;
 }
