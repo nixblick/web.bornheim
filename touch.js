@@ -18,7 +18,7 @@
 #tc .w{right:calc(5vw + 33vmin);bottom:5vh;width:11vmin;height:11vmin;max-width:72px;max-height:72px;font-size:18px}
 #tc .ctx1{right:calc(5vw + 33vmin);bottom:calc(5vh + 13vmin);width:10.5vmin;height:10.5vmin;max-width:68px;max-height:68px;font-size:15px}
 #tc .ctx2{right:calc(5vw + 45vmin);bottom:5vh;width:10.5vmin;height:10.5vmin;max-width:68px;max-height:68px;font-size:15px}
-#tc .top{top:8px;width:40px;height:40px;border-radius:10px;font-size:17px}#tc .top.x{display:none}#tc.mehr .top.x{display:flex}
+#tc .top{top:8px;width:40px;height:40px;border-radius:10px;font-size:17px}#tcx{position:fixed;z-index:70;top:calc(8px + env(safe-area-inset-top,0px));right:calc(8px + env(safe-area-inset-right,0px));width:46px;height:46px;border-radius:12px;border:2px solid #ffffffb0;background:#000000c0;color:#fff;font:800 20px system-ui;display:none}#tc .top.x{display:none}#tc.mehr .top.x{display:flex}
 body{overscroll-behavior:none;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}#hud{inset:env(safe-area-inset-top,0px) env(safe-area-inset-right,0px) env(safe-area-inset-bottom,0px) env(safe-area-inset-left,0px)!important}
 #phonebtn{right:calc(10px + env(safe-area-inset-right, 0px))!important}
 #minimap{position:fixed!important;left:calc(8px + env(safe-area-inset-left, 0px))!important;top:calc(78px + env(safe-area-inset-top, 0px))!important;bottom:auto!important;width:96px!important;height:96px!important;pointer-events:auto!important}
@@ -42,6 +42,12 @@ body{overscroll-behavior:none;-webkit-touch-callout:none;-webkit-user-select:non
 <div class="b ctx1 hide" data-k="ctx1">↻</div><div class="b ctx2 hide" data-k="ctx2">💡</div>
 <div class="b top" data-k="Escape" style="right:8px">☰</div><div class="b top" data-k="KeyM" style="right:54px">🗺</div><div class="b top" data-k="mehr" style="right:100px">⋯</div><div class="b top x" data-k="KeyV" style="right:100px;top:54px">🎥</div><div class="b top x" data-k="stats" style="right:100px;top:100px">📊</div><div class="b top x" data-k="KeyG" style="right:100px;top:146px">📣</div><div class="b top x" data-k="KeyC" style="right:100px;top:192px">🛠</div>`;
   document.body.appendChild(el);
+  // Schließen-Knopf für Handy und Statistik: beide decken auf kleinen Bildschirmen alles ab, Tasten zum Schließen gibt es nicht
+  const zu = document.createElement('button'); zu.id = 'tcx'; zu.textContent = '✕'; zu.setAttribute('aria-label', 'Schließen'); document.body.appendChild(zu);
+  const tabOffen = () => { const o = document.getElementById('tabov'); return !!o && o.style.display === 'flex'; }, handyOffen = () => { const o = document.getElementById('phone'); return !!o && o.style.display === 'block'; };
+  function schliessen(e) { if (e) { e.preventDefault(); e.stopPropagation(); } const g = window.G; if (!g) return; if (tabOffen() && g.PROGRESS) g.PROGRESS.showTab(false); else if (g.PHONE && g.PHONE.isOpen) g.PHONE.close(); zu.style.display = 'none'; }
+  zu.addEventListener('touchstart', schliessen, { passive: false }); zu.addEventListener('click', schliessen);
+  addEventListener('touchend', e => { if (e.target && e.target.id === 'tabov') schliessen(e); }, { passive: false }); // neben die Statistik tippen schließt sie auch
   const G = () => window.G; const key = (code, down) => dispatchEvent(new KeyboardEvent(down ? 'keydown' : 'keyup', { code, bubbles: true }));
 
   // WebAudio auf iOS/Safari nach Tab-Wechsel oder erstem Tippen automatisch aufwecken
@@ -199,6 +205,7 @@ body{overscroll-behavior:none;-webkit-touch-callout:none;-webkit-user-select:non
   const setH = (b, v) => { if (b._t !== v) { b._t = v; b.innerHTML = v; } };
   setInterval(() => {
     const g = G();
+    const zeig = tabOffen() || handyOffen() ? 'block' : 'none'; if (zu.style.display !== zeig) zu.style.display = zeig;
     const on = started() && !document.querySelector('#menu[style*="flex"]');
     el.style.display = on ? 'block' : 'none';
     // Handyknopf (phone.js legt ihn erst später an): nur zu Fuß im laufenden Spiel, bei offenem Handy bleibt er zum Schließen

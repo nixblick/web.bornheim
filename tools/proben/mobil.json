@@ -57,6 +57,26 @@
   "expect": "window.__m6.weg > 0.3 && !window.__m6.nach"
  },
  {
+  "n": "menu_ohne_maussperre",
+  "wait": 500,
+  "shot": false,
+  "js": "(() => { const G = window.G; G.X.closeMenu(); const alt = document.exitPointerLock; document.exitPointerLock = () => { throw new TypeError('gibt es am iPhone nicht'); }; try { dispatchEvent(new KeyboardEvent('keydown', { code: 'Escape', key: 'Escape' })); } catch (e) {} const offen = document.getElementById('menu').style.display; document.exitPointerLock = alt; document.getElementById('m_resume').click(); window.__m7 = { offen, danach: document.getElementById('menu').style.display }; return JSON.stringify(window.__m7); })()",
+  "expect": "window.__m7.offen === 'flex' && window.__m7.danach === 'none'"
+ },
+ {
+  "n": "statistik_zu",
+  "wait": 800,
+  "js": "(async () => { const G = window.G, w = ms => new Promise(q => setTimeout(q, ms)), zu = document.getElementById('tcx'); const tip = (typ, ziel) => { const t = new Touch({ identifier: 9, target: ziel, clientX: 5, clientY: 5 }); ziel.dispatchEvent(new TouchEvent(typ, { bubbles: true, cancelable: true, touches: typ === 'touchend' ? [] : [t], changedTouches: [t] })); }; G.PROGRESS.showTab(true); await w(600); const knopf = getComputedStyle(zu).display; tip('touchstart', zu); await w(300); const tab = document.getElementById('tabov').style.display; G.PHONE.open(); await w(600); const knopf2 = getComputedStyle(zu).display; window.__m8 = { knopf, tab, knopf2, handy: G.PHONE.isOpen }; return JSON.stringify(window.__m8); })()",
+  "expect": "window.__m8.knopf === 'block' && window.__m8.tab === 'none' && window.__m8.knopf2 === 'block' && window.__m8.handy"
+ },
+ {
+  "n": "handy_zu",
+  "wait": 500,
+  "shot": false,
+  "js": "(async () => { const G = window.G, w = ms => new Promise(q => setTimeout(q, ms)), zu = document.getElementById('tcx'); const tip = (typ, ziel) => { const t = new Touch({ identifier: 9, target: ziel, clientX: 5, clientY: 5 }); ziel.dispatchEvent(new TouchEvent(typ, { bubbles: true, cancelable: true, touches: typ === 'touchend' ? [] : [t], changedTouches: [t] })); }; tip('touchstart', zu); await w(500); window.__m9 = { handy: G.PHONE.isOpen, knopf: getComputedStyle(zu).display, tc: document.getElementById('tc').style.display }; return JSON.stringify(window.__m9); })()",
+  "expect": "!window.__m9.handy && window.__m9.knopf === 'none' && window.__m9.tc === 'block'"
+ },
+ {
   "n": "hoch_handy",
   "wait": 1500,
   "js": "(() => { window.G.PHONE.open(); return String(window.G.PHONE.isOpen); })()"
