@@ -16,6 +16,8 @@
 //   js     Ausdruck auswerten und ausgeben (Zugriff über window.G)
 //   expect Ausdruck, muss wahr sein, sonst zählt die Probe als rot
 //   wait   ms warten vor dem Bild (5000), shot false = kein Bild
+//   geraet [breite, höhe]: Handy nachstellen (Touch, grober Zeiger, Handy-Kennung). Im ersten Schritt gilt es schon beim Laden
+//          (dazu ein Bild 'start' vom Startbildschirm), in späteren Schritten dreht es nur das Gerät.
 import { spawn } from 'node:child_process'; import { writeFileSync, mkdirSync, readFileSync, appendFileSync } from 'node:fs';
 import { createServer } from 'node:net'; import { dirname, resolve } from 'node:path'; import { fileURLToPath } from 'node:url';
 const [STEPS, OUT, B = process.env.CHROME || 'chromium-browser', URL0] = process.argv.slice(2);
@@ -54,13 +56,18 @@ try {
   const ev = async x => { const r = await cmd('Runtime.evaluate', { expression: x, returnByValue: true, awaitPromise: true });
     return r?.timeout ? 'TIMEOUT' : r?.exceptionDetails ? 'EXC ' + (r.exceptionDetails.exception?.description || r.exceptionDetails.text) : r?.result?.value; };
   const shot = async n => { const r = await cmd('Page.captureScreenshot', { format: 'jpeg', quality: 80 }); if (r?.data) writeFileSync(`${OUT}/${n}.jpg`, Buffer.from(r.data, 'base64')); };
+  const geraet = async g => { await cmd('Emulation.setDeviceMetricsOverride', { width: g[0], height: g[1], deviceScaleFactor: 2, mobile: true, screenOrientation: g[0] > g[1] ? { type: 'landscapePrimary', angle: 90 } : { type: 'portraitPrimary', angle: 0 } }); };
+  const G0 = steps[0] && steps[0].geraet;
+  if (G0) { await geraet(G0); await cmd('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 5 }); await cmd('Emulation.setUserAgentOverride', { userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1', platform: 'iPhone' }); }
   await cmd('Runtime.enable'); await cmd('Page.enable'); await cmd('Page.navigate', { url: `${URL}?r=${Date.now()}` });
   let ready = false; for (let i = 0; i < 150 && !ready; i++) { await sleep(1000); ready = await ev("document.body.innerText.includes('Frankfurt bereit')") === true; }
   if (!ready) throw new Error('Stadt nach 150 s nicht geladen');
+  if (G0) await shot('start');
   for (let i = 0; i < 2; i++) { await ev("[...document.querySelectorAll('button')].find(b => /Rein da/.test(b.textContent))?.click()"); await sleep(i ? 5000 : 12000); }
   log('geladen: ' + URL);
   const pos = "(() => { const G = window.G, p = G.player.pos; return JSON.stringify({ x: Math.round(p.x), y: +p.y.toFixed(2), z: Math.round(p.z), drin: !!G.INTERIORS.inside }); })()";
   for (const s of steps) {
+    if (s.geraet && s !== steps[0]) { await geraet(s.geraet); await sleep(1500); }
     if (s.x !== undefined) await ev(`(async () => { const G = window.G; G.world.hour = ${s.hour ?? 13}; if (G.INTERIORS.inside) G.INTERIORS.leave(); await G.streamInit(${s.x}, ${s.z}); const y = ${s.y ?? 'null'} ?? G.TH(${s.x}, ${s.z}); G.player.pos.set(${s.x}, y, ${s.z}); G.player.vy = 0; if (G.player.mesh) G.player.mesh.position.copy(G.player.pos); })()`);
     if (s.ride) await ev(`(() => { const I = window.G.INTERIORS, M = I.metro, to = I.ST.get(${JSON.stringify(s.ride[1])}); let f = ${JSON.stringify(s.ride[0])} ? I.ST.get(${JSON.stringify(s.ride[0])}) : null;
       if (!f) { let d = 1e12; for (const q of M.stations) { const k = Math.hypot(q.p[0] - window.G.player.pos.x, q.p[1] - window.G.player.pos.z); if (k < d && q.id !== to.id) { d = k; f = q; } } } I.ride(f, to); })()`);

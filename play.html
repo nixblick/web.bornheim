@@ -16,7 +16,14 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="stylesheet" href="ui-sunset.css">
 <link rel="stylesheet" href="menu-neu.css?v=3">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Bornheim">
+<script>/* iPhone-Safari kennt keine Maussperre und kein requestIdleCallback: leere Ersatzfunktionen, sonst bricht z. B. das Menü beim Öffnen ab (14.11.2026) */
+if (!document.exitPointerLock) document.exitPointerLock = function () {}; if (!Element.prototype.requestPointerLock) Element.prototype.requestPointerLock = function () {};
+if (!window.requestIdleCallback) { window.requestIdleCallback = function (f) { return setTimeout(function () { f({ didTimeout: false, timeRemaining: function () { return 8; } }); }, 1); }; window.cancelIdleCallback = clearTimeout; }</script>
 <style>
   html,body{margin:0;height:100%;background:#0b0d12;color:#eee;font-family:system-ui,Segoe UI,sans-serif;overflow:hidden}
   canvas{display:block}
@@ -218,7 +225,7 @@
     </div>
     <div class="pane help" data-tab="hilfe" style="display:none">
       <p class="start"><kbd>WASD</kbd> laufen · <kbd>E</kbd> einsteigen · <kbd>F</kbd> benutzen · <kbd>M</kbd> Karte · <kbd>H</kbd> Handy (zu Fuß): Missionen, Nebenjobs, Speichern</p>
-      <p id="touchhelp" style="display:none;font-size:13px;line-height:1.6;margin:0 0 12px">Stick links: laufen und lenken, ganz nach vorn: rennen · rechts wischen: umsehen · Knöpfe rechts wechseln je nach Lage · 📱 Handy (zu Fuß): Missionen, Speichern · Untertitel antippen: Dialog weiter · Munition antippen: nachladen · Minikarte antippen: große Karte · Ziel antippen: ausblenden · ☰ Menü</p>
+      <p id="touchhelp" style="display:none;font-size:13px;line-height:1.6;margin:0 0 12px">Hochkant oder quer (quer sieht man mehr) · links aufsetzen: Stick zum Laufen und Lenken, ganz nach vorn: rennen · sonst wischen: umsehen · Knöpfe rechts wechseln je nach Lage · 📱 Handy (zu Fuß): Missionen, Speichern · Untertitel antippen: Dialog weiter · Munition antippen: nachladen · Minikarte antippen: große Karte · Ziel antippen: ausblenden · ☰ Menü · ⋯ Kamera, Statistik, Demo, Kreativ · iPhone: über Teilen › „Zum Home-Bildschirm“ läuft es ohne Adressleiste</p>
       <details><summary>🚗 Fahrzeuge</summary><p>Neben Auto, Fahrrad oder Motorrad stellen und <kbd>E</kbd>. Räder stehen an Fahrradständern. Im Auto schaltet <kbd>U</kbd> das Radio durch: drei Sender, dann aus.</p></details>
       <details><summary>🚁 Christoph 2 fliegen</summary><p>BG Unfallklinik Seckbach: am Eingang <kbd>F</kbd> (Aufzug), oben <kbd>E</kbd>. <kbd>Leertaste</kbd> hoch, <kbd>Shift</kbd> runter, <kbd>WASD</kbd> lenken.</p></details>
       <details><summary>🚇 U-Bahn</summary><p>Am Eingang <kbd>F</kbd>, Ziel wählen, losfahren.</p></details>
