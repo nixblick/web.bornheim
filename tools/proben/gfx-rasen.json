@@ -1,17 +1,39 @@
 [
- { "n": "rasen_tag_hoch", "x": -730, "z": 160, "wait": 40000, "shot": true,
-   "js": "(async () => { const G = window.G; window.__shaderFehler = []; G.renderer.debug.onShaderError = (gl, prog) => { const t = String(gl.getProgramInfoLog(prog) || 'Shaderfehler'); window.__shaderFehler.push(t.slice(0, 300)); console.error('Shaderfehler', t); }; G.world.hour = 13; G.opts.rasenForce = true; /* SwiftShader gilt als WEAK_GPU */ G.opts.quality = 'hoch'; G.applyQuality(); await new Promise(r => setTimeout(r, 2000)); for (let i = 0; i < 40 && !(G.RASEN.count > 0); i++) await new Promise(r => setTimeout(r, 500)); return JSON.stringify({ potato: G.opts.potato, weak: G.WEAK_GPU, q: G.opts.quality, stufe: G.RASEN && G.RASEN.stufe, halme: G.RASEN && G.RASEN.count, zellen: G.RASEN && G.RASEN.cells }); })()",
-   "expect": "window.G.RASEN && window.G.RASEN.count > 0" },
- { "n": "rasen_tag_mittel", "wait": 3000, "shot": true,
-   "js": "(async () => { const G = window.G; G.opts.quality = 'mittel'; G.applyQuality(); for (let i = 0; i < 40 && !(G.RASEN.count > 0 && G.RASEN.stufe === 'mittel'); i++) await new Promise(r => setTimeout(r, 500)); return JSON.stringify({ stufe: G.RASEN.stufe, halme: G.RASEN.count }); })()",
-   "expect": "window.G.RASEN.count > 0" },
- { "n": "rasen_spar_niedrig", "wait": 3000, "shot": true,
-   "js": "(async () => { const G = window.G; G.opts.quality = 'niedrig'; G.applyQuality(); /* Umbau aller Kacheln kann auf SwiftShader Bilder lang dauern: warten, bis update() die Stufe gesehen hat */ for (let i = 0; i < 40 && G.RASEN.stufe !== 'aus'; i++) await new Promise(r => setTimeout(r, 500)); return JSON.stringify({ stufe: G.RASEN.stufe, halme: G.RASEN.count }); })()",
-   "expect": "window.G.RASEN.stufe === 'aus' || window.G.RASEN.count === 0 || !window.G.scene.getObjectByName('rasen-halme').visible" },
- { "n": "rasen_nacht_hoch", "wait": 3000, "shot": true,
-   "js": "(async () => { const G = window.G; G.world.hour = 22.5; G.opts.quality = 'hoch'; G.applyQuality(); await new Promise(r => setTimeout(r, 2000)); for (let i = 0; i < 40 && !(G.RASEN.count > 0); i++) await new Promise(r => setTimeout(r, 500)); return JSON.stringify({ halme: G.RASEN.count }); })()",
-   "expect": "window.G.RASEN.count > 0" },
- { "n": "rasen_shader_ultra", "wait": 3000, "shot": true,
-   "js": "(async () => { const G = window.G; G.world.hour = 17.5; G.opts.quality = 'ultra'; G.applyQuality(); await new Promise(r => setTimeout(r, 2000)); for (let i = 0; i < 40 && !(G.RASEN.count > 0 && G.RASEN.stufe === 'ultra'); i++) await new Promise(r => setTimeout(r, 500)); await new Promise(r => setTimeout(r, 1500)); const gl = G.renderer.getContext(), P = G.renderer.info.programs.filter(p => /rasen-(halme|boden)/.test(String(p.cacheKey))); window.__rasenShader = { stufe: G.RASEN.stufe, halme: G.RASEN.count, programme: P.map(p => (String(p.cacheKey).match(/rasen-[a-z-]+/) || ['?'])[0] + (gl.getProgramParameter(p.program, 35714) && (!p.diagnostics || p.diagnostics.runnable) ? ':ok' : ':FEHLER')), fehler: window.__shaderFehler || [] }; return JSON.stringify(window.__rasenShader); })()",
-   "expect": "window.__rasenShader && window.__rasenShader.programme.includes('rasen-halme-licht:ok') && !window.__rasenShader.programme.some(s => s.endsWith(':FEHLER')) && window.__rasenShader.fehler.length === 0" }
+ {
+  "n": "rasen_tag_hoch",
+  "x": -730,
+  "z": 160,
+  "wait": 40000,
+  "shot": true,
+  "js": "(async () => { const G = window.G; window.__shaderFehler = []; G.renderer.debug.onShaderError = (gl, prog) => { const t = String(gl.getProgramInfoLog(prog) || 'Shaderfehler'); window.__shaderFehler.push(t.slice(0, 300)); console.error('Shaderfehler', t); }; G.world.hour = 13; G.opts.rasenForce = true; /* SwiftShader gilt als WEAK_GPU */ G.opts.quality = 'hoch'; G.applyQuality(); await new Promise(r => setTimeout(r, 2000)); const t0 = performance.now(); while (!(G.RASEN.count > 0) && performance.now() - t0 < 45000) await new Promise(r => setTimeout(r, 500)); return JSON.stringify({ potato: G.opts.potato, weak: G.WEAK_GPU, q: G.opts.quality, stufe: G.RASEN && G.RASEN.stufe, halme: G.RASEN && G.RASEN.count, zellen: G.RASEN && G.RASEN.cells }); })()",
+  "expect": "window.G.RASEN && window.G.RASEN.count > 0"
+ },
+ {
+  "n": "rasen_tag_mittel",
+  "wait": 3000,
+  "shot": true,
+  "js": "(async () => { const G = window.G; G.opts.quality = 'mittel'; G.applyQuality(); const t0 = performance.now(); while (!(G.RASEN.count > 0 && G.RASEN.stufe === 'mittel') && performance.now() - t0 < 45000) await new Promise(r => setTimeout(r, 500)); return JSON.stringify({ stufe: G.RASEN.stufe, halme: G.RASEN.count }); })()",
+  "expect": "window.G.RASEN.count > 0"
+ },
+ {
+  "n": "rasen_spar_niedrig",
+  "wait": 3000,
+  "shot": true,
+  "js": "(async () => { const G = window.G; G.opts.quality = 'niedrig'; G.applyQuality(); /* Umbau aller Kacheln kann auf SwiftShader Bilder lang dauern: warten, bis update() die Stufe gesehen hat */ const t0 = performance.now(); while (G.RASEN.stufe !== 'aus' && performance.now() - t0 < 50000) await new Promise(r => setTimeout(r, 500)); return JSON.stringify({ stufe: G.RASEN.stufe, halme: G.RASEN.count }); })()",
+  "expect": "window.G.RASEN.stufe === 'aus' || window.G.RASEN.count === 0 || !window.G.scene.getObjectByName('rasen-halme').visible"
+ },
+ {
+  "n": "rasen_nacht_hoch",
+  "wait": 3000,
+  "shot": true,
+  "js": "(async () => { const G = window.G; G.world.hour = 22.5; G.opts.quality = 'hoch'; G.applyQuality(); await new Promise(r => setTimeout(r, 2000)); const t0 = performance.now(); while (!(G.RASEN.count > 0) && performance.now() - t0 < 45000) await new Promise(r => setTimeout(r, 500)); return JSON.stringify({ halme: G.RASEN.count }); })()",
+  "expect": "window.G.RASEN.count > 0"
+ },
+ {
+  "n": "rasen_shader_ultra",
+  "wait": 3000,
+  "shot": true,
+  "js": "(async () => { const G = window.G; G.world.hour = 17.5; G.opts.quality = 'ultra'; G.applyQuality(); await new Promise(r => setTimeout(r, 2000)); const t0 = performance.now(); while (!(G.RASEN.count > 0 && G.RASEN.stufe === 'ultra') && performance.now() - t0 < 25000) await new Promise(r => setTimeout(r, 500)); /* das Licht-Programm entsteht erst im Bild nach dem Stufenwechsel: warten, bis es in info.programs steht (Spieltest: nach 1,5 s fehlte es auf SwiftShader). Gesamtgrenze 52 s, die Auswertung bricht bei 60 s ab */ const gl = G.renderer.getContext(), progs = () => G.renderer.info.programs.filter(p => /rasen-(halme|boden)/.test(String(p.cacheKey))); while (!progs().some(p => /rasen-halme-licht/.test(String(p.cacheKey))) && performance.now() - t0 < 52000) await new Promise(r => setTimeout(r, 500)); await new Promise(r => setTimeout(r, 500)); const P = progs(); window.__rasenShader = { stufe: G.RASEN.stufe, halme: G.RASEN.count, programme: P.map(p => (String(p.cacheKey).match(/rasen-[a-z-]+/) || ['?'])[0] + (gl.getProgramParameter(p.program, 35714) && (!p.diagnostics || p.diagnostics.runnable) ? ':ok' : ':FEHLER')), fehler: window.__shaderFehler || [] }; return JSON.stringify(window.__rasenShader); })()",
+  "expect": "window.__rasenShader && window.__rasenShader.programme.includes('rasen-halme-licht:ok') && !window.__rasenShader.programme.some(s => s.endsWith(':FEHLER')) && window.__rasenShader.fehler.length === 0"
+ }
 ]

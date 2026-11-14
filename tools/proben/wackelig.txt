@@ -1,3 +1,2 @@
 sparmodus
-gfx-rasen
 hoehen
