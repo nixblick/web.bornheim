@@ -2,7 +2,7 @@
 import { disposeHierarchy } from './dispose.js';
 /** @param {import('./types').Ctx} X */
 export function initWeapons(X) {
-  const { THREE, scene, camera, player, peds, cars, shootables, keys, camYaw, opts, TH, solidAtH, floorAt, nearestEdge, edgeNormal, damage, explode, burst, sfx, showMsg, raiseWanted, camShake, canvasTex, tracerMat, makeGun, playAnim, dentCar, moveWithCollision, rnd, clamp, pick } = X;
+  const { THREE, scene, camera, player, peds, cars, shootables, keys, camYaw, camPitch, opts, TH, solidAtH, floorAt, nearestEdge, edgeNormal, damage, explode, burst, sfx, showMsg, raiseWanted, camShake, canvasTex, tracerMat, makeGun, playAnim, dentCar, moveWithCollision, rnd, clamp, pick } = X;
   const V3 = THREE.Vector3;
   const emit = (ev, pos, data) => { for (const f of X.listeners) f(ev, pos, data || {}); };
 
@@ -10,10 +10,10 @@ export function initWeapons(X) {
   const DEF = {
     fists:   { n: 'Fäuste', ic: '✊', kind: 'melee', dmg: 14, range: 1.8, rate: 0.42, slot: 1 },
     bat:     { n: 'Baseballschläger', ic: '🏏', kind: 'melee', dmg: 45, range: 2.4, rate: 0.7, slot: 1, give: 1 },
-    pistol:  { n: 'Pistole', ic: '<svg class="wic" viewBox="0 0 24 14" width="22" height="12.6"><path d="M2 2h17l1 2h2v3h-9l-1 1h-2l-2 5H4l2-6H2z" fill="currentColor"/></svg>', kind: 'gun', dmg: 40, rate: 0.2, mag: 12, spread: 0.004, range: 200, give: 48, snd: 'shot', slot: 2 },
-    smg:     { n: 'Maschinenpistole', ic: '<svg class="wic" viewBox="0 0 30 14" width="27" height="12.6"><path d="M1 3h20l1-1h4v3h3v2h-6l-1 1h-3v5h-3l-1-5h-3l-2 4H7l2-4H1z" fill="currentColor"/></svg>', kind: 'gun', dmg: 19, rate: 0.07, mag: 30, spread: 0.028, range: 150, auto: true, give: 120, snd: 'smg', slot: 3 },
-    shotgun: { n: 'Schrotflinte', ic: '<svg class="wic" viewBox="0 0 27 14" width="24" height="12.6"><path d="M0 3h26v2H17l-1 1h-4l-5 6H3l3-5H0z" fill="currentColor"/></svg>', kind: 'gun', dmg: 15, pellets: 9, rate: 0.85, mag: 6, spread: 0.075, range: 45, give: 24, snd: 'shotgun', slot: 4 },
-    rifle:   { n: 'Sturmgewehr', ic: '<svg class="wic" viewBox="0 0 33 14" width="30" height="12.6"><path d="M0 4h4l1-1h18V2h3v2h6v2H22v2h-3l-1 4h-3l1-4h-5l-3 5H5l3-5H0z" fill="currentColor"/></svg>', kind: 'gun', dmg: 34, rate: 0.11, mag: 30, spread: 0.01, range: 260, auto: true, give: 90, snd: 'rifle', slot: 5 },
+    pistol:  { n: 'Pistole', ic: '<svg class="wic" viewBox="0 0 24 14" width="22" height="12.6"><path d="M2 2h17l1 2h2v3h-9l-1 1h-2l-2 5H4l2-6H2z" fill="currentColor"/></svg>', kind: 'gun', dmg: 40, rate: 0.2, mag: 12, spread: 0.004, range: 200, give: 48, snd: 'shot', slot: 2, r0: 15, r1: 60, fall: 0.6, kick: 0.012, rec: 12, rl: 1.4 },
+    smg:     { n: 'Maschinenpistole', ic: '<svg class="wic" viewBox="0 0 30 14" width="27" height="12.6"><path d="M1 3h20l1-1h4v3h3v2h-6l-1 1h-3v5h-3l-1-5h-3l-2 4H7l2-4H1z" fill="currentColor"/></svg>', kind: 'gun', dmg: 19, rate: 0.07, mag: 30, spread: 0.028, range: 150, auto: true, give: 120, snd: 'smg', slot: 3, r0: 20, r1: 80, fall: 0.55, kick: 0.006, rec: 9, rl: 1.8 },
+    shotgun: { n: 'Schrotflinte', ic: '<svg class="wic" viewBox="0 0 27 14" width="24" height="12.6"><path d="M0 3h26v2H17l-1 1h-4l-5 6H3l3-5H0z" fill="currentColor"/></svg>', kind: 'gun', dmg: 15, pellets: 9, rate: 0.85, mag: 6, spread: 0.075, range: 45, give: 24, snd: 'shotgun', slot: 4, r0: 8, r1: 40, fall: 0.15, kick: 0.03, rec: 6, shell: 0.55 },
+    rifle:   { n: 'Sturmgewehr', ic: '<svg class="wic" viewBox="0 0 33 14" width="30" height="12.6"><path d="M0 4h4l1-1h18V2h3v2h6v2H22v2h-3l-1 4h-3l1-4h-5l-3 5H5l3-5H0z" fill="currentColor"/></svg>', kind: 'gun', dmg: 34, rate: 0.11, mag: 30, spread: 0.01, range: 260, auto: true, give: 90, snd: 'rifle', slot: 5, r0: 60, r1: 260, fall: 0.7, kick: 0.008, rec: 9, rl: 2.1 },
     spray:   { n: 'Pfefferspray', ic: '🌶', kind: 'spray', rate: 0.05, auto: true, give: 1, slot: 6 },
     taser:   { n: 'Taser', ic: '⚡', kind: 'taser', rate: 1.1, range: 11, give: 6, slot: 6 },
     paint:   { n: 'Farbbeutel', ic: '🎨', kind: 'throw', rate: 0.45, give: 8, slot: 7 },
@@ -23,7 +23,7 @@ export function initWeapons(X) {
     grenade: { n: 'Granate', ic: '💣', kind: 'throw', rate: 1.0, give: 2, fuse: 2.5, slot: 0 },
     tnt:     { n: 'Zeitbombe', ic: '⏰', kind: 'throw', rate: 0.9, give: 3, fuse: 5.0, slot: 0 },
     molotov: { n: 'Brandsatz', ic: '🍾', kind: 'throw', rate: 0.9, give: 2, slot: 0, creativeOnly: true },
-    rocket:  { n: 'Raketenwerfer', ic: '🚀', kind: 'gun', dmg: 5000, rate: 1.6, mag: 1, spread: 0.002, range: 600, give: 6, slot: 0, boom: true, creativeOnly: true }, /* Hubschrauber-Abwehr, nur Kreativmodus (André 13.11.2026) */
+    rocket:  { n: 'Raketenwerfer', ic: '🚀', kind: 'gun', dmg: 5000, rate: 1.6, mag: 1, spread: 0.002, range: 600, give: 6, slot: 0, boom: true, creativeOnly: true, kick: 0.02, rec: 6, rl: 1.1 }, /* Hubschrauber-Abwehr, nur Kreativmodus (André 13.11.2026) */
   };
   const FUSE_STEPS = [1, 2, 3, 5, 10, 15, 30];
   const customFuse = {};
@@ -41,6 +41,8 @@ export function initWeapons(X) {
   const ORDER = Object.keys(DEF);
   const inv = {};
   let cur = 'fists', last = 'fists', cool = 0, trigger = false, swingT = 0, meleeT = -1, punchAlt = false, heat = 0, barT = 0;
+  let sinceShot = 9, burstN = 0, recAcc = 0, recRate = 9, lastPitch = 0, trN = 0; // Kamerarückstoß und Leuchtspur-Takt
+  let rl = null; const rlTimers = []; // laufendes Nachladen { id, t, shell } und die Zeitgeber der Klickgeräusche
   const unlimited = () => !!opts.ammo || !!X.creative.on;
   function give(id, n) {
     const d = DEF[id]; if (!d) return; const fresh = !inv[id]; const it = inv[id] || (inv[id] = { mag: 0, res: 0 });
@@ -105,7 +107,7 @@ export function initWeapons(X) {
     model = buildModel(cur); if (cur === 'fists') model.visible = false; hand.add(model); pm.userData.gun = model;
   }
   function select(id, quiet) {
-    if (!inv[id] || !allowed(id)) { if (inv[id] && !quiet) { barT = 1.5; drawBar(); } return false; } if (id !== cur) { last = cur; cur = id; } attach(); swingT = 0; meleeT = -1; trigger = false; cool = Math.max(cool, 0.15);
+    if (!inv[id] || !allowed(id)) { if (inv[id] && !quiet) { barT = 1.5; drawBar(); } return false; } if (id !== cur) { last = cur; cur = id; if (DEF[id].kind === 'gun') cool = Math.max(cool, id === 'pistol' ? 0.3 : 0.5); /* Waffenwechsel: kurz nicht schussbereit */ } stopReload(); attach(); swingT = 0; meleeT = -1; trigger = false; cool = Math.max(cool, 0.15);
     if (!quiet) { sfx('click'); barT = 2; } drawBar(); return true;
   }
   // Ziffern: 1 Nahkampf, 2 Pistole, 3 MP, 4 Schrotflinte, 5 Gewehr, 6 Spray/Taser, 7 Farbe, 8 Böller, 9 Rauch/Bengalo, 0 Granate
@@ -141,10 +143,70 @@ export function initWeapons(X) {
   };
   function hud() { return inClosedCar() ? null : ammoText(cur); }
 
+  // ---------- Waffengefühl: Kamerarückstoß, Streuung, Schadensabfall ----------
+  // Schaden fällt zwischen r0 und r1 (Meter ab Kamera) linear auf den Anteil fall
+  const falloff = (d, dist) => !d.r1 || dist <= d.r0 ? 1 : dist >= d.r1 ? d.fall : 1 - (1 - d.fall) * (dist - d.r0) / (d.r1 - d.r0);
+  // Streuung: Zielen ×0,55, Gehen ×1,7, Rennen zusätzlich ×1,6, in der Luft ×2,5, dazu die Erwärmung bei Dauerfeuer
+  function spreadNow(d) {
+    const moving = keys.KeyW || keys.KeyA || keys.KeyS || keys.KeyD; const sprint = moving && !player.car && (keys.ShiftLeft || keys.ShiftRight); const air = !player.car && !player.swim && Math.abs(player.vy || 0) > 0.5;
+    return (d.spread || 0) * (player.aimHold ? 0.55 : 1) * (moving ? 1.7 : 1) * (sprint ? 1.6 : 1) * (air ? 2.5 : 1) + heat * (d.auto ? 0.02 : 0.006);
+  }
+  // Rückstoß hebt den Blick (kleineres camPitch = höher); 55 % davon holt recoverCam nach 0,12 s Feuerpause zurück. Nur zu Fuß: im Auto führt game.js die Kamera selbst.
+  function kickCam(d) {
+    sinceShot = 0; if (player.car || !d.kick) return;
+    const k = d.kick * (player.aimHold ? 0.78 : 1) * (1 + Math.min(0.45, 0.025 * burstN)); burstN++;
+    camPitch.v = clamp(camPitch.v - k, -1.25, 1.1); camYaw.v += rnd(-0.3, 0.3) * k;
+    recAcc += k * 0.55; recRate = d.rec || 9; lastPitch = camPitch.v;
+  }
+  function recoverCam(dt) {
+    sinceShot += dt; if (sinceShot > 0.3) burstN = 0; if (recAcc <= 0) return;
+    const dv = camPitch.v - lastPitch; // Mausbewegung seit dem letzten Bild
+    if (dv > 0) recAcc -= dv; else if (dv < -0.001) recAcc = 0; // selbst nachgezogen: weniger zurückholen; gegen die Rückführung bewegt: abbrechen
+    if (recAcc > 0 && sinceShot > 0.12 && !player.car) { const s = Math.min(recAcc, Math.max(recAcc * Math.min(1, 0.6 * recRate * dt), 0.02 * dt)); camPitch.v = Math.min(1.1, camPitch.v + s); recAcc -= s; }
+    if (recAcc < 1e-5) recAcc = 0; lastPitch = camPitch.v;
+  }
+  // Eigenes kleines Element über dem Fadenkreuz: vier Striche, deren Abstand (--gap) der Streuung folgt, und ein Treffer-Kreuz (Klasse hit, down = Ziel geht zu Boden)
+  const feel = { hits: 0 }; const crossEl = document.getElementById('cross');
+  const fkCss = document.createElement('style');
+  fkCss.textContent = '#wgf{position:absolute;left:50%;top:50%;width:0;height:0;pointer-events:none;--gap:14px}#wgf i{position:absolute;display:none;background:#ffffffd9;box-shadow:0 0 2px #000}#wgf.an i{display:block}'
+    + '#wgf .t,#wgf .b{left:-1px;width:2px;height:6px}#wgf .t{top:calc(-1 * var(--gap) - 6px)}#wgf .b{top:var(--gap)}#wgf .l,#wgf .r{top:-1px;height:2px;width:6px}#wgf .l{left:calc(-1 * var(--gap) - 6px)}#wgf .r{left:var(--gap)}'
+    + '#wgf u{position:absolute;left:-10px;top:-10px;width:20px;height:20px;display:none;transform:rotate(45deg)}#wgf.hit u{display:block}#wgf u:before,#wgf u:after{content:"";position:absolute;background:#fff;box-shadow:0 0 2px #000}#wgf u:before{left:9px;top:0;width:2px;height:20px}#wgf u:after{top:9px;left:0;height:2px;width:20px}#wgf.down u:before,#wgf.down u:after{background:#ffd84a}';
+  document.head.appendChild(fkCss);
+  const fk = document.createElement('div'); fk.id = 'wgf'; fk.innerHTML = '<i class="t"></i><i class="b"></i><i class="l"></i><i class="r"></i><u></u>'; ((crossEl && crossEl.parentElement) || document.body).appendChild(fk);
+  let markT = 0, fkOn = false, fkGap = -1, viewH = innerHeight; addEventListener('resize', () => { viewH = innerHeight; });
+  function markHit(down) { fk.classList.add('hit'); fk.classList.toggle('down', !!down); markT = 0.15; feel.hits++; }
+  function updateCross(dt) {
+    if (markT > 0) { markT -= dt; if (markT <= 0) fk.classList.remove('hit', 'down'); }
+    const d = DEF[cur]; const on = d.kind === 'gun' && !player.dead && !inClosedCar() && !!crossEl && crossEl.style.display === 'block';
+    if (on !== fkOn) { fkOn = on; fk.classList.toggle('an', on); }
+    if (!on) return;
+    const g = Math.round(clamp(14 + spreadNow(d) * viewH * 0.6, 14, 150)); // DOM nur bei sichtbarer Änderung schreiben
+    if (Math.abs(g - fkGap) >= 2) { fkGap = g; fk.style.setProperty('--gap', g + 'px'); }
+  }
+  // Hülsen: 24 kleine Kästchen aus einem Pool, 6 s liegen lassen, nur zu Fuß und nicht auf schwacher Grafik (LOW_GFX)
+  const csGeo = new THREE.BoxGeometry(0.014, 0.014, 0.04), csMat = MS(0xc9a24a, 0.35, 0.85); csGeo.userData.shared = true; csMat.userData.shared = true;
+  const cases = []; let csI = 0, csLive = 0;
+  function ejectCase() {
+    if (X.LOW_GFX || player.car || cur === 'rocket') return;
+    let c = cases[csI]; if (!c) { const m = new THREE.Mesh(csGeo, csMat); m.visible = false; scene.add(m); c = cases[csI] = { m, vx: 0, vy: 0, vz: 0, t: 0, gy: 0 }; }
+    csI = (csI + 1) % 24; if (c.t <= 0) csLive++;
+    const m = c.m; muzzlePos(m.position); const yaw = camYaw.v, sp = rnd(1.4, 2.4); // nach rechts auswerfen
+    c.vx = -Math.cos(yaw) * sp + rnd(-0.3, 0.3); c.vz = Math.sin(yaw) * sp + rnd(-0.3, 0.3); c.vy = rnd(2, 3); c.t = 6; c.gy = floorAt(m.position.x, m.position.z, m.position.y + 0.3); m.visible = true;
+  }
+  function updateCases(dt) {
+    if (!csLive) return;
+    for (const c of cases) { if (c.t <= 0) continue; c.t -= dt; const m = c.m;
+      if (c.t <= 0) { m.visible = false; csLive--; continue; }
+      if (c.vy === 0 && c.vx === 0 && c.vz === 0) continue;
+      c.vy -= 9.8 * dt; m.position.x += c.vx * dt; m.position.y += c.vy * dt; m.position.z += c.vz * dt; m.rotation.x += 14 * dt; m.rotation.y += 9 * dt;
+      if (m.position.y <= c.gy + 0.01) { m.position.y = c.gy + 0.01; if (c.vy < -1.5) { c.vy = -c.vy * 0.3; c.vx *= 0.5; c.vz *= 0.5; } else { c.vx = 0; c.vy = 0; c.vz = 0; m.rotation.x = Math.PI / 2; } }
+    }
+  }
+
   // ---------- Feuern ----------
-  function press(down) { if (!allowed(cur)) { select('fists', true); } trigger = down; if (down) tryFire(true); }
+  function press(down) { if (!allowed(cur)) { select('fists', true); } trigger = down; if (down && rl && rl.shell && inv[cur] && inv[cur].mag > 0) stopReload(); if (down) tryFire(true); }
   function tryFire(first) {
-    if (inClosedCar() || player.dead || cool > 0) return false; const d = DEF[cur]; if (!d.auto && !first) return false;
+    if (inClosedCar() || player.dead || cool > 0 || rl) return false; const d = DEF[cur]; if (!d.auto && !first) return false;
     if (d.kind === 'gun') fireGun(d); else if (d.kind === 'melee') melee(d); else if (d.kind === 'throw') throwIt(d); else if (d.kind === 'spray') sprayTick(d); else if (d.kind === 'taser') taser(d);
     return true;
   }
@@ -163,26 +225,37 @@ export function initWeapons(X) {
   function fireGun(d) {
     const it = inv[cur]; if (it.mag <= 0) { if (it.res > 0 || unlimited()) reload(); else { showMsg('LEER', 600); sfx('click'); cool = 0.3; } return; }
     if (!unlimited()) it.mag--; cool = d.rate; heat = Math.min(1, heat + (d.auto ? 0.12 : 0.3));
-    shootPose(d.snd); camShake(cur === 'shotgun' ? 0.16 : cur === 'rifle' ? 0.07 : 0.05); player.mesh.userData.recoil = cur === 'shotgun' ? 0.5 : 0.22;
+    shootPose(d.snd); camShake(cur === 'shotgun' ? 0.1 : cur === 'rifle' ? 0.04 : cur === 'rocket' ? 0.05 : 0.03); player.mesh.userData.recoil = cur === 'shotgun' ? 0.5 : 0.22; // Wackeln kleiner, dafür hebt kickCam den Blick
     const muzzle = muzzlePos(new V3());
-    const moving = keys.KeyW || keys.KeyA || keys.KeyS || keys.KeyD; const spread = d.spread * (player.aimHold ? 0.55 : 1) * (moving ? 1.7 : 1) + heat * (d.auto ? 0.02 : 0.006);
+    const spread = spreadNow(d); const showTr = (cur !== 'smg' && cur !== 'rifle') || trN++ % 3 === 0; // Dauerfeuer: nur jede dritte Kugel mit Leuchtspur
     if (X.wakeParkedRay) { _ray.setFromCamera(_ndc.set(0, 0), camera); X.wakeParkedRay(_ray.ray.origin, _ray.ray.direction, d.range); }
-    const cands = candidates(d.range); const n = d.pellets || 1;
+    const cands = candidates(d.range); const n = d.pellets || 1; let hitN = 0, down = false;
     for (let k = 0; k < n; k++) {
       _ndc.set(rnd(-1, 1) * spread, rnd(-1, 1) * spread); _ray.setFromCamera(_ndc, camera); _ray.far = d.range;
       const wd = wallDist(_ray.ray, d.range); const hits = _ray.intersectObjects(cands, true).filter(h => h.distance > 2.5 && h.distance < wd);
-      let end; if (hits.length) { end = hits[0].point.clone(); const o = owner(hits[0].object); if (o) hitTarget(o, d.dmg, _ray.ray.direction.clone()); }
-      else { end = _ray.ray.at(wd, new V3()); if (wd < d.range) burst(end, 0xc8c0b0, 3, 1.2); }
+      let end; if (hits.length) { end = hits[0].point.clone(); const o = owner(hits[0].object); if (o) { const up = !(o.userData.hp <= 0); hitTarget(o, d.dmg * falloff(d, hits[0].distance), _ray.ray.direction.clone()); hitN++; if (up && (o.userData.hp <= 0 || o.userData.state === 'dead')) down = true; if (cars.includes(o) && hitN <= 2) sparks(end, 0xffe6b0, 3, 2.5); } }
+      else { end = _ray.ray.at(wd, new V3()); if (wd < d.range && k < 5) burst(end, end.y - TH(end.x, end.z) < 0.4 ? 0x7a5c3e : 0x9c9a96, 3 + Math.floor(Math.random() * 3), 1.2); } // Staub: braun am Boden, grau an Häusern
       if (d.boom) { burst(end, 0xff8a30, 40, 7); burst(end, 0xffe0a0, 20, 4); camShake(0.25); sfx('explosion', 0.9); } // Rakete: Einschlag mit Feuerball
-      if (k < 4) tracer(muzzle, end);
+      if (k < 4 && showTr) tracer(muzzle, end);
     }
+    if (hitN) markHit(down); kickCam(d); ejectCase();
     const f = model.userData.flash; if (f) { f.visible = true; f.material.rotation = Math.random() * 6; setTimeout(() => f.visible = false, 60); }
     raiseWanted(d.auto ? 0.08 : 0.15); emit('shot', player.pos, { weapon: cur });
     for (const p of peds) if (p.userData.state === 'walk' && p.position.distanceTo(player.pos) < 45) { p.userData.state = 'flee'; p.userData.fleeT = rnd(4, 8); }
-    if (it.mag <= 0 && (it.res > 0 || unlimited())) setTimeout(reload, 250);
+    if (it.mag <= 0 && (it.res > 0 || unlimited())) { const id = cur; setTimeout(() => { if (cur === id) reload(); }, 250); }
   }
-  function reload() { const d = DEF[cur], it = inv[cur]; if (!it) return; if (d.kind === 'gun') { if (it.mag >= d.mag) return; if (unlimited()) { it.mag = d.mag; sfx('reload'); cool = 0.6; return; } if (it.res <= 0) return; const n = Math.min(d.mag - it.mag, it.res); it.mag += n; it.res -= n; sfx('reload'); cool = cur === 'shotgun' ? 1.0 : 0.7; }
+  // Nachladen dauert je Waffe (rl, leeres Magazin +0,5 s); die Schrotflinte lädt Patrone für Patrone (shell), ein Abzug bricht mit dem Geladenen ab
+  function reload() { const d = DEF[cur], it = inv[cur]; if (!it) return; if (d.kind === 'gun') { if (rl || it.mag >= d.mag || (!unlimited() && it.res <= 0)) return; sfx('reload');
+      if (d.shell) { rl = { id: cur, t: d.shell, shell: true }; return; }
+      const T = (d.rl || 1.5) + (it.mag <= 0 ? 0.5 : 0); rl = { id: cur, t: T, shell: false }; for (const f of [0.15, 0.75]) rlTimers.push(setTimeout(() => { if (rl && rl.id === cur) sfx('click', 0.45); }, T * f * 1000)); }
     else if (d.kind === 'spray' && it.mag < 5 && it.res > 0) { it.res--; it.mag = 100; sfx('reload'); } }
+  function stopReload() { rl = null; for (const t of rlTimers) clearTimeout(t); rlTimers.length = 0; }
+  function stepReload(dt) {
+    if (!rl) return; const it = inv[rl.id], d = DEF[rl.id]; if (rl.id !== cur || !it) { stopReload(); return; } // Waffe gewechselt, weggenommen oder Spielstand geladen
+    rl.t -= dt; if (rl.t > 0) return;
+    if (rl.shell) { if (it.mag < d.mag && (unlimited() || it.res > 0)) { it.mag++; if (!unlimited()) it.res--; sfx('click', 0.35); } if (it.mag >= d.mag || (!unlimited() && it.res <= 0)) stopReload(); else rl.t += d.shell; return; }
+    const n = unlimited() ? d.mag - it.mag : Math.min(d.mag - it.mag, it.res); it.mag += Math.max(0, n); if (!unlimited()) it.res -= Math.max(0, n); stopReload();
+  }
   function addAmmo() { const own = ['pistol', 'smg', 'shotgun', 'rifle'].filter(k => inv[k]); const k = DEF[cur].kind === 'gun' ? cur : own[0]; if (!k) { give('pistol', 24); return 'PISTOLE'; } inv[k].res += Math.ceil(DEF[k].give / 2); return DEF[k].n.toUpperCase(); }
 
   // ---------- Nahkampf ----------
@@ -377,6 +450,7 @@ export function initWeapons(X) {
   // ---------- Schleife ----------
   function update(dt) {
     cool -= dt; heat = Math.max(0, heat - dt * 1.6); if (barT > 0) { barT -= dt; if (barT <= 0) drawBar(); }
+    stepReload(dt); recoverCam(dt); updateCross(dt); updateCases(dt);
     if (trigger && DEF[cur].auto && !X.creativeSpawnerActive()) tryFire(false);
     if (meleeT >= 0) { meleeT -= dt; if (meleeT < 0) meleeHit(DEF[cur]); }
     if (model && model.userData.piv) { if (swingT > 0) { swingT -= dt; const k = 1 - swingT / 0.34; model.userData.piv.rotation.x = k < 0.35 ? 0.7 + k / 0.35 * 0.5 : 1.2 - (k - 0.35) / 0.65 * 3.1; } else model.userData.piv.rotation.x += (0.7 - model.userData.piv.rotation.x) * Math.min(1, dt * 10); }
@@ -388,5 +462,5 @@ export function initWeapons(X) {
   function inSmoke(pos) { for (const p of projs) if (p.kind === 'smoke' && p.t > 2 && p.t < 24 && p.m.position.distanceTo(pos) < 5.5) return true; return false; }
 
   reset();
-  return { quick, DEF, ORDER, inv, give, reset, save, load, confiscate, lock, allowed, get locked() { return lockMode; }, select, slotKey, cycle, cycleFuse, press, update, reload, addAmmo, attach, hud, canAim, stun, spawnProj, sprayCone, puff, sparks, bang, boom, flashLight, firework, addSplat, paintTargets, inSmoke, buildModel, PAINT, get cur() { return cur; }, get trigger() { return trigger; }, projs };
+  return { quick, DEF, ORDER, inv, give, reset, save, load, confiscate, lock, allowed, get locked() { return lockMode; }, select, slotKey, cycle, cycleFuse, press, update, reload, addAmmo, attach, hud, canAim, stun, spawnProj, sprayCone, puff, sparks, bang, boom, flashLight, firework, addSplat, paintTargets, inSmoke, buildModel, PAINT, get cur() { return cur; }, get trigger() { return trigger; }, projs, feel, get reloading() { return !!rl; }, dmgAt: (id, dist) => DEF[id] && DEF[id].dmg ? DEF[id].dmg * falloff(DEF[id], dist) : 0 };
 }
