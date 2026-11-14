@@ -118,7 +118,9 @@ export function initEulen(X) {
     const here = player.car ? player.car.position : player.pos; if (!u.test && here.distanceTo(u.last) > 60) { stop('DISQUALIFIZIERT: KEINE ABKÜRZUNG PER BAHN ODER SPRUNG'); return; } u.last.copy(here);
     for (let k = u.i; k < Math.min(u.W.length, u.i + 3); k++) if (Math.hypot(u.W[k][0] - here.x, u.W[k][1] - here.z) < 420) aufStrasse(u.W[k]); const [x, z] = u.W[u.i]; WEG.update(dt); const d = Math.hypot(here.x - x, here.z - z); const ms = performance.now() - u.st0;
     const o = objEl || (objEl = document.getElementById('obj')); if (o) { const s = `${u.mode === 'rad' ? '🚲' : '🦉'} ${u.r.name}${u.B.length ? ` · Etappe ${u.stage + 1}/${u.B.length + 1}` : ''}: Wegpunkt ${u.i}/${u.W.length - 1} · ${Math.round(d)} m · ${fmt(ms)}`; if (o.textContent !== s) o.textContent = s; } // nur schreiben, wenn sich der Text ändert
-    if (d < (u.mode === 'rad' ? 9 : 7)) { u.i++; sfx('click', 0.6);
+    // Wegpunkt nicht erreichbar (Hof, hinter Gleisen)? Wer schon am nächsten ist, hat ihn passiert: sonst hing der Lauf dort für immer
+    const nx = u.W[u.i + 1], vorbei = !!nx && !u.B.includes(u.i) && Math.hypot(here.x - nx[0], here.z - nx[1]) < 25;
+    if (d < (u.mode === 'rad' ? 9 : 7) || vorbei) { u.i++; sfx('click', 0.6);
       if (u.B.includes(u.i - 1) || u.i >= u.W.length) { u.times.push(ms); u.st0 = performance.now(); u.stage++;
         if (u.i < u.W.length) { writeSave(u.mode, { name: u.r.name, i: u.i, n: u.W.length, times: u.times }); player.hp = Math.min(100, player.hp + 30); showMsg(`ETAPPE ${u.stage} GESCHAFFT · ${fmt(ms)} · GESPEICHERT`, 2200); } }
       if (u.i >= u.W.length) done(); } }

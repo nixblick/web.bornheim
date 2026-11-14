@@ -7,7 +7,8 @@
 // Seit Format 2 gehören auch Story 2, Story 3 (notgta.story2/3) und Ruf (notgta.rep) dazu. Ältere Plätze (ohne _v)
 // lassen diese drei Schlüssel beim Laden unberührt; eingelesene alte Exportdateien (nurSave) schreiben nur notgta.save.
 
-const KEYS_ALT = ['notgta.save', 'notgta.progress', 'notgta.story'], KEYS_NEU = ['notgta.story2', 'notgta.story3', 'notgta.rep'], KEYS = [...KEYS_ALT, ...KEYS_NEU];
+const KEYS_ALT = ['notgta.save', 'notgta.progress', 'notgta.story'], KEYS_NEU = ['notgta.story2', 'notgta.story3', 'notgta.rep'],
+  KEYS_3 = ['eulenMarathon', 'eulenMarathon_rad', 'notgta.outfit'] /* Format 3 (14.11.2026): Marathon-Zwischenstand und Kleidung. Ohne sie bot ein älterer Platz „Marathon fortsetzen“ aus einem anderen Spielstand an */, KEYS = [...KEYS_ALT, ...KEYS_NEU, ...KEYS_3];
 const IDX = 'notgta.slots', PRE = 'notgta.slot.', PEND = 'notgta.slot.pending', MAX = 20;
 
 // Vorgemerkten Platz zurückschreiben: läuft beim Import des Moduls, also vor dem Rumpf von game.js
@@ -19,7 +20,7 @@ try {
     if (d && typeof d === 'object') {
       const setzen = k => { if (typeof d[k] === 'string') localStorage.setItem(k, d[k]); else localStorage.removeItem(k); };
       if (d.nurSave) { if (typeof d['notgta.save'] === 'string') localStorage.setItem('notgta.save', d['notgta.save']); } // alte Exportdatei: Fortschritt und Storys bleiben, wie sie sind
-      else { for (const k of KEYS_ALT) setzen(k); if (+d._v >= 2) for (const k of KEYS_NEU) setzen(k); }
+      else { for (const k of KEYS_ALT) setzen(k); if (+d._v >= 2) for (const k of KEYS_NEU) setzen(k); if (+d._v >= 3) for (const k of KEYS_3) setzen(k); }
     }
   }
 } catch (e) { console.warn('Spielstand zurückschreiben', e); }
@@ -34,7 +35,7 @@ export function initSpielstaende(X) {
   /** @returns {{ id: string, name: string, when: number, ort: string, geld: number, teil?: boolean }[]} */
   const list = () => { try { const l = JSON.parse(localStorage.getItem(IDX) || '[]'); return Array.isArray(l) ? l.filter(s => s && typeof s.id === 'string') : []; } catch (e) { return []; } };
   const putList = l => localStorage.setItem(IDX, JSON.stringify(l));
-  const snapshot = () => { /** @type {Record<string, string>} */ const d = { _v: '2' }; for (const k of KEYS) { const v = localStorage.getItem(k); if (v != null) d[k] = v; } return d; };
+  const snapshot = () => { /** @type {Record<string, string>} */ const d = { _v: '3' }; for (const k of KEYS) { const v = localStorage.getItem(k); if (v != null) d[k] = v; } return d; };
   const when = t => { try { return new Date(t).toLocaleString('de-DE', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }); } catch (e) { return ''; } };
   const meta = name => { let ort = ''; try { ort = A.streetAt(A.player.pos.x, A.player.pos.z) || ''; } catch (e) {} return { name: String(name || '').trim().slice(0, 40) || 'Spielstand ' + when(Date.now()), when: Date.now(), ort, geld: Math.round(A.player.money || 0) }; };
 
@@ -80,7 +81,7 @@ export function initSpielstaende(X) {
       /** @type {Record<string, string>} */ const keys = {}; let d, sv, teil = false;
       try { // 1. lesen und prüfen
         d = JSON.parse(String(fr.result)); if (!d || typeof d !== 'object') throw new Error('leer');
-        if (d.bornheimSpielstand && d.keys && typeof d.keys === 'object') { for (const k of KEYS) if (typeof d.keys[k] === 'string') keys[k] = d.keys[k]; if (+d.keys._v >= 2) keys._v = '2'; if (d.keys.nurSave) { keys.nurSave = '1'; teil = true; } }
+        if (d.bornheimSpielstand && d.keys && typeof d.keys === 'object') { for (const k of KEYS) if (typeof d.keys[k] === 'string') keys[k] = d.keys[k]; if (+d.keys._v >= 2) keys._v = +d.keys._v >= 3 ? '3' : '2'; if (d.keys.nurSave) { keys.nurSave = '1'; teil = true; } }
         else if (Array.isArray(d.pos)) { keys['notgta.save'] = JSON.stringify(d); keys.nurSave = '1'; teil = true; } // alter Export: nur Position und Inventar
         sv = JSON.parse(keys['notgta.save'] || 'null'); if (!sv || !Array.isArray(sv.pos) || !sv.pos.every(Number.isFinite)) throw new Error('kein Spielstand');
       } catch (e) { alert('Diese Datei ist kein gültiger Spielstand.'); return; }
