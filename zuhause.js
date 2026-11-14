@@ -123,6 +123,7 @@ export function initZuhause(X, IN) {
 
   // ---------- Schlafen ----------
   function blocked() {
+    if (player.dead) return 'NICHT MÖGLICH';
     if (player.wanted > 0) return 'NICHT MIT FAHNDUNG – ERST ABTAUCHEN';
     if (A.storyBusy && A.storyBusy()) return 'ERST DIE STORY PAUSIEREN';
     if ((A.VOKA_BUSY && A.VOKA_BUSY()) || WEG.cur) return 'ERST DIE AKTUELLE AUFGABE BEENDEN';
@@ -134,7 +135,7 @@ export function initZuhause(X, IN) {
     const ov = document.createElement('div'); ov.style.cssText = 'position:fixed;inset:0;background:#000;color:#ddd;display:flex;align-items:center;justify-content:center;z-index:46;font:700 24px system-ui,sans-serif;opacity:0;transition:opacity .6s';
     ov.textContent = 'Schlafen …'; document.body.appendChild(ov); setTimeout(() => { ov.style.opacity = '1'; }, 30);
     return new Promise(res => setTimeout(() => {
-      try { world.hour = (world.hour + h) % 24; player.hp = Math.max(player.hp || 0, 100); if (A.saveGame) A.saveGame(true, true); ov.textContent = uhr(world.hour) + ' Uhr'; } catch (e) { console.warn('zuhause: schlafen', e); }
+      try { if (player.dead) throw new Error('im Schlaf umgehauen'); /* Tod während des Abblendens: nichts heilen, nichts speichern */ world.hour = (world.hour + h) % 24; player.hp = Math.max(player.hp || 0, 100); if (A.saveGame) A.saveGame(true, true); ov.textContent = uhr(world.hour) + ' Uhr'; } catch (e) { console.warn('zuhause: schlafen', e); }
       setTimeout(() => { ov.style.opacity = '0'; setTimeout(() => { ov.remove(); sleeping = false; card('AUSGESCHLAFEN', `${uhr(world.hour)} Uhr · Leben voll · Spielstand gespeichert`, 4); res(true); }, 650); }, 900);
     }, 700));
   }
@@ -142,7 +143,7 @@ export function initZuhause(X, IN) {
   // ---------- Auswahlfenster (Kleiderschrank, Bett) ----------
   let menuEl = null, menuOpts = [], wasLocked = false;
   const menuOn = () => !!menuEl && menuEl.style.display === 'flex';
-  function closeMenu() { if (!menuOn()) return; menuEl.style.display = 'none'; A.shopOpen = false; /** @type {any} */ (window).__noAutoMenu = false; if (wasLocked) { wasLocked = false; try { A.renderer.domElement.requestPointerLock(); } catch (e) { /* ohne Sperre weiter */ } } }
+  function closeMenu() { if (!menuOn()) return; menuEl.style.display = 'none'; A.shopOpen = false; /** @type {any} */ (window).__noAutoMenu = false; if (wasLocked) { wasLocked = false; try { const q = A.renderer.domElement.requestPointerLock(); if (q && q.catch) q.catch(() => {}); } catch (e) { /* ohne Sperre weiter */ } } }
   function menu(kind) {
     if (!atHome() || sleeping) return false;
     if (kind === 'bett') { const why = blocked(); if (why) { showMsg(why, 1600); return false; } }
