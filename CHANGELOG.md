@@ -2,6 +2,7 @@
 
 ## 2026-11-14
 
+- **Spieltest am Notebook (Intel UHD, 14.11.2026 nachmittags, auf Andrés „teste jetzt“):** Selbsttest 78 von 81 grün, keine Konsolenfehler. Zwei Befunde behoben: Rasenhalme erschienen auf schwacher Grafik nie; wer dort selbst „Hoch“ oder „Ultra“ wählt, bekommt jetzt die sparsame Mittel-Stufe (gemessen 38,5 ms ohne, 40,9 ms mit, bei 1024×768). Am Wochenmarkt Bornheim stand ein Supermarkt-Vordach mit Stützen und Schild im U-Bahn-Abgang; Vordächer näher als 10 m an einem Abgang entfallen. Bestätigt: Rakete sprengt ein Auto mit einem Treffer, Menü zeichnet gedrosselt, Nacht und Rasen-Shader laufen auf echter Grafik. Offen aus dem Selbsttest: nach einer Fahndung bleiben vier SEK-Beamte stehen, eine weiße Fläche liegt bei -280/107 8 cm über der Fahrbahn, 34 Texturen haben eine andere Anisotropie als die Stufe.
 - **Grafikstufe wechseln:** Beim Wechsel von oder nach „Niedrig“ fragt das Spiel jetzt, ob es speichern und neu laden soll. Licht, Autolack, Fahrbahn, Wasser und Dunst hängen am Stand beim Laden; ohne Neuladen blieb die neue Stufe halb (vorher nur ein kurzer Hinweis „Texturdetails nach Neustart“).
 - **Handy, Einstiegshilfe:** Bei den ersten drei Starts zeigen vier kurze Hinweise, wo man aufsetzt (laufen), wischt (umsehen) und wo Menü und Handy sind. Sie verschwinden nach 12 s oder sobald man gelaufen ist und sich umgesehen hat.
 - **Raketenwerfer:** Ein Treffer sprengt ein Auto sofort (brauchte zwei wie die Pistole), dazu Druckwelle wie bei der Granate.
