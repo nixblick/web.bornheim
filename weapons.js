@@ -235,7 +235,7 @@ export function initWeapons(X) {
       const wd = wallDist(_ray.ray, d.range); const hits = _ray.intersectObjects(cands, true).filter(h => h.distance > 2.5 && h.distance < wd);
       let end; if (hits.length) { end = hits[0].point.clone(); const o = owner(hits[0].object); if (o) { const up = !(o.userData.hp <= 0); hitTarget(o, d.dmg * falloff(d, hits[0].distance), _ray.ray.direction.clone()); hitN++; if (up && (o.userData.hp <= 0 || o.userData.state === 'dead')) down = true; if (cars.includes(o) && hitN <= 2) sparks(end, 0xffe6b0, 3, 2.5); } }
       else { end = _ray.ray.at(wd, new V3()); if (wd < d.range && k < 5) burst(end, end.y - TH(end.x, end.z) < 0.4 ? 0x7a5c3e : 0x9c9a96, 3 + Math.floor(Math.random() * 3), 1.2); } // Staub: braun am Boden, grau an Häusern
-      if (d.boom) { burst(end, 0xff8a30, 40, 7); burst(end, 0xffe0a0, 20, 4); camShake(0.25); sfx('explosion', 0.9, end); } // Rakete: Einschlag mit Feuerball
+      if (d.boom) { burst(end, 0xff8a30, 40, 7); burst(end, 0xffe0a0, 20, 4); /* Rakete: Einschlag mit Feuerball. Ein Treffer sprengt das Auto sofort (André 14.11.2026: brauchte zwei wie die Pistole), dazu Druckwelle wie bei der Granate */ const ro = hits.length ? owner(hits[0].object) : null; if (ro && ro !== player.car && cars.includes(ro) && !ro.userData.dead && ro.userData.mode !== 'wreck') explode(ro, 'player'); boom(end, 'player', 0.8); }
       if (k < 4 && showTr) tracer(muzzle, end);
     }
     if (hitN) markHit(down); kickCam(d); ejectCase();
