@@ -1581,23 +1581,51 @@ function* buildCity() { CITY_PART = 'c0';
     for (const [col, geos] of byCol) { if (typeof col !== 'string') { const c = new THREE.Color(col); for (const g of geos) flat.push(vcol(g, c)); continue; } const m = new THREE.Mesh(mergeGeometries(geos), rasenMat(THREE, +col.slice(1))); m.receiveShadow = true; scene.add(m); }
     if (flat.length) { const m = new THREE.Mesh(mergeGeometries(flat), vcolMat()); m.receiveShadow = true; scene.add(m); } }
   // Spielplatzgeräte und Sportplatz-Linien
-  const propGeos = { red: [], blue: [], yellow: [], wood: [], white: [], steel: [] };
+  const propGeos = { red: [], blue: [], yellow: [], wood: [], white: [], steel: [], green: [], dark: [], stone: [], roof: [] };
   const bx = (w, h, d, x, y, z, ry, bucket) => { const g = new THREE.BoxGeometry(w, h, d); if (ry) g.rotateY(ry); g.translate(x, y + TH(x, z), z); propGeos[bucket].push(g); };
   for (const g of CITY.green) { if (++YC % 3 === 0) yield;
     const ob = orientedBox(g.p); const cu = (ob.umin + ob.umax) / 2, cv = (ob.vmin + ob.vmax) / 2; const ang = Math.atan2(ob.ux, ob.uz) - Math.PI / 2; const [cx, cz] = ob.pt(cu, cv);
     const inside = (u, v) => { const [x, z] = ob.pt(u, v); return pointInPoly(x, z, g.p) && solidAt(x, z) < 0; };
     const L = ob.umax - ob.umin, W = ob.vmax - ob.vmin;
     if (g.k === 'playground' && L > 6 && W > 6) {
-      // Schaukel
-      if (inside(cu - 3, cv)) { const [x, z] = ob.pt(cu - 3, cv); for (const du of [-1.4, 1.4]) { const [px, pz] = ob.pt(cu - 3 + du, cv); bx(0.1, 2.4, 0.1, px, 1.2, pz, 0, 'steel'); } bx(3.0, 0.1, 0.1, x, 2.4, z, ang, 'steel'); for (const du of [-0.5, 0.5]) { const [px, pz] = ob.pt(cu - 3 + du, cv); bx(0.4, 0.06, 0.2, px, 0.6, pz, ang, 'wood'); bx(0.03, 1.8, 0.03, px, 1.5, pz, 0, 'steel'); } }
-      // Rutsche
-      if (inside(cu + 3, cv)) { const [x, z] = ob.pt(cu + 3, cv); const [tx, tz] = ob.pt(cu + 3, cv + 1.2); bx(0.8, 1.8, 0.8, tx, 0.9, tz, ang, 'wood'); const sg = new THREE.BoxGeometry(0.6, 0.08, 3.2); sg.rotateX(0.55); sg.rotateY(ang); const [sx, sz] = ob.pt(cu + 3, cv - 0.6); sg.translate(sx, 1.0 + TH(sx, sz), sz); propGeos.red.push(sg); bx(0.9, 0.3, 0.9, tx, 1.9, tz, ang, 'blue'); }
-      // Sandkasten
-      if (inside(cu, cv + 4)) { const [x, z] = ob.pt(cu, cv + 4); for (const [du, dv, w, d] of [[-1.5, 0, 0.2, 3.2], [1.5, 0, 0.2, 3.2], [0, -1.5, 3.2, 0.2], [0, 1.5, 3.2, 0.2]]) { const [px, pz] = ob.pt(cu + du, cv + 4 + dv); bx(w, 0.3, d, px, 0.15, pz, ang, 'wood'); } const sand = new THREE.BoxGeometry(2.9, 0.1, 2.9); sand.rotateY(ang); sand.translate(x, 0.08 + TH(x, z), z); propGeos.yellow.push(sand); }
+      // Geräte nach dem Günthersburgpark (14.11.2026): Spielturm, Reifenschaukel, Bank mit Mülleimer, Lastenrad. Die Platzmitte bleibt frei.
+      const big = L > 14 && W > 14; let y0 = 0;
+      // Baugruppe mit eigenem Achsenkreuz (a, b) um (ou, ov); q = 1 dreht sie um 90°. fits prüft Mitte und Ecken der Standfläche (im Polygon, kein Haus).
+      const mk = (ou, ov, q) => { const at = (a, b) => q ? ob.pt(cu + ou - b, cv + ov + a) : ob.pt(cu + ou + a, cv + ov + b); const ry = q ? ang - Math.PI / 2 : ang;
+        const add = (geo, a, b, y, bucket) => { geo.rotateY(ry); const [x, z] = at(a, b); geo.translate(x, y + y0, z); propGeos[bucket].push(geo); };
+        const fits = (a0, a1, b0, b1) => { for (const [a, b] of [[0, 0], [a0, b0], [a0, b1], [a1, b0], [a1, b1]]) { const [x, z] = at(a, b); if (!pointInPoly(x, z, g.p) || solidAt(x, z) >= 0) return false; } const [x, z] = at(0, 0); y0 = TH(x, z); return true; };
+        return { add, fits, box: (w, h, d, a, b, y, bucket) => add(new THREE.BoxGeometry(w, h, d), a, b, y, bucket), rod: (r, h, a, b, y, bucket) => add(new THREE.CylinderGeometry(r, r, h, 3, 1, true), a, b, y, bucket) }; };
+      // Spielturm: vier Pfosten, Podest auf 1,8 m, bunte Brüstung, Pyramidendach, Kletterwand, Leiter, Stahlrutsche, Balkenrahmen
+      const tower = (ou, ov, q) => { const A = mk(ou, ov, q); if (!A.fits(-2.6, 4.2, -2, 2)) return false;
+        for (const a of [-0.9, 0.9]) for (const b of [-0.9, 0.9]) A.box(0.14, 3.2, 0.14, a, b, 1.4, 'wood');
+        A.box(2.1, 0.1, 2.1, 0, 0, 1.8, 'wood');
+        A.box(0.85, 0.7, 0.05, -0.45, -1.0, 2.25, 'red'); A.box(0.85, 0.7, 0.05, 0.45, -1.0, 2.25, 'green'); A.box(0.85, 0.7, 0.05, -0.45, 1.0, 2.25, 'yellow'); A.box(0.85, 0.7, 0.05, 0.45, 1.0, 2.25, 'red'); A.box(0.05, 0.7, 0.85, -1.0, 0.45, 2.25, 'green');
+        A.box(1.2, 1.9, 0.08, 0, -1.03, 0.95, 'yellow');
+        const roof = new THREE.ConeGeometry(1.7, 1.0, 4); roof.rotateY(Math.PI / 4); A.add(roof, 0, 0, 3.5, 'roof');
+        for (const b of [-0.67, -0.23]) { const r = new THREE.BoxGeometry(0.07, 2.0, 0.07); r.rotateZ(-0.44); A.add(r, -1.475, b, 0.9, 'wood'); }
+        for (const [w, h, d, b, y] of [[3.2, 0.06, 0.6, 0, 0.95], [3.2, 0.18, 0.04, -0.3, 1.03], [3.2, 0.18, 0.04, 0.3, 1.03]]) { const c = new THREE.BoxGeometry(w, h, d); c.rotateZ(-0.56); A.add(c, 2.4, b, y, 'steel'); }
+        A.box(7.0, 0.2, 0.2, 0.8, -2, 0.1, 'wood'); A.box(7.0, 0.2, 0.2, 0.8, 2, 0.1, 'wood'); A.box(0.2, 0.2, 3.8, -2.6, 0, 0.1, 'wood'); A.box(0.2, 0.2, 3.8, 4.2, 0, 0.1, 'wood');
+        return true; };
+      // Reifenschaukel: graues Stahlgestell mit gekreuzten Holmen, Reifen an Seilen; klein = ein Holm, zwei Reifen
+      const swing = (ou, ov, q, small) => { const A = mk(ou, ov, q); const r = small ? 1.4 : 2.1; if (!(small ? A.fits(-1.5, 1.5, -0.4, 0.4) : A.fits(-2.3, 2.3, -2.3, 2.3))) return false;
+        for (const [a, b] of small ? [[-r, 0], [r, 0]] : [[-r, 0], [r, 0], [0, -r], [0, r]]) A.rod(0.08, 2.9, a, b, 1.3, 'steel');
+        A.box(2 * r + 0.2, 0.1, 0.1, 0, 0, 2.7, 'steel'); if (!small) A.box(0.1, 0.1, 2 * r + 0.2, 0, 0, 2.7, 'steel');
+        for (const [a, b] of small ? [[-0.55, 0], [0.55, 0]] : [[-1.05, 0], [1.05, 0], [0, 1.05]]) { A.rod(0.025, 1.7, a, b, 1.8, 'steel'); const t = new THREE.CylinderGeometry(0.3, 0.3, 0.16, 8); t.rotateX(Math.PI / 2); A.add(t, a, b, 0.7, 'dark'); }
+        return true; };
+      // Parkbank (dunkle Füße, Holzlatten) mit eckigem Mülleimer (dunkel, grünes Band, grauer Pyramidendeckel); bike = Lastenrad mit Verdeck daneben
+      const bench = (ou, ov, f, bike) => { const A = mk(ou, ov, 0); if (!A.fits(bike ? -3.8 : -1.0, 1.9, -0.5, 0.5)) return false;
+        A.box(1.8, 0.06, 0.42, 0, 0, 0.47, 'wood'); A.box(1.8, 0.4, 0.05, 0, f * 0.22, 0.74, 'wood'); for (const a of [-0.7, 0.7]) A.box(0.07, 0.45, 0.42, a, 0, 0.225, 'dark');
+        A.box(0.5, 0.85, 0.5, 1.5, 0, 0.425, 'dark'); A.box(0.54, 0.1, 0.54, 1.5, 0, 0.78, 'green'); const lid = new THREE.ConeGeometry(0.4, 0.22, 4); lid.rotateY(Math.PI / 4); A.add(lid, 1.5, 0, 0.96, 'steel');
+        if (bike) { const c = -2.6; for (const [a, r] of [[c - 1.0, 0.3], [c + 1.0, 0.25]]) { const w = new THREE.CylinderGeometry(r, r, 0.05, 6); w.rotateX(Math.PI / 2); A.add(w, a, 0, r, 'dark'); }
+          A.box(2.0, 0.06, 0.06, c, 0, 0.32, 'dark'); A.box(0.85, 0.45, 0.5, c + 0.3, 0, 0.58, 'dark'); A.box(0.75, 0.5, 0.44, c + 0.3, 0, 1.06, 'dark');
+          A.box(0.06, 0.6, 0.06, c - 0.6, 0, 0.62, 'dark'); A.box(0.26, 0.06, 0.14, c - 0.62, 0, 0.94, 'dark'); A.box(0.05, 0.8, 0.05, c - 0.2, 0, 0.72, 'steel'); A.box(0.05, 0.05, 0.5, c - 0.2, 0, 1.13, 'steel'); }
+        return true; };
+      if (big) { if (!tower(4.8, 0, 1)) tower(4.8, 0, 0); if (!swing(-4.8, 0, 0, false)) swing(-3, 0, 1, true); if (!bench(-3.8, 4.6, 1, true)) bench(-3.8, 4.6, 1, false); bench(5, -4.6, -1, false); }
+      else { if (!tower(3.8, 0, 1) && !swing(-3.2, 0, 0, false)) swing(-3, 0, 1, true); bench(-4, 3.6, 1, false); }
+      // Sandkasten mit heller Steinkante
+      if (inside(cu, cv + 4)) { const [x, z] = ob.pt(cu, cv + 4); bx(3.5, 0.16, 3.5, x, 0.08, z, ang, 'stone'); bx(3.0, 0.04, 3.0, x, 0.16, z, ang, 'yellow'); }
       // Wippe
       if (inside(cu, cv - 4)) { const [x, z] = ob.pt(cu, cv - 4); bx(0.3, 0.5, 0.3, x, 0.25, z, ang, 'steel'); const w = new THREE.BoxGeometry(3.0, 0.08, 0.3); w.rotateZ(0.2); w.rotateY(ang); w.translate(x, 0.55 + TH(x, z), z); propGeos.red.push(w); }
-      // Bank
-      if (inside(cu - 4, cv + 3)) { const [x, z] = ob.pt(cu - 4, cv + 3); bx(1.6, 0.06, 0.4, x, 0.45, z, ang, 'wood'); bx(1.6, 0.4, 0.06, x, 0.7, z, ang, 'wood'); }
     }
     if (g.k === 'pitch' && L > 10 && W > 5 && ob.ratio > 0.7) {
       const i = 0.8, u0 = ob.umin + i, u1 = ob.umax - i, v0 = ob.vmin + i, v1 = ob.vmax - i; const lw = 0.12, ly = 0.03;
@@ -1606,9 +1634,15 @@ function* buildCity() { CITY_PART = 'c0';
       if (g.s === 'soccer' || g.s === 'multi') { for (const [ue, sgn] of [[u0, 1], [u1, -1]]) { for (const dv of [-1.8, 1.8]) { const [px, pz] = ob.pt(ue, cv + dv); bx(0.1, 2.0, 0.1, px, 1.0, pz, 0, 'white'); } const [px, pz] = ob.pt(ue, cv); bx(0.1, 0.1, 3.7, px, 2.0, pz, ang + Math.PI / 2, 'white'); } }
       if (g.s === 'basketball' || g.s === 'multi') { for (const ue of [u0 + 0.5, u1 - 0.5]) { const [px, pz] = ob.pt(ue, cv); bx(0.12, 3.0, 0.12, px, 1.5, pz, 0, 'steel'); bx(1.4, 0.9, 0.06, px, 3.1, pz, ang + Math.PI / 2, 'white'); bx(0.5, 0.04, 0.5, px, 2.7, pz, 0, 'red'); } }
       if (g.s === 'tennis') { for (const dv of [v0, v1]) { const [px, pz] = ob.pt(cu, dv); bx(0.08, 1.1, 0.08, px, 0.55, pz, 0, 'steel'); } const [px, pz] = ob.pt(cu, cv); bx(0.03, 0.9, W - 1.6, px, 0.5, pz, ang, 'steel'); }
+      // Bolzplatz-Käfig (14.11.2026): 4 m hoher dunkelgrüner Zaun um kleine Ballplätze, Pfosten alle rund 3 m, drei Holme statt Gitter (kein eigenes Material), 2 m Eingang an einer Längsseite. Ohne Kollision wie alle Geräte hier.
+      if ((g.s === 'soccer' || g.s === 'multi' || g.s === 'basketball') && L < 45 && W < 45 && ob.ratio > 0.88) { const f = 0.3, a0 = ob.umin + f, a1 = ob.umax - f, b0 = ob.vmin + f, b1 = ob.vmax - f, ge = cu + L / 4;
+        if (inside(a0 + 0.3, b0 + 0.3) && inside(a1 - 0.3, b0 + 0.3) && inside(a0 + 0.3, b1 - 0.3) && inside(a1 - 0.3, b1 - 0.3)) {
+          const run = (ua, va, ub, vb, last) => { const n = Math.max(1, Math.round(Math.hypot(ub - ua, vb - va) / 3)); const P = []; for (let k = 0; k <= n; k++) { const [x, z] = ob.pt(ua + (ub - ua) * k / n, va + (vb - va) * k / n); P.push([x, TH(x, z), z]); if (k < n || last) { const q = new THREE.CylinderGeometry(0.06, 0.06, 4.0, 3, 1, true); q.translate(x, 2.0 + TH(x, z), z); propGeos.green.push(q); } }
+            for (let k = 0; k < n; k += 5) { const A = P[k], B = P[Math.min(n, k + 5)]; const dx = B[0] - A[0], dy = B[1] - A[1], dz = B[2] - A[2], l = Math.hypot(dx, dz); for (const h of [0.15, 2.05, 3.95]) { const r = new THREE.CylinderGeometry(0.04, 0.04, Math.hypot(l, dy), 3, 1, true); r.rotateX(Math.PI / 2 - Math.atan2(dy, l)); r.rotateY(Math.atan2(dx, dz)); r.translate((A[0] + B[0]) / 2, (A[1] + B[1]) / 2 + h, (A[2] + B[2]) / 2); propGeos.green.push(r); } } };
+          run(ge + 1, b0, a1, b0, false); run(a1, b0, a1, b1, false); run(a1, b1, a0, b1, false); run(a0, b1, a0, b0, false); run(a0, b0, ge - 1, b0, true); } }
     }
   }
-  const propMat = { red: 0xc0392b, blue: 0x2980b9, yellow: 0xe3c98a, wood: 0x8b5a2b, white: 0xf4f4f4, steel: 0x8a8f94 };
+  const propMat = { red: 0xc0392b, blue: 0x2980b9, yellow: 0xe3c98a, wood: 0x8b5a2b, white: 0xf4f4f4, steel: 0x8a8f94, green: 0x1f4d33, dark: 0x1c1c1e, stone: 0xb9b6ae, roof: 0x6e2a2a };
   yield; CITY_PART = 'c10'; { const all = []; for (const k in propGeos) { const c = new THREE.Color(propMat[k]); for (const g of propGeos[k]) all.push(vcol(g, c)); } // ein Mesh für alle Geräte: Farbe als Vertexfarbe statt sechs Farb-Meshes
     if (all.length) { const m = new THREE.Mesh(mergeGeometries(all), vcolMat()); m.castShadow = true; scene.add(m); } }
   const waters = [];
