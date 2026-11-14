@@ -1,0 +1,43 @@
+[
+ {
+  "n": "quer_zu_fuss",
+  "geraet": [
+   844,
+   390
+  ],
+  "x": -138,
+  "z": 372,
+  "wait": 6000,
+  "js": "(() => { const G = window.G; if (G.player.car) G.toggleCar(); const tc = document.getElementById('tc'); return JSON.stringify({ touch: !!window.__touch, grob: matchMedia('(pointer: coarse)').matches, fein: matchMedia('(pointer: fine)').matches, tc: tc && tc.style.display, w: innerWidth, h: innerHeight, q: G.opts.quality }); })()",
+  "expect": "window.__touch === true && document.getElementById('tc').style.display === 'block'"
+ },
+ {
+  "n": "quer_auto",
+  "wait": 3000,
+  "js": "(() => { const G = window.G; if (!G.player.car) G.toggleCar(); return String(!!G.player.car); })()"
+ },
+ {
+  "n": "quer_menu",
+  "wait": 1500,
+  "js": "(() => { const G = window.G; if (G.player.car) G.toggleCar(); dispatchEvent(new KeyboardEvent('keydown', { code: 'Escape', key: 'Escape' })); return document.getElementById('menu').style.display; })()"
+ },
+ {
+  "n": "quer_handy",
+  "wait": 1500,
+  "js": "(() => { const G = window.G; G.X.closeMenu(); G.PHONE.open(); return String(G.PHONE.isOpen); })()"
+ },
+ {
+  "n": "hoch_zu_fuss",
+  "geraet": [
+   390,
+   844
+  ],
+  "wait": 3000,
+  "js": "(() => { window.G.PHONE.close(); return JSON.stringify({ w: innerWidth, h: innerHeight, rot: document.getElementById('tcrot').style.display }); })()"
+ },
+ {
+  "n": "hoch_menu",
+  "wait": 1500,
+  "js": "(() => { dispatchEvent(new KeyboardEvent('keydown', { code: 'Escape', key: 'Escape' })); return document.getElementById('menu').style.display; })()"
+ }
+]
