@@ -235,7 +235,8 @@ export function initKlang(X) {
     const kette = (src, type, freq, q, nach) => { const f = C.createBiquadFilter(); f.type = type; f.frequency.value = freq; f.Q.value = q; const g = C.createGain(); g.gain.value = 0; src.connect(f); f.connect(g); g.connect(nach); return { f, g }; };
     // Motor: Obertonwelle (10 Teiltöne) → Sättigung (Antrieb steigt mit Last) → drei Formanten → Tiefpass; dazu Ansaugrauschen. Einmal gebaut.
     const motor = (() => {
-      const amp = [0, 1, 0.8, 0.55, 0.45, 0.32, 0.25, 0.18, 0.13, 0.09, 0.06], re = new Float32Array(amp.length), im = new Float32Array(amp.length);
+      // Pulsfolge statt glatter Welle (Teiltöne fallen langsam ab), dazu eine halbe Ordnung (Viertakter zünden ungleichmäßig)
+      const amp = [0]; for (let k = 1; k <= 16; k++) amp.push(Math.pow(k, -0.75)); const re = new Float32Array(amp.length), im = new Float32Array(amp.length);
       for (let k = 1; k < amp.length; k++) { im[k] = amp[k]; re[k] = k % 3 === 0 ? amp[k] * 0.4 : 0; }
       const os = C.createOscillator(); os.setPeriodicWave(C.createPeriodicWave(re, im)); os.frequency.value = 28;
       const drive = C.createGain(); drive.gain.value = 0.3; const sh = C.createWaveShaper(); sh.curve = tanhKurve();
@@ -243,7 +244,24 @@ export function initKlang(X) {
       const lp = C.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 500; lp.Q.value = 0.7; const g = C.createGain(); g.gain.value = 0;
       os.connect(drive); drive.connect(sh); sh.connect(pk[0]); pk[0].connect(pk[1]); pk[1].connect(pk[2]); pk[2].connect(lp); lp.connect(g); g.connect(gruppen.vehicles);
       const nb = C.createBiquadFilter(); nb.type = 'bandpass'; nb.frequency.value = 700; nb.Q.value = 1.2; const ng = C.createGain(); ng.gain.value = 0; quelle().connect(nb); nb.connect(ng); ng.connect(lp);
-      os.start(); return { os, drive, lp, g, nb, ng };
+      const os2 = C.createOscillator(); os2.type = 'triangle'; os2.frequency.value = 14; const og = C.createGain(); og.gain.value = 0.3; os2.connect(og); og.connect(drive);
+      // Leerlauf-Schwanken: langsamer Schwinger auf die Zündfrequenz; Rauheit: tiefpassgefiltertes Rauschen moduliert den Pegel
+      const wob = C.createOscillator(); wob.frequency.value = 1.7; const wg = C.createGain(); wg.gain.value = 0; wob.connect(wg); wg.connect(os.frequency); wg.connect(os2.frequency);
+      const rau = C.createGain(); rau.gain.value = 1; const rlp = C.createBiquadFilter(); rlp.type = 'lowpass'; rlp.frequency.value = 25; rlp.Q.value = 0.5; const rg = C.createGain(); rg.gain.value = 0.12;
+      quelle().connect(rlp); rlp.connect(rg); rg.connect(rau.gain); lp.disconnect(); lp.connect(rau); rau.connect(g);
+      os.start(); os2.start(); wob.start(); return { os, os2, drive, lp, g, nb, ng, wob, wg, rg };
+    })();
+    // E-Motor (eigene Stimme, kein Verbrenner): zwei leicht verstimmte Töne (Dreieck, Sinus) als Umrichter-Pfeifen, ein hoher
+    // Teilton kommt unter Last dazu, leichtes Tremolo, Tiefpass; dazu weiches Roll-/Luftrauschen. Einmal gebaut.
+    const elektro = (() => {
+      const a = C.createOscillator(); a.type = 'triangle'; a.frequency.value = 240; const b = C.createOscillator(); b.type = 'sine'; b.frequency.value = 240; b.detune.value = 9;
+      const c = C.createOscillator(); c.type = 'sine'; c.frequency.value = 715; const hg = C.createGain(); hg.gain.value = 0.05;
+      const mix = C.createGain(); mix.gain.value = 0.5; a.connect(mix); b.connect(mix); c.connect(hg); hg.connect(mix);
+      const trem = C.createGain(); trem.gain.value = 1; const lfo = C.createOscillator(); lfo.frequency.value = 5; const lg = C.createGain(); lg.gain.value = 0.06; lfo.connect(lg); lg.connect(trem.gain);
+      const lp = C.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 1500; lp.Q.value = 0.8; const g = C.createGain(); g.gain.value = 0;
+      mix.connect(trem); trem.connect(lp); lp.connect(g); g.connect(gruppen.vehicles);
+      const nb = C.createBiquadFilter(); nb.type = 'bandpass'; nb.frequency.value = 800; nb.Q.value = 0.6; const ng = C.createGain(); ng.gain.value = 0; quelle().connect(nb); nb.connect(ng); ng.connect(g);
+      a.start(); b.start(); c.start(); lfo.start(); return { a, b, c, hg, lfo, lp, g, nb, ng };
     })();
     // Reifen rutschen: Rauschen durch zwei schmale Bänder (Q 10/11), ein langsamer Schwinger lässt beide um ±90 Cent flattern
     const rutsch = (() => {
@@ -257,7 +275,7 @@ export function initKlang(X) {
     // Kulisse draußen (Stadt, Wind, Vögel, Grillen) und Regen je mit eigenem Tiefpass für drinnen; Donner ebenso
     const lpg = (nach) => { const f = C.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 18000; f.Q.value = 0.5; const g = C.createGain(); f.connect(g); g.connect(nach); return { f, g }; };
     const aussen = lpg(gruppen.ambience), regen = lpg(gruppen.ambience), donner = lpg(gruppen.ambience);
-    w = { C, S, gruppen, senke, motor, rutsch, reifen, wind, nass, aussen, regen, donner, bett: {}, um: [], aus: false, vogelT: 0, last: 0.2, gAlt: 0, skidAlt: undefined, zuletzt: {} };
+    w = { C, S, gruppen, senke, motor, elektro, rutsch, reifen, wind, nass, aussen, regen, donner, bett: {}, um: [], aus: false, vogelT: 0, last: 0.2, gAlt: 0, skidAlt: undefined, zuletzt: {} };
     umleiten(S.engine && S.engine.g); // alter Motor: stumm, liest weiter mit
     return true;
   }
@@ -269,7 +287,7 @@ export function initKlang(X) {
   function umschalten() {
     w.aus = api.aus;
     for (const n of w.um) { try { n.disconnect(); n.connect(w.aus ? w.S.master : w.senke); } catch (e) { /* bleibt */ } }
-    if (w.aus) for (const p of [w.motor.g.gain, w.motor.ng.gain, w.rutsch.g.gain, w.nass.g.gain, w.reifen.g.gain, w.wind.g.gain, w.aussen.g.gain, w.regen.g.gain]) p.setTargetAtTime(0, w.C.currentTime, 0.05);
+    if (w.aus) for (const p of [w.motor.g.gain, w.motor.ng.gain, w.elektro.g.gain, w.elektro.ng.gain, w.rutsch.g.gain, w.nass.g.gain, w.reifen.g.gain, w.wind.g.gain, w.aussen.g.gain, w.regen.g.gain]) p.setTargetAtTime(0, w.C.currentTime, 0.05);
   }
   /** Kulissen-Schleifen starten, sobald sie gerechnet sind; dann die alten Rauschteppiche stumm schalten. */
   function betten() {
@@ -299,13 +317,21 @@ export function initKlang(X) {
     if (api.aus || w.C.state !== 'running') return;
     betten();
     const S = A.SND, P = A.player, car = P && P.car, u = car && car.userData, sp = u ? Math.abs(u.speed || 0) : 0, motor = !!(u && (!u.bike || u.moto)), t = w.C.currentTime, M = w.motor;
+    const elek = motor && /^ev/.test(String(u.type || '')), verb = motor && !elek, E = w.elektro; // E-Autos (ev, evtaxi, evpolice, evkdow): Vorlagenname in u.type
     // Motor: Frequenz und Pegel des alten Motors sind Drehzahl und Last. Leerlauf etwa 28 Hz Zündfrequenz, Vollgas etwa 200 Hz (Motorrad höher)
     const f = S.engine ? S.engine.o1.frequency.value : 50, g = S.engine ? S.engine.g.gain.value : 0;
     const zuend = Math.min(340, u && u.moto ? 40 + Math.max(0, f - 80) * 0.96 : 28 + Math.max(0, f - 50) * 0.9), dreh = Math.min(1, Math.max(0, (zuend - 28) / 172));
     const gas = !!(A.keys && (A.keys.KeyW || A.keys.ArrowUp)) || g > w.gAlt + 0.002; w.gAlt = g; w.last += ((gas ? 1 : 0.2) - w.last) * 0.3; const L = w.last;
     ziel(M.os.frequency, zuend, 0.06); if (Math.random() < 0.12) ziel(M.os.detune, zufall(-13, 13), 0.4); // langsames Schwanken ±13 Cent
+    ziel(M.os2.frequency, zuend * 0.5, 0.06); ziel(M.os2.detune, zufall(-6, 6), 0.05); // halbe Ordnung mit kleinem Zittern
+    ziel(M.wg.gain, zuend * 0.03 * (1 - dreh), 0.3); ziel(M.wob.frequency, zufall(1.3, 2.2), 0.5); ziel(M.rg.gain, 0.1 + 0.15 * L, 0.2);
     ziel(M.drive.gain, 0.3 + 0.6 * L, 0.08); ziel(M.lp.frequency, 500 + 3500 * L * (0.35 + 0.65 * dreh), 0.08);
-    ziel(M.g.gain, motor ? g * 0.55 : 0, 0.08); ziel(M.ng.gain, motor ? (0.02 + 0.06 * L) * g * 2 : 0, 0.1); ziel(M.nb.frequency, 500 + 1500 * dreh, 0.1);
+    ziel(M.g.gain, verb ? g * 0.55 : 0, verb ? 0.08 : 0.2); ziel(M.ng.gain, verb ? (0.02 + 0.06 * L) * g * 2 : 0, 0.1);
+    // E-Motor: Tonhöhe folgt dem Tempo, im Stand leises hohes Summen; Überblendung beim Wechsel über die Zeitkonstante
+    const ke = Math.min(1, sp / 35), fe = 240 + 820 * ke * (1 + 0.04 * L);
+    ziel(E.a.frequency, fe, 0.08); ziel(E.b.frequency, fe, 0.08); ziel(E.c.frequency, fe * 2.98, 0.08); ziel(E.hg.gain, 0.04 + 0.3 * L * ke, 0.15);
+    ziel(E.lp.frequency, 1300 + 3200 * ke * (0.5 + 0.5 * L), 0.1); ziel(E.lfo.frequency, 4.5 + 3 * ke, 0.3); ziel(E.nb.frequency, 600 + 1400 * ke, 0.1);
+    ziel(E.g.gain, elek ? 0.06 + 0.16 * ke * (0.7 + 0.3 * L) : 0, 0.2); ziel(E.ng.gain, elek ? ke * ke * 0.3 : 0, 0.15); ziel(M.nb.frequency, 500 + 1500 * dreh, 0.1);
     // Reifen und Fahrtwind; Rutschen erkennt man daran, dass das Spiel u.skidT weiterzählt (nur wenn die Räder rutschen)
     const k = Math.min(1, sp / 32), wt = A.weather || {}, rain = wt.rain || 0;
     ziel(w.reifen.g.gain, car && !u.heli ? Math.pow(k, 1.4) * (u.bike && !u.moto ? 0.03 : 0.12) : 0); ziel(w.reifen.f.frequency, 300 + k * 700);
