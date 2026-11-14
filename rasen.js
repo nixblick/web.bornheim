@@ -3,7 +3,7 @@
 // in 8-m-Zellen nur rund um die Kamera, zum Rand hin flach ausgeblendet, Wind biegt die Spitzen im Vertex-Shader.
 // Für Bornheim angepasst: nur auf echten OSM-Grünflächen (Parks, Wiesen, Gärten, Friedhof), nicht auf Wegen, Häusern,
 // Wasser oder Brücken; gemähter Stadtrasen kurz (12–28 cm), Wiese höher. Farben bleiben die der Grünflächen.
-// Stufen (opts.rasenForce erzwingt Halme auch bei schwacher GPU, nur für Proben): Niedrig/Sparmodus/schwache GPU nur die Bodentextur (eine Textur mehr, kein Halm), Mittel 32 m, Hoch 44 m, Ultra 56 m.
+// Stufen (opts.rasenForce erzwingt Halme auch bei schwacher GPU, nur für Proben): Niedrig/Sparmodus/schwache GPU nur die Bodentextur (eine Textur mehr, kein Halm), Mittel 32 m, Hoch 44 m, Ultra 56 m. Schwache GPU mit von Hand gewähltem Hoch/Ultra: Mittel-Stufe.
 // Rasen 2 (#152): Halmtextur ohne dunkle Ränder, Randabstand zu Wegen, Wind mit Böenfront nach dem Wetter, zwei Rauschgrößen
 // für Farbe und Trockenflecken; nur Hoch/Ultra: Durchscheinen der Halme im Gegenlicht und eine zweite, grobe Bodentextur-Abfrage.
 
@@ -217,8 +217,12 @@ void RE_Direct_Rasen( const in IncidentLight directLight, const in vec3 geometry
   function reset() { cells.clear(); pending = []; lastX = lastZ = 1e9; if (mesh) mesh.count = 0; total = 0; }
 
   function update(dt) {
-    const q = opts.quality || 'mittel', schwach = !opts.rasenForce && (opts.potato || X.WEAK_GPU), st = schwach ||  X.inPocket && X.inPocket(camera.position.x, camera.position.z) ? null : STUFE[q] || null;
-    setGroundFein(!schwach && (q === 'hoch' || q === 'ultra')); // zweite Bodentextur-Abfrage nur Hoch/Ultra auf starker GPU
+    const q0 = opts.quality || 'mittel', gewollt = !!opts.qualityManuell && (q0 === 'hoch' || q0 === 'ultra');
+    // Schwache GPU (z. B. Intel UHD): keine Halme, außer jemand stellt selbst auf Hoch oder Ultra. Dann die sparsame Mittel-Stufe
+    // (gemessen auf Intel UHD bei 1024×768: 38,5 ms ohne, 40,9 ms mit Mittel, 43,2 ms mit Hoch). Vorher sah man den Rasen auf solchen Rechnern nie.
+    const schwachGpu = !opts.rasenForce && !!X.WEAK_GPU, schwach = !opts.rasenForce && (opts.potato || (X.WEAK_GPU && !gewollt)), q = schwachGpu && gewollt ? 'mittel' : q0,
+      st = schwach || X.inPocket && X.inPocket(camera.position.x, camera.position.z) ? null : STUFE[q] || null;
+    setGroundFein(!schwach && !schwachGpu && (q === 'hoch' || q === 'ultra')); // zweite Bodentextur-Abfrage nur Hoch/Ultra auf starker GPU
     if (st !== stufe) { stufe = st; reset(); if (st) { dens = st.d; rad = st.r; wind.uFade.value.set(rad * 0.72, rad - 1); setLook(q); } }
     if (mesh) mesh.visible = !!stufe; if (!stufe) return;
     // Windstärke aus dem Wetter (wetter.js: kind, rain 0–1), Regen und Sturm bewegen den Rasen deutlich mehr; weich nachgeführt.

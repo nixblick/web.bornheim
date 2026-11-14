@@ -94,6 +94,9 @@ export function initSupermarkt(X) {
     if (!k) { let bd = 1e9; for (let e = 0; e < b.p.length; e++) { const c = kante(b, e, p); if (!c) continue; const d = strasseNah(c.x + c.en.nx * 6, c.z + c.en.nz * 6); if (d < bd) { bd = d; k = c; } } }
     if (!k) return null;
     const { en, x, z, W } = k;
+    // Kein Vordach über einem U-Bahn-Abgang: am Wochenmarkt Bornheim stand der Eingang 5 m neben der Treppe, Stützen und Schild mitten im Abgang (Spieltest 14.11.2026)
+    const metro = /** @type {any} */ (window).G && /** @type {any} */ (window).G.INTERIORS && /** @type {any} */ (window).G.INTERIORS.metro;
+    if (metro && metro.stations) for (const st of metro.stations) { if (Math.abs(st.p[0] - x) > 400 || Math.abs(st.p[1] - z) > 400) continue; for (const e of st.entr || []) if ((e[0] - x) ** 2 + (e[1] - z) ** 2 < 100) return null; }
     const g = makeEingang(W, b.k === 'hall', art(String(p.n || '')));
     g.position.set(x, TH(x + en.nx * 1.5, z + en.nz * 1.5), z); g.rotation.y = Math.atan2(en.nx, en.nz); g.updateMatrixWorld(true);
     return g;
