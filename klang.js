@@ -75,6 +75,10 @@ const R = {
   schoolbell: s => { for (let i = 0; i < 14; i++) { s.T(0.09, { wave: 'square', f0: 2100, g: 0.1, lp: 5000, d: i * 0.095 }); s.T(0.09, { f0: 4200, g: 0.04, d: i * 0.095 }); } },
 };
 
+// Pegelabgleich nach der stummen Messung (Probe klang, 14.11.2026): Schüsse und Knall lagen vor dem Begrenzer über 1,
+// Schritte, Würfe, Husten und Reifenquietschen kaum hörbar unter 0,1. Faktor je Geräusch, 1 = unverändert.
+const PEGEL = { shot: 0.75, bang: 0.78, smg: 0.85, explosion: 0.85, rifle: 0.95, shotgun: 0.95, step: 2.6, throw: 3, cough: 3, swing: 2.6, screech: 3, whoosh: 2.2, splat: 2.4, reload: 2, notify: 1.6, click: 1.3 };
+
 /** @param {import('./types').Ctx} X */
 export function initKlang(X) {
   const A = /** @type {any} */ (X);
@@ -129,12 +133,12 @@ export function initKlang(X) {
   /** Geräusch spielen; false = dieses Geräusch kennt das Modul nicht oder der Ton ist noch nicht bereit (dann spielt game.js es wie bisher). */
   function sfx(kind, vol = 1) {
     const r = R[kind]; if (!r || !verdrahten() || api.aus) return false;
-    try { r(bau(w.C, A.SND.master, w.C.currentTime, vol), vol); return true; } catch (e) { console.warn('klang', kind, e); return false; }
+    try { const v = vol * (PEGEL[kind] || 1); r(bau(w.C, A.SND.master, w.C.currentTime, v), v); return true; } catch (e) { console.warn('klang', kind, e); return false; }
   }
   /** Jedes Geräusch stumm rechnen (OfflineAudioContext): Spitze, Mittelwert und Länge in ms, ohne einen Ton auszugeben. */
   async function messen(kinds = Object.keys(R)) {
     const out = {}, OC = window.OfflineAudioContext || /** @type {any} */ (window).webkitOfflineAudioContext; if (!OC) return out;
-    for (const kind of kinds) { if (!R[kind]) continue; const O = new OC(1, 44100 * 5, 44100); R[kind](bau(O, O.destination, 0.02, 1), 1);
+    for (const kind of kinds) { if (!R[kind]) continue; const O = new OC(1, 44100 * 5, 44100); const v = PEGEL[kind] || 1; R[kind](bau(O, O.destination, 0.02, v), v);
       const d = (await O.startRendering()).getChannelData(0); let peak = 0, sum = 0, last = 0, first = -1;
       for (let i = 0; i < d.length; i++) { const a = Math.abs(d[i]); if (a > peak) peak = a; if (a > 0.003) { last = i; if (first < 0) first = i; } }
       for (let i = Math.max(0, first); i <= last; i++) sum += d[i] * d[i];

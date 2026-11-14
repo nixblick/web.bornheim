@@ -55,5 +55,27 @@
   "wait": 800,
   "js": "(async () => { const G = window.G, M = G.MINI; const g0 = G.player.money; document.body.dispatchEvent(new KeyboardEvent('keydown', { code: 'Digit1', bubbles: true })); await new Promise(r => setTimeout(r, 100)); M.los.alles(); await new Promise(r => setTimeout(r, 300)); const last = M.los.last; document.body.dispatchEvent(new KeyboardEvent('keydown', { code: 'Escape', bubbles: true })); await new Promise(r => setTimeout(r, 300)); return JSON.stringify({ last, gewinn: G.player.money - g0, ep: M.stats.ep - window.__ep0, offen: M.offen }); })()",
   "expect": "window.G.MINI.los.last && window.G.MINI.los.last.felder.length === 3 && window.G.MINI.stats.ep - window.__ep0 === 5 && window.G.MINI.offen === null && window.G.player.money <= 117 && document.getElementById('menu').style.display !== 'flex'"
+ },
+ {
+  "n": "kick_tisch_jugendhaus",
+  "x": 589,
+  "z": 151,
+  "hour": 13,
+  "wait": 7000,
+  "js": "(async () => { const G = window.G, M = G.MINI, P = G.player; const t0 = performance.now(); while (performance.now() - t0 < 20000) { M.update(); if (M.kick.haeuser > 0 && M.kick.tische >= 1) break; await new Promise(r => setTimeout(r, 500)); } const o = M.kick.ort(); if (o) { P.pos.set(o[0] + 1.2, G.TH(o[0] + 1.2, o[1]), o[1]); if (P.mesh) P.mesh.position.copy(P.pos); G.camYaw.v = Math.atan2(o[0] - P.pos.x, o[1] - P.pos.z); G.camPitch.v = 0.3; } await new Promise(r => setTimeout(r, 1500)); return JSON.stringify({ haeuser: M.kick.haeuser, tische: M.kick.tische, ort: o, nahe: M.kick.nahe(), imHaus: o ? G.solidAt(o[0], o[1]) : null }); })()",
+  "expect": "window.G.MINI.kick.haeuser >= 30 && window.G.MINI.kick.tische >= 1 && window.G.MINI.kick.nahe()"
+ },
+ {
+  "n": "kick_spiel",
+  "wait": 800,
+  "js": "(async () => { const G = window.G, M = G.MINI, K = M.kick; window.__kep0 = M.stats.ep; window.__kgeld0 = G.player.money || 0; G.player.wanted = 0; document.body.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyF', bubbles: true })); document.body.dispatchEvent(new KeyboardEvent('keyup', { code: 'KeyF', bubbles: true })); await new Promise(r => setTimeout(r, 300)); const perF = !!K.spiel; if (!perF) K.start(); const offen = M.offen; K.auto = true; K.tempo = 6; const t0 = performance.now(); while (K.spiel && performance.now() - t0 < 90000) await new Promise(r => setTimeout(r, 250)); return JSON.stringify({ perF, offen, laeuft: !!K.spiel, last: K.last, ep: M.stats.ep - window.__kep0, geld: (G.player.money || 0) - window.__kgeld0 }); })()",
+  "expect": "window.G.MINI.kick.last && window.G.MINI.kick.last.sieg === true && window.G.MINI.kick.last.ich === 6 && window.G.MINI.stats.ep - window.__kep0 === 40 && (window.G.player.money || 0) === window.__kgeld0 && window.G.MINI.offen === null"
+ },
+ {
+  "n": "kick_abbruch_esc",
+  "wait": 800,
+  "shot": false,
+  "js": "(async () => { const G = window.G, M = G.MINI, K = M.kick; K.auto = false; K.tempo = 1; const e0 = M.stats.ep; K.start(); await new Promise(r => setTimeout(r, 600)); const lief = !!K.spiel; document.body.dispatchEvent(new KeyboardEvent('keydown', { code: 'Escape', key: 'Escape', bubbles: true })); await new Promise(r => setTimeout(r, 500)); window.__kab = { lief, jetzt: !!K.spiel, ep: M.stats.ep - e0, menu: document.getElementById('menu').style.display }; return JSON.stringify(window.__kab); })()",
+  "expect": "window.__kab.lief && !window.__kab.jetzt && window.__kab.ep === 0 && window.__kab.menu !== 'flex'"
  }
 ]
