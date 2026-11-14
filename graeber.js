@@ -128,6 +128,8 @@ export function initGraeber(X) {
   }
   // ---- Platzierung ----
   const railDir = (x, z) => { let best = 1e9, ang = 0; for (const r of CITY.rails || []) { if (r.k === 'platform') continue; const p = r.p; for (let i = 0; i < p.length - 1; i++) { const ax = p[i][0], az = p[i][1], bx = p[i + 1][0], bz = p[i + 1][1]; const dx = bx - ax, dz = bz - az, l = dx * dx + dz * dz || 1; const t = Math.max(0, Math.min(1, ((x - ax) * dx + (z - az) * dz) / l)); const d = (ax + t * dx - x) ** 2 + (az + t * dz - z) ** 2; if (d < best) { best = d; ang = Math.atan2(dz, dx); } } } return best < 400 ? ang : null; };
+  // Abstand zum nächsten Gleis (plat=false) bzw. Bahnsteig (plat=true; geschlossene Fläche innen = 0)
+  const railDist = (x, z, plat) => { let best = 1e18; for (const r of CITY.rails || []) { if ((r.k === 'platform') !== plat) continue; const p = r.p; if (!p || p.length < 2) continue; if (plat && p.length > 3 && p[0][0] === p[p.length - 1][0] && p[0][1] === p[p.length - 1][1] && pointInPoly(x, z, p)) return 0; for (let i = 0; i < p.length - 1; i++) { const ax = p[i][0], az = p[i][1], dx = p[i + 1][0] - ax, dz = p[i + 1][1] - az, l = dx * dx + dz * dz || 1; const t = Math.max(0, Math.min(1, ((x - ax) * dx + (z - az) * dz) / l)); const d = (ax + t * dx - x) ** 2 + (az + t * dz - z) ** 2; if (d < best) best = d; } } return Math.sqrt(best); };
   function place(grp, x, z, ang) { bake(grp); /* solange die Gruppe noch im Ursprung liegt */ grp.position.set(x, TH(x, z), z); grp.rotation.y = -ang; scene.add(grp); return grp; }
   /** Winkel für place(), damit lokal +z (Steinvorderseiten) zum nächsten Weg aus OSM zeigt; null = kein Weg in 60 m */
   const wegZu = (x, z) => { let best = 3600, dx0 = 0, dz0 = 0; for (const r of CITY.roads || []) { const p = r.p; if (!p) continue; for (let i = 0; i < p.length - 1; i++) { const ax = p[i][0], az = p[i][1], dx = p[i + 1][0] - ax, dz = p[i + 1][1] - az, l = dx * dx + dz * dz || 1; const t = Math.max(0, Math.min(1, ((x - ax) * dx + (z - az) * dz) / l)); const qx = ax + t * dx - x, qz = az + t * dz - z, d = qx * qx + qz * qz; if (d < best) { best = d; dx0 = qx; dz0 = qz; } } } return best < 3600 ? -Math.atan2(dx0, dz0) : null; };
@@ -145,8 +147,12 @@ export function initGraeber(X) {
     const w = wanted(), keys = new Set(w.map(e => e.key));
     for (const [k, g] of built) { const d2 = (g.position.x - player.pos.x) ** 2 + (g.position.z - player.pos.z) ** 2; if (!keys.has(k) && d2 > WEG * WEG) { scene.remove(g); disposeHierarchy(g); built.delete(k); } }
     for (const e of w) { if (built.has(e.key)) continue;
-      if (e.st) { const ang = railDir(e.st.x, e.st.z); if (ang === null) { built.set(e.key, new THREE.Group()); continue; } const s = (e.st.x * 7 + e.st.z * 3) % 2 > 0 ? 1 : -1; // Bahnsteig neben das Gleis
-        const ox = -Math.sin(ang) * 3.3 * s, oz = Math.cos(ang) * 3.3 * s; const g = makeHaltestelle(e.st.n || 'Haltestelle'); built.set(e.key, place(g, e.st.x + ox, e.st.z + oz, ang + (s > 0 ? Math.PI : 0))); }
+      if (e.st) { const ang = railDir(e.st.x, e.st.z); if (ang === null) { built.set(e.key, new THREE.Group()); continue; } const s0 = (e.st.x * 7 + e.st.z * 3) % 2 > 0 ? 1 : -1; // Bahnsteig neben das Gleis
+        // #251: nie zwischen die Gleise (zweigleisig, z. B. Dornbusch): erst OSM-Bahnsteig, sonst Abstand >= 2,6 m zu jedem Gleis
+        let s = s0, ox = 0, oz = 0, ok = false; const cand = [];
+        for (const d of [3.3, 4.5, 6, 7.5, 9]) for (const sg of [s0, -s0]) cand.push([sg, d]);
+        for (const pass of [0, 1]) { for (const [sg, d] of cand) { const qx = e.st.x - Math.sin(ang) * d * sg, qz = e.st.z + Math.cos(ang) * d * sg; if (railDist(qx, qz, false) < 2.6) continue; if (pass === 0 && railDist(qx, qz, true) > 1.5) continue; s = sg; ox = qx - e.st.x; oz = qz - e.st.z; ok = true; break; } if (ok) break; }
+        if (!ok) { built.set(e.key, new THREE.Group()); continue; } const g = makeHaltestelle(e.st.n || 'Haltestelle'); built.set(e.key, place(g, e.st.x + ox, e.st.z + oz, ang + (s > 0 ? Math.PI : 0))); }
       else { const w2 = wegZu(e.a.x, e.a.z); built.set(e.key, place(makeAnlage(), e.a.x, e.a.z, w2 === null ? e.a.ang : w2)); } }
   }
   setInterval(() => { try { update(1.5); } catch (e) { console.warn('graeber', e); } }, 1500); // eigener Takt, keine Zeile in der Spielschleife
