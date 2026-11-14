@@ -1,0 +1,59 @@
+[
+ {
+  "n": "tt_platte_guenthersburgpark",
+  "x": -396.6,
+  "z": -104.3,
+  "tx": -396.6,
+  "tz": -106.7,
+  "pitch": 0.35,
+  "hour": 13,
+  "wait": 7000,
+  "js": "(async () => { const M = window.G.MINI; for (let i = 0; i < 10 && !M.tt.tische; i++) { M.update(); await new Promise(r => setTimeout(r, 500)); } return JSON.stringify({ platten: M.tt.platten, tische: M.tt.tische, nahe: M.tt.nahe() }); })()",
+  "expect": "window.G.MINI && window.G.MINI.tt.tische >= 1 && window.G.MINI.tt.nahe()"
+ },
+ {
+  "n": "tt_start",
+  "wait": 1500,
+  "js": "(async () => { const G = window.G, M = G.MINI; window.__geld0 = G.player.money || 0; window.__ep0 = M.stats.ep; window.__xp0 = G.PROGRESS.P.lvl * 1e6 + G.PROGRESS.P.xp; G.player.wanted = 0; await new Promise(r => setTimeout(r, 300)); document.body.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyF', bubbles: true })); document.body.dispatchEvent(new KeyboardEvent('keyup', { code: 'KeyF', bubbles: true })); await new Promise(r => setTimeout(r, 300)); const perF = !!M.tt.spiel; if (!perF) M.tt.start(); return JSON.stringify({ perF, spiel: !!M.tt.spiel, offen: M.offen }); })()",
+  "expect": "!!window.G.MINI.tt.spiel && window.G.MINI.offen === 'tt' && document.getElementById('minispiel').style.display === 'flex'"
+ },
+ {
+  "n": "tt_tasten_gesperrt",
+  "wait": 500,
+  "shot": false,
+  "js": "(async () => { const G = window.G; document.body.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyW', bubbles: true })); await new Promise(r => setTimeout(r, 100)); const w = !!G.keys.KeyW; window.__w = w; document.body.dispatchEvent(new KeyboardEvent('keyup', { code: 'KeyW', bubbles: true })); G.keys.KeyW = false; return JSON.stringify({ w }); })()",
+  "expect": "window.__w === false && document.getElementById('menu').style.display !== 'flex'"
+ },
+ {
+  "n": "tt_satz",
+  "wait": 500,
+  "js": "(async () => { const G = window.G, T = G.MINI.tt; T.auto = true; T.tempo = 6; const t0 = performance.now(); while (T.spiel && performance.now() - t0 < 50000) await new Promise(r => setTimeout(r, 250)); return JSON.stringify({ laeuft: !!T.spiel, last: T.last, ep: G.MINI.stats.ep - window.__ep0, geld: (G.player.money || 0) - window.__geld0 }); })()",
+  "expect": "!window.G.MINI.tt.spiel && window.G.MINI.tt.last && window.G.MINI.tt.last.sieg && window.G.MINI.tt.last.ich >= 11 && window.G.MINI.tt.last.ich - window.G.MINI.tt.last.er >= 2 && window.G.MINI.stats.ep > window.__ep0 && window.G.PROGRESS.P.lvl * 1e6 + window.G.PROGRESS.P.xp > window.__xp0 && (window.G.player.money || 0) === window.__geld0 && window.G.MINI.offen === null"
+ },
+ {
+  "n": "tt_abbruch_esc",
+  "wait": 800,
+  "shot": false,
+  "js": "(async () => { const G = window.G, T = G.MINI.tt; T.auto = false; T.tempo = 1; const ep0 = G.MINI.stats.ep; T.start(); const lief = !!T.spiel; document.body.dispatchEvent(new KeyboardEvent('keydown', { code: 'Escape', bubbles: true })); await new Promise(r => setTimeout(r, 300)); return JSON.stringify({ lief, jetzt: !!T.spiel, ep: G.MINI.stats.ep - ep0, menu: document.getElementById('menu').style.display }); })()",
+  "expect": "!window.G.MINI.tt.spiel && window.G.MINI.offen === null && window.G.MINI.tt.last.abgebrochen && document.getElementById('menu').style.display !== 'flex'"
+ },
+ {
+  "n": "los_erwartungswert",
+  "wait": 300,
+  "shot": false,
+  "js": "(() => { const L = window.G.MINI.los; L.seed(4711); let s = 0; const n = 5000; for (let i = 0; i < n; i++) s += L.ziehen().geld; const ew = L.TAB.reduce((a, t) => a + t.p * t.geld, 0); window.__losMittel = s / n; return JSON.stringify({ preis: L.PREIS, ew, mittel: s / n }); })()",
+  "expect": "window.G.MINI.los.TAB.reduce((a, t) => a + t.p * t.geld, 0) < window.G.MINI.los.PREIS * 0.5 && window.__losMittel < window.G.MINI.los.PREIS * 0.5 && window.G.SHOPS.TYPES.kiosk.items.includes('los')"
+ },
+ {
+  "n": "los_kaufen",
+  "wait": 1000,
+  "js": "(async () => { const G = window.G, M = G.MINI; G.player.money = 100; window.__ep0 = M.stats.ep; M.los.seed(12345); G.SHOPS.open({ k: 'kiosk', name: 'Kiosk am Park', x: G.player.pos.x, z: G.player.pos.z }); await new Promise(r => setTimeout(r, 200)); G.SHOPS.buy('los'); await new Promise(r => setTimeout(r, 400)); return JSON.stringify({ offen: M.offen, geld: G.player.money, laden: document.getElementById('shop').style.display, text: document.getElementById('minispiel').textContent.slice(0, 120) }); })()",
+  "expect": "window.G.MINI.offen === 'los' && window.G.player.money < 100 && window.G.player.money >= 97 && document.getElementById('shop').style.display === 'none' && /nur Spielgeld/.test(document.getElementById('minispiel').textContent)"
+ },
+ {
+  "n": "los_rubbeln",
+  "wait": 800,
+  "js": "(async () => { const G = window.G, M = G.MINI; const g0 = G.player.money; document.body.dispatchEvent(new KeyboardEvent('keydown', { code: 'Digit1', bubbles: true })); await new Promise(r => setTimeout(r, 100)); M.los.alles(); await new Promise(r => setTimeout(r, 300)); const last = M.los.last; document.body.dispatchEvent(new KeyboardEvent('keydown', { code: 'Escape', bubbles: true })); await new Promise(r => setTimeout(r, 300)); return JSON.stringify({ last, gewinn: G.player.money - g0, ep: M.stats.ep - window.__ep0, offen: M.offen }); })()",
+  "expect": "window.G.MINI.los.last && window.G.MINI.los.last.felder.length === 3 && window.G.MINI.stats.ep - window.__ep0 === 5 && window.G.MINI.offen === null && window.G.player.money <= 117 && document.getElementById('menu').style.display !== 'flex'"
+ }
+]
