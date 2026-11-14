@@ -1,0 +1,25 @@
+[
+ {
+  "n": "klang_messen",
+  "x": -138,
+  "z": 372,
+  "wait": 6000,
+  "shot": false,
+  "js": "(async () => { const K = window.KLANG; const m = await K.messen(); window.__km = m; return JSON.stringify(m); })()",
+  "expect": "(m => window.KLANG.kinds.length >= 30 && window.KLANG.kinds.every(k => m[k] && m[k].peak > 0.1 && m[k].peak < 1.2 && m[k].ms > 5) && m.explosion.rms > m.click.rms && m.click.ms < 150 && m.explosion.ms > 1000 && m.thunder.ms > 2000 && m.shot.ms < 900)(window.__km)"
+ },
+ {
+  "n": "klang_verdrahtet",
+  "wait": 1500,
+  "shot": false,
+  "js": "(async () => { const G = window.G, K = window.KLANG; await new Promise(r => setTimeout(r, 800)); window.__kv = { ctx: !!(G.X.SND && G.X.SND.ctx), zustand: G.X.SND && G.X.SND.ctx ? G.X.SND.ctx.state : null, bereit: K.bereit, schuss: K.sfx('shot', 0.01), unbekannt: K.sfx('gibtsnicht', 1) }; return JSON.stringify(window.__kv); })()",
+  "expect": "window.__kv.unbekannt === false && (!window.__kv.ctx || (window.__kv.bereit === true && window.__kv.schuss === true))"
+ },
+ {
+  "n": "klang_aus_schalter",
+  "wait": 500,
+  "shot": false,
+  "js": "(() => { const K = window.KLANG; K.aus = true; const a = K.sfx('shot', 0.01); K.aus = false; window.__ka = a; return String(a); })()",
+  "expect": "window.__ka === false"
+ }
+]
