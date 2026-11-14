@@ -2799,7 +2799,7 @@ function driveCar(c, dt, ctrl) {
   const want = _want.set(Math.sin(u.heading) * u.speed, Math.cos(u.heading) * u.speed);
   const grip = (hand ? 1.6 : 7.5) * (opts.grip || 1) * (1 - weather.rain * 0.35) * (u.bike ? 2.5 : 1); u.vel.lerp(want, Math.min(1, grip * dt));
   const slip = Math.hypot(want.x - u.vel.x, want.y - u.vel.y);
-  if (slip > 3.2 && sp > 6 && !u.bike) { u.skidT = (u.skidT || 0) + dt; if (u.skidT > 0.035) { u.skidT = 0; const rx = Math.cos(u.heading) * 0.8, rz = -Math.sin(u.heading) * 0.8, bx = -Math.sin(u.heading) * 1.4, bz = -Math.cos(u.heading) * 1.4; addSkid(c.position.x + bx + rx, c.position.z + bz + rz, u.heading); addSkid(c.position.x + bx - rx, c.position.z + bz - rz, u.heading); }
+  if (slip > 3.2 && sp > 6 && !u.bike) { u.skidAt = performance.now(); u.skidT = (u.skidT || 0) + dt; if (u.skidT > 0.035) { u.skidT = 0; const rx = Math.cos(u.heading) * 0.8, rz = -Math.sin(u.heading) * 0.8, bx = -Math.sin(u.heading) * 1.4, bz = -Math.cos(u.heading) * 1.4; addSkid(c.position.x + bx + rx, c.position.z + bz + rz, u.heading); addSkid(c.position.x + bx - rx, c.position.z + bz - rz, u.heading); }
     if (c === player.car) { u.scrT = (u.scrT || 0) - dt; if (u.scrT <= 0) { u.scrT = 0.16; sfx('screech', clamp(slip / 10, 0.2, 0.7)); } } }
   // Karosserie neigt sich in Kurven und beim Bremsen/Beschleunigen
   const body = c.children[0]; if (body) { const acc = (u.speed - prev) / Math.max(dt, 1e-3); if (u.by0 === undefined) { u.by0 = body.position.y; u.rollS = u.pitchS = u.heave = u.rv = u.pv = u.hv = 0; }
@@ -2927,7 +2927,7 @@ function nodeAdd(r) { r.p.forEach((p, k) => { const kk = nkey(p[0], p[1]); let a
 function nodesNear(x, z) { const out = []; const cx = Math.round(x / 2), cz = Math.round(z / 2); for (let a = -1; a <= 1; a++) for (let b = -1; b <= 1; b++) { const l = NODEIDX.get((cx + a) + ',' + (cz + b)); if (l) for (const e of l) { const p = e[0].p[e[1]]; if (Math.abs(p[0] - x) < 1 && Math.abs(p[1] - z) < 1) out.push(e); } } return out; }
 // Ampeln im Raster (für die KI-Autos)
 const SIGGRID = new Map();
-function signalsNear(x, z) { const out = []; const cx = Math.floor(x / CELL), cz = Math.floor(z / CELL); for (let a = -1; a <= 1; a++) for (let b = -1; b <= 1; b++) { const l = SIGGRID.get(key(cx + a, cz + b)); if (l) out.push(...l); } return out; }
+const _sigOut = []; /* wiederverwendet: der Aufrufer liest das Ergebnis sofort aus und behält es nicht */ function signalsNear(x, z) { const out = _sigOut; out.length = 0; const cx = Math.floor(x / CELL), cz = Math.floor(z / CELL); for (let a = -1; a <= 1; a++) for (let b = -1; b <= 1; b++) { const l = SIGGRID.get(key(cx + a, cz + b)); if (l) for (let i = 0; i < l.length; i++) out.push(l[i]); } return out; }
 // Brücken/Rampen: Höhen kommen aus build_tiles.py, hier nur das Raster für deckAt
 function deckAddRoad(r) {
   if (!r.ry) return;
@@ -3122,7 +3122,7 @@ async function streamInit(sx = player.pos.x, sz = player.pos.z) {
 // Automatische Auflösung: hält die Bildrate auf schwachen Grafikkarten, indem weniger Pixel gerendert werden
 let upT = 0, upOffered = false; let dynK = 1, dynBase = 0, dynSet = 0, dynLast = 0, dynAcc = 0, dynN = 0;
 function dynRes() {
-  const now = performance.now(), ft = now - dynLast; dynLast = now; if (document.hidden || ft > 250) return;
+  const now = performance.now(), ft = now - dynLast; dynLast = now; if (document.hidden || ft > 250 || menuOpen || !started) return; /* im Menü und vor dem Start wird absichtlich selten gezeichnet */
   _smoothFt = _smoothFt * 0.9 + ft * 0.1;
   if (!upOffered && started && !menuOpen && opts.quality !== 'ultra' && _smoothFt < 20) { upT += ft; if (upT > 30000) { upOffered = true; showMsg('LÄUFT FLÜSSIG – HÖHERE GRAFIKSTUFE MÖGLICH: EINSTELLUNGEN › GRAFIK', 6000, 'ok'); } } else upT = 0; // #163: 30 s über 50 fps → einmal anbieten, nie selbst hochstufen
   const pr = renderer.getPixelRatio(); if (Math.abs(pr - dynSet) > 1e-3) { dynBase = pr; dynK = 1; } // Einstellung wurde geändert
@@ -3360,7 +3360,7 @@ function update(dt) {
       if (u.passT > 0 || u.passA) u.passA = clamp((u.passA || 0) + (u.passT > 0 ? dt : -dt) * 1.2, 0, 1); // Versatz weich hin und zurück, kein Seitensprung
       // Rechtsverkehr: die Normale in advanceAlongRoad dreht sich mit der Fahrtrichtung schon um, ein zusätzliches *u.dir hob das auf und ließ Gegenverkehr auf derselben Spur fahren (Frontalstaus)
       if (u.speed > 0.05) { const lk = yieldS ? Math.max(0.42, laneK(u)) : u.passA ? laneK(u) - (laneK(u) - 0.05) * u.passA : laneK(u); const k = sideGuard(u, c.position, u.road.w * lk, 0, 1); /* Versatz +W = rechts (Normale (-dz,dx) zeigt bei x Ost/z Süd nach rechts; Rechtsverkehr, #99) ohne u.dir: die Normale dreht schon mit der Fahrtrichtung */ advanceAlongRoad(u, c.position, u.speed * dt, u.road.w * lk * k); }
-      if (u.vh === undefined) u.vh = u.heading; u.vh = lerpAngle(u.vh, u.heading, Math.min(1, dt * Math.max(2.5, u.speed * 0.9))); const hh = u.heading; u.heading = u.vh; c.rotation.y = u.vh; carFx(c, dt, block); carTerrain(c); u.heading = hh;
+      if (u.vh === undefined) u.vh = u.heading; u.vh = lerpAngle(u.vh, u.heading, Math.min(1, dt * Math.max(2.5, u.speed * 0.9))); const hh = u.heading; u.heading = u.vh; c.rotation.y = u.vh; if (c.visible) carFx(c, dt, block); /* unsichtbare und instanzierte Autos: Lichter sieht keiner */ carTerrain(c); u.heading = hh;
       if (u.respawn) { u.respawn = false; let q = null; const pool = roadsNear(player.pos.x, player.pos.z, 1, true); for (let k = 0; k < 6 && pool.length; k++) { const t = randomRoadPoint(pick(pool)); if (Math.hypot(t.x - player.pos.x, t.z - player.pos.z) > 120) { q = t; break; } } if (q) { u.road = q.road; u.seg = q.seg; u.dir = q.road.o || q.dir; u.heading = q.heading + (u.dir < 0 ? Math.PI : 0); c.position.set(q.x, TH(q.x, q.z), q.z); u.speed = 0; snapToLane(u, c.position, u.road.w * laneK(u)); u.vh = u.heading; c.rotation.y = u.heading; } else if (u.road.o) { u.respawn = true; u.speed = 0; /* Einbahnstraße: nie wenden (Geisterfahrer), am Ende warten bis ein Ersatzpunkt frei ist */ } else { u.dir *= -1; } }
       if (!player.car && d < 4 && u.speed > 1) { const D = u.dims || { l: 4.4, w: 1.9 }; const rx = player.pos.x - c.position.x, rz = player.pos.z - c.position.z; const al = rx * fx + rz * fz, ac = rx * fz - rz * fx; if (al > 0 && al < D.l / 2 + 0.35 && Math.abs(ac) < D.w / 2 + 0.25) { const sg = Math.sign(ac) || 1; moveWithCollision(player.pos, fz * sg * 1.2, -fx * sg * 1.2, 0.35); if (u.speed > 4) { player.hp -= clamp(u.speed * 2.2, 8, 55); player.vy = 3; showMsg('ANGEFAHREN', 700); sfx('hit'); } u.speed = 0; } }
       if (u.rider && c.visible) { u.rt = (u.rt || 0) + dt * (u.speed > 0.2 ? Math.max(0.5, u.speed * 0.5) : 0); poseBikeRider(u.rider, !!u.moto, u.rt); }
@@ -3522,9 +3522,11 @@ renderer.setAnimationLoop(() => {
   fpsN++; const tn = performance.now(); if (tn - fpsT > 500) { const fe = document.getElementById('fps'); if (fe && opts.fps) fe.textContent = Math.round(fpsN * 1000 / (tn - fpsT)) + ' fps'; fpsN = 0; fpsT = tn; }
   const now = performance.now() / 1000; const dt = Math.min(now - lastT, 0.05); lastT = now;
   if (glLost) return; // ohne Grafik-Kontext weder simulieren noch zeichnen
+  // Menü offen oder Startbildschirm: die Welt steht, also nur 4 bzw. 10 Bilder je Sekunde zeichnen statt jedes (spart GPU und Akku)
+  if (menuOpen || !started) { if (tn - ruheBild < (started ? 250 : 100)) return; ruheBild = tn; }
   // Ein Fehler in einem Bild darf das Spiel nicht einfrieren (three fordert den nächsten Frame erst nach dem Callback an)
   try { update(dt); audioUpdate(dt); } catch (e) { loopErrors++; if (loopErrors <= 3 || loopErrors % 300 === 0) console.error('update-Fehler', loopErrors, e); if (loopErrors === 3) showMsg('FEHLER IM SPIEL – bitte melden (Esc › Fehler melden)', 4000); }
   // Render-Fehler getrennt zählen (aufeinanderfolgend): nach 5 Bildern in Folge Effekte abschalten und direkt zeichnen
   try { if (composer) composer.render(); else renderer.render(scene, camera); renderErrors = 0; } catch (e) { renderErrors++; if (renderLogs++ < 3) console.error('render-Fehler', e); if (renderErrors === 5) { if (composer) { composerBroken = true; try { disposeComposer(); } catch (e2) { composer = null; } try { if (HIMMEL) HIMMEL.setStufe(himmelStufe(), true); } catch (e3) { } renderErrors = 0; showMsg('EFFEKTE ABGESCHALTET (RENDER-FEHLER)', 4000); } else if (!renderWarned) { renderWarned = true; showMsg('FEHLER BEI DER GRAFIK – bitte melden (Esc › Fehler melden)', 4000); } } }
 });
-let loopErrors = 0, renderErrors = 0, renderLogs = 0, renderWarned = false;
+let loopErrors = 0, renderErrors = 0, renderLogs = 0, renderWarned = false; var ruheBild = 0;

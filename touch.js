@@ -18,7 +18,7 @@
 #tc .w{right:calc(5vw + 33vmin);bottom:5vh;width:11vmin;height:11vmin;max-width:72px;max-height:72px;font-size:18px}
 #tc .ctx1{right:calc(5vw + 33vmin);bottom:calc(5vh + 13vmin);width:10.5vmin;height:10.5vmin;max-width:68px;max-height:68px;font-size:15px}
 #tc .ctx2{right:calc(5vw + 45vmin);bottom:5vh;width:10.5vmin;height:10.5vmin;max-width:68px;max-height:68px;font-size:15px}
-#tc .top{top:8px;width:40px;height:40px;border-radius:10px;font-size:17px}#tcx{position:fixed;z-index:70;top:calc(8px + env(safe-area-inset-top,0px));right:calc(8px + env(safe-area-inset-right,0px));width:46px;height:46px;border-radius:12px;border:2px solid #ffffffb0;background:#000000c0;color:#fff;font:800 20px system-ui;display:none}#tc .top.x{display:none}#tc.mehr .top.x{display:flex}
+#tc .top{top:8px;width:40px;height:40px;border-radius:10px;font-size:17px}#tcx{position:fixed;z-index:70;top:calc(8px + env(safe-area-inset-top,0px));right:calc(8px + env(safe-area-inset-right,0px));width:46px;height:46px;border-radius:12px;border:2px solid #ffffffb0;background:#000000c0;color:#fff;font:800 20px system-ui;display:none}#tc .b *{pointer-events:none}#menu .box,#start,#shop .box,#metromenu,#tabov .box,#phone .ps-phone__page,#phone .ps-phone__home{touch-action:pan-y;-webkit-overflow-scrolling:touch}#tc .top.x{display:none}#tc.mehr .top.x{display:flex}
 body{overscroll-behavior:none;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}#hud{inset:env(safe-area-inset-top,0px) env(safe-area-inset-right,0px) env(safe-area-inset-bottom,0px) env(safe-area-inset-left,0px)!important}
 #phonebtn{top:calc(8px + env(safe-area-inset-top,0px))!important;right:calc(146px + env(safe-area-inset-right,0px))!important;width:40px!important;height:40px!important;font-size:19px!important;border-radius:10px!important;padding:0!important}#hud .tl{left:26px!important}#vehname{right:auto!important;left:50%!important;bottom:auto!important;top:26%!important;transform:translateX(-50%);font-size:22px!important}#hint{opacity:0!important}
 #minimap{position:fixed!important;left:calc(8px + env(safe-area-inset-left, 0px))!important;top:calc(78px + env(safe-area-inset-top, 0px))!important;bottom:auto!important;width:96px!important;height:96px!important;pointer-events:auto!important}
@@ -51,7 +51,7 @@ body{overscroll-behavior:none;-webkit-touch-callout:none;-webkit-user-select:non
   const G = () => window.G; const key = (code, down) => dispatchEvent(new KeyboardEvent(down ? 'keydown' : 'keyup', { code, bubbles: true }));
 
   // WebAudio auf iOS/Safari nach Tab-Wechsel oder erstem Tippen automatisch aufwecken
-  function resumeAudio() { const g = G(); if (g && g.SND && g.SND.ctx && g.SND.ctx.state === 'suspended') g.SND.ctx.resume().catch(() => {}); }
+  function resumeAudio() { const g = G(), S = g && g.X && g.X.SND; if (S && S.ctx && S.ctx.state !== 'running' && S.ctx.state !== 'closed') { try { S.ctx.resume().catch(() => {}); } catch (e) { /* bleibt aus */ } } } // SND liegt in G.X, nicht in G
   for (const ev of ['touchstart', 'touchend', 'click']) addEventListener(ev, resumeAudio, { passive: true }); // iOS lässt Ton erst nach touchend/click zu
   // iOS meldet die neue Größe nach dem Drehen und beim Ein-/Ausblenden der Adressleiste verspätet: Größe nachziehen
   const nachziehen = () => { for (const ms of [120, 450, 900]) setTimeout(() => dispatchEvent(new Event('resize')), ms); };
@@ -62,7 +62,7 @@ body{overscroll-behavior:none;-webkit-touch-callout:none;-webkit-user-select:non
   const stick = el.querySelector('.stick'), knob = el.querySelector('.knob');
   let sid = null;
   const held = { KeyW: false, KeyS: false, KeyA: false, KeyD: false, ShiftLeft: false };
-  const setK = (k, v) => { if (held[k] === v) return; held[k] = v; const g = G(); if (g) g.keys[k] = v; };
+  const setK = (k, v) => { const g = G(); if (held[k] === v && (!g || !!g.keys[k] === v)) return; held[k] = v; if (g) g.keys[k] = v; }; // auch nachziehen, wenn ein Menü die Tasten geleert hat
   function stickMove(t) {
     const r = stick.getBoundingClientRect(); const R = r.width / 2 || 1;
     let dx = t.clientX - (r.left + R), dy = t.clientY - (r.top + R);
@@ -85,7 +85,7 @@ body{overscroll-behavior:none;-webkit-touch-callout:none;-webkit-user-select:non
   addEventListener('deviceorientation', e => {
     const g = G();
     if (!g || !g.opts || !g.opts.gyro || !g.player || !g.player.car || sid !== null) return;
-    const ang = (screen.orientation && screen.orientation.angle) || window.orientation || 90;
+    const ang = screen.orientation ? screen.orientation.angle : (window.orientation ?? 90); // 0 (hochkant) ist ein gültiger Wert
     const tilt = ang === 90 ? (e.beta || 0) : ang === -90 || ang === 270 ? -(e.beta || 0) : (e.gamma || 0);
     const norm = Math.abs(tilt) < 3 ? 0 : Math.max(-1, Math.min(1, -tilt / 28));
     g.player.touchSteer = norm;
@@ -102,7 +102,7 @@ body{overscroll-behavior:none;-webkit-touch-callout:none;-webkit-user-select:non
   addEventListener('touchstart', e => {
     if (!started()) return;
     for (const t of e.changedTouches) {
-      if (t.target.closest && t.target.closest('#tc .b, #tc .stick, #menu, #shop, #metromenu, #fb, #hotbar, #wbar, #bigmap, #minimap, #sub, #obj, #phone .ps-phone, #phonebtn, #tabov, #gl_lost')) continue;
+      if (t.target.closest && t.target.closest('#tc .b, #tc .stick, #menu, #shop, #metromenu, #zuhausemenu, #tabov, #minispiel, #vokabaum, #fb, #hotbar, #wbar, #bigmap, #minimap, #sub, #obj, #phone .ps-phone, #phonebtn, #tabov, #gl_lost')) continue;
       // links unten aufsetzen: der Stick springt unter den Daumen; sonst umsehen
       if (sid === null && t.clientX < innerWidth * (innerHeight > innerWidth ? 0.5 : 0.38) && t.clientY > innerHeight * 0.35) {
         const tr = el.getBoundingClientRect(), R = stick.offsetWidth / 2; stick.style.left = (t.clientX - tr.left - R) + 'px'; stick.style.top = (t.clientY - tr.top - R) + 'px'; stick.style.bottom = 'auto'; sid = t.identifier; stickMove(t);
@@ -230,7 +230,7 @@ body{overscroll-behavior:none;-webkit-touch-callout:none;-webkit-user-select:non
     if (showDown) setT(downB, isHeli ? '▼ SINKEN' : '▼ RUNTER');
 
     // 4) Zielen-Knopf im Hubschrauber oder bei Spawner ausblenden
-    aimB.classList.toggle('hide', isHeli || spawner || isCannon);
+    aimB.classList.toggle('hide', isHeli || spawner || isCannon); if ((isHeli || spawner || isCannon) && p.aimHold) { p.aimHold = false; aimB.classList.remove('on'); }
 
     // 5) Kontextknöpfe ctx1 (Hupe/Sirene/Nachladen) & ctx2 (Licht/Zünder)
     if (car && !isHeli) {
@@ -285,5 +285,5 @@ body{overscroll-behavior:none;-webkit-touch-callout:none;-webkit-user-select:non
 
   // Doppeltipp-Zoom und Scrollen verhindern
   document.addEventListener('gesturestart', e => e.preventDefault());
-  document.documentElement.style.touchAction = 'none';
+  for (const c of document.querySelectorAll('canvas')) if (!c.closest('#menu, #phone, #shop')) c.style.touchAction = 'none'; // nicht auf <html>: Safari sperrte sonst das Scrollen in Menü, Läden und Handy
 })();

@@ -10,7 +10,7 @@ export function initEulen(X) {
   const xy = ([lon, lat]) => [(lon - LON0) * Math.PI / 180 * R * Math.cos(LAT0 * Math.PI / 180), -(lat - LAT0) * Math.PI / 180 * R];
   const SPAR = 'eulenMarathon';
   let pendingStart = null; let routes = [], posters = [], run = null, finish = null, startMark = null, t = 0;
-  const load = async () => { for (const u of ['https://frischlufteulen.de/api/spiel/strecken.json']) { try { const r = await fetch(u); if (!r.ok) continue; const d = await r.json(); if (d && d.strecken && d.strecken.length) return d.strecken; } catch (e) { /* nächste Quelle */ } } return []; };
+  const load = async () => { for (const u of ['https://frischlufteulen.de/api/spiel/strecken.json']) { try { const r = await fetch(u, { signal: typeof AbortSignal !== 'undefined' && AbortSignal.timeout ? AbortSignal.timeout(8000) : undefined }); if (!r.ok) continue; const d = await r.json(); if (d && d.strecken && d.strecken.length) return d.strecken; } catch (e) { /* nächste Quelle */ } } return []; };
   // API-Daten landen per innerHTML in card(): Name ohne HTML-Zeichen, Länge als Zahl, Link nur auf frischlufteulen.de (Nachttest 13.11.)
   const clean = r => { const l = String(r.link || ''); return { name: String(r.name || 'Strecke').replace(/[<>&"'`]/g, '').slice(0, 80), laenge_km: Math.round((Number(r.laenge_km) || 0) * 10) / 10, link: /^https:\/\/frischlufteulen\.de(\/[^"'<>\s]*)?$/.test(l) ? l : 'https://frischlufteulen.de/' }; };
   // Zuschnitt auf das Spielgebiet (#61): nur Punkte in vorhandenen Kacheln (Index wie interiors.js reachable), längster zusammenhängender Abschnitt
@@ -23,7 +23,7 @@ export function initEulen(X) {
     return { ...r, pts, km_gebiet: km, ganz: full, ziel: endIn ? all[all.length - 1] : pts[pts.length - 1], info: full ? `${r.laenge_km} km` : `Abschnitt im Spielgebiet: ${String(km).replace('.', ',')} km von ${String(r.laenge_km).replace('.', ',')} km` }; };
   // use(): auch für die Probe im Spieltest, deren Ursprung (127.0.0.1) der Endpunkt per CORS nicht bedient
   const use = s => { if (startMark) { for (const m of startMark) scene.remove(m); startMark = null; } routes = s.map(r => prep({ ...r, ...clean(r), marathon: r.marathon || /marathon/i.test(r.name || ''), mega: /megamarsch/i.test(r.name || '') })).filter(Boolean); if (routes.length) { for (const p of posters) scene.remove(p); posters = []; /* Säulen neu verteilen, jetzt mit Eulen-Motiv */ } buildStart(); };
-  load().then(use);
+  load().then(s => { if (s.length) use(s); }); // leere Antwort (Netz weg, CORS) darf schon gesetzte Strecken nicht löschen
 
   // ---------- Plakat (gezeichnet): Eule, Titel, Streckenname ----------
   const posterTex = name => canvasTex(256, 384, (c, w, h) => { const g = c.createLinearGradient(0, 0, 0, h); g.addColorStop(0, '#1f5b3a'); g.addColorStop(1, '#0f2f20'); c.fillStyle = g; c.fillRect(0, 0, w, h);
@@ -124,7 +124,7 @@ export function initEulen(X) {
       if (u.i >= u.W.length) done(); } }
   function best(key, ms) { let a = []; try { a = JSON.parse(localStorage.getItem('eulenBest') || '{}')[key] || []; } catch (e) { /* leer */ } a.push({ ms, am: new Date().toISOString().slice(0, 10) }); a.sort((p, q) => p.ms - q.ms); a = a.slice(0, 5);
     try { const all = JSON.parse(localStorage.getItem('eulenBest') || '{}'); all[key] = a; localStorage.setItem('eulenBest', JSON.stringify(all)); } catch (e) { /* nur Anzeige */ } return a; }
-  function done() { const u = run, r = u.r, mode = u.mode; stop(); writeSave(mode, null); const ms = u.times.reduce((a, b) => a + b, 0); const len = r.len || 1;
+  function done() { const u = run, r = u.r, mode = u.mode; stop(); writeSave(mode, null); const ms = u.times.reduce((a, b) => a + b, 0); const len = r.len || r.pts.reduce((a, q, i) => i ? a + Math.hypot(q[0] - r.pts[i - 1][0], q[1] - r.pts[i - 1][1]) : 0, 0) || 1; /* normale Läufe hatten keine Länge und bekamen immer Bronze */
     const vMax = V[mode] * (mode === 'lauf' ? ((X.perks && X.perks.run) || 1) : 1), frac = len / (ms / 1000) / vMax; const [, tier, ic] = TIER.find(([f]) => frac >= f);
     const real = ms * REAL[mode] * (r.laenge_km && r.km_gebiet ? r.laenge_km / r.km_gebiet : 1);
     let pay = 0; if (big(r)) { pay = PAY(r)[mode]; player.money = (player.money || 0) + pay; player.hp = 100; if ('stamina' in player) player.stamina = 1; for (let k = 0; k < 6; k++) setTimeout(() => burst(player.pos.clone().setY(player.pos.y + 3), [0xff4060, 0xffd84a, 0x3ad17a, 0x4fa8ff][k % 4], 40), k * 250); }

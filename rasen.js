@@ -158,7 +158,7 @@ void RE_Direct_Rasen( const in IncidentLight directLight, const in vec3 geometry
   // Platz wächst in Schritten von 50 %, damit nicht fast jedes assemble() ein neues InstancedMesh samt MB-großer Arrays anlegt.
   const geo = tuftGeo(THREE);
   let mesh = null, cap = 0, lastAsm = 0;
-  function ensureMesh(n) { if (mesh && cap >= n) return; if (mesh) { scene.remove(mesh); mesh.dispose(); } cap = Math.min(maxCap, Math.max(4000, Math.ceil(n * 1.5)));
+  function ensureMesh(n) { if (mesh && (cap >= n || cap >= maxCap)) return; /* an der Obergrenze nicht bei jedem Zusammenbau neu anlegen */ if (mesh) { scene.remove(mesh); mesh.dispose(); } cap = Math.min(maxCap, Math.max(4000, Math.ceil(n * 1.5)));
     mesh = new THREE.InstancedMesh(geo, mat, cap); mesh.count = 0; mesh.frustumCulled = false; mesh.castShadow = false; mesh.receiveShadow = true; mesh.name = 'rasen-halme';
     mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage); mesh.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(cap * 3), 3); scene.add(mesh); }
 
@@ -180,7 +180,7 @@ void RE_Direct_Rasen( const in IncidentLight directLight, const in vec3 geometry
   function vnoise(x, z) { const ix = Math.floor(x), iz = Math.floor(z), fx = x - ix, fz = z - iz, u = fx * fx * (3 - 2 * fx), v = fz * fz * (3 - 2 * fz);
     const a = vh(ix, iz), b = vh(ix + 1, iz), c = vh(ix, iz + 1), d = vh(ix + 1, iz + 1); return a + (b - a) * u + (c - a) * v + (a - b - c + d) * u * v; }
   function buildCell(cx, cz) {
-    const x0 = cx * CELL, z0 = cz * CELL, list = buckets.get(Math.floor((x0 + 4) / BUCKET) + ',' + Math.floor((z0 + 4) / BUCKET)); const out = { m: null, c: null, n: 0, v: gen }; if (!list) return out;
+    const x0 = cx * CELL, z0 = cz * CELL, list = buckets.get(Math.floor((x0 + 4) / BUCKET) + ',' + Math.floor((z0 + 4) / BUCKET)); const out = { m: null, c: null, n: 0, v: gen, cx, cz }; if (!list) return out;
     // 1-m-Raster: Grünfläche und frei (kein Weg, Haus, Wasser, Brücke); mit einem Feld Rand rundum (10 × 10, Index +1),
     // damit Büschel am Zellrand den Nachbarn kennen. Randfelder können in einem anderen 64-m-Eimer liegen.
     const ok = new Array(100).fill(null); let any = false;
@@ -205,8 +205,11 @@ void RE_Direct_Rasen( const in IncidentLight directLight, const in vec3 geometry
       tc.setHex(e.col); const dry = dryP * 0.38 + (1 - patch) * 0.06, B = 1.7; /* Spieltest 43419847797: Halme ohne Aufhellung deutlich dunkler als der Boden */ C[k * 3] = B * (0.55 + tc.r * 1.2) * lv * (1 + dry * 0.5); C[k * 3 + 1] = B * (0.55 + tc.g * 0.9) * lv * (1 + dry * 0.15); C[k * 3 + 2] = B * (0.55 + tc.b * 1.0) * lv * (1 - dry * 0.25); k++; }
     out.m = M.subarray(0, k * 16); out.c = C.subarray(0, k * 3); out.n = k; return out;
   }
-  function assemble() { let n = 0; for (const c of cells.values()) n += c.n; ensureMesh(n); n = Math.min(n, cap); let o = 0; const M = mesh.instanceMatrix.array, C = mesh.instanceColor.array;
-    for (const c of cells.values()) { if (!c.n) continue; const take = Math.min(c.n, cap - o); if (take <= 0) break; M.set(c.m.subarray(0, take * 16), o * 16); C.set(c.c.subarray(0, take * 3), o * 3); o += take; }
+  function assemble() { let n = 0; for (const c of cells.values()) n += c.n; ensureMesh(n); const liste = [...cells.values()];
+    // mehr Halme als Platz: die nächsten Zellen zuerst, sonst fehlt der Rasen direkt vor der Kamera
+    if (n > cap) { const p = camera.position, qx = p.x / CELL, qz = p.z / CELL; liste.sort((a, b) => ((a.cx - qx) ** 2 + (a.cz - qz) ** 2) - ((b.cx - qx) ** 2 + (b.cz - qz) ** 2)); }
+    n = Math.min(n, cap); let o = 0; const M = mesh.instanceMatrix.array, C = mesh.instanceColor.array;
+    for (const c of liste) { if (!c.n) continue; const take = Math.min(c.n, cap - o); if (take <= 0) break; M.set(c.m.subarray(0, take * 16), o * 16); C.set(c.c.subarray(0, take * 3), o * 3); o += take; }
     mesh.count = o; total = o; dirty = false; lastAsm = performance.now(); if (!o) return;
     // nur den belegten Teil hochladen, nicht den ganzen Puffer bis cap
     mesh.instanceMatrix.clearUpdateRanges(); mesh.instanceMatrix.addUpdateRange(0, o * 16); mesh.instanceMatrix.needsUpdate = true;

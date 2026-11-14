@@ -28,7 +28,7 @@ void main(){ float s = texture2D(uMap, vUv).r; vec3 col = vColor * s * (1.0 + uW
   function attach(spotM, lamps) {
     const a = new Float32Array(lamps.length * 4);
     lamps.forEach(([x, z], i) => { const h = hash(x, z), led = h < 0.35, b = 0.32 + hash(z, x) * 0.1 /* Nachbesserung #152: Kern war fast weiß, jetzt wärmer und weniger überstrahlt */, col = led ? LED : SODIUM; a[i * 4] = col[0] * b; a[i * 4 + 1] = col[1] * b; a[i * 4 + 2] = col[2] * b; a[i * 4 + 3] = 0.45 + h * 0.3; });
-    spotM.geometry = spotM.geometry.clone(); spotM.geometry.setAttribute('aPool', new THREE.InstancedBufferAttribute(a, 4)); spotM.material = material; spotM.renderOrder = 1;
+    spotM.geometry = spotM.geometry.clone(); spotM.geometry.userData = {}; /* clone() übernimmt userData.shared der Vorlage, dann gäbe disposeHierarchy die Kopie nie frei */ spotM.geometry.setAttribute('aPool', new THREE.InstancedBufferAttribute(a, 4)); spotM.material = material; spotM.renderOrder = 1;
   }
   // day: 0 Nacht … 1 Tag; wet: 0…1
   function update(day, wet) { uni.uNight.value = Math.min(1, Math.max(0, (0.4 - day) / 0.3)); uni.uWet.value = wet || 0; }

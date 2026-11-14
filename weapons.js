@@ -111,7 +111,7 @@ export function initWeapons(X) {
     if (!quiet) { sfx('click'); barT = 2; } drawBar(); return true;
   }
   // Ziffern: 1 Nahkampf, 2 Pistole, 3 MP, 4 Schrotflinte, 5 Gewehr, 6 Spray/Taser, 7 Farbe, 8 Böller, 9 Rauch/Bengalo, 0 Granate
-  function slotKey(n) { const ids = ORDER.filter(k => DEF[k].slot === n && inv[k] && allowed(k)); if (!ids.length) { barT = 1.5; drawBar(); return; } const i = ids.indexOf(cur); select(ids[(i + 1) % ids.length]); }
+  function slotKey(n) { const ids = ORDER.filter(k => DEF[k].slot === n && inv[k] && allowed(k)); if (!ids.length) { barT = 1.5; drawBar(); return; } const i = ids.indexOf(cur), nid = ids[(i + 1) % ids.length]; if (nid !== cur) select(nid); /* dieselbe Waffe nochmal wählen brach das Nachladen ab */ else { barT = 1.5; drawBar(); } }
   function quick() { select(inv[last] && allowed(last) ? last : 'fists'); }
   function cycle(dir) { const own = ORDER.filter(k => inv[k] && allowed(k)); const i = own.indexOf(cur); select(own[(i + dir + own.length) % own.length]); }
   function canAim() { const k = DEF[cur].kind; return k !== 'melee'; }
@@ -120,7 +120,7 @@ export function initWeapons(X) {
   const barEl = document.getElementById('wbar'), wEl = document.getElementById('weapon'); let lastW = '', lastB = '', lastBarDisp = '';
   if (barEl) {
     barEl.style.pointerEvents = 'auto';
-    const pickW = e => { const sl = e.target.closest && e.target.closest('[data-w]'); if (!sl) return; e.stopPropagation(); e.preventDefault(); select(sl.dataset.w); };
+    const pickW = e => { const sl = e.target.closest && e.target.closest('[data-w]'); if (!sl) return; e.stopPropagation(); e.preventDefault(); if (sl.dataset.w !== cur) select(sl.dataset.w); };
     barEl.addEventListener('mousedown', pickW);
     barEl.addEventListener('touchstart', pickW, { passive: false });
   }
