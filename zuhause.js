@@ -200,6 +200,7 @@ export function initZuhause(X, IN) {
     R.triggers.push({ x: -3.5, z: 1.5, r: 1.3, label: 'F · Kleiderschrank: Outfit wechseln', act: () => menu('schrank') });
     R.triggers.push({ x: 2.0, z: 2.6, r: 1.3, label: 'F · Bett: schlafen (Zeit vorstellen, speichert)', act: () => menu('bett') });
     if (A.WOHNEN) R.triggers.push({ x: -1.5, z: 0.3, r: 1.0, label: 'F · Vertrag ansehen', act: () => A.WOHNEN.oeffnen() }); // am Tisch
+    if (A.ERINNERN && A.ERINNERN.raum) { try { A.ERINNERN.raum(R); } catch (e) { console.warn('zuhause: Wand', e); } } // Wand mit Fotos und Erinnerungen, vier Rahmen (erinnerungen.js)
     return R;
   }
   function enter() {

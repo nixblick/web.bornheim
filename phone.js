@@ -44,6 +44,7 @@ export function initPhone(X, S) {
     { id: 'redscout', label: 'redscout', icon: '🔎', build: p => { const W = X.WOHNEN; if (!W) throw new Error('Wohnen fehlt'); W.app(p, { toast, esc }, 'markt'); }, show: () => !!X.WOHNEN },
     { id: 'statistik', label: 'Statistik', icon: '📊', build: appStats },
     { id: 'kamera', label: 'Kamera', icon: '📷', build: appCam },
+    { id: 'album', label: 'Album', icon: '🖼', build: p => { const E = X.ERINNERN; if (!E) throw new Error('Album fehlt'); E.app(p, { toast }); }, show: () => !!X.ERINNERN },
     { id: 'speichern', label: 'Speichern', icon: '💾', build: appSave },
     { id: 'kreativ', label: 'Kreativ', icon: '🛠', build: appCheats, show: () => X.creative && X.creative.on },
   ];
@@ -65,8 +66,16 @@ export function initPhone(X, S) {
   function appSave(p) { p.innerHTML = `<div class="ps-pbtns"><button class="ps-pbtn is-amber" data-a="save">💾 Schnellspeichern (F6)</button><button class="ps-pbtn" data-a="menu">Pausenmenü öffnen</button></div>`;
     p.querySelector('[data-a=save]').onclick = () => { try { X.saveGame(true, true); /* bewusst gespeichert */ toast('Gespeichert', 'success'); } catch (e) { toast('Speichern fehlgeschlagen', 'error'); } };
     p.querySelector('[data-a=menu]').onclick = () => { close(); X.openMenu && X.openMenu(); }; }
-  function appCam(p) { p.innerHTML = `<div class="ps-pbtns"><p class="ps-pempty">Foto vom Spielbild, ohne Handy. Wird als PNG heruntergeladen.</p><button class="ps-pbtn is-amber" data-a="shot">📷 Foto machen</button></div>`;
-    p.querySelector('[data-a=shot]').onclick = () => { root.style.visibility = 'hidden'; requestAnimationFrame(() => { try { const G = /** @type {any} */ (window).G, cv = X.renderer.domElement; const c = G && G.composerRef && G.composerRef(); if (c && c.render) c.render(); else X.renderer.render(X.scene, X.camera); const a = document.createElement('a'); a.href = cv.toDataURL('image/png'); a.download = 'bornheim-' + new Date().toISOString().slice(0, 19).replace(/[T:]/g, '-') + '.png'; a.click(); toast('Foto gespeichert', 'success'); } catch (e) { toast('Foto nicht möglich', 'error'); } root.style.visibility = ''; }); }; }
+  function appCam(p) { const E = X.ERINNERN; // mit Album (erinnerungen.js): Foto ins Album, auf Wunsch zusätzlich als PNG; ohne: nur PNG wie bisher
+    p.innerHTML = `<div class="ps-pbtns"><p class="ps-pempty">${E ? `Foto vom Spielbild, ohne Handy. Es landet im Album (höchstens ${E.MAX_FOTOS} Fotos). Ansehen: App „Album“ oder die Wand zu Hause.` : 'Foto vom Spielbild, ohne Handy. Wird als PNG heruntergeladen.'}</p>${E ? '<button class="ps-pbtn is-amber" data-a="album">📷 Foto ins Album</button><button class="ps-pbtn" data-a="shot">📷 Foto + Datei speichern</button>' : '<button class="ps-pbtn is-amber" data-a="shot">📷 Foto machen</button>'}</div>`;
+    const foto = datei => { root.style.visibility = 'hidden'; requestAnimationFrame(() => {
+      try {
+        if (E) E.fotoAufnehmen({ datei }).then(m => { if (m) toast(`Foto ${m.anzahl} von ${E.MAX_FOTOS} im Album` + (datei ? ' · Datei gespeichert' : ''), 'success'); else toast(E.fotos().length >= E.MAX_FOTOS ? 'Album voll: nur Favoriten. Erst ein Foto löschen.' : 'Foto nicht möglich', 'error'); });
+        else { const G = /** @type {any} */ (window).G, cv = X.renderer.domElement; const c = G && G.composerRef && G.composerRef(); if (c && c.render) c.render(); else X.renderer.render(X.scene, X.camera); const a = document.createElement('a'); a.href = cv.toDataURL('image/png'); a.download = 'bornheim-' + new Date().toISOString().slice(0, 19).replace(/[T:]/g, '-') + '.png'; a.click(); toast('Foto gespeichert', 'success'); }
+      } catch (e) { toast('Foto nicht möglich', 'error'); }
+      root.style.visibility = ''; }); };
+    const ba = p.querySelector('[data-a=album]'); if (ba) ba.onclick = () => foto(false);
+    p.querySelector('[data-a=shot]').onclick = () => foto(true); }
   function appCheats(p) { p.innerHTML = `<div class="ps-pbtns"><p class="ps-pempty">Nur im Kreativmodus.</p><button class="ps-pbtn" data-a="geld">💶 +1000 €</button><button class="ps-pbtn" data-a="heil">❤ Gesundheit voll</button><button class="ps-pbtn" data-a="fahndung">🚓 Fahndung weg</button></div>`;
     const ok = () => X.creative && X.creative.on;
     p.querySelector('[data-a=geld]').onclick = () => { if (ok()) { player.money = (player.money || 0) + 1000; toast('+1000 €', 'success'); } };

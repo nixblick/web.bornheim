@@ -110,7 +110,7 @@ body{overscroll-behavior:none;-webkit-touch-callout:none;-webkit-user-select:non
   addEventListener('touchstart', e => {
     if (!started()) return;
     for (const t of e.changedTouches) {
-      if (t.target.closest && t.target.closest('#tc .b, #tc .stick, #menu, #shop, #metromenu, #zuhausemenu, #tabov, #minispiel, #vokabaum, #fb, #hotbar, #wbar, #bigmap, #minimap, #sub, #obj, #phone .ps-phone, #phonebtn, #tabov, #gl_lost')) continue;
+      if (t.target.closest && t.target.closest('#tc .b, #tc .stick, #menu, #shop, #metromenu, #zuhausemenu, #erinnerwand, #tabov, #minispiel, #vokabaum, #fb, #hotbar, #wbar, #bigmap, #minimap, #sub, #obj, #phone .ps-phone, #phonebtn, #tabov, #gl_lost')) continue;
       // links unten aufsetzen: der Stick springt unter den Daumen; sonst umsehen
       if (sid === null && t.clientX < innerWidth * (innerHeight > innerWidth ? 0.5 : 0.38) && t.clientY > innerHeight * 0.35) {
         const tr = el.getBoundingClientRect(), R = stick.offsetWidth / 2; stick.style.left = (t.clientX - tr.left - R) + 'px'; stick.style.top = (t.clientY - tr.top - R) + 'px'; stick.style.bottom = 'auto'; sid = t.identifier; stickMove(t);

@@ -90,6 +90,8 @@ export function initWohnen(X) {
     try { if (A.PHONE && A.PHONE.nachricht) A.PHONE.nachricht(wer, lang || kurz); } catch (e) { /* ohne Handy */ }
     try { A.card(titel, kurz, sek); } catch (e) { /* ohne HUD */ }
   }
+  /** Signal an X.listeners (Tagebuch in erinnerungen.js): art = einzug | raeumung | kauf | verkauf | versteigerung */
+  function signal(art, o) { try { for (const f of A.listeners || []) f('wohnen', player.pos, { art, id: o.id, name: o.name, lage: o.lage }); } catch (e) { console.warn('wohnen: Signal', e); } }
 
   // ---------- Wohnung in zuhause.js nachführen ----------
   function abgleich() {
@@ -203,6 +205,7 @@ export function initWohnen(X) {
     if (!st.wohnsitz) { st.wohnsitz = id; st.zuletzt = id; st.geraeumt = false; } // ohne Wohnung: sofort einziehen
     speichern(); abgleich(); schildT = 0;
     melde('GEKAUFT', `${o.name} · ${o.lage}`, `Kaufvertrag für ${o.name} (${o.lage}, ${o.qm} m²): Kaufpreis ${eur(r.preis)}. Bar gezahlt: ${eur(r.eigen)} Eigenkapital und ${eur(r.neben)} Nebenkosten. Darlehen: ${eur(r.darlehen)}, Rate ${eur(r.rate)} je Monat, dazu ${eur(r.hausgeld)} Hausgeld.${zurueck ? ' Der Mietvertrag endet, Kaution zurück: ' + eur(zurueck) + '.' : ''} Im Grundbuch stehst du. An erster Stelle steht die Bank.`, 6, BANK);
+    signal('kauf', o);
     return { ok: true, betrag: r.bar, zurueck };
   }
   /** Sondertilgung: Betrag in Euro oder 'alles'; höchstens die Restschuld. */
@@ -227,6 +230,7 @@ export function initWohnen(X) {
     const e = besitz(id), o = objekt(id); if (!e || laeuft) return { ok: false, grund: e ? 'Gerade nicht möglich' : 'Gehört dir nicht' };
     const a = abrechnen(e, VERKAUF); verlassen(id); speichern(); abgleich(); schildT = 0;
     melde('VERKAUFT', `${o.name} · Auszahlung ${eur(a.auszahlung)}`, `Verkauf von ${o.name} (${o.lage}): Erlös ${eur(a.erloes)}, das sind 92 % deines Kaufpreises; der Rest sind Makler, Notar und Eile. Abgelöst: ${eur(a.rest)} Darlehen${a.offen ? ' und ' + eur(a.offen) + ' offene Rate' : ''}. Auszahlung: ${eur(a.auszahlung)}.${a.fehlt ? ' Offen bleiben ' + eur(a.fehlt) + '.' : ''}`, 6, BANK);
+    signal('verkauf', o);
     return { ok: true, ...a };
   }
   /** Rest nach einer Versteigerung zahlen (ganz). */
@@ -277,6 +281,7 @@ export function initWohnen(X) {
     st.miete = id; st.zuletzt = id; st.wohnsitz = id; st.kaution = k.kaution; st.schuld = 0; st.stufe = 0; st.stufeTag = 0; st.monatBezahlt = monat(); st.frei = false; st.geraeumt = false;
     speichern(); abgleich();
     melde('MIETVERTRAG', `${o.name} · ${o.lage}`, `Mietvertrag für ${o.name} (${o.lage}, ${o.qm} m²): Kaution ${eur(k.kaution)} und erste Miete ${eur(k.erste)} gezahlt${k.zurueck ? ', alte Kaution ' + eur(k.zurueck) + ' zurück' : ''}. Nächste Miete in ${tage(bisErster())}.`, 5);
+    signal('einzug', o);
     return { ok: true, betrag: k.summe };
   }
   /** Kündigen: gilt in Stufe 1 sofort. Kaution zurück; ist Miete offen, wird sie mit der Kaution verrechnet. */
@@ -354,7 +359,7 @@ export function initWohnen(X) {
   function raeumen() {
     const o = objekt(st.miete); if (!o || laeuft) return false;
     hinaus(o.id, () => {
-      AUF[o.id] = 1.15; st.miete = null; st.kaution = 0; st.stufe = 0; st.stufeTag = 0; st.frei = false; // Kaution einbehalten, Mietschuld bleibt
+      signal('raeumung', o); AUF[o.id] = 1.15; st.miete = null; st.kaution = 0; st.stufe = 0; st.stufeTag = 0; st.frei = false; // Kaution einbehalten, Mietschuld bleibt
       if (st.wohnsitz === o.id) { verlassen(o.id); st.geraeumt = !st.wohnsitz; } speichern();
       const rest = st.schuld ? ` Offen bleiben ${eur(st.schuld)}.` : '';
       try { if (A.PHONE && A.PHONE.nachricht) A.PHONE.nachricht(HV, `Die Wohnung (${o.name}, ${o.lage}) wurde geräumt, das Schloss getauscht. Die Kaution wird einbehalten.${rest} Deine Sachen sind eingelagert. Die Wohnung ist ab morgen wieder inseriert, 15 % teurer. Eine neue Wohnung findest du in der App „Wohnen“.`); } catch (e) { /* ohne Handy */ }
@@ -365,7 +370,7 @@ export function initWohnen(X) {
   function versteigern(id) {
     const e = besitz(id), o = objekt(id); if (!e || laeuft) return false;
     hinaus(id, () => {
-      const a = abrechnen(e, VERSTEIGERUNG);
+      const a = abrechnen(e, VERSTEIGERUNG); signal('versteigerung', o);
       if (st.wohnsitz === id) { verlassen(id); st.geraeumt = !st.wohnsitz; } speichern(); schildT = 0;
       const ende = a.fehlt ? `Das reicht nicht: Offen bleiben ${eur(a.fehlt)}. Das Haus hat jetzt der Fonds, die Schulden behältst du.` : a.auszahlung ? `Auszahlung an dich: ${eur(a.auszahlung)}.` : 'Für dich bleibt nichts übrig.';
       try { if (A.PHONE && A.PHONE.nachricht) A.PHONE.nachricht(BANK, `Zwangsversteigerung: ${o.name} (${o.lage}) ist versteigert. Den Zuschlag bekam ein Fonds, für 70 % deines Kaufpreises: ${eur(a.erloes)}. Davon gehen ${eur(a.rest)} Restschuld und ${eur(a.offen)} offene Rate an uns. ${ende} Dein Eigenkapital und die Nebenkosten sind verbraucht.`); } catch (x) { /* ohne Handy */ }

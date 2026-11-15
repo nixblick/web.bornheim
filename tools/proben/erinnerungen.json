@@ -1,0 +1,69 @@
+[
+ {
+  "n": "er_1_leer",
+  "x": -138,
+  "z": 372,
+  "hour": 13,
+  "wait": 8000,
+  "js": "(async () => { const G = window.G, w = ms => new Promise(r => setTimeout(r, ms)); for (let i = 0; i < 40 && !(window.ERINNERN && window.WOHNEN && G.X.ZUHAUSE && G.PHONE); i++) await w(500); const E = window.ERINNERN; if (G.player.car) G.toggleCar(); G.player.wanted = 0; if (G.STORY && G.STORY.busy) G.STORY.stop(); await E.bereit; await E.leeren(); window.WOHNEN.zuruecksetzen(); window.__e1 = { fotos: E.fotos().length, buch: E.tagebuch().length, speicher: E.speicher, max: [E.MAX_FOTOS, E.MAX_TAGEBUCH, E.MAX_SEITE, E.MAX_RAHMEN], apps: G.PHONE.apps, gleich: G.X.ERINNERN === E }; return JSON.stringify(window.__e1); })()",
+  "expect": "(r => !!r && r.fotos === 0 && r.buch === 0 && r.speicher === 'indexeddb' && r.max.join() === '60,200,960,4' && r.apps.includes('album') && r.apps.includes('kamera') && r.gleich)(window.__e1)"
+ },
+ {
+  "n": "er_2_foto",
+  "wait": 1500,
+  "js": "(async () => { const E = window.ERINNERN, m = await E.fotoAufnehmen(), b = m ? E.blob(m.id) : null; let farben = 0; if (b) { const bm = await createImageBitmap(b), c = document.createElement('canvas'); c.width = 64; c.height = 36; const x = c.getContext('2d'); x.drawImage(bm, 0, 0, 64, 36); const d = x.getImageData(0, 0, 64, 36).data, s = new Set(); for (let i = 0; i < d.length; i += 4) s.add((d[i] >> 4) + ',' + (d[i + 1] >> 4) + ',' + (d[i + 2] >> 4)); farben = s.size; } window.__e2 = { m, typ: b ? b.type : '', farben, n: E.fotos().length, tag: window.WOHNEN.tag }; return JSON.stringify(window.__e2); })()",
+  "expect": "(r => !!r && !!r.m && r.n === 1 && r.m.anzahl === 1 && r.m.id > 0 && r.m.zeit > 0 && r.m.bytes > 2000 && Math.max(r.m.b, r.m.h) <= 960 && Math.max(r.m.b, r.m.h) >= 100 && r.m.tag === r.tag && r.m.uhr >= 0 && r.m.uhr < 24 && typeof r.m.ort === 'string' && r.m.ort.length > 0 && r.m.fav === false && Math.abs(r.m.x + 138) < 80 && Math.abs(r.m.z - 372) < 80 && r.typ === 'image/jpeg' && r.farben >= 4)(window.__e2)"
+ },
+ {
+  "n": "er_3_grenze_60",
+  "wait": 500,
+  "shot": false,
+  "js": "(async () => { const E = window.ERINNERN, id = E.fotos()[0].id; const fav = await E.favorit(id, true); let letzte = null; for (let i = 0; i < 62; i++) letzte = await E.fotoAufnehmen({ wieder: true }); const f = E.fotos(); window.__e3 = { fav, n: f.length, da: f.some(p => p.id === id && p.fav), letzte: letzte ? letzte.anzahl : null, auf: f.every((p, i) => !i || p.id > f[i - 1].id), klein: f.filter(p => p.bytes > 2000).length }; return JSON.stringify(window.__e3); })()",
+  "expect": "(r => !!r && r.fav === true && r.n === 60 && r.da === true && r.letzte === 60 && r.auf && r.klein === 60)(window.__e3)"
+ },
+ {
+  "n": "er_4_handy_album",
+  "wait": 800,
+  "js": "(async () => { const G = window.G, P = G.PHONE, w = ms => new Promise(r => setTimeout(r, ms)); P.close(); P.open('kamera'); await w(300); const kam = [...document.querySelectorAll('#phone .ps-phone__page[data-app=kamera] button')].map(b => b.textContent); P.close(); await w(300); P.open('album'); await w(700); const pg = document.querySelector('#phone .ps-phone__page[data-app=album]'); const tabs = pg ? [...pg.querySelectorAll('.er-tabs button')].map(b => b.textContent) : []; const bilder = pg ? pg.querySelectorAll('.er-th img').length : 0; const erst = pg && pg.querySelector('.er-th'); if (erst) erst.click(); await w(300); const gross = !!(pg && pg.querySelector('.er-gross .er-bild img')), knoepfe = pg ? pg.querySelectorAll('.er-akt button').length : 0, info = pg && pg.querySelector('.er-info') ? pg.querySelector('.er-info').textContent : ''; const tb = pg && pg.querySelector('[data-tab=buch]'); if (tb) tb.click(); await w(300); const buch = !!(pg && pg.querySelector('.er-leer, .er-list')), fuss = pg && pg.querySelector('.er-fuss') ? pg.querySelector('.er-fuss').textContent : ''; P.close(); await w(1200); window.__e4 = { kam, tabs, bilder, gross, knoepfe, info, buch, fuss, zu: !P.isOpen, rest: pg ? pg.querySelectorAll('img').length : -1 }; return JSON.stringify(window.__e4); })()",
+  "expect": "(r => !!r && r.kam.length === 2 && /Foto ins Album/.test(r.kam[0]) && /Datei/.test(r.kam[1]) && r.tabs.length === 2 && /Fotos · 60\\/60/.test(r.tabs[0]) && /Erinnerungen/.test(r.tabs[1]) && r.bilder === 60 && r.gross && r.knoepfe === 5 && /Tag \\d+ · \\d\\d:\\d\\d Uhr/.test(r.info) && r.buch && /diesem Browser/.test(r.fuss) && r.zu && r.rest === 0)(window.__e4)"
+ },
+ {
+  "n": "er_5_wand_fenster",
+  "wait": 1000,
+  "js": "(async () => { const G = window.G, E = window.ERINNERN, Z = G.X.ZUHAUSE, p = G.player, w = ms => new Promise(r => setTimeout(r, ms)); for (let i = 0; i < 30 && !Z.home; i++) { Z.find(); await w(500); } const h = Z.home; if (p.car) G.toggleCar(); p.wanted = 0; if (G.STORY && G.STORY.busy) G.STORY.stop(); p.pos.set(h.ex, G.TH(h.ex, h.ez), h.ez); if (p.mesh) p.mesh.position.copy(p.pos); await w(1000); Z.enter(); for (let i = 0; i < 20 && !Z.inside; i++) await w(300); const I = G.INTERIORS.inside, tr = I ? I.triggers.find(t => /Wand/.test(t.label)) : null, netz = !!(I && I.g.children.find(c => c.name === 'erinnerwand')); const auf = tr ? tr.act() : false; await w(400); const el = document.getElementById('erinnerwand'); const offen = { el: !!el && el.style.display === 'flex', api: E.wandOffen, shop: !!G.X.shopOpen, x: !!(el && el.querySelector('.er-x')), bilder: el ? el.querySelectorAll('.er-th img').length : 0, tabs: el ? el.querySelectorAll('.er-tabs button').length : 0 }; const erst = el && el.querySelector('.er-th'); if (erst) erst.click(); await w(300); const g1 = E.ansicht ? E.ansicht.gross : 0; dispatchEvent(new KeyboardEvent('keydown', { code: 'ArrowRight', key: 'ArrowRight' })); await w(300); const g2 = E.ansicht ? E.ansicht.gross : 0; dispatchEvent(new KeyboardEvent('keydown', { code: 'Escape', key: 'Escape' })); await w(400); window.__e5 = { drin: Z.inside, tr: tr ? tr.label : null, netz, auf, offen, g1, g2, zu: { el: el ? el.style.display : '', api: E.wandOffen, shop: !!G.X.shopOpen, menu: document.getElementById('menu').style.display, noAuto: !!window.__noAutoMenu, leer: el ? el.children.length : -1 } }; return JSON.stringify(window.__e5); })()",
+  "expect": "(r => !!r && r.drin === true && /^F · Wand/.test(r.tr) && r.netz && r.auf === true && r.offen.el && r.offen.api && r.offen.shop && r.offen.x && r.offen.bilder === 60 && r.offen.tabs === 2 && r.g1 > 0 && r.g2 > 0 && r.g1 !== r.g2 && r.zu.el === 'none' && r.zu.api === false && r.zu.shop === false && r.zu.menu !== 'flex' && r.zu.noAuto === false && r.zu.leer === 0)(window.__e5)"
+ },
+ {
+  "n": "er_6_rahmen",
+  "wait": 500,
+  "js": "(async () => { const G = window.G, E = window.ERINNERN, w = ms => new Promise(r => setTimeout(r, ms)); const f = E.fotos(), a = f[f.length - 1].id, b = f[0].id; const netze = () => G.INTERIORS.inside ? G.INTERIORS.inside.g.children.filter(c => c.name === 'erinnerbild' && c.material.map && c.material.map.isTexture && c.material.map.image.width > 0) : []; const ok1 = await E.haengen(a, true), ok2 = await E.haengen(b, true); for (let i = 0; i < 60 && E.rahmen.filter(r => r.textur).length < 2; i++) await w(250); const r1 = E.rahmen, n1 = netze().length, farbraum = netze().map(c => c.material.map.colorSpace).join(); const ok3 = await E.haengen(b, false); await w(300); const r2 = E.rahmen, n2 = netze().length; window.__e6 = { ok1, ok2, ok3, r1, n1, farbraum, r2, n2, haengt: E.fotos().filter(p => p.wand).map(p => p.id), a }; return JSON.stringify(window.__e6); })()",
+  "expect": "(r => !!r && r.ok1 === true && r.ok2 === true && r.ok3 === true && r.r1.length === 2 && r.r1.every(q => q.textur && q.b > 0 && q.b <= 512 && q.h > 0) && r.n1 === 2 && r.farbraum === 'srgb,srgb' && r.r2.length === 1 && r.r2[0].id === r.a && r.n2 === 1 && r.haengt.length === 1 && r.haengt[0] === r.a)(window.__e6)"
+ },
+ {
+  "n": "er_7_zimmer_verlassen",
+  "wait": 500,
+  "shot": false,
+  "js": "(async () => { const G = window.G, E = window.ERINNERN, w = ms => new Promise(r => setTimeout(r, ms)); const vorher = E.imRaum; G.INTERIORS.leave(); for (let i = 0; i < 30 && E.imRaum; i++) await w(200); window.__e7 = { vorher, imRaum: E.imRaum, rahmen: E.rahmen.length, drin: !!G.INTERIORS.inside, haengt: E.fotos().filter(p => p.wand).length, shop: !!G.X.shopOpen }; return JSON.stringify(window.__e7); })()",
+  "expect": "(r => !!r && r.vorher === true && r.imRaum === false && r.rahmen === 0 && r.drin === false && r.haengt === 1 && r.shop === false)(window.__e7)"
+ },
+ {
+  "n": "er_8_tagebuch",
+  "wait": 500,
+  "js": "(async () => { const G = window.G, E = window.ERINNERN, W = window.WOHNEN, p = G.player, w = ms => new Promise(r => setTimeout(r, ms)); p.money = 10000; const neu = W.mieten('W2'); await w(300); p.money = 0; let tage = 0; for (; tage < 12 && W.stand.miete; tage++) { W.tagVor(1); await w(200); } await w(500); const m = await E.fotoAufnehmen({ wieder: true }), hand = await E.eintrag('Probe', 'von Hand'); const t = E.tagebuch(); window.__e8 = { neu: neu.ok, miete: W.stand.miete, tage, tag: W.tag, foto: m ? m.id : 0, hand, t: t.map(e => ({ titel: e.titel, tag: e.tag, uhr: e.uhr, art: e.art, ort: e.ort, text: e.text })), n: E.fotos().length }; return JSON.stringify(window.__e8); })()",
+  "expect": "(r => { if (!r || r.neu !== true || r.miete !== null || r.n !== 60) return false; const ein = r.t.find(e => e.titel === 'Einzug'), raus = r.t.find(e => e.titel === 'Zwangsräumung'); return !!ein && !!raus && ein.tag >= 1 && raus.tag > ein.tag && raus.tag <= r.tag && /Nordend/.test(ein.text) && /Nordend/.test(raus.text) && ein.art === 'wohnen-einzug' && raus.art === 'wohnen-raeumung' && typeof ein.ort === 'string' && ein.ort.length > 0 && r.t.indexOf(ein) < r.t.indexOf(raus) && !!r.hand && r.hand.titel === 'Probe' && r.hand.tag === r.tag && r.foto > 0 && r.hand.fotoId === r.foto && r.t.length >= 3; })(window.__e8)"
+ },
+ {
+  "n": "er_9_neu_lesen",
+  "wait": 500,
+  "shot": false,
+  "js": "(async () => { const E = window.ERINNERN, bild = () => ({ f: E.fotos().map(p => p.id + ':' + p.bytes + ':' + (p.fav ? 1 : 0) + ':' + p.wand).join(), b: E.tagebuch().map(e => e.id + ':' + e.titel + ':' + e.tag + ':' + (e.fotoId || 0)).join() }); const vor = bild(); const ok = await E.neuLesen(); const nach = bild(), f = E.fotos(); const b0 = E.blob(f[0].id), bm = await createImageBitmap(b0); window.__e9 = { ok, speicher: E.speicher, gleichF: vor.f === nach.f, gleichB: vor.b === nach.b, n: f.length, buch: E.tagebuch().length, fav: f.filter(p => p.fav).length, wand: f.filter(p => p.wand).length, bytes: Math.min(...f.map(p => p.bytes)), bild: [bm.width, bm.height, f[0].b, f[0].h] }; return JSON.stringify(window.__e9); })()",
+  "expect": "(r => !!r && r.ok === true && r.speicher === 'indexeddb' && r.gleichF && r.gleichB && r.n === 60 && r.buch >= 3 && r.fav === 1 && r.wand === 1 && r.bytes > 2000 && r.bild[0] === r.bild[2] && r.bild[1] === r.bild[3])(window.__e9)"
+ },
+ {
+  "n": "er_10_aufraeumen",
+  "wait": 500,
+  "shot": false,
+  "js": "(async () => { const G = window.G, E = window.ERINNERN, W = window.WOHNEN; await E.leeren(); await E.neuLesen(); G.world.tag = 1; G.player.money = 150; const st = W.zuruecksetzen(); const el = document.getElementById('erinnerwand'); window.__e10 = { fotos: E.fotos().length, buch: E.tagebuch().length, miete: st.miete, gesperrt: G.X.ZUHAUSE.gesperrt, shop: !!G.X.shopOpen, wand: E.wandOffen, el: el ? el.style.display : 'none' }; return JSON.stringify(window.__e10); })()",
+  "expect": "(r => !!r && r.fotos === 0 && r.buch === 0 && r.miete === 'W1' && r.gesperrt === false && r.shop === false && r.wand === false && r.el === 'none')(window.__e10)"
+ }
+]
