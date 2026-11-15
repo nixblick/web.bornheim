@@ -269,7 +269,7 @@ Im Wohnzimmer eine Wand mit drei Dingen (F davor öffnet ein Fenster im Stil des
 
 Jede Stufe ist ein eigener PR mit Probe.
 
-Stand der Umsetzung (15.11.2026): Stufe 1 und Stufe 2 sind umgesetzt. Abweichungen: Kündigung und Umzug wirken
+Stand der Umsetzung (15.11.2026): Stufe 1, 2 und 3 sind umgesetzt (Stufe 3 ohne größere Räume für größere Objekte). Abweichungen: Kündigung und Umzug wirken
 sofort; kein Schlosser bei der Räumung; Häuser haben noch keinen eigenen Innenraum; ein Fehlbetrag aus der
 Zwangsversteigerung bleibt als Bankschuld und sperrt nur weitere Käufe, nicht das Mieten.
 
