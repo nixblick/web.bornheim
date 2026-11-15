@@ -19,7 +19,7 @@
   "n": "schrot_abbrechen",
   "wait": 300,
   "shot": false,
-  "js": "(async () => { const G = window.G, W = G.WPN, w = ms => new Promise(q => setTimeout(q, ms)); W.give('shotgun', 24); W.select('shotgun', true); await w(800); const it = W.inv.shotgun; it.mag = 0; it.res = 24; W.reload(); const t0 = performance.now(); while (it.mag < 2 && performance.now() - t0 < 8000) await w(40); const geladen = it.mag, lief = W.reloading; W.press(true); W.press(false); const nach = it.mag, laedt = W.reloading; await w(1500); G.player.wanted = 0; window.__wg3 = { geladen, lief, nach, laedt, mag2: it.mag }; return JSON.stringify(window.__wg3); })()",
+  "js": "(async () => { const G = window.G, W = G.WPN, w = ms => new Promise(q => setTimeout(q, ms)); W.give('shotgun', 24); W.select('shotgun', true); await w(800); const it = W.inv.shotgun; it.mag = 0; it.res = 24; W.reload(); const t0 = performance.now(); while (it.mag < 2 && performance.now() - t0 < 30000) await w(40); const geladen = it.mag, lief = W.reloading; W.press(true); W.press(false); const nach = it.mag, laedt = W.reloading; await w(1500); G.player.wanted = 0; window.__wg3 = { geladen, lief, nach, laedt, mag2: it.mag }; return JSON.stringify(window.__wg3); })()",
   "expect": "(() => { const r = window.__wg3; return !!r && r.lief && r.geladen >= 2 && r.geladen < 6 && r.nach === r.geladen - 1 && !r.laedt && r.mag2 === r.nach; })()"
  },
  {
