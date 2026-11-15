@@ -38,7 +38,7 @@
   "wait": 1000,
   "shot": false,
   "js": "(() => { const G = window.G, W = window.WOHNEN; const t = G.world.tag; G.saveGame(true, true); const imStand = JSON.parse(localStorage.getItem('notgta.save')).tag; G.world.tag = 1; const ok = G.loadGame(); const st = W.laden(); window.__w6 = { t, imStand, ok, nach: G.world.tag, st, roh: JSON.parse(localStorage.getItem('notgta.wohnen')), anker: G.X.ZUHAUSE.anker }; return JSON.stringify(window.__w6); })()",
-  "expect": "(r => !!r && r.t === 13 && r.imStand === 13 && r.ok === true && r.nach === 13 && window.G.world.tag === 13 && r.st.miete === 'W2' && r.st.kaution === 3276 && r.st.monatBezahlt === 3 && r.roh.miete === 'W2' && r.roh.v === 1 && r.anker[0] === -980)(window.__w6)"
+  "expect": "(r => !!r && r.t === 13 && r.imStand === 13 && r.ok === true && r.nach === 13 && window.G.world.tag === 13 && r.st.miete === 'W2' && r.st.kaution === 3276 && r.st.monatBezahlt === 3 && r.roh.miete === 'W2' && r.roh.v === 2 && r.anker[0] === -980)(window.__w6)"
  },
  {
   "n": "wo_7_aufraeumen",
