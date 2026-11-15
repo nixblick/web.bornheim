@@ -16,12 +16,13 @@ export function initWohnen(X) {
   // Katalog nach Konzept 7.3. anker: Weltpunkt [x, z] in einem Wohnblock (mit Kacheldaten geprüft), das Haus wählt zuhause.js.
   // kaufQm/kauf: Stufe 2. Einträge ohne mieteQm (Häuser) sind später nur zu kaufen.
   const KATALOG = [
-    { id: 'W1', art: 'wohnung', name: '1-Zimmer-Altbau', lage: 'Bornheim, Wochenmarkt', ort: 'in Bornheim am Wochenmarkt', qm: 38, mieteQm: 18, kaufQm: 6900, kauf: 262000, anker: [-138, 372] },
-    { id: 'W2', art: 'wohnung', name: '3-Zimmer-Altbau mit Balkon', lage: 'Nordend', ort: 'im Nordend', qm: 78, mieteQm: 21, kaufQm: 8200, kauf: 640000, anker: [-980, 720] },
-    { id: 'W3', art: 'wohnung', name: 'Neubauwohnung mit Mainblick', lage: 'Ostend, am Hafen', ort: 'im Ostend am Hafen', qm: 96, mieteQm: 24, kaufQm: 9400, kauf: 902000, anker: [900, 1960] },
+    { id: 'W1', art: 'wohnung', name: '1-Zimmer-Altbau', lage: 'Bornheim, Wochenmarkt', ort: 'in Bornheim am Wochenmarkt', anzeige: '„Charmantes Altbau-Apartment für Singles mit zwei Einkommen. Bad mit Fenster zum Flur.“', qm: 38, mieteQm: 18, kaufQm: 6900, kauf: 262000, anker: [-138, 372] },
+    { id: 'W2', art: 'wohnung', name: '3-Zimmer-Altbau mit Balkon', lage: 'Nordend', ort: 'im Nordend', anzeige: '„Familienwohnung in gewachsener Nachbarschaft.“ Gewachsen ist vor allem die Miete.', qm: 78, mieteQm: 21, kaufQm: 8200, kauf: 640000, anker: [-980, 720] },
+    { id: 'W3', art: 'wohnung', name: 'Neubauwohnung mit Mainblick', lage: 'Ostend, am Hafen', ort: 'im Ostend am Hafen', anzeige: '„Urbanes Wohnen am Wasser.“ Vorher stand hier ein Hafenbetrieb, davor wohnte hier, wer dort arbeitete.', qm: 96, mieteQm: 24, kaufQm: 9400, kauf: 902000, anker: [900, 1960] },
   ];
   const objekt = id => KATALOG.find(o => o.id === id) || null;
-  const miete = o => (o && o.mieteQm ? o.qm * o.mieteQm : 0);
+  let AUF = {}; // Wohnung → Faktor auf die Miete. Nach einer Räumung wird neu vermietet, 15 % teurer: das Geschäftsmodell hinter mancher Räumung
+  const miete = o => (o && o.mieteQm ? Math.round(o.qm * o.mieteQm * (AUF[o.id] || 1)) : 0);
   const eur = v => Math.round(v).toLocaleString('de-DE') + ' €';
   const tage = n => (n === 1 ? '1 Tag' : n + ' Tagen');
 
@@ -46,16 +47,17 @@ export function initWohnen(X) {
         s.miete = miete(objekt(d.miete)) ? d.miete : null; s.zuletzt = objekt(d.zuletzt) ? d.zuletzt : s.miete || 'W1';
         s.kaution = n(d.kaution); s.schuld = n(d.schuld); s.stufe = s.miete && s.schuld ? Math.max(1, n(d.stufe, 2)) : 0; s.stufeTag = n(d.stufeTag); s.monatBezahlt = n(d.monatBezahlt);
         s.frei = !!d.frei; s.geraeumt = !!d.geraeumt && !s.miete; s.eigentum = Array.isArray(d.eigentum) ? d.eigentum : [];
+        AUF = {}; if (d.auf && typeof d.auf === 'object') for (const k of Object.keys(d.auf)) if (KATALOG.some(o => o.id === k) && +d.auf[k] > 1 && +d.auf[k] <= 1.5) AUF[k] = +d.auf[k];
         return s;
       }
     } catch (e) { /* unlesbar: Startzustand */ }
     return NEU(); // neue und bestehende Spieler: W1 gemietet, erster Monat frei, nichts rückwirkend
   }
   let st = lesen(), laeuft = false;
-  function speichern() { try { localStorage.setItem(KEY, JSON.stringify(st)); } catch (e) { console.warn('wohnen: speichern', e); } }
+  function speichern() { try { st.auf = AUF; localStorage.setItem(KEY, JSON.stringify(st)); } catch (e) { console.warn('wohnen: speichern', e); } }
 
   // ---------- Meldungen ----------
-  const HV = 'Hausverwaltung';
+  const HV = 'Hausverwaltung Rendite & Wert'; // erfunden
   function melde(titel, kurz, lang, sek = 6) {
     try { if (A.PHONE && A.PHONE.nachricht) A.PHONE.nachricht(HV, lang || kurz); } catch (e) { /* ohne Handy */ }
     try { A.card(titel, kurz, sek); } catch (e) { /* ohne HUD */ }
@@ -81,16 +83,16 @@ export function initWohnen(X) {
       if (st.stufe === 0 && m > st.monatBezahlt) { // Monatserster (oder später bemerkt): genau eine Miete, keine Nachforderung für übersprungene Monate
         neu = true;
         if ((player.money || 0) >= r) {
-          player.money -= r; st.monatBezahlt = m; st.frei = false;
-          melde('MIETE ABGEBUCHT', `−${eur(r)} · nächste Miete in ${tage(bisErster(t))}`, `Miete für Monat ${m} abgebucht: ${eur(r)} (${o.name}, ${o.lage}).`, 5);
+          const vorher = player.money || 0, anteil = vorher > 0 ? Math.round(r / vorher * 100) : 100; player.money -= r; st.monatBezahlt = m; st.frei = false;
+          melde('MIETE ABGEBUCHT', `−${eur(r)} · ${anteil} % von allem, was du hattest`, `Miete für Monat ${m} abgebucht: ${eur(r)} (${o.name}, ${o.lage}). Das waren ${anteil} % deines Geldes. Als tragbar gilt ein Drittel des Einkommens.`, 5);
         } else {
           st.stufe = 1; st.stufeTag = t; st.schuld = r; st.frei = false;
-          melde('MAHNUNG', `Miete ${eur(r)} offen · Frist: ein Spieltag`, `Mahnung: Die Miete für Monat ${m} (${eur(r)}) konnte nicht abgebucht werden. Bitte innerhalb eines Spieltags in der App „Wohnen“ zahlen.`);
+          melde('MAHNUNG', `Miete ${eur(r)} offen · Frist: ein Spieltag`, `Mahnung: Die Miete für Monat ${m} (${eur(r)}) konnte nicht abgebucht werden. Bitte innerhalb eines Spieltags in der App „Wohnen“ zahlen. Wir bitten um Verständnis, dass Verständnis nicht Teil des Mietvertrags ist.`);
         }
       }
       if (st.stufe === 1 && t - st.stufeTag >= 1) {
         st.stufe = 2; neu = true;
-        melde('ZWEITE MAHNUNG', `Miete ${eur(st.schuld)} offen · morgen wird geräumt`, `Zweite Mahnung: ${eur(st.schuld)} sind weiter offen. Ohne Zahlung wird die Wohnung am nächsten Spieltag geräumt.`);
+        melde('ZWEITE MAHNUNG', `Miete ${eur(st.schuld)} offen · morgen wird geräumt`, `Zweite Mahnung: ${eur(st.schuld)} sind weiter offen. Ohne Zahlung wird die Wohnung am nächsten Spieltag geräumt. Für Ihre Wohnung liegen bereits Anfragen vor.`);
       }
       if (st.stufe === 2 && t - st.stufeTag >= 2) { raeumen(); return; }
     }
@@ -182,11 +184,11 @@ export function initWohnen(X) {
     const o = objekt(st.miete); if (!o || laeuft) return false;
     const Z = A.ZUHAUSE, h = Z && Z.home, drin = !!(Z && Z.inside);
     const nah = !player.dead && (drin || (!!h && Math.hypot(player.pos.x - h.x, player.pos.z - h.z) < NAH));
-    st.miete = null; st.zuletzt = o.id; st.kaution = 0; st.stufe = 0; st.stufeTag = 0; st.frei = false; st.geraeumt = true; speichern(); // Kaution einbehalten, Mietschuld bleibt
+    AUF[o.id] = 1.15; st.miete = null; st.zuletzt = o.id; st.kaution = 0; st.stufe = 0; st.stufeTag = 0; st.frei = false; st.geraeumt = true; speichern(); // Kaution einbehalten, Mietschuld bleibt
     const rest = st.schuld ? ` Offen bleiben ${eur(st.schuld)}.` : '';
-    try { if (A.PHONE && A.PHONE.nachricht) A.PHONE.nachricht(HV, `Die Wohnung (${o.name}, ${o.lage}) wurde geräumt, das Schloss getauscht. Die Kaution wird einbehalten.${rest} Deine Sachen sind eingelagert. Eine neue Wohnung findest du in der App „Wohnen“.`); } catch (e) { /* ohne Handy */ }
+    try { if (A.PHONE && A.PHONE.nachricht) A.PHONE.nachricht(HV, `Die Wohnung (${o.name}, ${o.lage}) wurde geräumt, das Schloss getauscht. Die Kaution wird einbehalten.${rest} Deine Sachen sind eingelagert. Die Wohnung ist ab morgen wieder inseriert, 15 % teurer. Eine neue Wohnung findest du in der App „Wohnen“.`); } catch (e) { /* ohne Handy */ }
     if (!nah) { sperre(); return true; } // weit weg: still, beim nächsten Besuch ist die Tür zu
-    try { A.card('ZWANGSRÄUMUNG', drin ? 'Die Wohnung wird geräumt. Zwei Beamte begleiten dich hinaus.' : 'Die Wohnung ist geräumt, das Schloss getauscht.', 7); } catch (e) { /* ohne HUD */ }
+    try { A.card('ZWANGSRÄUMUNG', drin ? 'Zwei Beamte begleiten dich hinaus. Sie machen ihren Job, die Wohnung macht ab morgen 15 % mehr.' : 'Schloss getauscht. Ab morgen wieder inseriert, 15 % teurer.', 7); } catch (e) { /* ohne HUD */ }
     if (!drin) { sperre(); wachenStellen(h); return true; }
     laeuft = true; // drinnen: abblenden, vor die Tür, aufblenden
     const ov = document.createElement('div'); ov.id = 'wohnenblende';
@@ -223,14 +225,14 @@ export function initWohnen(X) {
       zl.push(st.stufe === 0 ? 'Nichts offen.' : `Offen: ${eur(st.schuld)} · ${st.stufe === 1 ? 'Mahnung, Frist ein Spieltag' : 'zweite Mahnung, am nächsten Spieltag wird geräumt'}`);
       block('Deine Wohnung', o.name, zl, (st.schuld > 0 ? knopf('zahlen', `Jetzt zahlen: ${eur(st.schuld)}`, { amber: true, aus: geld < st.schuld }) + (geld < st.schuld ? `<p>${esc('Es fehlen ' + eur(st.schuld - geld) + '. Teilzahlung zählt nicht.')}</p>` : '') : '') + knopf('kuendigen', 'Mietvertrag kündigen'));
     } else {
-      const zl = [st.geraeumt ? 'Die Wohnung wurde geräumt. Schrank und Sachen sind eingelagert, bis du wieder wohnst.' : 'Du hast gerade keinen Mietvertrag.', 'Ohne Wohnung: kein Schlafen, kein Kleiderschrank.'];
+      const zl = [st.geraeumt ? 'Die Wohnung wurde geräumt. Schrank und Sachen sind eingelagert, bis du wieder wohnst.' : 'Du hast gerade keinen Mietvertrag.', 'Ohne Wohnung: kein Schlafen, kein Kleiderschrank. Leer stehende Büros gibt es in dieser Stadt genug, Betten darin nicht.'];
       if (st.schuld > 0) zl.push(`Offene Mietschuld: ${eur(st.schuld)}. Sie ist vor einem neuen Vertrag fällig.`);
       block('Ohne Wohnung', 'Kein Zuhause', zl, st.schuld > 0 ? knopf('zahlen', `Mietschuld zahlen: ${eur(st.schuld)}`, { amber: true, aus: geld < st.schuld }) + (geld < st.schuld ? `<p>${esc('Es fehlen ' + eur(st.schuld - geld) + '.')}</p>` : '') : '');
     }
     for (const q of KATALOG) {
       if (!miete(q) || q.id === st.miete) continue;
       const k = kosten(q.id), grund = hindernis(q.id);
-      const zl = [`${q.lage} · ${q.qm} m² · ${eur(k.miete)} je Monat (${q.mieteQm} €/m²)`, `Kaution ${eur(k.kaution)} + erste Miete ${eur(k.erste)}${k.zurueck ? ' − alte Kaution ' + eur(k.zurueck) : ''} = ${eur(k.summe)} bei Einzug`];
+      const zl = [q.anzeige, `${q.lage} · ${q.qm} m² · ${eur(k.miete)} je Monat (${(k.miete / q.qm).toFixed(2).replace('.', ',')} €/m²${AUF[q.id] ? ', nach Neuvermietung 15 % teurer' : ''})`, `Kaution ${eur(k.kaution)} + erste Miete ${eur(k.erste)}${k.zurueck ? ' − alte Kaution ' + eur(k.zurueck) : ''} = ${eur(k.summe)} bei Einzug`];
       block('Zu mieten', q.name, zl, knopf('mieten', o ? 'Umziehen' : 'Mieten', { id: q.id, aus: !!grund }) + (grund ? `<p>${esc(grund)}</p>` : ''));
     }
     p.innerHTML = `<div class="ps-plist">${z.join('')}</div><p class="ps-pempty">Kündigung und Umzug gelten in dieser Fassung sofort. Die Kaution kommt zurück, wenn nichts offen ist. Es gibt immer nur eine Mietwohnung.</p>`;
@@ -254,7 +256,7 @@ export function initWohnen(X) {
     /** Testhilfen: n Spieltage weiter (rechnet sofort ab), Zustand neu aus dem Speicher lesen, Startzustand */
     tagVor(n = 1) { world.tag = tag() + Math.max(0, Math.floor(n)); pruefen(); return tag(); },
     laden() { st = lesen(); abgleich(); return api.stand; },
-    zuruecksetzen() { for (const p of wachen.splice(0)) wacheWeg(p); st = NEU(); speichern(); abgleich(); return api.stand; },
+    zuruecksetzen() { for (const p of wachen.splice(0)) wacheWeg(p); AUF = {}; st = NEU(); speichern(); abgleich(); return api.stand; },
   };
   A.WOHNEN = api; /** @type {any} */ (window).WOHNEN = api;
   return api;

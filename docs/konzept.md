@@ -272,7 +272,11 @@ Jede Stufe ist ein eigener PR mit Probe.
 ### 7.10 Offene Entscheidungen (Vorschlag jeweils zuerst)
 
 - **Spielmonat:** 5 Spieltage. Alternative: 7 Spieltage (weniger Druck) oder 3 (mehr Druck).
-- **Einkommen für die großen Häuser:** eigener Ausbau nach Stufe 2, z. B. feste Anstellung mit Monatslohn (Kurier,
-  Rettungsdienst, Taxi fahren) statt nur Einzelaufträgen. Alternative: Mieteinnahmen aus Eigentum.
+- **Einkommen für die großen Häuser: entschieden (André, 15.11.2026).** Dass man sich Mieten und Kaufen nicht einfach
+  leisten kann, soll so sein. Kein zusätzliches Einkommen dafür: wer etwas Großes will, gewinnt einen Marathon oder
+  holt sich die wenigen großen Brocken im Spiel.
+- **Sozialkritik erwünscht (André, 15.11.2026).** Inserate im Ton echter Anzeigen, Mahnungen im Ton einer Hausverwaltung
+  (erfunden: „Rendite & Wert“), die Abbuchung nennt den Anteil der Miete am Geld. Mechanik dazu: Nach einer Räumung wird
+  die Wohnung neu vermietet, 15 % teurer. Keine erfundenen Statistiken, keine echten Firmen oder Personen.
 - **Start:** erster Monat frei, danach Miete. Alternative: gleich ab Tag 1 zahlen.
 - **Bestehende Spielstände:** bekommen W1 als Mietvertrag mit einem freien Monat, niemand wird rückwirkend geräumt.
