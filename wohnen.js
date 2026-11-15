@@ -210,26 +210,30 @@ export function initWohnen(X) {
     if (st.stufe > 0) return [{ k: 'Wohnen', name: st.stufe === 1 ? 'Mahnung: Miete offen' : 'Räumung droht', info: `${kal} · ${eur(st.schuld)} offen. ${st.stufe === 1 ? 'Frist: ein Spieltag.' : 'Am nächsten Spieltag wird geräumt.'} Zahlen in der App „Wohnen“.`, btn: 'App „Wohnen“' }];
     return [{ k: 'Wohnen', name: 'Miete', info: `${kal} · Miete fällig in ${tage(bisErster(t))} (${eur(miete(o))})${st.frei ? ' · dieser Monat ist frei (Starthilfe)' : ''}`, btn: 'App „Wohnen“' }];
   }
-  function oeffnen() { const P = A.PHONE; if (!P) return false; return P.isOpen ? P.openApp('wohnen') : P.open('wohnen'); }
+  function oeffnen(id = 'wohnen') { const P = A.PHONE; if (!P) return false; return P.isOpen ? P.openApp(id) : P.open(id); }
+  const PORTAL = 'redscout24'; // erfundenes Wohnungsportal (André 15.11.2026): Angebote ansehen und mieten, in der App oder vor Ort am Schild
 
   // ---------- Handy-App „Wohnen“ (phone.js ruft app(seite, { toast, esc })) ----------
-  function app(p, H) {
+  function app(p, H, modus = 'wohnen') {
+    const markt = modus === 'markt';
     const esc = H.esc, t = tag(), m = monat(t), o = objekt(st.miete), geld = player.money || 0, z = [];
     const block = (k, name, zeil, knoepfe = '') => z.push(`<div class="ps-pmis"><div class="ps-pmis__k">${esc(k)}</div><b>${esc(name)}</b>${zeil.map(x => `<p>${esc(x)}</p>`).join('')}${knoepfe}</div>`);
     /** @param {string} a @param {string} text @param {{ amber?: boolean, id?: string, aus?: boolean }} [o2] */
     const knopf = (a, text, o2 = {}) => `<button class="ps-pbtn${o2.amber ? ' is-amber' : ''}" data-a="${a}"${o2.id ? ` data-id="${esc(o2.id)}"` : ''}${o2.aus ? ' disabled style="opacity:.5;cursor:default"' : ''}>${esc(text)}</button>`;
-    block('Kalender', `Tag ${tagImMonat(t)} von ${MONAT} · Monat ${m}`, [o ? `Nächste Miete in ${tage(bisErster(t))}, am 1. von Monat ${m + 1}.` : 'Kein Mietvertrag.', `Ein Spielmonat hat ${MONAT} Spieltage. Kontostand: ${eur(geld)}`]);
-    if (o) {
+    if (markt) block(PORTAL, 'Wohnungen in Frankfurt', [`Suche „bezahlbar“: 0 Treffer. Wir zeigen dir stattdessen ${KATALOG.filter(q => miete(q) && q.id !== st.miete).length} andere.`, `Dein Kontostand: ${eur(geld)}. Kaution sind zwei Monatsmieten, die erste Miete kommt sofort dazu.`]);
+    if (!markt) block('Kalender', `Tag ${tagImMonat(t)} von ${MONAT} · Monat ${m}`, [o ? `Nächste Miete in ${tage(bisErster(t))}, am 1. von Monat ${m + 1}.` : 'Kein Mietvertrag.', `Ein Spielmonat hat ${MONAT} Spieltage. Kontostand: ${eur(geld)}`]);
+    if (!markt && o) {
       const r = miete(o), zl = [`${o.lage} · ${o.qm} m² · ${eur(r)} je Monat (${o.mieteQm} €/m²)`, `Kaution hinterlegt: ${eur(st.kaution)}`];
       if (st.frei) zl.push('Starthilfe: Dieser Monat ist frei.');
       zl.push(st.stufe === 0 ? 'Nichts offen.' : `Offen: ${eur(st.schuld)} · ${st.stufe === 1 ? 'Mahnung, Frist ein Spieltag' : 'zweite Mahnung, am nächsten Spieltag wird geräumt'}`);
       block('Deine Wohnung', o.name, zl, (st.schuld > 0 ? knopf('zahlen', `Jetzt zahlen: ${eur(st.schuld)}`, { amber: true, aus: geld < st.schuld }) + (geld < st.schuld ? `<p>${esc('Es fehlen ' + eur(st.schuld - geld) + '. Teilzahlung zählt nicht.')}</p>` : '') : '') + knopf('kuendigen', 'Mietvertrag kündigen'));
-    } else {
+    } else if (!markt) {
       const zl = [st.geraeumt ? 'Die Wohnung wurde geräumt. Schrank und Sachen sind eingelagert, bis du wieder wohnst.' : 'Du hast gerade keinen Mietvertrag.', 'Ohne Wohnung: kein Schlafen, kein Kleiderschrank. Leer stehende Büros gibt es in dieser Stadt genug, Betten darin nicht.'];
       if (st.schuld > 0) zl.push(`Offene Mietschuld: ${eur(st.schuld)}. Sie ist vor einem neuen Vertrag fällig.`);
       block('Ohne Wohnung', 'Kein Zuhause', zl, st.schuld > 0 ? knopf('zahlen', `Mietschuld zahlen: ${eur(st.schuld)}`, { amber: true, aus: geld < st.schuld }) + (geld < st.schuld ? `<p>${esc('Es fehlen ' + eur(st.schuld - geld) + '.')}</p>` : '') : '');
     }
-    for (const q of KATALOG) {
+    if (!markt) z.push(`<div class="ps-pbtns">${knopf('markt', 'Angebote bei ' + PORTAL)}</div>`);
+    for (const q of markt ? KATALOG : []) {
       if (!miete(q) || q.id === st.miete) continue;
       const k = kosten(q.id), grund = hindernis(q.id);
       const zl = [q.anzeige, `${q.lage} · ${q.qm} m² · ${eur(k.miete)} je Monat (${(k.miete / q.qm).toFixed(2).replace('.', ',')} €/m²${AUF[q.id] ? ', nach Neuvermietung 15 % teurer' : ''})`, `Kaution ${eur(k.kaution)} + erste Miete ${eur(k.erste)}${k.zurueck ? ' − alte Kaution ' + eur(k.zurueck) : ''} = ${eur(k.summe)} bei Einzug`];
@@ -240,19 +244,46 @@ export function initWohnen(X) {
     for (const b of p.querySelectorAll('button[data-a]')) b.addEventListener('click', () => {
       const d = /** @type {HTMLElement} */ (b).dataset; let r = null;
       if (d.a === 'kuendigen' && !sicher) { sicher = true; b.textContent = 'Wirklich kündigen? Noch einmal tippen'; return; }
+      if (d.a === 'markt') { oeffnen('redscout'); return; }
       if (d.a === 'zahlen') r = zahlen(); else if (d.a === 'mieten') r = mieten(d.id); else if (d.a === 'kuendigen') r = kuendigen();
       if (r) H.toast(r.ok ? (d.a === 'zahlen' ? 'Bezahlt' : d.a === 'mieten' ? 'Mietvertrag geschlossen' : 'Gekündigt') : r.grund, r.ok ? 'success' : 'error');
-      app(p, H);
+      app(p, H, modus);
     });
   }
 
+  // ---------- Vor Ort: Schild „Zu vermieten“ an freien Wohnungen (F öffnet das Angebot im Portal) ----------
+  const schilder = new Map(); let schildMat = null, schildT = 0;
+  function schildBauen(q) {
+    const T = A.THREE, r = A.nearestRoadDir && A.nearestRoadDir(q.anker[0], q.anker[1], 45); if (!T || !r || !(r.w > 0)) return null;
+    const ux = Math.sin(r.ang), uz = Math.cos(r.ang); let nx = uz, nz = -ux; if ((q.anker[0] - r.x) * nx + (q.anker[1] - r.z) * nz < 0) { nx = -nx; nz = -nz; } // zur Hausseite
+    const x = r.x + nx * (r.w / 2 + 1.3), z = r.z + nz * (r.w / 2 + 1.3); if (A.solidAt(x, z) >= 0 || (A.rasenRoad && A.rasenRoad(x, z))) return null;
+    if (!schildMat) { const cv = document.createElement('canvas'); cv.width = 256; cv.height = 160; const c = cv.getContext('2d');
+      c.fillStyle = '#c62828'; c.fillRect(0, 0, 256, 160); c.fillStyle = '#fff'; c.textAlign = 'center'; c.font = '800 44px system-ui, Arial, sans-serif'; c.fillText('ZU', 128, 52); c.fillText('VERMIETEN', 128, 100); c.font = '600 22px system-ui, Arial, sans-serif'; c.fillText(PORTAL, 128, 138);
+      const tex = new T.CanvasTexture(cv); tex.colorSpace = T.SRGBColorSpace; tex.anisotropy = 4; tex.userData.shared = true;
+      schildMat = { tafel: new T.MeshBasicMaterial({ map: tex, side: T.DoubleSide }), pfahl: new T.MeshLambertMaterial({ color: 0x55585e }) }; schildMat.tafel.userData.shared = true; schildMat.pfahl.userData.shared = true; }
+    const g = new T.Group(), y = A.TH(x, z);
+    const pf = new T.Mesh(new T.BoxGeometry(0.08, 2.2, 0.08), schildMat.pfahl); pf.position.set(0, 1.1, 0); g.add(pf);
+    const ta = new T.Mesh(new T.PlaneGeometry(1.1, 0.7), schildMat.tafel); ta.position.set(0, 1.9, 0.05); g.add(ta);
+    g.position.set(x, y, z); g.rotation.y = Math.atan2(-nx, -nz); /* Tafel zeigt zur Straße */ g.userData.noChunk = true; g.userData.id = q.id; g.userData.x = x; g.userData.z = z; A.scene.add(g); return g;
+  }
+  function schildWeg(id) { const g = schilder.get(id); if (!g) return; schilder.delete(id); if (g.parent) { A.scene.remove(g); for (const m of g.children) m.geometry.dispose(); } }
+  function schilderTakt() {
+    const now = performance.now(); if (now - schildT < 1500) return; schildT = now;
+    for (const q of KATALOG) { if (!miete(q)) continue; const frei = q.id !== st.miete, nah = Math.hypot(player.pos.x - q.anker[0], player.pos.z - q.anker[1]) < 170;
+      if (frei && nah && !schilder.has(q.id)) { let g = null; try { g = schildBauen(q); } catch (e) { g = null; } schilder.set(q.id, g || new A.THREE.Group()); }
+      else if ((!frei || !nah) && schilder.has(q.id)) schildWeg(q.id); }
+  }
+  A.fHooks = A.fHooks || [];
+  A.fHooks.push(() => { if (player.car || player.dead) return null; for (const [id, g] of schilder) { if (!g.children.length) continue; if ((player.pos.x - g.userData.x) ** 2 + (player.pos.z - g.userData.z) ** 2 > 9) continue; const q = objekt(id); return { label: `F · Zu vermieten: ${q.name}, ${eur(miete(q))} im Monat · Angebot ansehen`, act: () => { oeffnen('redscout'); } }; } return null; });
+
   // ---------- Takt (eigener, keine Zeile in der Spielschleife) ----------
-  setInterval(() => { try { abgleich(); pruefen(); wachenTakt(); } catch (e) { console.warn('wohnen', e); } }, 250);
+  setInterval(() => { try { abgleich(); pruefen(); wachenTakt(); schilderTakt(); } catch (e) { console.warn('wohnen', e); } }, 250);
 
   const api = {
     MONAT, katalog: KATALOG, miete: id => miete(objekt(id)), kosten, hindernis, mieten, kuendigen, zahlen, raeumen, pruefen, zeilen, oeffnen, app,
     get stand() { return JSON.parse(JSON.stringify(st)); }, get tag() { return tag(); }, get monat() { return monat(); }, get tagImMonat() { return tagImMonat(); }, get bisErster() { return bisErster(); },
     get laeuft() { return laeuft; }, get wachen() { return wachen.length; },
+    /** gebaute Schilder „Zu vermieten“ [[id, x, z], …] (für Proben) */ get schilder() { return [...schilder].filter(([, g]) => g.children.length).map(([id, g]) => [id, Math.round(g.userData.x), Math.round(g.userData.z)]); }, oeffnenMarkt: () => oeffnen('redscout'),
     /** Testhilfen: n Spieltage weiter (rechnet sofort ab), Zustand neu aus dem Speicher lesen, Startzustand */
     tagVor(n = 1) { world.tag = tag() + Math.max(0, Math.floor(n)); pruefen(); return tag(); },
     laden() { st = lesen(); abgleich(); return api.stand; },

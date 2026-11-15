@@ -275,6 +275,8 @@ Jede Stufe ist ein eigener PR mit Probe.
 - **Einkommen für die großen Häuser: entschieden (André, 15.11.2026).** Dass man sich Mieten und Kaufen nicht einfach
   leisten kann, soll so sein. Kein zusätzliches Einkommen dafür: wer etwas Großes will, gewinnt einen Marathon oder
   holt sich die wenigen großen Brocken im Spiel.
+- **Portal „redscout24“ (André, 15.11.2026).** Eigene Handy-App mit den Miet- und später Kaufangeboten; mieten geht
+  in der App oder vor Ort am Schild „Zu vermieten“ (F). „Wohnen“ bleibt die App für den laufenden Vertrag.
 - **Sozialkritik erwünscht (André, 15.11.2026).** Inserate im Ton echter Anzeigen, Mahnungen im Ton einer Hausverwaltung
   (erfunden: „Rendite & Wert“), die Abbuchung nennt den Anteil der Miete am Geld. Mechanik dazu: Nach einer Räumung wird
   die Wohnung neu vermietet, 15 % teurer. Keine erfundenen Statistiken, keine echten Firmen oder Personen.
