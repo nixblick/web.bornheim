@@ -150,3 +150,129 @@ Im Worktree `ausbau-2026` wurden die wichtigsten Maßnahmen für alle drei Hardw
    - **Gepooltes Scheinwerfer- & Blaulicht (`updateDynLights`):** Echtes `SpotLight` für das Spielerfahrzeug bei Nacht und dynamisches `PointLight` für aktives Blaulicht auf den Stufen `Hoch` und `Ultra` (`opts.dynlights`).
    - **Offline-fähiger Service Worker (`sw.js`):** Speichert 3D-Modelle, Texturen und besuchte Frankfurter Stadtkacheln (`data/tiles/*.json`, `data/dem/*.bin`) lokal im Browser-Cache für sofortige Ladezeiten und Offline-Spielbarkeit.
 
+---
+
+## 7. Wohnen: mieten, kaufen, Räumung, Wohnung als Zentrale (Plan, 15.11.2026)
+
+Auftrag (André, 15.11.2026): Wohnung mieten (mindestens 18 €/m², Monatsmiete), ohne Geld Räumung mit Polizei; Wohnungen
+und Häuser kaufen, aber wenige: 3 Wohnungen, 5 Häuser, reale Preise. Die Wohnung ist wie das Handy eine Zentrale:
+Videos, Fotos und Erinnerungen, die man im Spiel erstellt hat. Erst planen, dann umsetzen.
+
+### 7.1 Ist-Stand, auf dem das aufbaut
+
+- `zuhause.js`: eine Wohnung am Wochenmarkt, kostenlos, mit Kleiderschrank und Bett (schlafen, heilen, speichern).
+  Das Haus wird zur Laufzeit aus den Kartendaten gewählt (Wohnhaus nahe einem Ankerpunkt), innen ein Taschenraum.
+- Die Spielwelt kennt nur die Uhrzeit (`world.hour`), keinen Tag und keinen Monat. Ein Spieltag dauert beim
+  Standardtempo 96 Minuten Echtzeit; Schlafen überspringt Stunden.
+- Geld: Start 150 €, Verdienst in Hundertern (Nebenjobs, Laufrunden, Story), einzelne Preise bis 15 000 € (Marathon).
+  Kaufpreise in echter Höhe (300 000 € und mehr) sind damit nicht bar erreichbar.
+- Kamera-App im Handy: lädt ein PNG herunter, das Spiel behält nichts. Videos gibt es nicht.
+- Polizei: Festnahme über `DEMO.busted()`, Beamte über `spawnOfficer`.
+
+### 7.2 Kalender
+
+- Neuer Tageszähler `world.tag` (zählt bei jedem Wechsel über Mitternacht, auch beim Schlafen), im Spielstand.
+- **Ein Spielmonat sind 5 Spieltage** (rund 8 Stunden Echtzeit ohne Schlafen). Die Miete ist eine echte Monatsmiete in
+  Euro, fällig am 1. des Spielmonats. Begründung: 30 Spieltage wären 48 Stunden Echtzeit, dann spürt niemand die Miete.
+- Handy und Pausenmenü zeigen Tag und Monat („Tag 3 von 5 · Miete in 2 Tagen“).
+
+### 7.3 Katalog (fest, klein)
+
+Lage über Ankerpunkte, das konkrete Haus wählt das Spiel wie bisher aus den Kartendaten. Preise nach dem Frankfurter
+Markt 2026 (Miete kalt je m², Kauf je m²), gerundet. Keine Makler, keine Marken, keine echten Adressen.
+
+| Nr. | Objekt | Lage | Größe | Miete/Monat | Kaufpreis |
+|---|---|---|---|---|---|
+| W1 | 1-Zimmer-Altbau (bisheriges Zuhause) | Bornheim, Wochenmarkt | 38 m² | 18 €/m² = 684 € | 6 900 €/m² = 262 000 € |
+| W2 | 3-Zimmer-Altbau mit Balkon | Nordend | 78 m² | 21 €/m² = 1 638 € | 8 200 €/m² = 640 000 € |
+| W3 | Neubauwohnung mit Mainblick | Ostend, am Hafen | 96 m² | 24 €/m² = 2 304 € | 9 400 €/m² = 902 000 € |
+| H1 | Reihenhaus | Riederwald | 105 m² | nur Kauf | 560 000 € |
+| H2 | Doppelhaushälfte | Seckbach | 130 m² | nur Kauf | 790 000 € |
+| H3 | Einfamilienhaus mit Garten | Bergen-Enkheim | 160 m² | nur Kauf | 1 150 000 € |
+| H4 | Gründerzeit-Stadthaus | Sachsenhausen | 210 m² | nur Kauf | 1 950 000 € |
+| H5 | Villa | Westend | 320 m² | nur Kauf | 4 200 000 € |
+
+Gleichzeitig höchstens eine Mietwohnung; Eigentum beliebig viele aus dem Katalog.
+
+### 7.4 Mieten
+
+- Start: W1 ist gemietet, der erste Monat ist frei (Starthilfe). Danach 684 € je Spielmonat.
+- Mietvertrag am Türschild (F) oder in der neuen Handy-App „Wohnen“: Kaution zwei Monatsmieten, erste Miete sofort.
+- Kündigen jederzeit zum Monatsende; Kaution zurück, wenn nichts offen ist.
+- Miete wird am Monatsersten automatisch abgebucht. Reicht das Geld nicht:
+  1. **Mahnung** (Handy-Nachricht, Karte), Frist ein Spieltag.
+  2. **Zweite Mahnung** mit Räumungsandrohung, noch ein Spieltag.
+  3. **Zwangsräumung** am dritten Tag.
+- Zahlen kann man jederzeit in der App; Teilzahlung zählt nicht.
+
+### 7.5 Räumung mit Polizei
+
+- Am Räumungstag stehen zwei Beamte und ein Schlosser-Statist an der Haustür (nur wenn der Spieler in der Nähe ist,
+  sonst läuft es im Hintergrund ab). Ist der Spieler drin, wird er nach einer Ansage hinausbegleitet (Ausblenden,
+  draußen wieder einblenden).
+- Folgen: Schloss getauscht, Wohnung weg, Kaution einbehalten, Mietschuld bleibt offen (wird beim nächsten Vertrag
+  zuerst fällig). Schrank und Erinnerungen bleiben erhalten (Einlagerung), sind aber erst mit neuer Wohnung erreichbar.
+- Wer sich wehrt (schlägt, schießt), bekommt Fahndung wie sonst auch; die Räumung findet trotzdem statt.
+- Ohne Wohnung: kein Schlafen, kein bewusstes Speichern am Bett (Autosave bleibt). Hinweis in der Missionsliste.
+- Kein Spott, kein Game Over: Die Räumung ist eine Lage, aus der man wieder herauskommt.
+
+### 7.6 Kaufen mit realen Preisen
+
+Reale Preise sind mit dem Spielverdienst nicht bar bezahlbar. Deshalb wie in echt: **Eigenkapital und Kredit.**
+
+- Eigenkapital 20 % des Kaufpreises plus 10 % Nebenkosten (Grunderwerbsteuer, Notar, zusammen gerundet), bar.
+- Rest als Darlehen: 3,6 % Zins, 2 % Tilgung, Rate je Spielmonat = Darlehen × 5,6 % / 12.
+  Beispiel W1: 262 000 €, bar 78 600 €, Darlehen 209 600 €, Rate 978 € je Spielmonat.
+- Dazu Hausgeld bzw. Unterhalt: 3,50 €/m² je Spielmonat.
+- Sondertilgung jederzeit in der App. Ist das Darlehen getilgt, bleibt nur das Hausgeld.
+- Rate nicht bezahlt: gleiche Mahnstufen wie bei der Miete, am Ende **Zwangsversteigerung**: Objekt weg, Erlös 70 %
+  des Kaufpreises minus Restschuld wird ausgezahlt (kann null sein), Räumung mit Polizei wie oben.
+- Verkaufen jederzeit: 92 % des Kaufpreises minus Restschuld.
+- Eigentum bringt keine Mieteinnahmen (bewusst: kein Vermieter-Simulator). Offen, siehe 7.10.
+
+Damit die großen Häuser erreichbar sind, braucht es mehr Einkommen als heute. Das ist ein eigener Punkt (7.10) und
+nicht Teil der ersten Stufe; W1 kaufen ist mit Marathon-Preisgeldern und Jobs in Reichweite.
+
+### 7.7 Wohnung als Zentrale
+
+Im Wohnzimmer eine Wand mit drei Dingen (F davor öffnet ein Fenster im Stil des Handys):
+
+- **Fotos:** Die Kamera-App speichert jedes Foto zusätzlich im Spiel (verkleinert, JPEG, höchstens 60 Stück, älteste
+  fallen heraus; IndexedDB, nicht localStorage). Album mit Ort, Spieltag und Uhrzeit; einzelne Fotos als Bild an die
+  Wand hängen (bis zu vier Rahmen im Raum zeigen echte eigene Fotos).
+- **Erinnerungen:** automatisches Tagebuch ohne Zutun: Story-Kapitel, Medaillen, erster Marathon, erste Fahrt mit
+  Christoph 2, Räumung, Einzug, gekaufte Objekte. Je Eintrag Titel, Ort, Spieltag, wenn vorhanden ein Foto.
+- **Videos:** kurze Clips (10 s, 540p) über eine Aufnahme-Taste im Handy, höchstens 6 Stück, Abspielen am Fernseher
+  in der Wohnung und im Handy. Nur wo der Browser `MediaRecorder` kann; wo nicht, bleibt der Knopf weg. Clips sind
+  groß (rund 2 bis 4 MB je Stück), deshalb die enge Grenze.
+- Alles bleibt im Browser des Spielers. Export einzelner Fotos und Clips als Datei; nichts wird hochgeladen.
+- Größere Wohnungen bekommen größere Räume (zweiter Raum ab W2, Garten-Andeutung bei Häusern), gleiche Zentrale.
+
+### 7.8 Technik
+
+- Neues Modul `wohnen.js` (`initWohnen(X)`): Katalog, Kalender-Abrechnung, Verträge, Darlehen, Mahnstufen, Räumung.
+  Speichert unter `notgta.wohnen` (Format 4 der Spielstände nimmt den Schlüssel auf).
+- `zuhause.js` wird von „eine Wohnung“ auf „Wohnung je Katalogeintrag“ erweitert: Ankerpunkt, Türschild, Kartensymbol
+  und Innenraum je Objekt; nur die aktuell bewohnte ist betretbar.
+- Neues Modul `erinnerungen.js`: IndexedDB-Ablage für Fotos, Clips und Tagebuch, mit Mengen- und Größengrenzen.
+- `phone.js`: App „Wohnen“ (Vertrag, Fälligkeit, zahlen, kaufen, verkaufen), Kamera speichert ins Album, Aufnahme-Knopf.
+- `game.js`: nur Tageszähler, Speichern/Laden des Zählers und die Init-Zeilen.
+- Proben: `wohnen` (Monatswechsel bucht Miete ab; ohne Geld Mahnung, dann Räumung; Kauf mit Darlehen; Verkauf),
+  `erinnerungen` (Foto landet im Album und übersteht Neuladen; Grenze 60 wird gehalten).
+
+### 7.9 Stufen der Umsetzung
+
+1. **Stufe 1:** Kalender, Katalog, mieten, Abbuchung, Mahnungen, Räumung mit Polizei, App „Wohnen“. W1 bis W3.
+2. **Stufe 2:** Kaufen mit Darlehen, Hausgeld, Verkauf, Zwangsversteigerung. Häuser H1 bis H5 mit eigenem Innenraum.
+3. **Stufe 3:** Zentrale mit Fotos und Erinnerungen (Album, Rahmen an der Wand, Tagebuch).
+4. **Stufe 4:** Videos (Aufnahme, Fernseher), nur auf Geräten, die es können.
+
+Jede Stufe ist ein eigener PR mit Probe.
+
+### 7.10 Offene Entscheidungen (Vorschlag jeweils zuerst)
+
+- **Spielmonat:** 5 Spieltage. Alternative: 7 Spieltage (weniger Druck) oder 3 (mehr Druck).
+- **Einkommen für die großen Häuser:** eigener Ausbau nach Stufe 2, z. B. feste Anstellung mit Monatslohn (Kurier,
+  Rettungsdienst, Taxi fahren) statt nur Einzelaufträgen. Alternative: Mieteinnahmen aus Eigentum.
+- **Start:** erster Monat frei, danach Miete. Alternative: gleich ab Tag 1 zahlen.
+- **Bestehende Spielstände:** bekommen W1 als Mietvertrag mit einem freien Monat, niemand wird rückwirkend geräumt.
