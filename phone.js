@@ -41,7 +41,7 @@ export function initPhone(X, S) {
     { id: 'karte', label: 'Karte', icon: '🗺', build: appMap },
     { id: 'missionen', label: 'Missionen', icon: '🎯', build: appMissions },
     { id: 'wohnen', label: 'Wohnen', icon: '🏠', build: p => { const W = X.WOHNEN; if (!W) throw new Error('Wohnen fehlt'); W.app(p, { toast, esc }); }, show: () => !!X.WOHNEN },
-    { id: 'redscout', label: 'redscout24', icon: '🔎', build: p => { const W = X.WOHNEN; if (!W) throw new Error('Wohnen fehlt'); W.app(p, { toast, esc }, 'markt'); }, show: () => !!X.WOHNEN },
+    { id: 'redscout', label: 'redscout', icon: '🔎', build: p => { const W = X.WOHNEN; if (!W) throw new Error('Wohnen fehlt'); W.app(p, { toast, esc }, 'markt'); }, show: () => !!X.WOHNEN },
     { id: 'statistik', label: 'Statistik', icon: '📊', build: appStats },
     { id: 'kamera', label: 'Kamera', icon: '📷', build: appCam },
     { id: 'speichern', label: 'Speichern', icon: '💾', build: appSave },
