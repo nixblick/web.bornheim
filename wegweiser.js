@@ -38,13 +38,19 @@ export function initWegweiser(X) {
   function update(dt) { if (!cur || !cur.pts[cur.i]) return; placeT -= dt || 0.016; if (placeT <= 0) { placeT = 0.25; place(); } /* Layout nur 4-mal je Sekunde lesen */ { const k = sun(), [mb, mc] = beam.userData.mats; mb.opacity = 0.28 + 0.37 * k; mc.opacity = 0.5 + 0.45 * k; const sc = 1 + 0.5 * k; beam.children[0].scale.set(sc, 1, sc); } const [x, z] = cur.pts[cur.i]; const here = player.car ? player.car.position : player.pos;
     beam.position.set(x, TH(x, z), z); beam.userData.ring.rotation.z += dt * 1.5; beam.userData.arrow.position.y = 4 + Math.sin(performance.now() / 300) * 0.4; beam.userData.arrow.rotation.y += dt * 2;
     const dx = x - here.x, dz = z - here.z, d = Math.hypot(dx, dz);
-    const rot = relAngle(dx, dz).toFixed(2); if (rot !== lastRot) { lastRot = rot; pfeil.style.transform = `rotate(${rot}rad)`; }
+    let px = dx, pz = dz; // Pfeil: mit Straßenpfad (cur.pfad) zeigt er die Straße entlang zum nächsten Pfadpunkt, der mehr als 18 m voraus liegt
+    if (cur.pfad && cur.pfadI) { const pf = cur.pfad, a = cur.i ? cur.pfadI[cur.i - 1] : 0, b = cur.pfadI[cur.i]; let bi = a, bd = 1e18; for (let k = a; k <= b; k++) { const q = (pf[k][0] - here.x) ** 2 + (pf[k][1] - here.z) ** 2; if (q < bd) { bd = q; bi = k; } }
+      let k = bi; while (k < b && Math.hypot(pf[k][0] - here.x, pf[k][1] - here.z) < 18) k++; px = pf[k][0] - here.x; pz = pf[k][1] - here.z; }
+    const rot = relAngle(px, pz).toFixed(2); if (rot !== lastRot) { lastRot = rot; pfeil.style.transform = `rotate(${rot}rad)`; }
     const t = `${cur.label} · Punkt ${cur.i + 1 - (cur.off || 0)}/${cur.pts.length - (cur.off || 0)} · ${d < 1000 ? Math.round(d) + ' m' : (d / 1000).toFixed(1).replace('.', ',') + ' km'}`; if (t !== lastTxt) { lastTxt = t; text.textContent = t; } }
 
   // Strecke auf einer Karte: erledigte Abschnitte blass, Rest kräftig, nächster Punkt groß mit Rand; R = Kartenradius (Minikarte) zum Anheften am Rand
   function draw(ctx, P, R) { if (!cur) return; const pts = cur.pts, from = cur.from || null; ctx.save(); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
     const line = (a, b, w, col, al) => { if (b - a < 1) return; ctx.globalAlpha = al; ctx.strokeStyle = col; ctx.lineWidth = w; ctx.beginPath(); for (let k = a; k <= b; k++) { const q = k < 0 ? from : pts[k]; if (!q) continue; const [x, y] = P(q[0], q[1]); k === a ? ctx.moveTo(x, y) : ctx.lineTo(x, y); } ctx.stroke(); };
-    const s0 = from ? -1 : 0; line(s0, cur.i, 3, '#9fe8b8', 0.45); line(Math.max(s0, cur.i - 1), pts.length - 1, 7, '#0b3d1e', 0.9); line(Math.max(s0, cur.i - 1), pts.length - 1, 4, CSS, 1);
+    if (cur.pfad && cur.pfadI) { // Strecke entlang der Straßen statt Luftlinie zwischen den Punkten
+      const pf = cur.pfad, c0 = cur.i ? cur.pfadI[cur.i - 1] : 0, seg = (a, b, w, col, al) => { if (b - a < 1) return; ctx.globalAlpha = al; ctx.strokeStyle = col; ctx.lineWidth = w; ctx.beginPath(); for (let k = a; k <= b; k++) { const [x, y] = P(pf[k][0], pf[k][1]); k === a ? ctx.moveTo(x, y) : ctx.lineTo(x, y); } ctx.stroke(); };
+      seg(0, c0, 3, '#9fe8b8', 0.45); seg(c0, pf.length - 1, 7, '#0b3d1e', 0.9); seg(c0, pf.length - 1, 4, CSS, 1);
+    } else { const s0 = from ? -1 : 0; line(s0, cur.i, 3, '#9fe8b8', 0.45); line(Math.max(s0, cur.i - 1), pts.length - 1, 7, '#0b3d1e', 0.9); line(Math.max(s0, cur.i - 1), pts.length - 1, 4, CSS, 1); }
     ctx.globalAlpha = 1; for (let k = cur.i + 1; k < pts.length; k++) { if (cur.big && k % 5) continue; const [x, y] = P(pts[k][0], pts[k][1]); ctx.fillStyle = '#fff'; ctx.strokeStyle = '#0b3d1e'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(x, y, 3.5, 0, 7); ctx.fill(); ctx.stroke(); }
     let [x, y] = P(pts[cur.i][0], pts[cur.i][1]); if (R) { const L = Math.hypot(x, y); if (L > R) { x *= R / L; y *= R / L; } }
     const pulse = 1 + Math.sin(performance.now() / 200) * 0.15; ctx.fillStyle = CSS; ctx.strokeStyle = '#fff'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.arc(x, y, 8 * pulse, 0, 7); ctx.fill(); ctx.stroke();
