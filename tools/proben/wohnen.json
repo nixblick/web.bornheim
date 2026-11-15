@@ -6,7 +6,7 @@
   "hour": 13,
   "wait": 8000,
   "js": "(async () => { const G = window.G, w = ms => new Promise(r => setTimeout(r, ms)); for (let i = 0; i < 40 && !(window.WOHNEN && G.X.ZUHAUSE); i++) await w(500); const W = window.WOHNEN, Z = G.X.ZUHAUSE; if (G.player.car) G.toggleCar(); G.player.wanted = 0; if (G.STORY && G.STORY.busy) G.STORY.stop(); for (let i = 0; i < 40 && !(Z.home && W.stand.monatBezahlt === 1); i++) { Z.find(); await w(500); } window.__w1 = { st: W.stand, tag: W.tag, monat: W.monat, tim: W.tagImMonat, bis: W.bisErster, gesperrt: Z.gesperrt, anker: Z.anker, home: !!Z.home, apps: G.PHONE.apps, zeile: W.zeilen()[0], kat: W.katalog.map(o => [o.id, W.miete(o.id)]) }; return JSON.stringify(window.__w1); })()",
-  "expect": "(r => !!r && r.st.miete === 'W1' && r.st.frei === true && r.st.schuld === 0 && r.st.stufe === 0 && r.st.monatBezahlt === 1 && r.tag === 1 && r.monat === 1 && r.tim === 1 && r.bis === 5 && r.gesperrt === false && r.anker[0] === -138 && r.anker[1] === 372 && r.home && r.apps.includes('wohnen') && /Starthilfe/.test(r.zeile.info) && JSON.stringify(r.kat) === '[[\"W1\",684],[\"W2\",1638],[\"W3\",2304]]')(window.__w1)"
+  "expect": "(r => !!r && r.st.miete === 'W1' && r.st.frei === true && r.st.schuld === 0 && r.st.stufe === 0 && r.st.monatBezahlt === 1 && r.tag === 1 && r.monat === 1 && r.tim === 1 && r.bis === 5 && r.gesperrt === false && r.anker[0] === -138 && r.anker[1] === 372 && r.home && r.apps.includes('wohnen') && /Starthilfe/.test(r.zeile.info) && JSON.stringify(r.kat) === '[[\"W1\",684],[\"W2\",1638],[\"W3\",2304],[\"H1\",0],[\"H2\",0],[\"H3\",0],[\"H4\",0],[\"H5\",0]]')(window.__w1)"
  },
  {
   "n": "wo_2_miete_abgebucht",
