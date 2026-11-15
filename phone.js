@@ -67,7 +67,7 @@ export function initPhone(X, S) {
     p.querySelector('[data-a=save]').onclick = () => { try { X.saveGame(true, true); /* bewusst gespeichert */ toast('Gespeichert', 'success'); } catch (e) { toast('Speichern fehlgeschlagen', 'error'); } };
     p.querySelector('[data-a=menu]').onclick = () => { close(); X.openMenu && X.openMenu(); }; }
   function appCam(p) { const E = X.ERINNERN; // mit Album (erinnerungen.js): Foto ins Album, auf Wunsch zusätzlich als PNG; ohne: nur PNG wie bisher
-    p.innerHTML = `<div class="ps-pbtns"><p class="ps-pempty">${E ? `Foto vom Spielbild, ohne Handy. Es landet im Album (höchstens ${E.MAX_FOTOS} Fotos). Ansehen: App „Album“ oder die Wand zu Hause.` : 'Foto vom Spielbild, ohne Handy. Wird als PNG heruntergeladen.'}</p>${E ? '<button class="ps-pbtn is-amber" data-a="album">📷 Foto ins Album</button><button class="ps-pbtn" data-a="shot">📷 Foto + Datei speichern</button>' : '<button class="ps-pbtn is-amber" data-a="shot">📷 Foto machen</button>'}</div>`;
+    p.innerHTML = `<div class="ps-pbtns"><p class="ps-pempty">${E ? `Foto vom Spielbild, ohne Handy. Es landet im Album (höchstens ${E.MAX_FOTOS} Fotos). Ansehen: App „Album“ oder die Wand zu Hause.${E.clipKannAufnehmen ? ` Clips: ${E.CLIP_SEK} Sekunden ohne Ton, höchstens ${E.MAX_CLIPS}; ansehen im Album oder am Fernseher zu Hause.` : ''}` : 'Foto vom Spielbild, ohne Handy. Wird als PNG heruntergeladen.'}</p>${E ? '<button class="ps-pbtn is-amber" data-a="album">📷 Foto ins Album</button><button class="ps-pbtn" data-a="shot">📷 Foto + Datei speichern</button>' : '<button class="ps-pbtn is-amber" data-a="shot">📷 Foto machen</button>'}${E && E.clipKannAufnehmen ? `<button class="ps-pbtn" data-a="clip">${E.clipLaeuft ? '⏹ Aufnahme beenden' : `🎬 Clip aufnehmen (${E.CLIP_SEK} s)`}</button>` : ''}</div>`;
     const foto = datei => { root.style.visibility = 'hidden'; requestAnimationFrame(() => {
       try {
         if (E) E.fotoAufnehmen({ datei }).then(m => { if (m) toast(`Foto ${m.anzahl} von ${E.MAX_FOTOS} im Album` + (datei ? ' · Datei gespeichert' : ''), 'success'); else toast(E.fotos().length >= E.MAX_FOTOS ? 'Album voll: nur Favoriten. Erst ein Foto löschen.' : 'Foto nicht möglich', 'error'); });
@@ -75,7 +75,9 @@ export function initPhone(X, S) {
       } catch (e) { toast('Foto nicht möglich', 'error'); }
       root.style.visibility = ''; }); };
     const ba = p.querySelector('[data-a=album]'); if (ba) ba.onclick = () => foto(false);
-    p.querySelector('[data-a=shot]').onclick = () => foto(true); }
+    p.querySelector('[data-a=shot]').onclick = () => foto(true);
+    // Clip (erinnerungen.js): Handy zu, dann läuft die Aufnahme mit rotem Zähler; derselbe Knopf beendet sie vorzeitig
+    const bc = p.querySelector('[data-a=clip]'); if (bc) bc.onclick = () => { const lief = E.clipLaeuft; close(); try { if (lief) E.clipStopp(); else E.clipAufnehmen(); } catch (e) { showMsg('CLIP NICHT MÖGLICH', 1600); } }; }
   function appCheats(p) { p.innerHTML = `<div class="ps-pbtns"><p class="ps-pempty">Nur im Kreativmodus.</p><button class="ps-pbtn" data-a="geld">💶 +1000 €</button><button class="ps-pbtn" data-a="heil">❤ Gesundheit voll</button><button class="ps-pbtn" data-a="fahndung">🚓 Fahndung weg</button></div>`;
     const ok = () => X.creative && X.creative.on;
     p.querySelector('[data-a=geld]').onclick = () => { if (ok()) { player.money = (player.money || 0) + 1000; toast('+1000 €', 'success'); } };
