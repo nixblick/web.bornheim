@@ -269,6 +269,10 @@ Im Wohnzimmer eine Wand mit drei Dingen (F davor öffnet ein Fenster im Stil des
 
 Jede Stufe ist ein eigener PR mit Probe.
 
+Stand der Umsetzung (15.11.2026): Stufe 1 und Stufe 2 sind umgesetzt. Abweichungen: Kündigung und Umzug wirken
+sofort; kein Schlosser bei der Räumung; Häuser haben noch keinen eigenen Innenraum; ein Fehlbetrag aus der
+Zwangsversteigerung bleibt als Bankschuld und sperrt nur weitere Käufe, nicht das Mieten.
+
 ### 7.10 Offene Entscheidungen (Vorschlag jeweils zuerst)
 
 - **Spielmonat:** 5 Spieltage. Alternative: 7 Spieltage (weniger Druck) oder 3 (mehr Druck).
