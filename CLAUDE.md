@@ -28,6 +28,16 @@ gh run list -R nixblick/web.bornheim -w spieltest.yml -L 1
 gh run download -R nixblick/web.bornheim <run-id> -D <ordner>
 ```
 
+Seit 15.11.2026 wird der Lauf durch rote Proben **nicht mehr rot** (jeder rote Lauf schickt André eine Mail). Rot wird er nur
+noch bei Fehlern in eslint oder tsc; die laufen vor jedem Push lokal. Deshalb vor jedem Merge den Befund lesen, ein grüner
+Haken allein sagt nichts über die Proben:
+
+```
+gh run view <run-id> -R nixblick/web.bornheim --log | grep BEFUND     # „BEFUND: GRUEN (55 Proben gelaufen)“ oder „BEFUND: ROT …: clips zuhause“
+```
+
+Bei „ROT“ nicht mergen: Ursache klären (Spielfehler oder Probe zu knapp getaktet), beheben, neu laufen lassen.
+
 ## Werkzeug für gezielte Proben: `tools/probe.mjs`
 
 13.11.2026: Eine Nachtrunde hat die ganze Nacht ihr eigenes Testskript gebaut und nichts getestet.
