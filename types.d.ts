@@ -161,6 +161,8 @@ export interface Ctx {
   ZUHAUSE?: any;
   // Wohnen (wohnen.js): Kalender, Miete, Räumung; zeitVor zählt den Spieltag (game.js), PHONE setzt phone.js
   WOHNEN?: any;
+  // Erinnerungen (erinnerungen.js): Fotoalbum, Tagebuch, Wand in der Wohnung
+  ERINNERN?: any;
   PHONE?: any;
   zeitVor?: (h: number) => void;
   // Rasen (rasen.js): vor initRasen per Object.assign gesetzt
