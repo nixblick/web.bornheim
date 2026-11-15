@@ -199,12 +199,12 @@ export function initZuhause(X, IN) {
     R.triggers.push({ x: 0, z: -3.2, r: 1.2, label: 'F · Raus auf die Straße', act: () => IN.leave() });
     R.triggers.push({ x: -3.5, z: 1.5, r: 1.3, label: 'F · Kleiderschrank: Outfit wechseln', act: () => menu('schrank') });
     R.triggers.push({ x: 2.0, z: 2.6, r: 1.3, label: 'F · Bett: schlafen (Zeit vorstellen, speichert)', act: () => menu('bett') });
-    if (A.WOHNEN) R.triggers.push({ x: -1.5, z: 0.3, r: 1.0, label: 'F · Mietvertrag ansehen', act: () => A.WOHNEN.oeffnen() }); // am Tisch
+    if (A.WOHNEN) R.triggers.push({ x: -1.5, z: 0.3, r: 1.0, label: 'F · Vertrag ansehen', act: () => A.WOHNEN.oeffnen() }); // am Tisch
     return R;
   }
   function enter() {
     if (!home || !IN || !IN.enter) return false; if (player.car || player.dead) return false;
-    if (gesperrt) { showMsg('VERSCHLOSSEN – KEIN MIETVERTRAG', 1600); return false; }
+    if (gesperrt) { showMsg('VERSCHLOSSEN – KEIN WOHNSITZ', 1600); return false; }
     if (player.wanted > 0) { showMsg('POLIZEI SUCHT DICH – ERST ABTAUCHEN', 1400); return false; }
     guide(false);
     IN.enter(buildRoom(), [0, -2.4], 0, { x: home.ex, z: home.ez, yaw: home.yaw }, 'Zuhause', [home.ex, home.ez]);
