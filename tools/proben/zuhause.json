@@ -16,6 +16,13 @@
   "expect": "!!window.G.INTERIORS.inside && window.G.INTERIORS.inside.label === 'Zuhause' && window.G.X.ZUHAUSE.inside"
  },
  {
+  "n": "zh_2b_kamera_unter_decke",
+  "wait": 500,
+  "shot": false,
+  "js": "(async () => { const G = window.G, Z = G.X.ZUHAUSE; G.camPitch.v = 1.0; await new Promise(r => setTimeout(r, 2500)); window.__camY = G.camera.position.y; G.camPitch.v = 0.12; const h = Z.home; return JSON.stringify({ camY: window.__camY, strasse: h.strasse, hof: h.hof ? [Math.round(h.hof.x), Math.round(h.hof.z)] : null }); })()",
+  "expect": "window.__camY < 2.6"
+ },
+ {
   "n": "zh_3_kleiderschrank",
   "wait": 1500,
   "js": "(async () => { const G = window.G, Z = G.X.ZUHAUSE; const ok = Z.menu('schrank'); await new Promise(r => setTimeout(r, 300)); const b = document.querySelector('#zuhausemenu button[data-o=lauf]'); if (b) b.click(); await new Promise(r => setTimeout(r, 300)); return JSON.stringify({ ok, knopf: !!b, look: Z.look(), gespeichert: localStorage.getItem('notgta.outfit'), offen: document.getElementById('zuhausemenu').style.display }); })()",

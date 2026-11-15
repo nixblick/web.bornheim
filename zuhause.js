@@ -29,6 +29,8 @@ export function initZuhause(X, IN) {
   // ---------- Haus wählen ----------
   // Wohnhaus (ohne Art oder res/house/apartments, 8–30 m hoch) mit Mittelpunkt nächst ANCHOR; Tür an der Kante, vor der
   // 3 m frei sind, kein Laden/POI im Umkreis von 10 m und keine Fahrbahn: unter den passenden Kanten die straßennächste.
+  // Ticket 264 (15.11.2026): Die Haustür liegt an der Straßenseite (Kante schaut zur Straße, Weg dorthin frei), nicht im
+  // Innenhof. Dazu gibt es immer eine zweite Tür an einer anderen Hausseite (home.hof), wenn dort eine Kante frei ist.
   function find() {
     const W = A.WORLD; if (!W || !W.buildings) return null; const [ax, az] = ANCHOR, cand = [];
     for (const b of W.buildings) {
@@ -39,8 +41,11 @@ export function initZuhause(X, IN) {
     }
     cand.sort((a, c) => a.d - c.d || a.cx - c.cx);
     const pois = W.pois || [], free = (x, z) => A.solidAt(x, z) < 0;
-    for (const c of cand) {
-      let best = null, bd = 1e9;
+    // Straßenseite: Kante schaut zur nächsten Straße und zwischen Tür und Fahrbahnrand steht kein Haus
+    const zurStrasse = (ex, ez, nx, nz, r) => { if (!r) return false; const vx = r.x - ex, vz = r.z - ez, L = Math.hypot(vx, vz) || 1; if ((vx * nx + vz * nz) / L < 0.5) return false;
+      for (let s = 1.5; s < L - r.w / 2; s += 1.5) if (!free(ex + vx / L * s, ez + vz / L * s)) return false; return true; };
+    for (const nurStrasse of [true, false]) for (const c of cand) {
+      let best = null, bd = 1e9; const alle = [];
       for (let e = 0; e < c.b.p.length; e++) {
         const en = A.edgeNormal(c.b.p, e); if (en.l < 5) continue;
         const mx = en.ax + en.dx / 2, mz = en.az + en.dz / 2, nx = en.nx, nz = en.nz, ux = en.dx / en.l, uz = en.dz / en.l;
@@ -48,9 +53,13 @@ export function initZuhause(X, IN) {
         let poi = false; for (const p of pois) if (p && p.k && (p.x - mx) ** 2 + (p.z - mz) ** 2 < 100) { poi = true; break; } if (poi) continue;
         const ex = mx + nx * 1.6, ez = mz + nz * 1.6, r = A.nearestRoadDir ? A.nearestRoadDir(ex, ez, 30) : null, rd = r ? Math.hypot(r.x - ex, r.z - ez) - r.w / 2 : 30;
         if (rd < 1) continue;
-        if (rd < bd) { bd = rd; best = { x: mx, z: mz, nx, nz, ex, ez, yaw: Math.atan2(nx, nz) }; }
+        const t = { x: mx, z: mz, nx, nz, ex, ez, yaw: Math.atan2(nx, nz), strasse: zurStrasse(ex, ez, nx, nz, r) }; alle.push(t);
+        if (nurStrasse && !t.strasse) continue;
+        if (rd < bd) { bd = rd; best = t; }
       }
-      if (best) return best;
+      if (best) { // zweite Tür: die Kante, die am stärksten von der Haustür wegschaut (Hofseite), mindestens 6 m entfernt
+        let hof = null, hd = 0.2; for (const t of alle) { if (t === best || Math.hypot(t.x - best.x, t.z - best.z) < 6) continue; const dot = t.nx * best.nx + t.nz * best.nz; if (dot < hd) { hd = dot; hof = t; } }
+        best.hof = hof; return best; }
     }
     return null;
   }
@@ -72,14 +81,18 @@ export function initZuhause(X, IN) {
   }
   function buildMarker() {
     const m = mk(), g = new THREE.Group();
-    const door = new THREE.Mesh(m.doorG, m.doorM); door.position.set(0, 1.1, 0.07); g.add(door);
-    if (!gesperrt) { // ohne Wohnung: nur die Tür, kein Schild „Zuhause“, kein Licht
-      const sign = new THREE.Mesh(m.signG, m.signM); sign.position.set(0, 2.45, 0.09); g.add(sign);
-      const lamp = new THREE.Mesh(m.lampG, m.lampM); lamp.position.set(0.85, 2.0, 0.1); g.add(lamp);
-    }
-    g.position.set(home.x, TH(home.ex, home.ez), home.z); g.rotation.y = Math.atan2(home.nx, home.nz); g.userData.noChunk = true; g.updateMatrixWorld(true);
+    for (const t of tueren()) { const q = new THREE.Group();
+      const door = new THREE.Mesh(m.doorG, m.doorM); door.position.set(0, 1.1, 0.07); q.add(door);
+      if (!gesperrt) { // ohne Wohnung: nur die Tür, kein Schild „Zuhause“, kein Licht
+        if (t === home) { const sign = new THREE.Mesh(m.signG, m.signM); sign.position.set(0, 2.45, 0.09); q.add(sign); } // Schild nur an der Haustür, die Hoftür hat nur das Licht
+        const lamp = new THREE.Mesh(m.lampG, m.lampM); lamp.position.set(0.85, 2.0, 0.1); q.add(lamp);
+      }
+      q.position.set(t.x, TH(t.ex, t.ez), t.z); q.rotation.y = Math.atan2(t.nx, t.nz); g.add(q); }
+    g.userData.noChunk = true; g.updateMatrixWorld(true);
     scene.add(g); return g;
   }
+  /** Haustür (Straße) und, wenn vorhanden, Hoftür. */
+  function tueren() { return home ? (home.hof ? [home, home.hof] : [home]) : []; }
   function updateMarker() {
     const d = home ? Math.hypot(player.pos.x - home.x, player.pos.z - home.z) : 1e9;
     if (!marker && d < 150) marker = buildMarker();
@@ -203,17 +216,17 @@ export function initZuhause(X, IN) {
     if (A.ERINNERN && A.ERINNERN.raum) { try { A.ERINNERN.raum(R); } catch (e) { console.warn('zuhause: Wand', e); } } // Wand mit Fotos und Erinnerungen, vier Rahmen (erinnerungen.js)
     return R;
   }
-  function enter() {
-    if (!home || !IN || !IN.enter) return false; if (player.car || player.dead) return false;
+  function enter(t) {
+    if (!home || !IN || !IN.enter) return false; if (player.car || player.dead) return false; if (!t || !Number.isFinite(t.ex)) t = home;
     if (gesperrt) { showMsg('VERSCHLOSSEN – KEIN WOHNSITZ', 1600); return false; }
     if (player.wanted > 0) { showMsg('POLIZEI SUCHT DICH – ERST ABTAUCHEN', 1400); return false; }
     guide(false);
-    IN.enter(buildRoom(), [0, -2.4], 0, { x: home.ex, z: home.ez, yaw: home.yaw }, 'Zuhause', [home.ex, home.ez]);
+    IN.enter(buildRoom(), [0, -2.4], 0, { x: t.ex, z: t.ez, yaw: t.yaw }, 'Zuhause', [home.ex, home.ez]);
     showMsg('ZUHAUSE', 1000); return true;
   }
   // Tür: F-Aktion vor U-Bahn, Läden und Hauseingang (interiors.js fragt X.fHooks zuerst ab)
   A.fHooks = A.fHooks || [];
-  A.fHooks.push(() => { if (!home) return null; const dx = player.pos.x - (home.x + home.nx * 0.8), dz = player.pos.z - (home.z + home.nz * 0.8); if (dx * dx + dz * dz > 4) return null; if (Math.abs(player.pos.y - TH(home.ex, home.ez)) > 1.5) return null; return gesperrt ? { label: 'F · Verschlossen · Wohnen-App öffnen', act: () => { if (A.WOHNEN) A.WOHNEN.oeffnen(); else showMsg('VERSCHLOSSEN', 1400); } } : { label: 'F · Nach Hause', act: enter }; });
+  A.fHooks.push(() => { if (!home) return null; let t = null; for (const q of tueren()) { const dx = player.pos.x - (q.x + q.nx * 0.8), dz = player.pos.z - (q.z + q.nz * 0.8); if (dx * dx + dz * dz <= 4 && Math.abs(player.pos.y - TH(q.ex, q.ez)) <= 1.5) { t = q; break; } } if (!t) return null; return gesperrt ? { label: 'F · Verschlossen · Wohnen-App öffnen', act: () => { if (A.WOHNEN) A.WOHNEN.oeffnen(); else showMsg('VERSCHLOSSEN', 1400); } } : { label: t === home ? 'F · Nach Hause' : 'F · Nach Hause (Hoftür)', act: () => enter(t) }; });
 
   // ---------- Mietwohnung wechseln, sperren (wohnen.js) ----------
   /** Anderer Ankerpunkt: Haus neu suchen, Tür und Kartensymbol folgen. ort = Text für die Missionsliste. */
@@ -239,7 +252,7 @@ export function initZuhause(X, IN) {
   }
   setInterval(() => { try { tick(); } catch (e) { console.warn('zuhause', e); } }, 1000);
 
-  return { find: () => (home = home || find()), enter, menu, outfit: setOutfit, sleep, guide, OUTFITS, HOURS, setzeAnker, sperren,
+  return { find: () => (home = home || find()), enter: () => enter(), menu, outfit: setOutfit, sleep, guide, OUTFITS, HOURS, setzeAnker, sperren,
     get anker() { return ANCHOR.slice(); }, get gesperrt() { return gesperrt; }, get ort() { return ortText; },
     get home() { return home; }, get guiding() { return !!route && WEG.cur === route; }, get inside() { return atHome(); }, look: () => ({ id: outfitId, n: lastN }) };
 }

@@ -41,7 +41,7 @@ export function initInteriors(X, W, D, SH) {
     if (inside) leaveSilent();
     scene.add(R.g); inside = Object.assign(R, { exit, label });
     const pad = 0.35;
-    X.setPocket({ x0: PX - R.W2 - 5, x1: PX + R.W2 + 5, z0: PZ - R.D2 - 5, z1: PZ + R.D2 + 5, label, anchor: anchor || [exit.x, exit.z],
+    X.setPocket({ x0: PX - R.W2 - 5, x1: PX + R.W2 + 5, z0: PZ - R.D2 - 5, z1: PZ + R.D2 + 5, h: R.H, label, anchor: anchor || [exit.x, exit.z],
       solidH: (x, z, y) => { const lx = x - PX, lz = z - PZ; if (y !== undefined && y > R.H - 0.35) return true; if (Math.abs(lx) > R.W2 - pad || Math.abs(lz) > R.D2 - pad) return true; for (const w of R.walls) if (lx > w[0] && lx < w[2] && lz > w[1] && lz < w[3] && (y === undefined || y < (w[4] ?? 99))) return true; return false; } });
     player.pos.set(PX + spawn[0], 0, PZ + spawn[1]); player.vy = 0; if (player.mesh) player.mesh.position.copy(player.pos); camYaw.v = yaw; camPitch.v = 0.12;
     const mm = $('minimap'); if (mm) mm.style.visibility = 'hidden'; sfx('click', 0.4);
