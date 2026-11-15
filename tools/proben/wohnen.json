@@ -1,0 +1,50 @@
+[
+ {
+  "n": "wo_1_start",
+  "x": -138,
+  "z": 372,
+  "hour": 13,
+  "wait": 8000,
+  "js": "(async () => { const G = window.G, w = ms => new Promise(r => setTimeout(r, ms)); for (let i = 0; i < 40 && !(window.WOHNEN && G.X.ZUHAUSE); i++) await w(500); const W = window.WOHNEN, Z = G.X.ZUHAUSE; if (G.player.car) G.toggleCar(); G.player.wanted = 0; if (G.STORY && G.STORY.busy) G.STORY.stop(); for (let i = 0; i < 40 && !(Z.home && W.stand.monatBezahlt === 1); i++) { Z.find(); await w(500); } window.__w1 = { st: W.stand, tag: W.tag, monat: W.monat, tim: W.tagImMonat, bis: W.bisErster, gesperrt: Z.gesperrt, anker: Z.anker, home: !!Z.home, apps: G.PHONE.apps, zeile: W.zeilen()[0], kat: W.katalog.map(o => [o.id, W.miete(o.id)]) }; return JSON.stringify(window.__w1); })()",
+  "expect": "(r => !!r && r.st.miete === 'W1' && r.st.frei === true && r.st.schuld === 0 && r.st.stufe === 0 && r.st.monatBezahlt === 1 && r.tag === 1 && r.monat === 1 && r.tim === 1 && r.bis === 5 && r.gesperrt === false && r.anker[0] === -138 && r.anker[1] === 372 && r.home && r.apps.includes('wohnen') && /Starthilfe/.test(r.zeile.info) && JSON.stringify(r.kat) === '[[\"W1\",684],[\"W2\",1638],[\"W3\",2304]]')(window.__w1)"
+ },
+ {
+  "n": "wo_2_miete_abgebucht",
+  "wait": 1500,
+  "js": "(async () => { const G = window.G, W = window.WOHNEN, p = G.player, w = ms => new Promise(r => setTimeout(r, ms)); p.money = 5000; W.tagVor(W.bisErster - 1); const vorher = 5000 - p.money; W.tagVor(1); await w(1500); W.pruefen(); G.PHONE.open('wohnen'); await w(400); const pg = document.querySelector('#phone .ps-phone__page[data-app=wohnen]'); const text = pg ? pg.textContent : ''; const knoepfe = pg ? pg.querySelectorAll('button[data-a=mieten]').length : 0; G.PHONE.close(); window.__w2 = { vorher, diff: 5000 - p.money, st: W.stand, tag: W.tag, monat: W.monat, tim: W.tagImMonat, text: text.slice(0, 200), knoepfe, post: G.PHONE.msgs.filter(m => m.who === 'Hausverwaltung').length }; return JSON.stringify(window.__w2); })()",
+  "expect": "(r => !!r && r.vorher === 0 && r.diff === 684 && r.tag === 6 && r.monat === 2 && r.tim === 1 && r.st.stufe === 0 && r.st.frei === false && r.st.monatBezahlt === 2 && r.st.miete === 'W1' && /Tag 1 von 5 · Monat 2/.test(r.text) && r.knoepfe === 2 && r.post >= 1 && !window.G.PHONE.isOpen)(window.__w2)"
+ },
+ {
+  "n": "wo_3_mahnungen",
+  "wait": 1000,
+  "shot": false,
+  "js": "(async () => { const G = window.G, W = window.WOHNEN, p = G.player, w = ms => new Promise(r => setTimeout(r, ms)); p.money = 0; W.tagVor(W.bisErster); await w(600); const s1 = W.stand, z1 = W.zeilen()[0].name, zahl = W.zahlen().ok; W.tagVor(1); await w(600); const s2 = W.stand, z2 = W.zeilen()[0].name; window.__w3 = { s1, s2, z1, z2, zahl, tag: W.tag, gesperrt: G.X.ZUHAUSE.gesperrt }; return JSON.stringify(window.__w3); })()",
+  "expect": "(r => !!r && r.s1.stufe === 1 && r.s1.schuld === 684 && r.s1.miete === 'W1' && r.s2.stufe === 2 && r.s2.schuld === 684 && r.s2.miete === 'W1' && r.zahl === false && /Mahnung/.test(r.z1) && /Räumung/.test(r.z2) && r.tag === 12 && r.gesperrt === false)(window.__w3)"
+ },
+ {
+  "n": "wo_4_raeumung",
+  "wait": 2500,
+  "js": "(async () => { const G = window.G, W = window.WOHNEN, Z = G.X.ZUHAUSE, p = G.player, w = ms => new Promise(r => setTimeout(r, ms)); const h = Z.home; if (p.car) G.toggleCar(); p.wanted = 0; if (G.STORY && G.STORY.busy) G.STORY.stop(); p.pos.set(h.ex, G.TH(h.ex, h.ez), h.ez); if (p.mesh) p.mesh.position.copy(p.pos); await w(1000); Z.enter(); for (let i = 0; i < 20 && !Z.inside; i++) await w(300); const warDrin = Z.inside; W.tagVor(1); const sofort = W.stand; let wachen = W.wachen; for (let i = 0; i < 80 && (W.laeuft || G.INTERIORS.inside || document.getElementById('wohnenblende')); i++) { await w(500); wachen = Math.max(wachen, W.wachen); } wachen = Math.max(wachen, W.wachen); const nochmal = Z.enter(); const schlaf = await Z.sleep(1); window.__w4 = { warDrin, sofort, st: W.stand, gesperrt: Z.gesperrt, drin: !!G.INTERIORS.inside, zdrin: Z.inside, laeuft: W.laeuft, blende: !!document.getElementById('wohnenblende'), shop: !!G.X.shopOpen, d: Math.hypot(p.pos.x - h.ex, p.pos.z - h.ez), x: p.pos.x, wachen, nochmal, schlaf, zeile: W.zeilen()[0].name, karte: [...document.querySelectorAll('#card h2')].map(e => e.textContent).join() }; return JSON.stringify(window.__w4); })()",
+  "expect": "(r => !!r && r.warDrin === true && r.sofort.miete === null && r.st.miete === null && r.st.schuld === 684 && r.st.kaution === 0 && r.st.stufe === 0 && r.st.geraeumt === true && r.gesperrt === true && r.drin === false && r.zdrin === false && r.laeuft === false && r.blende === false && r.shop === false && r.d < 6 && Math.abs(r.x) < 50000 && r.nochmal === false && r.schlaf === false && r.zeile === 'Ohne Wohnung')(window.__w4)"
+ },
+ {
+  "n": "wo_5_schuld_zahlen_w2_mieten",
+  "wait": 1500,
+  "js": "(async () => { const G = window.G, W = window.WOHNEN, Z = G.X.ZUHAUSE, p = G.player, w = ms => new Promise(r => setTimeout(r, ms)); p.money = 10000; const mitSchuld = W.mieten('W2').ok; const g0 = p.money; const zahl = W.zahlen(); const g1 = p.money; const neu = W.mieten('W2'); await w(800); const a = W.katalog.find(o => o.id === 'W2').anker; window.__w5 = { mitSchuld, unveraendert: g0 === 10000, zahl, schuld: g0 - g1, neu, diff: 10000 - p.money, st: W.stand, anker: Z.anker, soll: a, gesperrt: Z.gesperrt, ort: Z.ort }; return JSON.stringify(window.__w5); })()",
+  "expect": "(r => !!r && r.mitSchuld === false && r.unveraendert && r.zahl.ok === true && r.schuld === 684 && r.neu.ok === true && r.diff === 684 + 2 * 1638 + 1638 && r.st.miete === 'W2' && r.st.kaution === 3276 && r.st.schuld === 0 && r.st.geraeumt === false && r.anker[0] === r.soll[0] && r.anker[1] === r.soll[1] && r.soll[0] === -980 && r.soll[1] === 720 && r.gesperrt === false && /Nordend/.test(r.ort))(window.__w5)"
+ },
+ {
+  "n": "wo_6_speichern_laden",
+  "wait": 1000,
+  "shot": false,
+  "js": "(() => { const G = window.G, W = window.WOHNEN; const t = G.world.tag; G.saveGame(true, true); const imStand = JSON.parse(localStorage.getItem('notgta.save')).tag; G.world.tag = 1; const ok = G.loadGame(); const st = W.laden(); window.__w6 = { t, imStand, ok, nach: G.world.tag, st, roh: JSON.parse(localStorage.getItem('notgta.wohnen')), anker: G.X.ZUHAUSE.anker }; return JSON.stringify(window.__w6); })()",
+  "expect": "(r => !!r && r.t === 13 && r.imStand === 13 && r.ok === true && r.nach === 13 && window.G.world.tag === 13 && r.st.miete === 'W2' && r.st.kaution === 3276 && r.st.monatBezahlt === 3 && r.roh.miete === 'W2' && r.roh.v === 1 && r.anker[0] === -980)(window.__w6)"
+ },
+ {
+  "n": "wo_7_aufraeumen",
+  "wait": 500,
+  "shot": false,
+  "js": "(() => { const G = window.G, W = window.WOHNEN; G.world.tag = 1; G.player.money = 150; const st = W.zuruecksetzen(); return JSON.stringify({ st, anker: G.X.ZUHAUSE.anker, gesperrt: G.X.ZUHAUSE.gesperrt }); })()",
+  "expect": "window.WOHNEN.stand.miete === 'W1' && window.G.X.ZUHAUSE.anker[0] === -138 && window.G.X.ZUHAUSE.gesperrt === false"
+ }
+]

@@ -283,7 +283,7 @@ export function initInteriors(X, W, D, SH) {
     const loading = X.streamInit(exitPt[0], exitPt[1]); let done = false; loading.then(() => done = true, () => done = true);
     // @ts-ignore -- Baseline #119: DOM-/Zahl-String-Typen, kein X-Fehler
     await new Promise(res => { const tick = () => { const k = Math.min(1, (performance.now() - t0) / 3500); const bar = ov.querySelector('#rbar'); if (bar) bar.style.width = (k * 100) + '%'; const i = Math.min(names.length - 1, 1 + Math.floor(k * (names.length - 1))); const nx = ov.querySelector('#rnext'); if (nx) nx.textContent = names[i]; if (k >= 1 && done) res(); else setTimeout(tick, 60); }; tick(); });
-    world.hour = (world.hour + p.min / 60) % 24;
+    { const zv = /** @type {any} */ (X).zeitVor; if (zv) zv(p.min / 60); else world.hour = (world.hour + p.min / 60) % 24; } /* Fahrzeit über Mitternacht zählt den Spieltag (wohnen.js) */
     const [ex, ez] = exitPt; const [fx, fz] = exitNear(ex + 2, ez + 2); const exit = { x: fx, z: fz, yaw: camYaw.v, fix: () => { if (to.sOnly) placeEntr(exitPt, to); [exit.x, exit.z] = exitNear(exitPt[0] + 2, exitPt[1] + 2); } }; /* erst beim Aussteigen festlegen: dann sind die Straßen da */
     if (to.entr && to.entr.length) station(to, exit, 1, to.sTun && (!(p.line || '').startsWith('U')) && hasS(to) ? 'S' : 'U'); else { leaveSilent(); player.pos.set(fx, TH(fx, fz), fz); if (player.mesh) player.mesh.position.copy(player.pos); }
     ov.style.opacity = '0'; setTimeout(() => ov.remove(), 450); riding = false;
