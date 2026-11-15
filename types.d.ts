@@ -159,6 +159,10 @@ export interface Ctx {
   SHOPS_LIST?: () => { x: number, z: number }[];
   // Zuhause (#149, zuhause.js): von game.js nach initSupermarkt gesetzt
   ZUHAUSE?: any;
+  // Wohnen (wohnen.js): Kalender, Miete, Räumung; zeitVor zählt den Spieltag (game.js), PHONE setzt phone.js
+  WOHNEN?: any;
+  PHONE?: any;
+  zeitVor?: (h: number) => void;
   // Rasen (rasen.js): vor initRasen per Object.assign gesetzt
   LOW_GFX?: boolean;
   WEAK_GPU?: boolean;

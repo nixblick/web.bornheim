@@ -40,6 +40,8 @@ export function initPhone(X, S) {
     { id: 'feed', label: 'Feed', icon: '📣', build: appFeed },
     { id: 'karte', label: 'Karte', icon: '🗺', build: appMap },
     { id: 'missionen', label: 'Missionen', icon: '🎯', build: appMissions },
+    { id: 'wohnen', label: 'Wohnen', icon: '🏠', build: p => { const W = X.WOHNEN; if (!W) throw new Error('Wohnen fehlt'); W.app(p, { toast, esc }); }, show: () => !!X.WOHNEN },
+    { id: 'redscout', label: 'redscout24', icon: '🔎', build: p => { const W = X.WOHNEN; if (!W) throw new Error('Wohnen fehlt'); W.app(p, { toast, esc }, 'markt'); }, show: () => !!X.WOHNEN },
     { id: 'statistik', label: 'Statistik', icon: '📊', build: appStats },
     { id: 'kamera', label: 'Kamera', icon: '📷', build: appCam },
     { id: 'speichern', label: 'Speichern', icon: '💾', build: appSave },
@@ -90,5 +92,7 @@ export function initPhone(X, S) {
     toggle(); }, true);
   // Touch: Knopf am rechten Rand
   if (/** @type {any} */ (window).__touch) { const b = document.createElement('button'); b.id = 'phonebtn'; b.textContent = '📱'; b.setAttribute('aria-label', 'Handy'); b.addEventListener('touchstart', e => { e.preventDefault(); if (!player.car) toggle(); }, { passive: false }); b.onclick = () => { if (!player.car) toggle(); }; document.body.appendChild(b); }
-  return { open: show, close, toggle, openApp, get isOpen() { return open; }, get app() { return app ? app.id : null; }, apps: APPS.map(a => a.id), get msgs() { return msgs; }, get feed() { return feed; } };
+  /** Nachricht von außen (wohnen.js: Hausverwaltung), zählt als ungelesen */
+  function nachricht(who, text) { msgs.push({ who: String(who || 'Info'), text: String(text || ''), at: clock() }); if (msgs.length > 80) msgs.shift(); if (!open) unread++; badge(); }
+  return X.PHONE = { open: show, close, toggle, openApp, nachricht, get isOpen() { return open; }, get app() { return app ? app.id : null; }, apps: APPS.map(a => a.id), get msgs() { return msgs; }, get feed() { return feed; } };
 }

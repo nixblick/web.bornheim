@@ -11,7 +11,8 @@ export function initZuhause(X, IN) {
   const A = /** @type {any} */ (X);
   const { THREE, scene, player, world, TH, showMsg, card, keys } = A;
   const WEG = A.WEG || (A.WEG = initWegweiser(X));
-  const ANCHOR = [-138, 372]; // Startpunkt am Wochenmarkt Bornheim
+  let ANCHOR = [-138, 372]; // Startpunkt am Wochenmarkt Bornheim; wohnen.js setzt ihn je Mietwohnung (setzeAnker)
+  let gesperrt = false, ortText = 'in Bornheim am Wochenmarkt'; // gesperrt: ohne Wohnung (gekündigt oder geräumt) bleibt die Tür zu
   const PX = 60000, PZ = 0; // Taschenraum wie interiors.js
   const KEY = 'notgta.outfit';
   const OUTFITS = {
@@ -72,21 +73,24 @@ export function initZuhause(X, IN) {
   function buildMarker() {
     const m = mk(), g = new THREE.Group();
     const door = new THREE.Mesh(m.doorG, m.doorM); door.position.set(0, 1.1, 0.07); g.add(door);
-    const sign = new THREE.Mesh(m.signG, m.signM); sign.position.set(0, 2.45, 0.09); g.add(sign);
-    const lamp = new THREE.Mesh(m.lampG, m.lampM); lamp.position.set(0.85, 2.0, 0.1); g.add(lamp);
+    if (!gesperrt) { // ohne Wohnung: nur die Tür, kein Schild „Zuhause“, kein Licht
+      const sign = new THREE.Mesh(m.signG, m.signM); sign.position.set(0, 2.45, 0.09); g.add(sign);
+      const lamp = new THREE.Mesh(m.lampG, m.lampM); lamp.position.set(0.85, 2.0, 0.1); g.add(lamp);
+    }
     g.position.set(home.x, TH(home.ex, home.ez), home.z); g.rotation.y = Math.atan2(home.nx, home.nz); g.userData.noChunk = true; g.updateMatrixWorld(true);
     scene.add(g); return g;
   }
   function updateMarker() {
     const d = home ? Math.hypot(player.pos.x - home.x, player.pos.z - home.z) : 1e9;
     if (!marker && d < 150) marker = buildMarker();
-    else if (marker && d > 220) { scene.remove(marker); disposeHierarchy(marker); marker = null; }
+    else if (marker && d > 220) dropMarker();
   }
+  function dropMarker() { if (marker) { scene.remove(marker); disposeHierarchy(marker); marker = null; } }
 
   // ---------- Karten ----------
   const icon = (ctx, x, y, s) => { ctx.save(); ctx.fillStyle = '#f0a830'; ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(x - s, y); ctx.lineTo(x, y - s); ctx.lineTo(x + s, y); ctx.lineTo(x + s * 0.7, y); ctx.lineTo(x + s * 0.7, y + s * 0.8); ctx.lineTo(x - s * 0.7, y + s * 0.8); ctx.lineTo(x - s * 0.7, y); ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.restore(); };
-  if (A.mmHooks) A.mmHooks.push((ctx, P, R) => { if (!home || atHome()) return; let [x, y] = P(home.x, home.z); const L = Math.hypot(x, y); if (R && L > R - 8) { if (Math.hypot(player.pos.x - home.x, player.pos.z - home.z) > 800) return; x *= (R - 8) / L; y *= (R - 8) / L; } icon(ctx, x, y, 7); });
-  if (A.mapHooks) A.mapHooks.push((ctx, P) => { if (!home) return; const [x, y] = P(home.x, home.z); icon(ctx, x, y, 8); ctx.save(); ctx.fillStyle = '#fff'; ctx.strokeStyle = '#000'; ctx.lineWidth = 3; ctx.font = 'bold 12px system-ui'; ctx.textAlign = 'center'; ctx.textBaseline = 'top'; ctx.strokeText('Zuhause', x, y + 9); ctx.fillText('Zuhause', x, y + 9); ctx.restore(); });
+  if (A.mmHooks) A.mmHooks.push((ctx, P, R) => { if (!home || gesperrt || atHome()) return; let [x, y] = P(home.x, home.z); const L = Math.hypot(x, y); if (R && L > R - 8) { if (Math.hypot(player.pos.x - home.x, player.pos.z - home.z) > 800) return; x *= (R - 8) / L; y *= (R - 8) / L; } icon(ctx, x, y, 7); });
+  if (A.mapHooks) A.mapHooks.push((ctx, P) => { if (!home || gesperrt) return; const [x, y] = P(home.x, home.z); icon(ctx, x, y, 8); ctx.save(); ctx.fillStyle = '#fff'; ctx.strokeStyle = '#000'; ctx.lineWidth = 3; ctx.font = 'bold 12px system-ui'; ctx.textAlign = 'center'; ctx.textBaseline = 'top'; ctx.strokeText('Zuhause', x, y + 9); ctx.fillText('Zuhause', x, y + 9); ctx.restore(); });
 
   // ---------- Weg zeigen (Wegweiser; eine Strecke zugleich) ----------
   let route = null, rafOn = false;
@@ -94,6 +98,7 @@ export function initZuhause(X, IN) {
     const f = () => { if (!route || WEG.cur !== route) { rafOn = false; route = null; return; } const t = performance.now(); WEG.update(Math.min(0.1, (t - t0) / 1000)); t0 = t; requestAnimationFrame(f); }; requestAnimationFrame(f); }
   function guide(on) {
     if (!on) { if (route && WEG.cur === route) WEG.route(null); route = null; return true; }
+    if (gesperrt) { showMsg('KEINE WOHNUNG – APP „WOHNEN“', 1600); return false; }
     if (route && WEG.cur === route) return true; if (atHome()) { showMsg('DU BIST SCHON ZUHAUSE', 1200); return false; } if (!WEG.frei()) return false;
     route = { pts: [home ? [home.ex, home.ez] : ANCHOR.slice()], i: 0, label: '🏠 Zuhause' }; WEG.route(route); loop(); card('WEG NACH HAUSE', 'Dem grünen Strahl folgen', 3); return true;
   }
@@ -130,12 +135,12 @@ export function initZuhause(X, IN) {
     return null;
   }
   function sleep(h) {
-    if (sleeping || !HOURS.includes(h)) return Promise.resolve(false); const why = blocked(); if (why) { showMsg(why, 1600); return Promise.resolve(false); }
+    if (sleeping || gesperrt || !HOURS.includes(h)) return Promise.resolve(false); const why = blocked(); if (why) { showMsg(why, 1600); return Promise.resolve(false); }
     sleeping = true;
     const ov = document.createElement('div'); ov.style.cssText = 'position:fixed;inset:0;background:#000;color:#ddd;display:flex;align-items:center;justify-content:center;z-index:46;font:700 24px system-ui,sans-serif;opacity:0;transition:opacity .6s';
     ov.textContent = 'Schlafen …'; document.body.appendChild(ov); setTimeout(() => { ov.style.opacity = '1'; }, 30);
     return new Promise(res => setTimeout(() => {
-      try { if (player.dead) throw new Error('im Schlaf umgehauen'); /* Tod während des Abblendens: nichts heilen, nichts speichern */ world.hour = (world.hour + h) % 24; player.hp = Math.max(player.hp || 0, 100); if (A.saveGame) A.saveGame(true, true); ov.textContent = uhr(world.hour) + ' Uhr'; } catch (e) { console.warn('zuhause: schlafen', e); }
+      try { if (player.dead) throw new Error('im Schlaf umgehauen'); /* Tod während des Abblendens: nichts heilen, nichts speichern */ if (A.zeitVor) A.zeitVor(h); /* zählt den Spieltag über Mitternacht (wohnen.js) */ else world.hour = (world.hour + h) % 24; player.hp = Math.max(player.hp || 0, 100); if (A.saveGame) A.saveGame(true, true); ov.textContent = uhr(world.hour) + ' Uhr'; } catch (e) { console.warn('zuhause: schlafen', e); }
       setTimeout(() => { ov.style.opacity = '0'; setTimeout(() => { ov.remove(); sleeping = false; card('AUSGESCHLAFEN', `${uhr(world.hour)} Uhr · Leben voll · Spielstand gespeichert`, 4); res(true); }, 650); }, 900);
     }, 700));
   }
@@ -145,7 +150,7 @@ export function initZuhause(X, IN) {
   const menuOn = () => !!menuEl && menuEl.style.display === 'flex';
   function closeMenu() { if (!menuOn()) return; menuEl.style.display = 'none'; A.shopOpen = false; /** @type {any} */ (window).__noAutoMenu = false; if (wasLocked) { wasLocked = false; try { const q = A.renderer.domElement.requestPointerLock(); if (q && q.catch) q.catch(() => {}); } catch (e) { /* ohne Sperre weiter */ } } }
   function menu(kind) {
-    if (!atHome() || sleeping) return false;
+    if (!atHome() || sleeping || gesperrt) return false;
     if (kind === 'bett') { const why = blocked(); if (why) { showMsg(why, 1600); return false; } }
     if (!menuEl) { menuEl = document.createElement('div'); menuEl.id = 'zuhausemenu'; menuEl.style.cssText = 'position:fixed;inset:0;background:#000b;display:none;align-items:center;justify-content:center;z-index:45;font-family:system-ui,sans-serif'; document.body.appendChild(menuEl); }
     menuOpts = kind === 'schrank'
@@ -194,10 +199,12 @@ export function initZuhause(X, IN) {
     R.triggers.push({ x: 0, z: -3.2, r: 1.2, label: 'F · Raus auf die Straße', act: () => IN.leave() });
     R.triggers.push({ x: -3.5, z: 1.5, r: 1.3, label: 'F · Kleiderschrank: Outfit wechseln', act: () => menu('schrank') });
     R.triggers.push({ x: 2.0, z: 2.6, r: 1.3, label: 'F · Bett: schlafen (Zeit vorstellen, speichert)', act: () => menu('bett') });
+    if (A.WOHNEN) R.triggers.push({ x: -1.5, z: 0.3, r: 1.0, label: 'F · Mietvertrag ansehen', act: () => A.WOHNEN.oeffnen() }); // am Tisch
     return R;
   }
   function enter() {
     if (!home || !IN || !IN.enter) return false; if (player.car || player.dead) return false;
+    if (gesperrt) { showMsg('VERSCHLOSSEN – KEIN MIETVERTRAG', 1600); return false; }
     if (player.wanted > 0) { showMsg('POLIZEI SUCHT DICH – ERST ABTAUCHEN', 1400); return false; }
     guide(false);
     IN.enter(buildRoom(), [0, -2.4], 0, { x: home.ex, z: home.ez, yaw: home.yaw }, 'Zuhause', [home.ex, home.ez]);
@@ -205,7 +212,22 @@ export function initZuhause(X, IN) {
   }
   // Tür: F-Aktion vor U-Bahn, Läden und Hauseingang (interiors.js fragt X.fHooks zuerst ab)
   A.fHooks = A.fHooks || [];
-  A.fHooks.push(() => { if (!home) return null; const dx = player.pos.x - (home.x + home.nx * 0.8), dz = player.pos.z - (home.z + home.nz * 0.8); if (dx * dx + dz * dz > 4) return null; if (Math.abs(player.pos.y - TH(home.ex, home.ez)) > 1.5) return null; return { label: 'F · Nach Hause', act: enter }; });
+  A.fHooks.push(() => { if (!home) return null; const dx = player.pos.x - (home.x + home.nx * 0.8), dz = player.pos.z - (home.z + home.nz * 0.8); if (dx * dx + dz * dz > 4) return null; if (Math.abs(player.pos.y - TH(home.ex, home.ez)) > 1.5) return null; return gesperrt ? { label: 'F · Verschlossen · Wohnen-App öffnen', act: () => { if (A.WOHNEN) A.WOHNEN.oeffnen(); else showMsg('VERSCHLOSSEN', 1400); } } : { label: 'F · Nach Hause', act: enter }; });
+
+  // ---------- Mietwohnung wechseln, sperren (wohnen.js) ----------
+  /** Anderer Ankerpunkt: Haus neu suchen, Tür und Kartensymbol folgen. ort = Text für die Missionsliste. */
+  function setzeAnker(a, ort) {
+    if (ort) ortText = String(ort);
+    if (!a || !Number.isFinite(a[0]) || !Number.isFinite(a[1]) || (a[0] === ANCHOR[0] && a[1] === ANCHOR[1])) return false;
+    raus(); guide(false); ANCHOR = [a[0], a[1]]; home = null; findT = 0; dropMarker(); return true;
+  }
+  /** true = keine Wohnung: Tür zu, kein Schild, kein Schlafen/Schrank; wer drin ist, steht danach vor der Tür. */
+  function sperren(an) {
+    an = !!an; if (an === gesperrt) return false; gesperrt = an;
+    if (an) { raus(); guide(false); }
+    dropMarker(); return true; // Tür mit/ohne Schild neu bauen (updateMarker)
+  }
+  function raus() { closeMenu(); if (atHome()) { try { IN.leave(); } catch (e) { console.warn('zuhause: raus', e); } } }
 
   // ---------- Takt (eigener, keine Zeile in der Spielschleife) ----------
   function tick() {
@@ -216,6 +238,7 @@ export function initZuhause(X, IN) {
   }
   setInterval(() => { try { tick(); } catch (e) { console.warn('zuhause', e); } }, 1000);
 
-  return { find: () => (home = home || find()), enter, menu, outfit: setOutfit, sleep, guide, OUTFITS, HOURS,
+  return { find: () => (home = home || find()), enter, menu, outfit: setOutfit, sleep, guide, OUTFITS, HOURS, setzeAnker, sperren,
+    get anker() { return ANCHOR.slice(); }, get gesperrt() { return gesperrt; }, get ort() { return ortText; },
     get home() { return home; }, get guiding() { return !!route && WEG.cur === route; }, get inside() { return atHome(); }, look: () => ({ id: outfitId, n: lastN }) };
 }

@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-11-15
+
+- **Wohnen, Stufe 1 (`wohnen.js`, Konzept Abschnitt 7):** Das Spiel zählt jetzt Tage, ein Spielmonat hat 5 Spieltage. Die bisherige Wohnung am Wochenmarkt ist ein Mietvertrag (38 m², 684 € im Monat, erster Monat frei), dazu zwei weitere Mietwohnungen im Nordend (78 m², 1 638 €) und im Ostend (96 m², 2 304 €), Kaution zwei Monatsmieten. Abbuchung am Monatsersten; fehlt das Geld: Mahnung, am nächsten Tag die zweite, am dritten Tag Zwangsräumung mit zwei Beamten an der Tür. Danach ist die Wohnung weg, die Kaution einbehalten, die Schuld bleibt, und die Wohnung wird 15 % teurer neu vermietet. Zwei neue Handy-Apps: „Wohnen“ (Vertrag, Fälligkeit, zahlen, kündigen) und das erfundene Portal „redscout24“ (Angebote ansehen und mieten). Vor Ort steht an jeder freien Wohnung ein Schild „Zu vermieten“, F öffnet dort das Angebot. Sozialkritik in Inseraten, Mahnungen und Abbuchung. Spielstände Format 4. Kaufen, Häuser und die Wohnung als Zentrale folgen in den Stufen 2 bis 4. Im Browser noch nicht angesehen, Probe `wohnen` im Spieltest.
+
 ## 2026-11-14
 
 - **Weitere Höhen nach gesundem Menschenverstand:** Kleine Hallen und Nebengebäude unter 25 m² ohne Etagenangabe (Vorgabe 10 m, rund 880 Fälle) sind jetzt 3,5 m hoch, Kirchen und Kapellen unter 60 m² (Vorgabe 25 m) 8 m.
