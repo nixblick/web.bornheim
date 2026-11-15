@@ -211,7 +211,7 @@ export function initWohnen(X) {
     return [{ k: 'Wohnen', name: 'Miete', info: `${kal} · Miete fällig in ${tage(bisErster(t))} (${eur(miete(o))})${st.frei ? ' · dieser Monat ist frei (Starthilfe)' : ''}`, btn: 'App „Wohnen“' }];
   }
   function oeffnen(id = 'wohnen') { const P = A.PHONE; if (!P) return false; return P.isOpen ? P.openApp(id) : P.open(id); }
-  const PORTAL = 'redscout24'; // erfundenes Wohnungsportal (André 15.11.2026): Angebote ansehen und mieten, in der App oder vor Ort am Schild
+  const PORTAL = 'redscout'; // erfundenes Wohnungsportal (André 15.11.2026): Angebote ansehen und mieten, in der App oder vor Ort am Schild
 
   // ---------- Handy-App „Wohnen“ (phone.js ruft app(seite, { toast, esc })) ----------
   function app(p, H, modus = 'wohnen') {
