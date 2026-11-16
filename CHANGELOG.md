@@ -1,5 +1,10 @@
 # Changelog
 
+## 2026-11-16
+
+- **Audio-Modul (#118, #188):** Web-Audio-Teil (`SND`, `audioInit`, `sfx`, `audioUpdate`) aus `game.js` nach `audio.js` ausgelagert, auf dem Stand nach `klang.js` (KLANG kommt per `setKlang`). `audioUpdate` bekommt `player`, `keys`, `cars`, `worldT` als Parameter. Verhalten unverändert. Spieltest auf GitHub.
+- **Kachelbau-Schritt `park` in kleineren Stücken (Probe `sparmodus`, #195):** Die einmalige Vorbereitung der Parkauto-Geometrie läuft je Autotyp in einem eigenen Stück, die 100-m-Kacheln der Parkautos je eine (vorher 34,1 ms am Stück). Grenze der Probe unverändert. Spieltest auf GitHub.
+
 ## 2026-11-15
 
 - **Bus fahren (`bus.js`):** F an einer Bushaltestelle öffnet den Fahrkartenautomaten: Linie wählen (echte Linien und Haltestellennamen aus `data/busroutes.json`), dann das Ziel in Fahrtrichtung. Kurzstrecke bis 2 km 2,40 €, sonst Einzelfahrt 3,80 €. Ohne Fahrkarte fährt man umsonst oder zahlt bei der Kontrolle (30 %) 60 €. Die Fahrt wird wie beim Taxi nicht simuliert (Abblende, Ankunft an der Zielhaltestelle), die Uhr läuft um die Fahrzeit weiter. Mit Fahndung steigt man nicht ein. Ungetestet im Browser, Probe `bus`.

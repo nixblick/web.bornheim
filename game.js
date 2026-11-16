@@ -30,7 +30,7 @@ import { weather, initWetter } from './wetter.js';
 import { initRasen, rasenMat, RASEN_KINDS } from './rasen.js';
 import { initLandmarks } from './landmarks.js';
 import { initGraeber } from './graeber.js'; import { initErinnerungen } from './erinnerungen.js'; import { initSupermarkt } from './supermarkt.js'; import { initLadesaeulen } from './ladesaeulen.js'; import { initTaxi } from './taxi.js'; import { initBus } from './bus.js';
-import { initRadio } from './radio.js'; import { initKlang } from './klang.js';
+import { initRadio } from './radio.js'; import { initKlang } from './klang.js'; import { SND, audioInit, sfx, audioUpdate, setKlang } from './audio.js';
 import { initMinispiele } from './minispiele.js';
 import { initZuhause } from './zuhause.js';
 import { initWohnen } from './wohnen.js';
@@ -1163,12 +1163,13 @@ function* buildParked() { // Generator wie die übrigen Bauschritte (#173)
   // Geometrie je Typ vorbereiten: Lack (Instanzfarbe) + Rest (Vertexfarben oder Atlas-Textur)
   const toNI = g => { const gg = g.index ? g.toNonIndexed() : g; for (const k of Object.keys(gg.attributes)) if (!['position', 'normal', 'uv'].includes(k)) gg.deleteAttribute(k); if (!gg.attributes.uv) gg.setAttribute('uv', new THREE.Float32BufferAttribute(new Float32Array(gg.attributes.position.count * 2), 2)); return gg; };
   const withColor = (g, col) => { const n = g.attributes.position.count; const a = new Float32Array(n * 3); for (let i = 0; i < n; i++) { a[i * 3] = col.r; a[i * 3 + 1] = col.g; a[i * 3 + 2] = col.b; } g.setAttribute('color', new THREE.BufferAttribute(a, 3)); return g; };
-  const TG = PARK_TG || (PARK_TG = (() => {
+  yield; if (!PARK_TG) { /* einmalig, je Autotyp ein Stück (Probe sparmodus, 13.11.2026) */
   const TG = {};
-  for (const type of Object.keys(CAR_TPL)) { const T = CAR_TPL[type]; T.root.updateMatrixWorld(true); const body = [], rest = []; let atlas = null;
+  for (const type of Object.keys(CAR_TPL)) { yield; const T = CAR_TPL[type]; T.root.updateMatrixWorld(true); const body = [], rest = []; let atlas = null;
     T.root.traverse(m => { if (!m.isMesh) return; const g = toNI(m.geometry.clone().applyMatrix4(m.matrixWorld)); if (BODY_MATS.includes(m.material.name)) body.push(g); else { if (m.material.map) atlas = m.material.map; rest.push(withColor(g, m.material.color)); } });
     TG[type] = { body: body.length ? mergeGeometries(body) : null, rest: rest.length ? mergeGeometries(rest) : null, restMat: (m => LACK ? LACK.rest(m) : m)(atlas ? new THREE.MeshLambertMaterial({ map: atlas }) : new THREE.MeshLambertMaterial({ vertexColors: true })) }; }
-  for (const t of Object.values(TG)) { for (const g of [t.body, t.rest]) if (g) g.userData.shared = true; t.restMat.userData.shared = true; } return TG; })());
+  for (const t of Object.values(TG)) { for (const g of [t.body, t.rest]) if (g) g.userData.shared = true; t.restMat.userData.shared = true; } PARK_TG = TG; }
+  const TG = PARK_TG; yield;
   if (!PARK_LOW) { PARK_LOW = { bodyMat: LACK ? LACK.body : new THREE.MeshLambertMaterial({ color: 0xffffff }) }; PARK_LOW.bodyMat.userData.shared = true; }
   const bodyMat = PARK_LOW.bodyMat;
   // Ferne Stufe: einfacher Kasten mit Fensterband
@@ -1179,7 +1180,7 @@ function* buildParked() { // Generator wie die übrigen Bauschritte (#173)
   const PT = opts.quality === 'niedrig' ? TS : 100; const lowOnly = opts.quality === 'niedrig'; const tiles = new Map(); for (const sp of local) { const k = Math.floor(sp.x / PT) + ',' + Math.floor(sp.z / PT); if (!tiles.has(k)) tiles.set(k, { x0: Math.floor(sp.x / PT) * PT, z0: Math.floor(sp.z / PT) * PT, list: [] }); tiles.get(k).list.push(sp); }
   const o = new THREE.Object3D(); const cc = new THREE.Color();
   const place = (im, list, colorize) => { list.forEach((sp, i) => { o.position.set(sp.x, TH(sp.x, sp.z), sp.z); o.rotation.set(0, sp.h, 0); o.scale.setScalar(1); o.updateMatrix(); im.setMatrixAt(i, o.matrix); if (colorize) im.setColorAt(i, cc.setHex(sp.col).convertSRGBToLinear()); sp.refs.push({ mesh: im, i }); }); im.userData.noChunk = true; im.computeBoundingSphere(); scene.add(im); };
-  for (const [, t] of tiles) { const det = []; const byType = new Map(); for (const sp of t.list) { if (!byType.has(sp.type)) byType.set(sp.type, []); byType.get(sp.type).push(sp); }
+  for (const [, t] of tiles) { yield; const det = []; const byType = new Map(); for (const sp of t.list) { if (!byType.has(sp.type)) byType.set(sp.type, []); byType.get(sp.type).push(sp); }
     for (const [type, list] of byType) { if (lowOnly) break; const G = TG[type]; if (!G) continue; if (G.body) { const im = new THREE.InstancedMesh(G.body, bodyMat, list.length); place(im, list, true); im.castShadow = true; det.push(im); } if (G.rest) { const im = new THREE.InstancedMesh(G.rest, G.restMat, list.length); place(im, list, false); im.castShadow = true; det.push(im); } }
     const low = new THREE.InstancedMesh(lowGeo, lowMat, t.list.length); place(low, t.list, true);
     parkedTiles.push({ x0: t.x0, z0: t.z0, det, low }); }
@@ -2313,66 +2314,6 @@ function advanceAlongRoad(u, pos, dist, offset) {
   }
 }
 
-// ---------- Sound (Web Audio, alles synthetisch) ----------
-const SND = { ctx: null, master: null, vol: 0.8, engine: null, siren: null, ambient: null };
-function audioInit() {
-  if (SND.ctx) { if (SND.ctx.state === 'suspended') SND.ctx.resume(); return; }
-  const C = new (window.AudioContext || window.webkitAudioContext)(); SND.ctx = C; SND.master = C.createGain(); SND.master.gain.value = SND.vol; SND.master.connect(C.destination);
-  // Motor: zwei Sägezähne + Tiefpass
-  const eg = C.createGain(); eg.gain.value = 0; const ef = C.createBiquadFilter(); ef.type = 'lowpass'; ef.frequency.value = 400; const o1 = C.createOscillator(), o2 = C.createOscillator(); o1.type = 'sawtooth'; o2.type = 'square'; o1.frequency.value = 60; o2.frequency.value = 31; o1.connect(ef); o2.connect(ef); ef.connect(eg); eg.connect(SND.master); o1.start(); o2.start(); SND.engine = { g: eg, o1, o2, f: ef };
-  // Sirene
-  const sg = C.createGain(); sg.gain.value = 0; const so = C.createOscillator(); so.type = 'triangle'; so.frequency.value = 700; so.connect(sg); sg.connect(SND.master); so.start(); SND.siren = { g: sg, o: so };
-  // Stadtrauschen
-  const buf = C.createBuffer(1, C.sampleRate * 2, C.sampleRate); const d = buf.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1); const src = C.createBufferSource(); src.buffer = buf; src.loop = true; const af = C.createBiquadFilter(); af.type = 'lowpass'; af.frequency.value = 300; const ag = C.createGain(); ag.gain.value = 0.06; src.connect(af); af.connect(ag); ag.connect(SND.master); src.start(); SND.ambient = ag; SND.noise = buf;
-  const rs = C.createBufferSource(); rs.buffer = buf; rs.loop = true; const rf = C.createBiquadFilter(); rf.type = 'highpass'; rf.frequency.value = 1200; const rg = C.createGain(); rg.gain.value = 0; rs.connect(rf); rf.connect(rg); rg.connect(SND.master); rs.start(); SND.rain = rg;
-}
-function sfx(kind, vol = 1, pos) {
-  if (KLANG && KLANG.sfx(kind, vol, pos)) return; // pos: Ort der Quelle ({x, z}), ohne = Mitte. Geräusche aus Schichten (klang.js); kennt das Modul eines nicht, klingt es wie bisher
-  if (!SND.ctx) return; const C = SND.ctx, t = C.currentTime;
-  const noise = (dur, f0, f1, g0, type = 'lowpass') => { const src = C.createBufferSource(); src.buffer = SND.noise; const f = C.createBiquadFilter(); f.type = type; f.frequency.setValueAtTime(f0, t); f.frequency.exponentialRampToValueAtTime(f1, t + dur); const g = C.createGain(); g.gain.setValueAtTime(g0 * vol, t); g.gain.exponentialRampToValueAtTime(0.001, t + dur); src.connect(f); f.connect(g); g.connect(SND.master); src.start(t); src.stop(t + dur + 0.05); };
-  const tone = (dur, f0, f1, g0, type = 'sine') => { const o = C.createOscillator(); o.type = type; o.frequency.setValueAtTime(f0, t); o.frequency.exponentialRampToValueAtTime(f1, t + dur); const g = C.createGain(); g.gain.setValueAtTime(g0 * vol, t); g.gain.exponentialRampToValueAtTime(0.001, t + dur); o.connect(g); g.connect(SND.master); o.start(t); o.stop(t + dur + 0.05); };
-  if (kind === 'shot') { noise(0.18, 4000, 400, 0.9, 'bandpass'); tone(0.12, 180, 50, 0.6); }
-  else if (kind === 'reload') { tone(0.05, 900, 600, 0.2, 'square'); setTimeout(() => tone(0.05, 700, 1200, 0.2, 'square'), 120); }
-  else if (kind === 'step') { noise(0.07, 800, 200, 0.25); }
-  else if (kind === 'crash') { noise(0.5, 1500, 100, 1.0); tone(0.3, 90, 30, 0.6); }
-  else if (kind === 'bump') { noise(0.15, 600, 100, 0.4); }
-  else if (kind === 'screech') { noise(0.2, 2400, 1500, 0.35, 'bandpass'); }
-  else if (kind === 'thunder') { noise(2.5, 400, 30, 1.2); tone(1.5, 55, 25, 0.8); }
-  else if (kind === 'explosion') { noise(1.6, 900, 40, 1.4); tone(0.9, 70, 20, 1.0); }
-  else if (kind === 'bell') { tone(0.12, 2600, 2500, 0.25, 'sine'); tone(0.3, 3900, 3800, 0.1, 'sine'); setTimeout(() => { tone(0.12, 2600, 2500, 0.2, 'sine'); }, 110); }
-  else if (kind === 'horn') { tone(0.5, 420, 420, 0.35, 'square'); tone(0.5, 530, 530, 0.25, 'square'); }
-  else if (kind === 'hit') { noise(0.12, 2000, 300, 0.5); tone(0.15, 300, 100, 0.3); }
-  else if (kind === 'door') { noise(0.12, 500, 150, 0.35); tone(0.08, 160, 80, 0.3); }
-  else if (kind === 'pickup') { tone(0.1, 880, 1320, 0.3); setTimeout(() => tone(0.15, 1320, 1760, 0.3), 90); }
-  else if (kind === 'click') { tone(0.04, 1200, 800, 0.15, 'square'); }
-  else if (kind === 'smg') { noise(0.1, 5000, 600, 0.7, 'bandpass'); tone(0.07, 220, 70, 0.4); }
-  else if (kind === 'shotgun') { noise(0.35, 2500, 120, 1.3); tone(0.25, 120, 35, 0.9); }
-  else if (kind === 'rifle') { noise(0.16, 6000, 500, 1.0, 'bandpass'); tone(0.1, 260, 60, 0.5); }
-  else if (kind === 'swing') { noise(0.18, 600, 2400, 0.35, 'bandpass'); }
-  else if (kind === 'punch') { noise(0.1, 900, 120, 0.7); tone(0.12, 140, 60, 0.6); }
-  else if (kind === 'bang') { noise(0.06, 9000, 3000, 1.6, 'highpass'); noise(0.9, 1200, 60, 1.1); tone(0.3, 90, 30, 0.8); }
-  else if (kind === 'hiss') { noise(0.7, 3000, 2500, 0.3, 'highpass'); }
-  else if (kind === 'taser') { tone(0.5, 2400, 2200, 0.2, 'square'); noise(0.5, 4000, 3000, 0.25, 'bandpass'); }
-  else if (kind === 'splat') { noise(0.14, 700, 150, 0.6); }
-  else if (kind === 'throw') { noise(0.15, 400, 1500, 0.25, 'bandpass'); }
-  else if (kind === 'cough') { noise(0.12, 900, 300, 0.4, 'bandpass'); setTimeout(() => noise(0.1, 800, 300, 0.3, 'bandpass'), 180); }
-  else if (kind === 'notify') { tone(0.07, 1320, 1320, 0.12); setTimeout(() => tone(0.09, 1760, 1760, 0.1), 80); }
-  else if (kind === 'crackle') { for (let i = 0; i < 6; i++) setTimeout(() => noise(0.03, 7000, 4000, 0.5, 'highpass'), i * 60 + Math.random() * 40); }
-  else if (kind === 'bell') { tone(0.35, 1480, 1470, 0.25, 'triangle'); setTimeout(() => tone(0.35, 1480, 1470, 0.22, 'triangle'), 220); }
-  else if (kind === 'glass') { noise(0.25, 7000, 2500, 0.8, 'highpass'); tone(0.12, 2600, 1800, 0.15, 'triangle'); }
-  else if (kind === 'schoolbell') { for (let i = 0; i < 14; i++) setTimeout(() => tone(0.09, 2100, 2050, 0.22, 'square'), i * 95); }
-  else if (kind === 'whoosh') { noise(0.8, 800, 4000, 0.35, 'bandpass'); }
-}
-/* Leistung: setTargetAtTime nur, wenn sich der Zielwert geändert hat (ein gesetztes Ziel läuft von selbst weiter); Sirenensuche über alle Autos mit 5 Hz */
-const _sndZ = new WeakMap(); let _sirT = 0, _sirD = 1e9;
-function sndZiel(p, v, t, tc) { if (_sndZ.get(p) === v) return; p.setTargetAtTime(v, t, tc); _sndZ.set(p, v); }
-function audioUpdate(dt) {
-  if (!SND.ctx) return; const t = SND.ctx.currentTime;
-  if (SND.engine) { const car = player.car && (!player.car.userData.bike || player.car.userData.moto) ? player.car : null; /* Fahrrad hat keinen Motor, Motorrad schon */ const sp = car ? Math.abs(car.userData.speed) : 0; const target = car ? 0.18 + Math.min(sp / 30, 1) * 0.25 : 0; sndZiel(SND.engine.g.gain, target, t, 0.1); const f = (car && car.userData.moto ? 80 + sp * 9 : 50 + sp * 6) + (car && keys.KeyW ? 15 : 0); sndZiel(SND.engine.o1.frequency, f, t, 0.08); sndZiel(SND.engine.o2.frequency, f / 2, t, 0.08); sndZiel(SND.engine.f.frequency, 300 + sp * 40, t, 0.1); }
-  if (SND.siren) { _sirT -= dt; if (!(_sirT > 0)) { _sirT = 0.2; _sirD = 1e9; for (const c of cars) if (c.userData.mode === 'police' || (c.userData.siren && c !== player.car)) _sirD = Math.min(_sirD, c.position.distanceTo(player.pos)); } let best = _sirD; if (player.car && player.car.userData.siren) best = 0; const g = best < 220 ? 0.25 * (1 - best / 220) : 0; sndZiel(SND.siren.g.gain, g, t, 0.1); sndZiel(SND.siren.o.frequency, Math.floor(worldT * 1.7) % 2 ? 650 : 870, t, 0.03); }
-  if (SND.ambient) sndZiel(SND.ambient.gain, player.car ? 0.02 : 0.06, t, 0.5);
-}
-
 // ---------- Straßenbahn ----------
 function makeTram() {
   const g = new THREE.Group(); const paint = new THREE.MeshLambertMaterial({ color: 0x3aa8b8 }); /* Foto 12.11.2026: türkis wie die Frankfurter Straßenbahn */ const glass = new THREE.MeshLambertMaterial({ color: 0x182030, emissive: 0x2a3a50 });
@@ -3289,7 +3230,7 @@ $('cont').onclick = () => { let d = null; try { d = JSON.parse(localStorage.getI
 while (solidAt(player.pos.x, player.pos.z) >= 0) player.pos.x += 3;
 const X = { FAR_HAZE, sun, THREE, scene, camera, renderer, player, peds, cars, shootables, pickups, FX, puff, losFactor, keys, camYaw, camPitch, opts, world, weather, CITY, TH, solidAt, solidAtH, floorAt, nearestEdge, edgeNormal, moveWithCollision, makeHuman, makeCar, makeAmbulance, dropRider, tipBike, rehome, spawnCar, spawnPedAt, playAnim, animateWalk, damage, explode, burst, smoke, wakeParked, wakeParkedRay, sfx, SND, showMsg, raiseWanted, camShake, freeSkel, canvasTex, tracerMat, makeGun, dentCar, rnd, clamp, pick, lerpAngle, distSegSq, pointInPoly, randomRoadPoint, roadsDrivable, driveCar, carFx, carTerrain, exitCar, syncHand, CHAR, coneTex, hurtPlayer, card, closeMenu, saveGame, lockMouse, disposeCar,
   listeners: [], mmHooks: MM_HOOKS, mapHooks: MAP_HOOKS, menuHooks: MENU_HOOKS, rallyLimit: 8, get creative() { return creative; }, creativeSpawnerActive, pedRoads: () => pedRoads, roadsNear: (x, z, R, car) => roadsNear(x, z, R, car), streetAt: (x, z) => streetNameAt(x, z), barrierNear: (x, z, r) => barrierHit(x, z, r), storyBusy: () => STORY ? STORY.busy : false, openMenu, menuTab: t => MENU_TAB(t), get started() { return started; }, menuOpen: () => menuOpen };
-var PFUETZEN = initLichtpfuetzen(X); var DUNST = initDunst(X); var WPN = initWeapons(X); var DEMO = initDemo(X, WPN); var FIRE = initFire(X, WPN, DEMO); var STORY = initStory(X, WPN, DEMO, FIRE); var SHOPS = initShops(X, WPN); Object.assign(X, { wachen: WACHEN, nearestRoadDir, pushOffRoads, setPocket: p => { POCKET = p; camera.userData.init = false; }, inPocket, streamInit, roofHeight, WORLD, TILES, TS, WIDX }); var INTERIORS = initInteriors(X, WPN, DEMO, SHOPS); var PROGRESS = initProgress(X); var HELI = initHeli(X); var EULEN = null; try { EULEN = initEulen(X); } catch (e) { console.warn('Frischlufteulen aus', e); } var VOKA = null; var LAUF = null; var NEBENJOBS = null; try { VOKA = initVokabaum(X); try { LAUF = initLaufrunden(X); try { X.SHOPS_LIST = () => SHOPS.shops; NEBENJOBS = initNebenjobs(X); } catch (e) { console.warn('Nebenjobs aus', e); NEBENJOBS = null; } X.VOKA_BUSY = () => !!(VOKA && (VOKA.mission || VOKA.ped)); X.PROGRESS_GAIN = (n, why) => PROGRESS.gain(n, why); } catch (e) { console.warn('Laufrunden', e); LAUF = null; } } catch (e) { console.warn('Vokabaum-Mission aus', e); } var RASEN = null; try { Object.assign(X, { LOW_GFX, WEAK_GPU, waterAt, deckAt, rasenRoad: (x, z) => onOtherRoad(x, z, null, 0.3) }); RASEN = initRasen(X); } catch (e) { console.warn('Rasen aus', e); } var ZIVIL = null; try { ZIVIL = initZivilcourage(X); } catch (e) { console.warn('Zivilcourage aus', e); } var LANDMARKS = initLandmarks(X); initGraeber(X); initSupermarkt(X); try { initErinnerungen(X); } catch (e) { console.warn('Erinnerungen aus', e); } try { X.zeitVor = zeitVor; initWohnen(X); } catch (e) { console.warn('Wohnen aus', e); } try { initLadesaeulen(X); } catch (e) { console.warn('Ladesäulen aus', e); } try { initTaxi(X); } catch (e) { console.warn('Taxi aus', e); } try { initBus(X); } catch (e) { console.warn('Bus aus', e); } var KLANG = null; try { KLANG = initKlang(X); fetch('assets/sfx/manifest.json').then(r => r.ok ? r.json() : null).then(m => m && KLANG.ladeAufnahmen(m.aufnahmen)).catch(() => { /* ohne Aufnahmen bleibt die Synthese */ }); } catch (e) { console.warn('Klang aus', e); } try { X.ZUHAUSE = initZuhause(X, INTERIORS); } catch (e) { console.warn('Zuhause aus', e); } var MINI = null; try { MINI = initMinispiele(X, SHOPS); } catch (e) { console.warn('Minispiele aus', e); } var WAHRZ = initWahrzeichen(X); /* #150: Handy (H) nach Sunset */ var PHONE = null; try { const SY = { STORY, DEMO, PROGRESS, LAUF, VOKA, get NEBENJOBS() { return NEBENJOBS; }, get EULEN() { return EULEN; } }; initSpielstaende(X); initMenuNeu(X, SY); PHONE = initPhone(X, SY); } catch (e) { console.warn('Handy/Menü', e); }
+var PFUETZEN = initLichtpfuetzen(X); var DUNST = initDunst(X); var WPN = initWeapons(X); var DEMO = initDemo(X, WPN); var FIRE = initFire(X, WPN, DEMO); var STORY = initStory(X, WPN, DEMO, FIRE); var SHOPS = initShops(X, WPN); Object.assign(X, { wachen: WACHEN, nearestRoadDir, pushOffRoads, setPocket: p => { POCKET = p; camera.userData.init = false; }, inPocket, streamInit, roofHeight, WORLD, TILES, TS, WIDX }); var INTERIORS = initInteriors(X, WPN, DEMO, SHOPS); var PROGRESS = initProgress(X); var HELI = initHeli(X); var EULEN = null; try { EULEN = initEulen(X); } catch (e) { console.warn('Frischlufteulen aus', e); } var VOKA = null; var LAUF = null; var NEBENJOBS = null; try { VOKA = initVokabaum(X); try { LAUF = initLaufrunden(X); try { X.SHOPS_LIST = () => SHOPS.shops; NEBENJOBS = initNebenjobs(X); } catch (e) { console.warn('Nebenjobs aus', e); NEBENJOBS = null; } X.VOKA_BUSY = () => !!(VOKA && (VOKA.mission || VOKA.ped)); X.PROGRESS_GAIN = (n, why) => PROGRESS.gain(n, why); } catch (e) { console.warn('Laufrunden', e); LAUF = null; } } catch (e) { console.warn('Vokabaum-Mission aus', e); } var RASEN = null; try { Object.assign(X, { LOW_GFX, WEAK_GPU, waterAt, deckAt, rasenRoad: (x, z) => onOtherRoad(x, z, null, 0.3) }); RASEN = initRasen(X); } catch (e) { console.warn('Rasen aus', e); } var ZIVIL = null; try { ZIVIL = initZivilcourage(X); } catch (e) { console.warn('Zivilcourage aus', e); } var LANDMARKS = initLandmarks(X); initGraeber(X); initSupermarkt(X); try { initErinnerungen(X); } catch (e) { console.warn('Erinnerungen aus', e); } try { X.zeitVor = zeitVor; initWohnen(X); } catch (e) { console.warn('Wohnen aus', e); } try { initLadesaeulen(X); } catch (e) { console.warn('Ladesäulen aus', e); } try { initTaxi(X); } catch (e) { console.warn('Taxi aus', e); } try { initBus(X); } catch (e) { console.warn('Bus aus', e); } var KLANG = null; try { KLANG = initKlang(X); setKlang(KLANG); fetch('assets/sfx/manifest.json').then(r => r.ok ? r.json() : null).then(m => m && KLANG.ladeAufnahmen(m.aufnahmen)).catch(() => { /* ohne Aufnahmen bleibt die Synthese */ }); } catch (e) { console.warn('Klang aus', e); } try { X.ZUHAUSE = initZuhause(X, INTERIORS); } catch (e) { console.warn('Zuhause aus', e); } var MINI = null; try { MINI = initMinispiele(X, SHOPS); } catch (e) { console.warn('Minispiele aus', e); } var WAHRZ = initWahrzeichen(X); /* #150: Handy (H) nach Sunset */ var PHONE = null; try { const SY = { STORY, DEMO, PROGRESS, LAUF, VOKA, get NEBENJOBS() { return NEBENJOBS; }, get EULEN() { return EULEN; } }; initSpielstaende(X); initMenuNeu(X, SY); PHONE = initPhone(X, SY); } catch (e) { console.warn('Handy/Menü', e); }
 try { initRadio(X); } catch (e) { console.warn('Autoradio aus', e); } // #146, Taste U im Auto
 for (let i = 0; i < 200 && cars.length < 60; i++) spawnCar(false, player.pos, 10, 260);
 for (let i = 0; i < 55; i++) spawnPed(null);
@@ -3581,7 +3522,7 @@ renderer.setAnimationLoop(() => {
   // Menü offen oder Startbildschirm: die Welt steht, also nur 4 bzw. 10 Bilder je Sekunde zeichnen statt jedes (spart GPU und Akku)
   if (menuOpen || !started) { if (tn - ruheBild < (started ? 250 : 100)) return; ruheBild = tn; }
   // Ein Fehler in einem Bild darf das Spiel nicht einfrieren (three fordert den nächsten Frame erst nach dem Callback an)
-  try { update(dt); audioUpdate(dt); } catch (e) { loopErrors++; if (loopErrors <= 3 || loopErrors % 300 === 0) console.error('update-Fehler', loopErrors, e); if (loopErrors === 3) showMsg('FEHLER IM SPIEL – bitte melden (Esc › Fehler melden)', 4000); }
+  try { update(dt); audioUpdate(dt, player, keys, cars, worldT); } catch (e) { loopErrors++; if (loopErrors <= 3 || loopErrors % 300 === 0) console.error('update-Fehler', loopErrors, e); if (loopErrors === 3) showMsg('FEHLER IM SPIEL – bitte melden (Esc › Fehler melden)', 4000); }
   // Render-Fehler getrennt zählen (aufeinanderfolgend): nach 5 Bildern in Folge Effekte abschalten und direkt zeichnen
   try { { const ch = scene.children; for (let i = 0, n = ch.length; i < n; i++) { const c = ch[i]; if (c.visible || c.userData.inst) mwSichtbar(c, null); } } if (composer) composer.render(); else renderer.render(scene, camera); renderErrors = 0; } catch (e) { renderErrors++; if (renderLogs++ < 3) console.error('render-Fehler', e); if (renderErrors === 5) { if (composer) { composerBroken = true; try { disposeComposer(); } catch (e2) { composer = null; } try { if (HIMMEL) HIMMEL.setStufe(himmelStufe(), true); } catch (e3) { } renderErrors = 0; showMsg('EFFEKTE ABGESCHALTET (RENDER-FEHLER)', 4000); } else if (!renderWarned) { renderWarned = true; showMsg('FEHLER BEI DER GRAFIK – bitte melden (Esc › Fehler melden)', 4000); } } }
 });
