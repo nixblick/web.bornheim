@@ -1,0 +1,43 @@
+[
+ {
+  "n": "skyline_berger_tag",
+  "x": -250,
+  "z": 460,
+  "hour": 13,
+  "tx": -2520,
+  "tz": 2033,
+  "pitch": 0.12,
+  "wait": 12000,
+  "js": "JSON.stringify({ skyline: !!window.G.scene.children.find(o => o.material && o.material.uniforms && o.material.uniforms.T) })"
+ },
+ {
+  "n": "skyline_berger_daemmerung",
+  "x": -250,
+  "z": 460,
+  "hour": 18.6,
+  "tx": -2520,
+  "tz": 2033,
+  "pitch": 0.12,
+  "wait": 12000
+ },
+ {
+  "n": "skyline_berger_nacht",
+  "x": -250,
+  "z": 460,
+  "hour": 22,
+  "tx": -2520,
+  "tz": 2033,
+  "pitch": 0.12,
+  "wait": 12000
+ },
+ {
+  "n": "skyline_berger_tag_weit",
+  "x": -600,
+  "z": 720,
+  "hour": 13,
+  "tx": -2520,
+  "tz": 2033,
+  "pitch": 0.12,
+  "wait": 12000
+ }
+]

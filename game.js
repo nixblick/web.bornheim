@@ -35,6 +35,7 @@ import { initMinispiele } from './minispiele.js';
 import { initZuhause } from './zuhause.js';
 import { initWohnen } from './wohnen.js';
 import { initWahrzeichen, markLandmark } from './wahrzeichen.js';
+import { initSkyline } from './skyline.js';
 import { disposeHierarchy } from './dispose.js';
 import { initPhone } from './phone.js';
 import { initMenuNeu } from './menu-neu.js';
@@ -68,7 +69,7 @@ const camera = new THREE.PerspectiveCamera(65, (innerWidth > 0 && innerHeight > 
 
 const hemi = new THREE.HemisphereLight(0x8a90c8, 0x4a4038, 1.1); scene.add(hemi);
 const world = { hour: 8, tag: 1, speed: 0.25 / 60, headlights: true }; /* tag: Spieltag ab 1 (wohnen.js: Kalender, Miete) */ function zeitVor(h) { const n = world.hour + h; if (n >= 24) world.tag = (world.tag || 1) + Math.floor(n / 24); world.hour = n % 24; } /* einzige Stelle, an der Zeit vergeht: zählt den Tag über Mitternacht */ /* Start 8 Uhr, 1 Spielstunde = 4 Minuten (12.11.2026, André) */
-let skyU = null, HIMMEL = null, WASSER = null, skyDome = null, sunDisk = null, skylineMesh = null, skylineBeacons = null;
+let skyU = null, HIMMEL = null, WASSER = null, skyDome = null, sunDisk = null, skylineMesh = null, skylineBeacons = null, SKY = null;
 let WET = null, roadMatRef = null; const lampSpots = []; let streaks = null, streakT = 0;
 // Wiederverwendete Hilfsobjekte für updateStreaks: nichts wird je Lauf neu angelegt
 const _stO = new THREE.Object3D(), _stC = new THREE.Color(), _stD = [], _stL = [], _stI = [], _stCmp = (a, b) => _stD[a] - _stD[b];
@@ -1004,53 +1005,11 @@ function streetTrees() {
         if (solidAt(x, z) >= 0 || solidAt(x + nx * sd * 1.5, z + nz * sd * 1.5) >= 0 || onOtherRoad(x, z, r, 2) || nearPoint(x, z, CITY.signals, 8) || nearPoint(x, z, CITY.stops, 6)) continue; out.push([x, z]); } } }
   return out;
 }
-// Echte Frankfurter Hochhäuser (ab 80 m) für die Horizont-Silhouette aus allen Stadtteilen (ein Draw-Call, blendet aus sobald die echte Kachel gebaut ist)
-const SKYLINE_TOWERS = [
-  [-3028, -1637, 28, 28, 337.5, 0, -8, -5], [-2175, 976, 56, 52, 259, -0.82, -6, 2], [-3705, 972, 41, 41, 256.5, -1.21, -10, 2],
-  [-2225, 845, 36, 34, 233, -0.35, -6, 2], [-3352, 1132, 34, 62, 200, 0.25, -9, 2], [-2940, 991, 44, 52, 198, -0.36, -8, 2],
-  [-2344, 793, 42, 42, 198, 0.2, -6, 1], [-3391, 956, 38, 49, 185, -1.29, -9, 2], [-82, 1419, 48, 69, 185, -0.26, -1, 3],
-  [-2191, 835, 42, 50, 183, 0.43, -6, 2], [-3487, 1126, 30, 56, 172, -1.03, -9, 2], [-2340, 825, 30, 32, 170, 0.27, -6, 2],
-  [-2611, 563, 35, 57, 170, 1.38, -7, 1], [-2536, 868, 52, 59, 170, -0.23, -7, 2], [-2713, 1185, 37, 62, 166, -1.16, -7, 2],
-  [-3267, 653, 34, 48, 159, 0.68, -9, 1], [-2563, 796, 35, 38, 155, -0.3, -7, 1], [-2579, 755, 35, 38, 155, 1.27, -7, 1],
-  [-2458, 916, 38, 42, 155, -0.25, -7, 2], [-2526, 1084, 39, 43, 153.8, -1.2, -7, 2], [-2125, 1020, 40, 65, 148, -1.13, -6, 2],
-  [-2819, 865, 44, 43, 142, 0.34, -8, 2], [-2907, 948, 43, 44, 142, 0.9, -8, 2], [-1074, 2407, 42, 42, 140, 0.45, -3, 6],
-  [-2505, 1166, 37, 48, 136, -1.14, -7, 2], [-1713, 620, 33, 52, 136, 1.22, -5, 1], [-3348, 998, 27, 47, 130, -1.3, -9, 2],
-  [-2231, 902, 26, 40, 127, 0.44, -6, 2], [-4286, 1020, 31, 51, 117, -1.24, -11, 2], [-2221, 1063, 38, 38, 115, 0.44, -6, 2],
-  [-3175, 1894, 30, 30, 112.3, -0.89, -8, 4], [-4052, 658, 24, 67, 112, 0.4, -11, 1], [-2340, 761, 29, 29, 110, -0.66, -6, 1],
-  [-2118, 1236, 26, 42, 110, 0.38, -6, 3], [-2300, 954, 24, 46, 108.6, 0.44, -6, 2], [-3487, 492, 24, 49, 106, 1.24, -9, 1],
-  [-1197, 3082, 31, 34, 100, -0.35, -3, 7], [-1754, 672, 26, 51, 99, 1.22, -5, 1], [-3806, 1307, 19, 89, 96, -1.03, -10, 3],
-  [-3059, 976, 20, 48, 96, -1.27, -8, 2], [-2767, 815, 29, 36, 95, -1.32, -7, 2], [-1826, 27, 34, 42, 93, 0.31, -5, 0],
-  [546, 1277, 18, 86, 90, -0.21, 1, 3], [-4404, 1463, 21, 61, 87, -0.87, -12, 3]
-];
-const SKY_KEYS = SKYLINE_TOWERS.map(t => t[6] + '_' + t[7]); // Kachelschlüssel einmal bauen statt 88 Strings je Bild in updateSky
-const _skyO = new THREE.Object3D(), _skyC1 = new THREE.Color(), _skyC2 = new THREE.Color(), _skyTint = new THREE.Color();
 function buildSky() {
   HIMMEL = makeHimmel(THREE, himmelStufe(), !himmelPost()); skyU = HIMMEL.uniforms; skyDome = HIMMEL.dome; scene.add(skyDome); // Verlauf und Wolkendecke in einem Shader (himmel.js, #152)
   const sunTex = canvasTex(128, 128, (ctx, w, h) => { const gr = ctx.createRadialGradient(64, 64, 4, 64, 64, 64); gr.addColorStop(0, 'rgba(255,255,240,1)'); gr.addColorStop(0.15, 'rgba(255,245,210,0.95)'); gr.addColorStop(0.35, 'rgba(255,220,160,0.25)'); gr.addColorStop(1, 'rgba(255,200,120,0)'); ctx.fillStyle = gr; ctx.fillRect(0, 0, w, h); });
   sunDisk = new THREE.Sprite(new THREE.SpriteMaterial({ map: sunTex, fog: false, depthWrite: false, transparent: true, blending: THREE.AdditiveBlending })); sunDisk.scale.set(140, 140, 1); scene.add(sunDisk);
-  // Frankfurter Skyline-Horizontschicht: ein einziges InstancedMesh (1 Draw-Call) für alle fernen Wolkenkratzer
-  const twTex = canvasTex(64, 128, (ctx, w, h) => {
-    ctx.fillStyle = '#8fa0b5'; ctx.fillRect(0, 0, w, h);
-    for (let y = 4; y < h - 4; y += 6) for (let x = 4; x < w - 4; x += 8) {
-      ctx.fillStyle = ((x * 7 + y * 13) % 5 === 0) ? '#ffe4a8' : '#4a5c72';
-      ctx.fillRect(x, y, 5, 3.5);
-    }
-  });
-  // Nachtbild (12.11.2026, nach Nachtfotos vom Mainufer): dunkle Fassade, viele helle Fenster in Warm- und Kaltweiß, angestrahlte Krone oben
-  const twTexN = canvasTex(64, 128, (ctx, w, h) => { let s = 9; const r = () => (s = (s * 16807) % 2147483647) / 2147483647;
-    ctx.fillStyle = '#141b27'; ctx.fillRect(0, 0, w, h);
-    for (let y = 10; y < h - 4; y += 6) for (let x = 4; x < w - 4; x += 8) { const q = r(); ctx.fillStyle = q < 0.55 ? pick(['#fff1cf', '#e9f0ff', '#ffe0a0', '#f6f6ee']) : q < 0.7 ? '#8a7a5a' : '#263040'; ctx.fillRect(x, y, 5, 3.5); }
-    const g = ctx.createLinearGradient(0, 0, 0, 10); g.addColorStop(0, '#fff6c8'); g.addColorStop(1, 'rgba(255,240,180,0.2)'); ctx.fillStyle = g; ctx.fillRect(0, 0, w, 10); });
-  const twGeo = new THREE.BoxGeometry(1, 1, 1); twGeo.userData.shared = true;
-  const twMat = new THREE.MeshBasicMaterial({ map: twTex, fog: false, transparent: true, opacity: 0.92 }); twMat.userData.shared = true;
-  twMat.userData.day = twTex; twMat.userData.night = twTexN;
-  skylineMesh = new THREE.InstancedMesh(twGeo, twMat, SKYLINE_TOWERS.length);
-  skylineMesh.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(SKYLINE_TOWERS.length * 3), 3);
-  skylineMesh.userData.noChunk = true; skylineMesh.frustumCulled = false; scene.add(skylineMesh);
-  const bcGeo = new THREE.SphereGeometry(1, 6, 4); bcGeo.userData.shared = true;
-  const bcMat = new THREE.MeshBasicMaterial({ color: 0xff2820, fog: false }); bcMat.userData.shared = true;
-  skylineBeacons = new THREE.InstancedMesh(bcGeo, bcMat, SKYLINE_TOWERS.length);
-  skylineBeacons.userData.noChunk = true; skylineBeacons.frustumCulled = false; scene.add(skylineBeacons);
+  SKY = initSkyline({ scene, onReady: m => { skylineMesh = m; } }); // Horizont-Skyline aus echten Grundrissen (skyline.js, data/skyline.json)
 }
 // Himmelsstufe aus der aktuellen Qualität (auch beim Umschalten im Menü): 0 einfach, 1 fein, 2 Volumen (Hoch/Ultra)
 function himmelPost() { return (opts.quality === 'hoch' || opts.quality === 'ultra') && !composerBroken; }
@@ -1062,48 +1021,8 @@ function updateSky(dt) {
   const sd = _sunV.copy(world.sunDir).normalize(); sunDisk.position.copy(camera.position).addScaledVector(sd, 700); sunDisk.material.opacity = clamp(world.day * 1.2 - weather.cloud * 0.9, 0, 1); sunDisk.visible = sunDisk.material.opacity > 0.02;
   HIMMEL.update(dt, { day: world.day, cloud: weather.cloud, flash: weather.flash, night: !!world.night, sunColor: sun.color, sunDir: world.sunDir });
   if (WASSER) WASSER.update(dt, { sky: skyU.top.value, sunColor: sun.color, sunDir: world.sunDir, sunI: sun.intensity, night: !!world.night, camera });
-  if (skylineMesh) {
-    const showSkyline = !POCKET;
-    skylineMesh.visible = showSkyline;
-    skylineBeacons.visible = showSkyline && !!world.night;
-    if (showSkyline) {
-      const cx = camera.position.x, cy = camera.position.y, cz = camera.position.z;
-      const sm = skylineMesh.material, wantMap = world.night ? sm.userData.night : sm.userData.day; if (wantMap && sm.map !== wantMap) { sm.map = wantMap; sm.needsUpdate = true; }
-      const baseCol = world.night ? _skyC1.setHex(0xd8dce6) : _skyC1.setHex(0x7b8ea6).multiplyScalar(0.38 + 0.62 * world.day); // nachts leuchten die Fenster selbst
-      const blink = Math.floor(performance.now() / 700) % 2 === 0;
-      for (let i = 0; i < SKYLINE_TOWERS.length; i++) {
-        const T = SKYLINE_TOWERS[i], tx0 = T[0], tz0 = T[1], w = T[2], d = T[3], h = T[4], ang = T[5];
-        const tile = TILES.get(SKY_KEYS[i]);
-        if (tile && tile.built) {
-          _skyO.scale.setScalar(0); _skyO.updateMatrix();
-          skylineMesh.setMatrixAt(i, _skyO.matrix);
-          if (world.night) skylineBeacons.setMatrixAt(i, _skyO.matrix);
-          continue;
-        }
-        const dx = tx0 - cx, dz = tz0 - cz, dist = Math.hypot(dx, dz) || 1;
-        const dProj = Math.min(dist, 760), s = dProj / dist;
-        const inf = WIDX.tiles[SKY_KEYS[i]]; const by = inf ? inf[2] : 98;
-        _skyO.position.set(cx + dx * s, cy + (by + h * 0.5 - cy) * s, cz + dz * s);
-        _skyO.rotation.set(0, ang, 0);
-        _skyO.scale.set(w * s, h * s, d * s);
-        _skyO.updateMatrix();
-        skylineMesh.setMatrixAt(i, _skyO.matrix);
-        const haze = clamp((dist - 450) / 4200 + weather.fog * 0.45 + weather.rain * 0.25, 0.2, 0.82);
-        _skyC2.copy(baseCol); if (!world.night) { if (h > 250 && h < 260 && w < 45) _skyC2.multiply(_skyTint.setHex(0xc89a8c)); else if (h > 150 && h < 160) _skyC2.multiply(_skyTint.setHex(0x9fbde6)); } _skyC2.lerp(_cFog, haze); // Messeturm-Granit, Glastürme blau (Fotos)
-        skylineMesh.setColorAt(i, _skyC2);
-        if (world.night) {
-          const r = (blink || i % 3 !== 0) ? Math.max(1.6, dist * 0.0022) * s : 0;
-          _skyO.position.set(cx + dx * s, cy + (by + h + 2.5 - cy) * s, cz + dz * s);
-          _skyO.scale.setScalar(r);
-          _skyO.updateMatrix();
-          skylineBeacons.setMatrixAt(i, _skyO.matrix);
-        }
-      }
-      skylineMesh.instanceMatrix.needsUpdate = true;
-      skylineMesh.instanceColor.needsUpdate = true;
-      if (world.night) skylineBeacons.instanceMatrix.needsUpdate = true;
-    }
-  }
+  if (SKY) SKY.update({ cam: camera.position, fogCol: _cFog, haze: weather.fog * 0.45 + weather.rain * 0.25, day: world.day, blink: Math.floor(performance.now() / 700) % 2 === 0, sunDir: world.sunDir, pocket: POCKET,
+    built: k => { const t = TILES.get(k); return !!(t && t.built); }, shown: n => !!(typeof WAHRZ !== 'undefined' && WAHRZ && WAHRZ.shown && WAHRZ.shown(n)) });
 }
 function* buildDetails2() {
   const Q = () => ({ v: [], n: [] });
