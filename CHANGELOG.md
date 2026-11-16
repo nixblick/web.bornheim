@@ -1,6 +1,8 @@
 # Changelog
 
 ## 2026-11-16
+
+- Skyline am Horizont neu (skyline.js, data/skyline.json aus tools/build_skyline.py): alle 43 Hochhäuser ab 90 m mit echtem OSM-Grundriss und echter Lage, Europaturm, Messeturm-Pyramide, Commerzbank-Antenne, Main-Tower-Mast, Henninger-Fass, Domturm; nachts Fensterlicht und Flugfeuer. Die alte Liste in game.js lag rund 1 km neben den echten Türmen (z. B. Commerzbank Tower −2175/976 statt −2520/2033). In der Nähe übernimmt weiter wahrzeichen.js. Probe tools/proben/skyline.json (Blick die Berger Straße hinunter).
 - **Pausenmenü Runde 2:** Spieler als großer Pfeil in Blickrichtung auf der Karte, schlanke Kartenleiste oben links auf der Karte (U-Bahn, Bus, Linien, Suche), Statusblock ohne Scrollen (Knöpfe zweispaltig, kompakter); Probe menu-runde2 prüft 1280×720, 1366×768, 1920×1080 (neues Probenfeld `fenster`).
 - **Audio-Modul (#118, #188):** Web-Audio-Teil (`SND`, `audioInit`, `sfx`, `audioUpdate`) aus `game.js` nach `audio.js` ausgelagert, auf dem Stand nach `klang.js` (KLANG kommt per `setKlang`). `audioUpdate` bekommt `player`, `keys`, `cars`, `worldT` als Parameter. Verhalten unverändert. Spieltest auf GitHub.
 - **Kachelbau-Schritt `park` in kleineren Stücken (Probe `sparmodus`, #195):** Die einmalige Vorbereitung der Parkauto-Geometrie läuft je Autotyp in einem eigenen Stück, die 100-m-Kacheln der Parkautos je eine (vorher 34,1 ms am Stück). Grenze der Probe unverändert. Spieltest auf GitHub.
