@@ -137,7 +137,10 @@ export function initSkyline(X) {
           if (vWin > 0.5 && night > 0.01) { vec2 q = vUV / vec2(7.0, 7.2); vec2 f = fract(q); float h = fract(sin(dot(floor(q) + vTid * 13.1, vec2(12.9898, 78.233))) * 43758.5453);
             c += vec3(1.0, 0.82, 0.5) * 0.5 * step(0.2, f.x) * step(f.x, 0.8) * step(0.25, f.y) * step(f.y, 0.75) * step(0.7, h) * night; }
           float L = 0.0; if (vGlow > 0.5) { L = night * (vGlow > 1.5 ? blink : 1.0); c = mix(c, vLit, L); }
-          gl_FragColor = vec4(mix(c, fogCol, vHaze * (1.0 - 0.6 * L)), 1.0);
+          // Fuß im Bodendunst (16.11.): unter den Türmen liegt nur der vernebelte Boden (farPlane, Kacheln ab 700 m = fogCol);
+          // ohne Übergang endete jeder Turm mit harter Kante darüber und schwebte. Unten ganz fogCol, ab 110 m wie bisher.
+          float foot = 1.0 - smoothstep(-40.0, 110.0, vY);
+          gl_FragColor = vec4(mix(c, fogCol, max(vHaze, foot) * (1.0 - 0.6 * L)), 1.0);
           #include <colorspace_fragment>
         }` });
     const mesh = new THREE.Mesh(g, mat); mesh.frustumCulled = false; mesh.userData.noChunk = true; scene.add(mesh); api.mesh = mesh;
