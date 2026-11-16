@@ -57,7 +57,7 @@
 #menu.mn .mn-bar{height:4px;margin:-4px 0 2px 28px;background:#ffffff1a}#menu.mn .mn-bar i{display:block;height:100%;background:#7dd87d;transform-origin:left}#menu.mn .mn-bar.is-low i{background:#e5534b}
 #menu.mn .mn-stars{display:flex;gap:3px}#menu.mn .mn-stars i{width:13px;height:13px;clip-path:polygon(50% 0,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%);background:#ffffff2a}#menu.mn .mn-stars i.is-on{background:var(--mn-amber)}
 #menu.mn .mn-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;padding-top:8px;border-top:1px solid var(--mn-line)}
-#menu.mn .mn-stats div{display:flex;flex-direction:column;gap:3px;min-width:0}#menu.mn .mn-stats small{letter-spacing:.1em}
+#menu.mn .mn-stats div{display:flex;flex-direction:column;gap:3px;min-width:0}#menu.mn .mn-stats small{letter-spacing:.06em}
 #menu.mn .mn-stats b{font-size:18px;color:var(--mn-ivory);font-variant-numeric:tabular-nums}
 #menu.mn .mn-stats i{display:block;height:3px;background:#ffffff1a}#menu.mn .mn-stats em{display:block;height:100%;background:#b07cff}
 /* Spiel-Knöpfe im Statusblock */

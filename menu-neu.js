@@ -40,7 +40,7 @@ export function initMenuNeu(X, S) {
   const status = el('aside', 'mn-status');
   const vals = el('div', 'mn-vals');
   const acts = el('div', 'mn-acts');
-  const TXT = { m_save: 'Speichern', m_load: 'Laden', m_feedback: 'Fehler melden', m_creative: 'Kreativmodus', m_restart: 'Neu starten', m_export: 'Exportieren', m_import: 'Importieren', m_home: 'Zur Startseite' };
+  const TXT = { m_save: 'Speichern', m_load: 'Laden', m_feedback: 'Fehler melden', m_restart: 'Neu starten', m_export: 'Exportieren', m_import: 'Importieren', m_home: 'Zur Startseite' };
   for (const n of [...side.childNodes]) if (n.nodeType === 1) acts.append(n);
   for (const [id, t] of Object.entries(TXT)) { const b = $(id); if (b) b.textContent = t; }
   const more = acts.querySelector('details.more'); if (more) more.querySelector('summary').textContent = 'Mehr: Neu starten, Export, Startseite';
@@ -121,7 +121,7 @@ export function initMenuNeu(X, S) {
   X.menuHooks.push(() => {
     try { board(); missions(); } catch (e) { console.warn('Pausenmenü', e); }
     if (X.menuTab) X.menuTab('karte'); sync();
-    requestAnimationFrame(() => { for (const b of acts.querySelectorAll('button')) { const t = noEmoji(b.textContent); if (t !== b.textContent) b.textContent = t; } redraw(); });
+    requestAnimationFrame(() => { const fb = $('m_feedback'); if (fb) fb.textContent = TXT.m_feedback; for (const b of acts.querySelectorAll('button')) { const t = noEmoji(b.textContent); if (t !== b.textContent) b.textContent = t; } redraw(); });
   });
   sync();
   return { board, pane: status };
