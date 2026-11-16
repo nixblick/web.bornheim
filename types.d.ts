@@ -153,8 +153,18 @@ export interface Ctx {
   shopOpen?: any;
   // Laufrunden (#128): von game.js nach initVokabaum gesetzt
   VOKA_BUSY?: () => boolean;
+  // story.js: #obj wurde von außen überschrieben (eulen.js), Zieltext beim nächsten Bild neu setzen
+  objDirty?: () => void;
   PROGRESS_GAIN?: (n: number, why?: string) => void;
   SHOPS_LIST?: () => { x: number, z: number }[];
+  // Zuhause (#149, zuhause.js): von game.js nach initSupermarkt gesetzt
+  ZUHAUSE?: any;
+  // Wohnen (wohnen.js): Kalender, Miete, Räumung; zeitVor zählt den Spieltag (game.js), PHONE setzt phone.js
+  WOHNEN?: any;
+  // Erinnerungen (erinnerungen.js): Fotoalbum, Tagebuch, Wand in der Wohnung
+  ERINNERN?: any;
+  PHONE?: any;
+  zeitVor?: (h: number) => void;
   // Rasen (rasen.js): vor initRasen per Object.assign gesetzt
   LOW_GFX?: boolean;
   WEAK_GPU?: boolean;

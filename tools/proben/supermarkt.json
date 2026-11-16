@@ -1,0 +1,48 @@
+[
+ {
+  "n": "sm_halle_tag",
+  "x": 997,
+  "z": 1458,
+  "tx": 1008,
+  "tz": 1447,
+  "pitch": 0,
+  "hour": 13,
+  "wait": 7000,
+  "js": "(async () => { await new Promise(r => setTimeout(r, 2500)); window.SUPERMARKT.update(); await new Promise(r => setTimeout(r, 500)); return JSON.stringify({ n: window.SUPERMARKT.count, liste: window.SUPERMARKT.list }); })()",
+  "expect": "window.SUPERMARKT && window.SUPERMARKT.count >= 1"
+ },
+ {
+  "n": "sm_halle_nacht",
+  "x": 997,
+  "z": 1458,
+  "tx": 1008,
+  "tz": 1447,
+  "pitch": 0,
+  "hour": 22.5,
+  "wait": 4000,
+  "js": "(async () => { await new Promise(r => setTimeout(r, 2500)); window.SUPERMARKT.update(); await new Promise(r => setTimeout(r, 500)); return JSON.stringify({ n: window.SUPERMARKT.count, liste: window.SUPERMARKT.list }); })()",
+  "expect": "window.SUPERMARKT.count >= 1 && window.G.scene.children.some(o => o.userData && o.userData.x !== undefined && o.children.some(c => c.userData.nacht && c.visible))"
+ },
+ {
+  "n": "sm_berger_tag",
+  "x": -312,
+  "z": 519,
+  "tx": -325,
+  "tz": 508,
+  "pitch": 0,
+  "hour": 13,
+  "wait": 7000,
+  "js": "(async () => { await new Promise(r => setTimeout(r, 2500)); window.SUPERMARKT.update(); await new Promise(r => setTimeout(r, 500)); return JSON.stringify({ n: window.SUPERMARKT.count, liste: window.SUPERMARKT.list }); })()",
+  "expect": "window.SUPERMARKT.count >= 2 && window.SUPERMARKT.count <= 4"
+ },
+ {
+  "n": "sm_abbau",
+  "x": -138,
+  "z": 372,
+  "hour": 13,
+  "wait": 6000,
+  "shot": false,
+  "js": "(async () => { await window.G.streamInit(-5600, -2844); window.G.player.pos.set(-5600, window.G.TH(-5600, -2844), -2844); await new Promise(r => setTimeout(r, 4000)); window.SUPERMARKT.update(); return JSON.stringify(window.SUPERMARKT.list); })()",
+  "expect": "!window.SUPERMARKT.list.some(e => e[0] === 'm-327,505')"
+ }
+]

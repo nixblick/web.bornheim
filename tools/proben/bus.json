@@ -1,0 +1,31 @@
+[
+ {
+  "n": "bus_1_haltestelle",
+  "x": -139,
+  "z": 330,
+  "hour": 13,
+  "wait": 8000,
+  "shot": false,
+  "js": "(async () => { const w = ms => new Promise(r => setTimeout(r, ms)); const G = window.G, B = window.BUS; for (let i = 0; i < 20 && !B.linien.length; i++) await w(500); if (G.player.car) G.toggleCar(); G.player.wanted = 0; G.player.pos.set(-139, G.TH(-139, 330), 330); if (G.player.mesh) G.player.mesh.position.copy(G.player.pos); await w(500); const h = B.hier(); const t = (G.X.fHooks || []).map(f => f()).find(r => r && /Bushaltestelle/.test(r.label)); window.__b1 = { linien: B.linien.length, name: h ? h.name : null, n: h ? h.linien.length : 0, haken: t ? t.label : null }; return JSON.stringify(window.__b1); })()",
+  "expect": "(r => !!r && r.linien > 10 && r.name === 'Bornheim Mitte' && r.n >= 2 && /Fahrkarte kaufen/.test(r.haken || ''))(window.__b1)"
+ },
+ {
+  "n": "bus_2_automat",
+  "wait": 500,
+  "js": "(async () => { const w = ms => new Promise(r => setTimeout(r, ms)); const G = window.G, B = window.BUS; G.player.money = 100; const t = (G.X.fHooks || []).map(f => f()).find(r => r && /Bushaltestelle/.test(r.label)); if (t) t.act(); await w(300); const m = document.getElementById('busmenu'); const lin = [...m.querySelectorAll('button[data-linie]')]; const offen1 = B.offen, shop = !!G.X.shopOpen; const b = lin.find(q => q.dataset.linie === '38') || lin[0]; b.click(); await w(300); const zi = [...m.querySelectorAll('button[data-ziel]')]; window.__b2 = { offen1, shop, linien: lin.length, ziele: zi.length, text: zi[0] ? zi[0].textContent : '', ohne: !!m.querySelector('button[data-a=ohne]') }; return JSON.stringify(window.__b2); })()",
+  "expect": "(r => !!r && r.offen1 && r.shop && r.linien >= 2 && r.ziele >= 3 && /km · \\d,\\d0 €/.test(r.text) && r.ohne)(window.__b2)"
+ },
+ {
+  "n": "bus_3_fahrt",
+  "wait": 1500,
+  "js": "(async () => { const w = ms => new Promise(r => setTimeout(r, ms)); const G = window.G, B = window.BUS, m = document.getElementById('busmenu'); const zi = [...m.querySelectorAll('button[data-ziel]')]; const h0 = G.world.hour, x0 = G.player.pos.x, z0 = G.player.pos.z; const b = zi[2]; const text = b.textContent; b.click(); for (let i = 0; i < 80 && (B.faehrt || i < 2); i++) await w(500); await w(600); window.__b3 = { text, geld: G.player.money, weg: Math.round(Math.hypot(G.player.pos.x - x0, G.player.pos.z - z0)), zu: !B.offen, shop: !!G.X.shopOpen, dh: (G.world.hour - h0 + 24) % 24, fest: G.solidAt(G.player.pos.x, G.player.pos.z), faehrt: B.faehrt }; return JSON.stringify(window.__b3); })()",
+  "expect": "(r => !!r && (Math.abs(r.geld - 97.6) < 0.01 || Math.abs(r.geld - 96.2) < 0.01) && r.weg > 300 && r.zu && !r.shop && r.dh > 0 && r.fest < 0 && !r.faehrt)(window.__b3)"
+ },
+ {
+  "n": "bus_4_ohne_fahrkarte",
+  "wait": 1500,
+  "shot": false,
+  "js": "(async () => { const w = ms => new Promise(r => setTimeout(r, ms)); const G = window.G, B = window.BUS, P = G.player; const h = B.halte(P.pos.x, P.pos.z, 150)[0]; if (!h) { window.__b4 = { halt: false }; return JSON.stringify(window.__b4); } P.money = 100; const a = await B.fahren(h[0], h[1], h[1] + 1, true, false); const g1 = P.money; const q = B.halte(P.pos.x, P.pos.z, 150)[0]; let g2 = null, b = null, c = null; if (q) { P.money = 100; b = await B.fahren(q[0], q[1], q[1] + 1, true, true); g2 = P.money; P.wanted = 2; c = await B.fahren(q[0], q[1], q[1] + 1, false); P.wanted = 0; } window.__b4 = { halt: true, a, g1, b, g2, c }; return JSON.stringify(window.__b4); })()",
+  "expect": "(r => !!r && r.halt && r.a === true && r.g1 === 100 && (r.b === null || (r.b === true && r.g2 === 40)) && !r.c)(window.__b4)"
+ }
+]

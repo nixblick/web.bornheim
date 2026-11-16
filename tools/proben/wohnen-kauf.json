@@ -1,0 +1,85 @@
+[
+ {
+  "n": "wk_1_angebot",
+  "x": -138,
+  "z": 372,
+  "hour": 13,
+  "wait": 8000,
+  "js": "(async () => { const G = window.G, w = ms => new Promise(r => setTimeout(r, ms)); for (let i = 0; i < 40 && !(window.WOHNEN && G.X.ZUHAUSE); i++) await w(500); const W = window.WOHNEN, Z = G.X.ZUHAUSE, p = G.player; if (p.car) G.toggleCar(); p.wanted = 0; if (G.STORY && G.STORY.busy) G.STORY.stop(); G.world.tag = 1; W.zuruecksetzen(); for (let i = 0; i < 40 && !(Z.home && W.stand.monatBezahlt === 1); i++) { Z.find(); await w(500); } const r = W.rechnung('W1'), h5 = W.rechnung('H5'); p.money = 78599; const nein = W.kaufen('W1'), geld = p.money, st = W.stand; G.PHONE.open('redscout'); await w(400); const pr = document.querySelector('#phone .ps-phone__page[data-app=redscout]'); const mieten = pr ? pr.querySelectorAll('button[data-a=mieten]').length : -1, kaufen = pr ? pr.querySelectorAll('button[data-a=kaufen]').length : -1, zu = pr ? pr.querySelectorAll('button[data-a=kaufen][disabled]').length : -1, text = pr ? pr.textContent : ''; G.PHONE.close(); const R = { r, h5, nein, geld, st, mieten, kaufen, zu, bezahlbar: /bezahlbar/.test(text), erbschaft: /Erbschaft/.test(text), bar: /78\\.600/.test(text), fehlt: /Es fehlen 1 € Eigenkapital/.test(text), kat: W.katalog.map(o => o.id).join(), home: !!Z.home }; window.__k1 = R; return JSON.stringify(R); })()",
+  "expect": "(r => !!r && r.r.preis === 262000 && r.r.eigen === 52400 && r.r.neben === 26200 && r.r.bar === 78600 && r.r.darlehen === 209600 && r.r.rate === 978 && r.r.hausgeld === 133 && r.r.monat === 1111 && r.h5.bar === 1260000 && r.h5.rate === 15680 && r.nein.ok === false && r.geld === 78599 && r.st.eigentum.length === 0 && r.st.miete === 'W1' && r.st.wohnsitz === 'W1' && r.st.v === 2 && r.mieten === 2 && r.kaufen === 8 && r.zu === 8 && r.bezahlbar && r.erbschaft && r.bar && r.fehlt && r.kat === 'W1,W2,W3,H1,H2,H3,H4,H5' && r.home && !window.G.PHONE.isOpen)(window.__k1)"
+ },
+ {
+  "n": "wk_2_kauf_w1",
+  "wait": 1500,
+  "js": "(async () => { const G = window.G, W = window.WOHNEN, Z = G.X.ZUHAUSE, p = G.player, w = ms => new Promise(r => setTimeout(r, ms)); p.money = 200000; const m1 = W.mieten('W2').ok, m2 = W.mieten('W1').ok, kaution = W.stand.kaution, g0 = p.money; const k = W.kaufen('W1'); const diff = g0 - p.money, doppelt = W.kaufen('W1').ok, mietbar = W.mieten('W1').ok; for (let i = 0; i < 40 && !Z.home; i++) { Z.find(); await w(500); } const h = Z.home; let drin = false; if (h) { p.pos.set(h.ex, G.TH(h.ex, h.ez), h.ez); if (p.mesh) p.mesh.position.copy(p.pos); await w(1000); Z.enter(); for (let i = 0; i < 20 && !Z.inside; i++) await w(300); drin = Z.inside; if (G.INTERIORS.inside) G.INTERIORS.leave(); for (let i = 0; i < 20 && G.INTERIORS.inside; i++) await w(300); } const R = { m1, m2, kaution, k, diff, doppelt, mietbar, st: W.stand, gesperrt: Z.gesperrt, anker: Z.anker, drin, draussen: !G.INTERIORS.inside, zeile: W.zeilen()[0].name, post: G.PHONE.msgs.filter(m => /^Sparbank/.test(m.who)).length }; window.__k2 = R; return JSON.stringify(R); })()",
+  "expect": "(r => !!r && r.m1 && r.m2 && r.kaution === 1368 && r.k.ok === true && r.k.zurueck === 1368 && r.diff === 78600 - 1368 && r.doppelt === false && r.mietbar === false && r.st.miete === null && r.st.kaution === 0 && r.st.schuld === 0 && r.st.wohnsitz === 'W1' && r.st.eigentum.length === 1 && r.st.eigentum[0].id === 'W1' && r.st.eigentum[0].preis === 262000 && r.st.eigentum[0].rest === 209600 && r.gesperrt === false && r.anker[0] === -138 && r.anker[1] === 372 && r.drin === true && r.draussen === true && r.zeile === 'Eigentum' && r.post >= 1)(window.__k2)"
+ },
+ {
+  "n": "wk_3_rate_und_hausgeld",
+  "wait": 1000,
+  "shot": false,
+  "js": "(async () => { const G = window.G, W = window.WOHNEN, Z = G.X.ZUHAUSE, p = G.player, w = ms => new Promise(r => setTimeout(r, ms)); p.money = 50000; W.tagVor(W.bisErster - 1); const vorher = 50000 - p.money; W.tagVor(1); const diff = 50000 - p.money; await w(600); W.pruefen(); W.tagVor(1); await w(600); const R = { vorher, diff, danach: 50000 - p.money, st: W.stand, tag: W.tag, r: W.rechnung('W1'), post: G.PHONE.msgs.filter(m => /^Sparbank/.test(m.who)).map(m => m.text).join(' # ').slice(-500) }; window.__k3 = R; return JSON.stringify(R); })()",
+  "expect": "(r => !!r && r.vorher === 0 && r.diff === 978 + 133 && r.danach === 1111 && r.st.eigentum[0].rest === 209600 - (978 - 629) && r.st.eigentum[0].monatBezahlt === 2 && r.st.eigentum[0].stufe === 0 && r.tag === 7 && r.r.rest === 209251 && r.r.zins === 628 && r.r.tilgung === 350 && /629 € Zins/.test(r.post) && /349 € Tilgung/.test(r.post) && /133 € Hausgeld/.test(r.post))(window.__k3)"
+ },
+ {
+  "n": "wk_4_sondertilgung",
+  "wait": 1000,
+  "js": "(async () => { const G = window.G, W = window.WOHNEN, Z = G.X.ZUHAUSE, p = G.player, w = ms => new Promise(r => setTimeout(r, ms)); p.money = 5000; const t1 = W.tilgen('W1', 1000), geld = p.money, zuViel = W.tilgen('W1', 'alles'), fremd = W.tilgen('H1', 1000).ok; G.PHONE.open('wohnen'); await w(400); const pg = document.querySelector('#phone .ps-phone__page[data-app=wohnen]'); const n = q => (pg ? pg.querySelectorAll(q).length : -1), text = pg ? pg.textContent : ''; const R = { t1, geld, zuViel, fremd, st: W.stand, tilgen: n('button[data-a=tilgen]'), verkaufen: n('button[data-a=verkaufen]'), wohnsitz: n('button[data-a=wohnsitz]'), kuendigen: n('button[data-a=kuendigen]'), hinweis: /Bewohnbar ist immer nur der aktuelle Wohnsitz/.test(text), hier: /Hier wohnst du/.test(text), kal: /Tag 2 von 5 · Monat 2/.test(text.slice(0, 200)) }; G.PHONE.close(); window.__k4 = R; return JSON.stringify(R); })()",
+  "expect": "(r => !!r && r.t1.ok === true && r.t1.betrag === 1000 && r.t1.rest === 208251 && r.geld === 4000 && r.zuViel.ok === false && r.fremd === false && r.st.eigentum[0].rest === 208251 && r.tilgen === 3 && r.verkaufen === 1 && r.wohnsitz === 0 && r.kuendigen === 0 && r.hinweis && r.hier && r.kal && !window.G.PHONE.isOpen)(window.__k4)"
+ },
+ {
+  "n": "wk_5_mahnungen_bank",
+  "wait": 1000,
+  "shot": false,
+  "js": "(async () => { const G = window.G, W = window.WOHNEN, Z = G.X.ZUHAUSE, p = G.player, w = ms => new Promise(r => setTimeout(r, ms)); p.money = 0; W.tagVor(W.bisErster); await w(600); const s1 = W.stand, z1 = W.zeilen()[0].name, zahl = W.zahlen('W1').ok, sonder = W.tilgen('W1', 1).ok; W.tagVor(1); await w(600); const s2 = W.stand, z2 = W.zeilen()[0].name; const R = { s1, s2, z1, z2, zahl, sonder, tag: W.tag, gesperrt: Z.gesperrt }; window.__k5 = R; return JSON.stringify(R); })()",
+  "expect": "(r => !!r && r.s1.eigentum[0].stufe === 1 && r.s1.eigentum[0].schuld === 1111 && r.s2.eigentum.length === 1 && r.s2.eigentum[0].stufe === 2 && r.s2.eigentum[0].schuld === 1111 && r.s2.eigentum[0].rest === 208251 && r.zahl === false && r.sonder === false && r.z1 === 'Mahnung: Rate offen' && r.z2 === 'Versteigerung droht' && r.tag === 12 && r.gesperrt === false && r.s2.wohnsitz === 'W1')(window.__k5)"
+ },
+ {
+  "n": "wk_6_zwangsversteigerung",
+  "wait": 2500,
+  "js": "(async () => { const G = window.G, W = window.WOHNEN, Z = G.X.ZUHAUSE, p = G.player, w = ms => new Promise(r => setTimeout(r, ms)); const h = Z.home; if (p.car) G.toggleCar(); p.wanted = 0; if (G.STORY && G.STORY.busy) G.STORY.stop(); p.pos.set(h.ex, G.TH(h.ex, h.ez), h.ez); if (p.mesh) p.mesh.position.copy(p.pos); await w(1000); Z.enter(); for (let i = 0; i < 20 && !Z.inside; i++) await w(300); const warDrin = Z.inside; W.tagVor(1); const sofort = W.stand; let wachen = W.wachen; for (let i = 0; i < 80 && (W.laeuft || G.INTERIORS.inside || document.getElementById('wohnenblende')); i++) { await w(500); wachen = Math.max(wachen, W.wachen); } const nochmal = Z.enter(); const schlaf = await Z.sleep(1); const R = { warDrin, sofort, st: W.stand, geld: p.money, gesperrt: Z.gesperrt, drin: !!G.INTERIORS.inside, zdrin: Z.inside, laeuft: W.laeuft, blende: !!document.getElementById('wohnenblende'), shop: !!G.X.shopOpen, d: Math.hypot(p.pos.x - h.ex, p.pos.z - h.ez), x: p.pos.x, wachen, nochmal, schlaf, zeile: W.zeilen()[0].name, post: G.PHONE.msgs.filter(m => /^Sparbank/.test(m.who)).map(m => m.text).join(' # ').slice(-600) }; window.__k6 = R; return JSON.stringify(R); })()",
+  "expect": "(r => !!r && r.warDrin === true && r.sofort.eigentum.length === 0 && r.sofort.wohnsitz === null && r.st.eigentum.length === 0 && r.st.wohnsitz === null && r.st.miete === null && r.st.bankschuld === 208251 + 1111 - 183400 && r.geld === 0 && r.st.geraeumt === true && r.gesperrt === true && r.drin === false && r.zdrin === false && r.laeuft === false && r.blende === false && r.shop === false && r.d < 6 && Math.abs(r.x) < 50000 && r.nochmal === false && r.schlaf === false && r.zeile === 'Ohne Wohnung' && /Zwangsversteigerung/.test(r.post) && /ein Fonds/.test(r.post))(window.__k6)"
+ },
+ {
+  "n": "wk_7_schild_zu_verkaufen",
+  "x": 1859,
+  "z": -82,
+  "hour": 13,
+  "wait": 3000,
+  "js": "(async () => { const G = window.G, W = window.WOHNEN, Z = G.X.ZUHAUSE, p = G.player, w = ms => new Promise(r => setTimeout(r, ms)); p.money = 1000000; const gesperrtKauf = W.kaufHindernis('H1'), bank = W.zahlen('bank'); let s = null; for (let i = 0; i < 90 && !s; i++) { s = W.schilder.find(q => q[0] === 'H1') || null; if (!s) await w(500); } const R = { gesperrtKauf, bank, s, d: s ? Math.hypot(s[1] - 1870, s[2] + 84) : -1, hind: W.kaufHindernis('H1'), st: W.stand }; window.__k7 = R; return JSON.stringify(R); })()",
+  "expect": "(r => !!r && /Restschuld bei der Bank/.test(r.gesperrtKauf) && r.bank.ok === true && r.bank.betrag === 25962 && r.st.bankschuld === 0 && !!r.s && r.s[3] === 'K' && r.d >= 0 && r.d < 45 && r.hind === '')(window.__k7)"
+ },
+ {
+  "n": "wk_8_kauf_h1_schild_weg",
+  "wait": 1500,
+  "js": "(async () => { const G = window.G, W = window.WOHNEN, Z = G.X.ZUHAUSE, p = G.player, w = ms => new Promise(r => setTimeout(r, ms)); const vorher = !!W.schilder.find(q => q[0] === 'H1'), g0 = p.money, k = W.kaufen('H1'), diff = g0 - p.money; let weg = false; for (let i = 0; i < 60 && !weg; i++) { weg = !W.schilder.find(q => q[0] === 'H1'); if (!weg) await w(500); } await w(600); const R = { vorher, k, diff, weg, st: W.stand, anker: Z.anker, gesperrt: Z.gesperrt, ort: Z.ort }; window.__k8 = R; return JSON.stringify(R); })()",
+  "expect": "(r => !!r && r.vorher === true && r.k.ok === true && r.diff === 168000 && r.weg === true && r.st.wohnsitz === 'H1' && r.st.eigentum.length === 1 && r.st.eigentum[0].id === 'H1' && r.st.eigentum[0].rest === 448000 && r.anker[0] === 1870 && r.anker[1] === -84 && r.gesperrt === false && /Riederwald/.test(r.ort))(window.__k8)"
+ },
+ {
+  "n": "wk_9_verkauf_h1",
+  "wait": 1500,
+  "js": "(async () => { const G = window.G, W = window.WOHNEN, Z = G.X.ZUHAUSE, p = G.player, w = ms => new Promise(r => setTimeout(r, ms)); const g0 = p.money, v = W.verkaufen('H1'), plus = p.money - g0; let s = null; for (let i = 0; i < 90 && !s; i++) { s = W.schilder.find(q => q[0] === 'H1') || null; if (!s) await w(500); } await w(600); const R = { v, plus, s, st: W.stand, gesperrt: Z.gesperrt, nochmal: W.verkaufen('H1').ok }; window.__k9 = R; return JSON.stringify(R); })()",
+  "expect": "(r => !!r && r.v.ok === true && r.v.erloes === 515200 && r.v.auszahlung === 67200 && r.plus === Math.round(560000 * 0.92) - 448000 && r.st.eigentum.length === 0 && r.st.wohnsitz === null && r.st.bankschuld === 0 && r.gesperrt === true && r.nochmal === false && !!r.s && r.s[3] === 'K')(window.__k9)"
+ },
+ {
+  "n": "wk_10_versteigerung_mit_auszahlung",
+  "wait": 1000,
+  "shot": false,
+  "js": "(async () => { const G = window.G, W = window.WOHNEN, Z = G.X.ZUHAUSE, p = G.player, w = ms => new Promise(r => setTimeout(r, ms)); p.money = 1000000; const k = W.kaufen('H1').ok, t = W.tilgen('H1', 200000), g0 = p.money, ok = W.versteigern('H1'), plus = p.money - g0; for (let i = 0; i < 40 && (W.laeuft || document.getElementById('wohnenblende')); i++) await w(500); const R = { k, t, ok, plus, st: W.stand, laeuft: W.laeuft }; window.__k10 = R; return JSON.stringify(R); })()",
+  "expect": "(r => !!r && r.k === true && r.t.ok === true && r.t.rest === 248000 && r.ok === true && r.plus === 392000 - 248000 && r.st.eigentum.length === 0 && r.st.bankschuld === 0 && r.st.wohnsitz === null && r.laeuft === false)(window.__k10)"
+ },
+ {
+  "n": "wk_11_speichern_laden",
+  "wait": 1000,
+  "shot": false,
+  "js": "(() => { const G = window.G, W = window.WOHNEN, Z = G.X.ZUHAUSE, p = G.player; p.money = 1000000; const k = W.kaufen('H1').ok, t = W.tilgen('H1', 10000).ok, tag = G.world.tag; G.saveGame(true, true); const text = localStorage.getItem('notgta.wohnen'), roh = JSON.parse(text); W.zuruecksetzen(); const leer = W.stand.eigentum.length; localStorage.setItem('notgta.wohnen', text); G.world.tag = 1; const ok = G.loadGame(); const st = W.laden(), anker = Z.anker; localStorage.setItem('notgta.wohnen', '{\"v\":1,\"miete\":\"W2\",\"zuletzt\":\"W2\",\"kaution\":3276,\"schuld\":0,\"stufe\":0,\"stufeTag\":0,\"monatBezahlt\":3,\"frei\":false,\"geraeumt\":false,\"eigentum\":[]}'); const alt = W.laden(), ankerAlt = Z.anker; const R = { k, t, tag, roh, leer, ok, nach: G.world.tag, st, anker, alt, ankerAlt, gesperrt: Z.gesperrt }; window.__k11 = R; return JSON.stringify(R); })()",
+  "expect": "(r => !!r && r.k && r.t && r.tag === 13 && r.roh.v === 2 && r.roh.wohnsitz === 'H1' && r.roh.eigentum[0].id === 'H1' && r.roh.eigentum[0].rest === 438000 && r.leer === 0 && r.ok === true && r.nach === 13 && r.st.eigentum.length === 1 && r.st.eigentum[0].id === 'H1' && r.st.eigentum[0].rest === 438000 && r.st.eigentum[0].preis === 560000 && r.st.wohnsitz === 'H1' && r.st.miete === null && r.anker[0] === 1870 && r.alt.v === 2 && r.alt.miete === 'W2' && r.alt.wohnsitz === 'W2' && r.alt.kaution === 3276 && r.alt.monatBezahlt === 3 && r.alt.eigentum.length === 0 && r.ankerAlt[0] === -980 && r.gesperrt === false)(window.__k11)"
+ },
+ {
+  "n": "wk_12_aufraeumen",
+  "wait": 500,
+  "shot": false,
+  "js": "(() => { const G = window.G, W = window.WOHNEN; G.world.tag = 1; G.player.money = 150; const st = W.zuruecksetzen(); return JSON.stringify({ st, anker: G.X.ZUHAUSE.anker, gesperrt: G.X.ZUHAUSE.gesperrt }); })()",
+  "expect": "window.WOHNEN.stand.miete === 'W1' && window.WOHNEN.stand.eigentum.length === 0 && window.WOHNEN.stand.wohnsitz === 'W1' && window.G.X.ZUHAUSE.anker[0] === -138 && window.G.X.ZUHAUSE.gesperrt === false"
+ }
+]

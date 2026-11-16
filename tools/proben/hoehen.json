@@ -1,9 +1,15 @@
 [
  {
-  "n": "hoehen_guenthersburgpark_fahren",
+  "n": "hoehen_kacheln_fertig",
   "x": -730,
   "z": 160,
-  "wait": 15000,
+  "wait": 3000,
+  "shot": false,
+  "js": "(async () => { /* Kachelmenge muss feststehen: T.fahren() sucht das steilste Gerade unter den gebauten Kacheln (straight() in tools/fahren.js); je nach Baufortschritt der CI fand es mal 4,6 % statt der steileren Strecke */ const G = window.G, R = (G.opts.view || 700) > 550 ? 2 : 1, ptx = Math.floor(G.player.pos.x / G.TS), ptz = Math.floor(G.player.pos.z / G.TS); const offen = () => { let n = 0; for (let a = -R; a <= R; a++) for (let b = -R; b <= R; b++) { const k = (ptx + a) + '_' + (ptz + b); if (G.WIDX.tiles[k]) { const t = G.TILES.get(k); if (!t || !t.built) n++; } } return n; }; const t0 = performance.now(); let n = offen(); while (n > 0 && performance.now() - t0 < 50000) { await new Promise(r => setTimeout(r, 500)); n = offen(); } await new Promise(r => setTimeout(r, 1000)); return JSON.stringify({ offen: n, R, ms: Math.round(performance.now() - t0) }); })()"
+ },
+ {
+  "n": "hoehen_guenthersburgpark_fahren",
+  "wait": 1000,
   "shot": true,
   "js": "(async () => { await import('/tools/fahren.js?' + Date.now()); window.__f = await T.fahren(); return JSON.stringify(window.__f.filter(r => !r.ok || /Hang|Bergab/.test(r.name))); })()",
   "expect": "window.__f && window.__f.filter(r => /Hang|Bergab/.test(r.name)).every(r => r.ok)"

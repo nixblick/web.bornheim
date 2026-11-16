@@ -4,8 +4,8 @@
   "x": -138,
   "z": 372,
   "wait": 12000,
-  "js": "(async () => { const G = window.G, L = G.LAUF; let ok = false; for (let i = 0; i < 10 && !ok; i++) { ok = L.force(); if (!ok) await new Promise(r => setTimeout(r, 1500)); } return JSON.stringify({ ok, punkte: L.run ? L.run.pts.length : 0, km: L.run ? +(L.run.len / 1000).toFixed(2) : 0, erster_m: L.run ? Math.round(Math.hypot(L.run.pts[0][0] - L.run.x0, L.run.pts[0][1] - L.run.z0)) : -1 }); })()",
-  "expect": "!!window.G.LAUF.run && Math.hypot(window.G.LAUF.run.pts[0][0] - window.G.LAUF.run.x0, window.G.LAUF.run.pts[0][1] - window.G.LAUF.run.z0) < 100"
+  "js": "(async () => { const G = window.G, L = G.LAUF; let ok = false; for (let i = 0; i < 10 && !ok; i++) { ok = L.force(); if (!ok) await new Promise(r => setTimeout(r, 1500)); } const R = L.run; window.__lr = R ? { pfad: R.pfad.length, aufStrasse: R.pts.slice(0, -1).every(q => !!G.X.nearestRoadDir(q[0], q[1], 1.5)), pfadAufStrasse: R.pfad.slice(1, -1).every(q => !!G.X.nearestRoadDir(q[0], q[1], 1.5)) } : null; return JSON.stringify({ lr: window.__lr, ok, punkte: L.run ? L.run.pts.length : 0, km: L.run ? +(L.run.len / 1000).toFixed(2) : 0, erster_m: L.run ? Math.round(Math.hypot(L.run.pts[0][0] - L.run.x0, L.run.pts[0][1] - L.run.z0)) : -1 }); })()",
+  "expect": "!!window.G.LAUF.run && Math.hypot(window.G.LAUF.run.pts[0][0] - window.G.LAUF.run.x0, window.G.LAUF.run.pts[0][1] - window.G.LAUF.run.z0) < 100 && !!window.__lr && window.__lr.aufStrasse && window.__lr.pfadAufStrasse && window.__lr.pfad > window.G.LAUF.run.pts.length"
  },
  {
   "n": "laufrunde_strahl",

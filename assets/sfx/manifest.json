@@ -1,0 +1,78 @@
+{
+ "lizenz": "CC0 1.0 (Public Domain), Quellen in CREDITS.md",
+ "aufnahmen": {
+  "step": [
+   "assets/sfx/step_1.ogg",
+   "assets/sfx/step_2.ogg",
+   "assets/sfx/step_3.ogg",
+   "assets/sfx/step_4.ogg",
+   "assets/sfx/step_5.ogg"
+  ],
+  "step_gras": [
+   "assets/sfx/step_gras_1.ogg",
+   "assets/sfx/step_gras_2.ogg",
+   "assets/sfx/step_gras_3.ogg",
+   "assets/sfx/step_gras_4.ogg",
+   "assets/sfx/step_gras_5.ogg"
+  ],
+  "step_holz": [
+   "assets/sfx/step_holz_1.ogg",
+   "assets/sfx/step_holz_2.ogg",
+   "assets/sfx/step_holz_3.ogg",
+   "assets/sfx/step_holz_4.ogg",
+   "assets/sfx/step_holz_5.ogg"
+  ],
+  "punch": [
+   "assets/sfx/punch_1.ogg",
+   "assets/sfx/punch_2.ogg",
+   "assets/sfx/punch_3.ogg",
+   "assets/sfx/punch_4.ogg",
+   "assets/sfx/punch_5.ogg"
+  ],
+  "hit": [
+   "assets/sfx/hit_1.ogg",
+   "assets/sfx/hit_2.ogg",
+   "assets/sfx/hit_3.ogg",
+   "assets/sfx/hit_4.ogg",
+   "assets/sfx/hit_5.ogg"
+  ],
+  "bump": [
+   "assets/sfx/bump_1.ogg",
+   "assets/sfx/bump_2.ogg",
+   "assets/sfx/bump_3.ogg",
+   "assets/sfx/bump_4.ogg",
+   "assets/sfx/bump_5.ogg"
+  ],
+  "splat": [
+   "assets/sfx/splat_1.ogg",
+   "assets/sfx/splat_2.ogg",
+   "assets/sfx/splat_3.ogg",
+   "assets/sfx/splat_4.ogg",
+   "assets/sfx/splat_5.ogg"
+  ],
+  "door": [
+   "assets/sfx/door_1.ogg",
+   "assets/sfx/door_2.ogg",
+   "assets/sfx/door_3.ogg",
+   "assets/sfx/door_4.ogg"
+  ],
+  "click": [
+   "assets/sfx/click_1.ogg",
+   "assets/sfx/click_2.ogg",
+   "assets/sfx/click_3.ogg",
+   "assets/sfx/click_4.ogg",
+   "assets/sfx/click_5.ogg"
+  ],
+  "pickup": [
+   "assets/sfx/pickup_1.ogg",
+   "assets/sfx/pickup_2.ogg",
+   "assets/sfx/pickup_3.ogg",
+   "assets/sfx/pickup_4.ogg"
+  ],
+  "reload": [
+   "assets/sfx/reload_1.ogg",
+   "assets/sfx/reload_2.ogg",
+   "assets/sfx/reload_3.ogg"
+  ]
+ }
+}
