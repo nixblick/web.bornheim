@@ -1,23 +1,43 @@
 [
  {
-  "n": "skyline_bornheim_hoch_tag",
-  "x": -200, "z": 500, "y": 45, "hour": 13,
-  "tx": -2600, "tz": 2000, "pitch": -0.02, "wait": 12000,
-  "js": "JSON.stringify({ skyline: !!(window.G.scene.children.find(o => o.material && o.material.uniforms && o.material.uniforms.T)) })"
+  "n": "skyline_berger_tag",
+  "x": -250,
+  "z": 460,
+  "hour": 13,
+  "tx": -2520,
+  "tz": 2033,
+  "pitch": 0.12,
+  "wait": 12000,
+  "js": "JSON.stringify({ skyline: !!window.G.scene.children.find(o => o.material && o.material.uniforms && o.material.uniforms.T) })"
  },
  {
-  "n": "skyline_bornheim_hoch_daemmerung",
-  "x": -200, "z": 500, "y": 45, "hour": 17.4,
-  "tx": -2600, "tz": 2000, "pitch": -0.02, "wait": 12000
+  "n": "skyline_berger_daemmerung",
+  "x": -250,
+  "z": 460,
+  "hour": 17.4,
+  "tx": -2520,
+  "tz": 2033,
+  "pitch": 0.12,
+  "wait": 12000
  },
  {
-  "n": "skyline_bornheim_hoch_nacht",
-  "x": -200, "z": 500, "y": 45, "hour": 22,
-  "tx": -2600, "tz": 2000, "pitch": -0.02, "wait": 12000
+  "n": "skyline_berger_nacht",
+  "x": -250,
+  "z": 460,
+  "hour": 22,
+  "tx": -2520,
+  "tz": 2033,
+  "pitch": 0.12,
+  "wait": 12000
  },
  {
-  "n": "skyline_bornheim_strasse_tag",
-  "x": -350, "z": 700, "hour": 13,
-  "tx": -2600, "tz": 2000, "pitch": 0.05, "wait": 12000
+  "n": "skyline_berger_tag_weit",
+  "x": -600,
+  "z": 720,
+  "hour": 13,
+  "tx": -2520,
+  "tz": 2033,
+  "pitch": 0.12,
+  "wait": 12000
  }
 ]
