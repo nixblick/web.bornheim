@@ -2,6 +2,7 @@
 
 ## 2026-11-16
 
+- **Probe `skyline` zeigt mehr:** Dämmerung jetzt um 20:00 (das Spiel hat seinen Dämmerungsgipfel um 19:30, `applyTime` in game.js; um 18:36 war noch Tag). Drei neue Bilder von oben (`skyline_hoch_*`, Tag/Dämmerung/Nacht): Kreativmodus schweben 55 m über der Berger Straße, Blick zum Commerzbank Tower, die Skyline steht frei im Bild. Am Spiel nichts geändert; ein tieferer Turmfuß im Dunst brachte im Bild keinen sichtbaren Gewinn und blieb draußen.
 - **Pausenmenü Feinschliff:** Namen von U-Bahn-Stationen und Bushaltestellen liegen nicht mehr über dem Spielerpfeil (rückt nach links oder rechts neben den Halo). Auf hohen Bildschirmen (ab 900 px, z. B. 1920×1080) füllt ein Block „Fortschritt“ die leere Mitte des Statusblocks: letzte Medaille, entdeckte Stadtteile, EP bis zur nächsten Stufe, Spielzeit, gefahrene und gelaufene Kilometer; bei 1280×720 und 1366×768 bleibt er aus (kein Scrollen). Probe `menu-runde2`.
 - **HUD-Modul (#118, #190):** Meldungen, `setTxt`/`setSty`, Minikarte, Stadtübersicht und U-Bahn-Linien der Karten aus `game.js` nach `hud.js` ausgelagert; `game.js` behält dünne Hüllen, Verhalten unverändert. Spieltest auf GitHub.
 - Fix: skyline.js: tsc-Fehler am Import von 'three' unterdrückt (wie bei game.js, das tsc auslässt); der Fehler brach tsc, Spieltest und Pages-Deploy waren seit #282 rot.
