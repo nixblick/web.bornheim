@@ -2,6 +2,7 @@
 
 ## 2026-11-16
 
+- **Probe `sparmodus-kachelbau` stabil:** Rot war kein Kachelbau-Problem, sondern Last auf dem Runner: In den roten Läufen (43847837612, 43848365027) stand im Messfenster je ein Bild mit 2,6–3,4 s Hauptthread, darin ein Kachelbau-Wert von 79–85 ms; alle übrigen Bilder lagen wie in grünen Läufen bei rund 5–6 ms. Weil `G.PERF` das p95 als `floor(n·0,95)` nahm, war es bei 20 Werten das Maximum, ein einziger Ausreißer entschied. Jetzt nächster Rang (`ceil(n·0,95)−1`), und die Probe misst 60 Bilder in bis zu 45 s statt 40 in 20 s (mindestens 40 Werte, oder 20 nach 40 s). Grenze 10 ms unverändert. Spieltest auf GitHub.
 - **HUD-Modul (#118, #190):** Meldungen, `setTxt`/`setSty`, Minikarte, Stadtübersicht und U-Bahn-Linien der Karten aus `game.js` nach `hud.js` ausgelagert; `game.js` behält dünne Hüllen, Verhalten unverändert. Spieltest auf GitHub.
 - Fix: skyline.js: tsc-Fehler am Import von 'three' unterdrückt (wie bei game.js, das tsc auslässt); der Fehler brach tsc, Spieltest und Pages-Deploy waren seit #282 rot.
 
