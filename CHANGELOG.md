@@ -3,6 +3,7 @@
 ## 2026-11-16
 
 - **Audio-Modul (#118, #188):** Web-Audio-Teil (`SND`, `audioInit`, `sfx`, `audioUpdate`) aus `game.js` nach `audio.js` ausgelagert, auf dem Stand nach `klang.js` (KLANG kommt per `setKlang`). `audioUpdate` bekommt `player`, `keys`, `cars`, `worldT` als Parameter. Verhalten unverändert. Spieltest auf GitHub.
+- **Kachelbau-Schritt `park` in kleineren Stücken (Probe `sparmodus`, #195):** Die einmalige Vorbereitung der Parkauto-Geometrie läuft je Autotyp in einem eigenen Stück, die 100-m-Kacheln der Parkautos je eine (vorher 34,1 ms am Stück). Grenze der Probe unverändert. Spieltest auf GitHub.
 
 ## 2026-11-15
 
