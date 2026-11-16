@@ -1,0 +1,30 @@
+[
+ {
+  "n": "mr_1280x720",
+  "x": -138,
+  "z": 372,
+  "wait": 9000,
+  "js": "(() => { const G = window.G; if (G.player.car) G.toggleCar(); dispatchEvent(new KeyboardEvent('keydown', { code: 'Escape', key: 'Escape' })); return new Promise(r => setTimeout(() => { const s = document.querySelector('#menu .mn-status'), b = document.querySelector('#menu .pmbar'), m = document.getElementById('pmap'); r(JSON.stringify({ st: [s.scrollHeight, s.clientHeight], bar: [b.offsetWidth, b.offsetHeight], map: [m.clientWidth, m.clientHeight] })); }, 600)); })()",
+  "expect": "document.getElementById('menu').style.display === 'flex' && (s => s.scrollHeight <= s.clientHeight + 1)(document.querySelector('#menu .mn-status')) && document.querySelector('#menu .pmbar').offsetHeight < 40 && document.querySelector('#menu .pmbar').offsetWidth < document.getElementById('pmap').clientWidth / 2 && document.getElementById('pmap').clientHeight > 400"
+ },
+ {
+  "n": "mr_1366x768",
+  "fenster": [1366, 768],
+  "wait": 1500,
+  "js": "(() => { const s = document.querySelector('#menu .mn-status'); return JSON.stringify([s.scrollHeight, s.clientHeight, document.getElementById('menu').scrollHeight, innerHeight]); })()",
+  "expect": "(s => s.scrollHeight <= s.clientHeight + 1)(document.querySelector('#menu .mn-status')) && document.querySelector('#menu .opts').scrollHeight <= document.querySelector('#menu .opts').clientHeight + 1"
+ },
+ {
+  "n": "mr_1920x1080",
+  "fenster": [1920, 1080],
+  "wait": 1500,
+  "js": "(() => { const s = document.querySelector('#menu .mn-status'); return JSON.stringify([s.scrollHeight, s.clientHeight, innerWidth, innerHeight]); })()",
+  "expect": "(s => s.scrollHeight <= s.clientHeight + 1)(document.querySelector('#menu .mn-status')) && document.querySelector('#menu .opts').scrollHeight <= document.querySelector('#menu .opts').clientHeight + 1"
+ },
+ {
+  "n": "mr_zoom_pfeil",
+  "fenster": [1280, 720],
+  "wait": 1500,
+  "js": "(() => { const cv = document.getElementById('pmap'); for (let i = 0; i < 4; i++) cv.dispatchEvent(new WheelEvent('wheel', { deltaY: -120, clientX: cv.getBoundingClientRect().left + cv.clientWidth / 2, clientY: cv.getBoundingClientRect().top + cv.clientHeight / 2, bubbles: true, cancelable: true })); return 'ok'; })()"
+ }
+]
