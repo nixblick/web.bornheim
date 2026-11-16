@@ -37,6 +37,8 @@ jobs:
           mkdir _site
           cp index.html play.html credits.html impressum.html manifest.webmanifest _site/
           cp *.css _site/  # Stylesheets im Wurzelverzeichnis (menu-neu.css, ui-sunset.css): fehlten live, 404 (13.11.2026)
+          python3 tools/podcast.py --pruefen   # #284: keine MP3 über 30 MB, Liste passt zum Ordner
+          mkdir -p _site/audio/podcast && cp audio/podcast/*.mp3 _site/audio/podcast/ 2>/dev/null || true   # Podcast-Folgen, sw.js cacht sie nicht
           cp *.js _site/   # alle Spielmodule im Wurzelverzeichnis (tools/ bleibt draußen); eine feste Liste hat story3.js vergessen und die Seite hing bei „Lade Stadt“
           V="${GITHUB_SHA::7}"
           sed -i "s/game.js?v=[0-9a-z]*/game.js?v=$V/" _site/play.html

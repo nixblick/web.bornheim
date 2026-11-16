@@ -45,6 +45,7 @@ export function initPhone(X, S) {
     { id: 'statistik', label: 'Statistik', icon: '📊', build: appStats },
     { id: 'kamera', label: 'Kamera', icon: '📷', build: appCam },
     { id: 'album', label: 'Album', icon: '🖼', build: p => { const E = X.ERINNERN; if (!E) throw new Error('Album fehlt'); E.app(p, { toast }); }, show: () => !!X.ERINNERN },
+    { id: 'podcast', label: 'Podcast', icon: '🎧', build: p => { const P = /** @type {any} */ (X).PODCAST; if (!P) throw new Error('Podcast fehlt'); P.app(p, toast); }, show: () => !!(/** @type {any} */ (X).PODCAST) }, // #284
     { id: 'speichern', label: 'Speichern', icon: '💾', build: appSave },
     { id: 'kreativ', label: 'Kreativ', icon: '🛠', build: appCheats, show: () => X.creative && X.creative.on },
   ];
