@@ -5,7 +5,7 @@
 // 2) Ikonen: Messeturm-Pyramide, Europaturm (Turmkorb, Antenne), Commerzbank-Antenne und gelbe Krone,
 //    Main-Tower-Antenne, Krone des Westend Tower, Henninger-Fass, Japan-Center-Dach, Domturm.
 // In der Nähe baut wahrzeichen.js die Wahrzeichen selbst; solange es einen Turm gebaut hat (e.shown), fehlt er hier.
-import * as THREE from 'three';
+/** @type {any} */ let THREE; // kommt aus X (game.js), wie in wahrzeichen.js; ein Import von 'three' bricht tsc
 
 const R = 760; // wie die alte Horizontschicht: innerhalb der Sichtweite, vor der Himmelskuppel (850)
 const lin = h => { const c = new THREE.Color(h); return [c.r, c.g, c.b]; };
@@ -109,6 +109,7 @@ function towerParts(P, t, th, far) {
 
 // ---------- Horizont ----------
 export function initSkyline(X) {
+  THREE = X.THREE;
   const { scene } = X; const api = { mesh: null, update() {} };
   fetch('data/skyline.json').then(r => r.ok ? r.json() : []).then(list => {
     if (!list.length) return; const N = list.length; const P = parts(); const tid = [];
