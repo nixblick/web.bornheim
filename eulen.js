@@ -2,6 +2,7 @@
 // Daten nur aus https://frischlufteulen.de/api/spiel/strecken.json (einmal je Sitzung), nichts ausgedacht: ohne freigegebene Strecke keine Plakate und keine Mission.
 // Format je Strecke: { name, laenge_km, linie: [[lon, lat], …], link, marathon? }. Keine Nutzerdaten, keine fremden Marken.
 import { initWegweiser } from './wegweiser.js';
+import { disposeHierarchy } from './dispose.js';
 /** @param {import('./types').Ctx} X */
 export function initEulen(X) {
   const { THREE, scene, player, TH, showMsg, canvasTex, card, sfx, burst, solidAt } = X;
@@ -9,7 +10,7 @@ export function initEulen(X) {
   const xy = ([lon, lat]) => [(lon - LON0) * Math.PI / 180 * R * Math.cos(LAT0 * Math.PI / 180), -(lat - LAT0) * Math.PI / 180 * R];
   const SPAR = 'eulenMarathon';
   let pendingStart = null; let routes = [], posters = [], run = null, finish = null, startMark = null, t = 0;
-  const load = async () => { for (const u of ['https://frischlufteulen.de/api/spiel/strecken.json']) { try { const r = await fetch(u); if (!r.ok) continue; const d = await r.json(); if (d && d.strecken && d.strecken.length) return d.strecken; } catch (e) { /* nächste Quelle */ } } return []; };
+  const load = async () => { for (const u of ['https://frischlufteulen.de/api/spiel/strecken.json']) { try { const r = await fetch(u, { signal: typeof AbortSignal !== 'undefined' && AbortSignal.timeout ? AbortSignal.timeout(8000) : undefined }); if (!r.ok) continue; const d = await r.json(); if (d && d.strecken && d.strecken.length) return d.strecken; } catch (e) { /* nächste Quelle */ } } return []; };
   // API-Daten landen per innerHTML in card(): Name ohne HTML-Zeichen, Länge als Zahl, Link nur auf frischlufteulen.de (Nachttest 13.11.)
   const clean = r => { const l = String(r.link || ''); return { name: String(r.name || 'Strecke').replace(/[<>&"'`]/g, '').slice(0, 80), laenge_km: Math.round((Number(r.laenge_km) || 0) * 10) / 10, link: /^https:\/\/frischlufteulen\.de(\/[^"'<>\s]*)?$/.test(l) ? l : 'https://frischlufteulen.de/' }; };
   // Zuschnitt auf das Spielgebiet (#61): nur Punkte in vorhandenen Kacheln (Index wie interiors.js reachable), längster zusammenhängender Abschnitt
@@ -22,7 +23,7 @@ export function initEulen(X) {
     return { ...r, pts, km_gebiet: km, ganz: full, ziel: endIn ? all[all.length - 1] : pts[pts.length - 1], info: full ? `${r.laenge_km} km` : `Abschnitt im Spielgebiet: ${String(km).replace('.', ',')} km von ${String(r.laenge_km).replace('.', ',')} km` }; };
   // use(): auch für die Probe im Spieltest, deren Ursprung (127.0.0.1) der Endpunkt per CORS nicht bedient
   const use = s => { if (startMark) { for (const m of startMark) scene.remove(m); startMark = null; } routes = s.map(r => prep({ ...r, ...clean(r), marathon: r.marathon || /marathon/i.test(r.name || ''), mega: /megamarsch/i.test(r.name || '') })).filter(Boolean); if (routes.length) { for (const p of posters) scene.remove(p); posters = []; /* Säulen neu verteilen, jetzt mit Eulen-Motiv */ } buildStart(); };
-  load().then(use);
+  load().then(s => { if (s.length) use(s); }); // leere Antwort (Netz weg, CORS) darf schon gesetzte Strecken nicht löschen
 
   // ---------- Plakat (gezeichnet): Eule, Titel, Streckenname ----------
   const posterTex = name => canvasTex(256, 384, (c, w, h) => { const g = c.createLinearGradient(0, 0, 0, h); g.addColorStop(0, '#1f5b3a'); g.addColorStop(1, '#0f2f20'); c.fillStyle = g; c.fillRect(0, 0, w, h);
@@ -42,12 +43,15 @@ export function initEulen(X) {
   const posterMat = m => MATS[m] || (MATS[m] = new THREE.MeshLambertMaterial({ map: MOTIV[m](), emissive: 0x223322, emissiveIntensity: 0.4 }));
   // je Säule ein Motiv: Eulen nur, wenn der Endpunkt Strecken liefert, Vokabaum immer; abwechselnd verteilt
   const nextMotif = () => { if (!routes.length) return 'vokabaum'; const n = m => posters.filter(p => p.userData.motif === m).length; return n('eulen') <= n('vokabaum') ? 'eulen' : 'vokabaum'; };
-  function litfass(x, z, motif) { const g = new THREE.Group(); g.userData.motif = motif; const y = TH(x, z); const col = new THREE.Mesh(new THREE.CylinderGeometry(0.6, 0.6, 2.8, 16, 1, true), posterMat(motif)); col.position.y = 1.6; g.add(col);
-    const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.72, 0.62, 0.3, 16), new THREE.MeshLambertMaterial({ color: 0x2d4a3a })); cap.position.y = 3.15; g.add(cap); const base = new THREE.Mesh(new THREE.CylinderGeometry(0.66, 0.7, 0.2, 16), cap.material); base.position.y = 0.1; g.add(base);
+  const lfCol = new THREE.CylinderGeometry(0.6, 0.6, 2.8, 16, 1, true), lfCap = new THREE.CylinderGeometry(0.72, 0.62, 0.3, 16), lfBase = new THREE.CylinderGeometry(0.66, 0.7, 0.2, 16), lfMat = new THREE.MeshLambertMaterial({ color: 0x2d4a3a }); // alle Säulen teilen Geometrie und Material: scene.remove genügt (#120)
+  function litfass(x, z, motif) { const g = new THREE.Group(); g.userData.motif = motif; const y = TH(x, z); const col = new THREE.Mesh(lfCol, posterMat(motif)); col.position.y = 1.6; g.add(col);
+    const cap = new THREE.Mesh(lfCap, lfMat); cap.position.y = 3.15; g.add(cap); const base = new THREE.Mesh(lfBase, lfMat); base.position.y = 0.1; g.add(base);
     g.position.set(x, y, z); scene.add(g); return g; }
+  /** Gleis näher als 2,8 m? (#254: Litfaßsäule stand auf der Tram- und Busspur der Friedberger Landstraße) */
+  const amGleis = (x, z) => { const rs = (X.CITY && X.CITY.rails) || []; for (const r of rs) { if (!r || !r.p || r.k === 'platform') continue; const p = r.p; for (let i = 0; i < p.length - 1; i++) { const ax = p[i][0], az = p[i][1], dx = p[i + 1][0] - ax, dz = p[i + 1][1] - az; if (Math.min(ax, ax + dx) > x + 3 || Math.max(ax, ax + dx) < x - 3 || Math.min(az, az + dz) > z + 3 || Math.max(az, az + dz) < z - 3) continue; const l = dx * dx + dz * dz || 1, t = Math.max(0, Math.min(1, ((x - ax) * dx + (z - az) * dz) / l)); if ((ax + t * dx - x) ** 2 + (az + t * dz - z) ** 2 < 2.8 * 2.8) return true; } } return false; };
   function updatePosters() { const keep = []; for (const p of posters) { if (Math.hypot(p.position.x - player.pos.x, p.position.z - player.pos.z) < 450) keep.push(p); else scene.remove(p); } posters = keep;
     if (posters.length >= 4) return; const stops = ((X.WORLD || X.CITY).stops || []).filter(s => s.k === 'bus' && Math.hypot(s.x - player.pos.x, s.z - player.pos.z) < 350 && !posters.some(p => Math.hypot(p.position.x - s.x, p.position.z - s.z) < 60));
-    for (const s of stops.slice(0, 4 - posters.length)) { for (const [ox, oz] of [[3, 3], [-3, 3], [3, -3], [-3, -3]]) { const x = s.x + ox, z = s.z + oz; if (solidAt(x, z) >= 0 || (X.nearestRoadDir && (() => { const n = X.nearestRoadDir(x, z, 8); return n && Math.hypot(n.x - x, n.z - z) < n.w / 2 + 0.8; })())) continue; posters.push(litfass(x, z, nextMotif())); break; } } }
+    for (const s of stops.slice(0, 4 - posters.length)) { for (const [ox, oz] of [[3, 3], [-3, 3], [3, -3], [-3, -3]]) { const x = s.x + ox, z = s.z + oz; if (solidAt(x, z) >= 0 || amGleis(x, z) || (X.rasenRoad && X.rasenRoad(x, z)) /* auf irgendeiner Fahrbahn, nicht nur der nächsten (3 Säulen standen an Einmündungen auf der Querstraße) */ || (X.nearestRoadDir && (() => { const n = X.nearestRoadDir(x, z, 8); return n && Math.hypot(n.x - x, n.z - z) < n.w / 2 + 0.8; })())) continue; posters.push(litfass(x, z, nextMotif())); break; } } }
 
   // ---------- Start-Markierung des Marathons (grüne Eulen-Säule) ----------
   // je angebotener Strecke eine Säule am ersten Punkt des Abschnitts im Spielgebiet, von der Fahrbahn geschoben, sobald die Kachel steht
@@ -57,7 +61,23 @@ export function initEulen(X) {
 
   // ---------- Lauf ----------
   const WEG = X.WEG || (X.WEG = initWegweiser(X)); // Strahl, Kartenlinie, Richtung (wegweiser.js)
-  function wps(r) { if (r.W) return r.W; const out = r.W = [r.pts[0]]; let acc = 0; for (let i = 1; i < r.pts.length; i++) { const a = r.pts[i - 1], b = r.pts[i]; acc += Math.hypot(b[0] - a[0], b[1] - a[1]); if (acc > (big(r) ? 900 : 300) || i === r.pts.length - 1) { out.push(b.slice()); acc = 0; } } return out; }
+  // Wegpunkte großer Strecken alle ~250 m statt 900 m (André 14.11.2026: gern mehr Punkte, alle auf der Straße): die Linie auf
+  // der Karte folgt so dem Track, statt Häuserblöcke zu schneiden. Alte Spielstände zählten in 900-m-Punkten (wpsAlt).
+  const WP_GROSS = 250;
+  function wpsAlt(r) { const out = [r.pts[0]]; let acc = 0; for (let i = 1; i < r.pts.length; i++) { const a = r.pts[i - 1], b = r.pts[i]; acc += Math.hypot(b[0] - a[0], b[1] - a[1]); if (acc > (big(r) ? 900 : 300) || i === r.pts.length - 1) { out.push(b); acc = 0; } } return out; }
+  /** Wegpunkt auf die nächste echte Straße setzen, sobald deren Kachel geladen ist (einmal je Punkt). Erst breite Straßen
+   *  (ab 6 m, bis 70 m entfernt), sonst jede befahrbare ab 4 m (bis 40 m); keine Gleise, keine Autobahn. Vorher wurden die
+   *  Punkte von der Fahrbahn weggeschoben und landeten dabei in Innenhöfen. */
+  function aufStrasse(q) {
+    if (q.str) return q; const RD = X.WORLD && X.WORLD.roads; if (!RD) return q; let geladen = false;
+    for (const [minW, maxD] of [[6, 70], [4, 40]]) { let bd = maxD * maxD, bx = 0, bz = 0, hit = false;
+      for (const r of RD) { if (!r || !r.p || r.ry || r.mw || !(r.w >= minW)) continue; const p0 = r.p[0]; if (Math.abs(p0[0] - q[0]) > 450 || Math.abs(p0[1] - q[1]) > 450) continue; geladen = true;
+        for (let i = 0; i < r.p.length - 1; i++) { const ax = r.p[i][0], az = r.p[i][1], dx = r.p[i + 1][0] - ax, dz = r.p[i + 1][1] - az, l2 = dx * dx + dz * dz || 1, t = Math.max(0, Math.min(1, ((q[0] - ax) * dx + (q[1] - az) * dz) / l2)), cx = ax + dx * t, cz = az + dz * t, d = (cx - q[0]) ** 2 + (cz - q[1]) ** 2; if (d < bd) { bd = d; bx = cx; bz = cz; hit = true; } } }
+      if (hit) { q[0] = bx; q[1] = bz; q.str = true; return q; } }
+    if (geladen) q.str = true; // Straßen sind da, aber keine in Reichweite (Parkweg): Punkt bleibt, wo der Track ihn hat
+    return q;
+  }
+  function wps(r) { if (r.W) return r.W; const out = r.W = [r.pts[0]]; let acc = 0; for (let i = 1; i < r.pts.length; i++) { const a = r.pts[i - 1], b = r.pts[i]; acc += Math.hypot(b[0] - a[0], b[1] - a[1]); if (acc > (big(r) ? WP_GROSS : 300) || i === r.pts.length - 1) { out.push(b.slice()); acc = 0; } } return out; }
   // ---------- Wettbewerbe (#127, André 13.11.2026): Marathon und Megamarsch zu Fuß (gehen oder rennen) und als zweiter Wettbewerb nur mit dem Rad ----------
   // Etappen à ~10,5 km mit Speichern an der Etappengrenze (Verpflegung); je Etappe eine Zeit, Gesamtzeit = Summe. Fortsetzen startet an der Grenze.
   const STAGE_M = 10500;
@@ -82,28 +102,33 @@ export function initEulen(X) {
   const fmt = ms => { const s = Math.floor(ms / 1000); return Math.floor(s / 3600) + ':' + String(Math.floor(s / 60) % 60).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0'); };
   const G = () => /** @type {any} */ (window).G;
   function giveBike(x, z) { const g = G(); if (!g || !g.makeBike) return false; const c = g.makeBike(); c.position.set(x, TH(x, z), z); g.scene.add(c); g.cars.push(c); player.pos.set(x + 0.5, TH(x, z), z); g.toggleCar(); return !!(player.car && player.car.userData.bike); }
-  function start(r, resume, mode = 'lauf', opt = {}) { const W = wps(r); const B = big(r) ? stages(r) : []; const sv = resume ? readSave(mode) : null; const go = sv && sv.name === r.name;
-    const i = go ? sv.i : 1; const stage = B.filter(b => b < i).length;
-    if (go && mode === 'lauf' && !player.car) { const [x, z] = W[i - 1]; player.pos.set(x, TH(x, z), z); }
-    if (mode === 'rad' && !(player.car && player.car.userData.bike && !player.car.userData.moto)) { const [x, z] = W[go ? i - 1 : 0]; if (!giveBike(x, z)) { showMsg('KEIN RAD VERFÜGBAR', 1500); return; } }
+  function start(r, resume, mode = 'lauf', opt = {}) { if (!WEG.frei()) return false; /* vor Teleport und Rad: abgelehnter Start ohne Nebenwirkung */ const W = wps(r); const B = big(r) ? stages(r) : []; const sv = resume ? readSave(mode) : null; const go = sv && sv.name === r.name;
+    let i = go ? sv.i : 1; if (go && sv.n !== W.length) { const alt = big(r) && !sv.n ? wpsAlt(r) : null, q = alt && alt[Math.min(alt.length - 1, sv.i - 1)]; /* Stand aus der Zeit mit 900-m-Punkten: nächstgelegenen neuen Punkt suchen */
+      if (q) { let bd = 1e18; for (let k = 0; k < W.length; k++) { const d = (W[k][0] - q[0]) ** 2 + (W[k][1] - q[1]) ** 2; if (d < bd) { bd = d; i = k + 1; } } } else i = Math.max(1, Math.min(W.length - 1, Math.round(sv.i / (sv.n || W.length) * W.length))); }
+    i = Math.max(1, Math.min(W.length - 1, i)); const stage = B.filter(b => b < i).length;
+    if (go && mode === 'lauf' && !player.car) { const [x, z] = aufStrasse(W[i - 1]); player.pos.set(x, TH(x, z), z); }
+    if (mode === 'rad' && !(player.car && player.car.userData.bike && !player.car.userData.moto)) { const [x, z] = W[go ? i - 1 : 0]; if (!giveBike(x, z)) { showMsg('KEIN RAD VERFÜGBAR', 1500); return false; } }
     run = { r, W, B, mode, i, stage, times: go ? sv.times.slice() : [], st0: performance.now(), grace: performance.now() + 3000, last: player.pos.clone(), test: !!opt.test };
     WEG.route({ pts: W, get i() { return run ? run.i : 1; }, off: 1, big: big(r), label: (mode === 'rad' ? '🚲 ' : '🦉 ') + kind(r) }); if (r.marathon) buildFinish(r.ziel);
     const et = B.length ? ` · Etappe ${stage + 1}/${B.length + 1}` : '';
-    card((mode === 'rad' ? 'RAD-WETTBEWERB · ' : 'EULEN-') + kind(r).toUpperCase(), `${r.name} · ${r.info}${et} · ` + (mode === 'rad' ? 'nur mit dem Fahrrad, Absteigen macht ungültig' : 'zu Fuß, gehen oder rennen, ohne Auto, Rad oder Bahn') + (B.length ? ' · an jeder Etappengrenze wird gespeichert' : ''), 5); sfx('bell', 0.5); }
-  function stop(msg) { run = null; WEG.route(null); const o = document.getElementById('obj'); if (o) o.textContent = ''; if (msg) showMsg(msg, 2600); }
+    card((mode === 'rad' ? 'RAD-WETTBEWERB · ' : 'EULEN-') + kind(r).toUpperCase(), `${r.name} · ${r.info}${et} · ` + (mode === 'rad' ? 'nur mit dem Fahrrad, Absteigen macht ungültig' : 'zu Fuß, gehen oder rennen, ohne Auto, Rad oder Bahn') + (B.length ? ' · an jeder Etappengrenze wird gespeichert' : ''), 5); sfx('bell', 0.5); return true; }
+  function stop(msg) { run = null; WEG.route(null); const o = document.getElementById('obj'); if (o) o.textContent = ''; if (X.objDirty) X.objDirty(); /* Story schreibt ihr Kapitelziel neu */ if (msg) showMsg(msg, 2600); }
+  let objEl = null;
   function runUpdate(dt) { const u = run;
     if (u.mode === 'lauf' && player.car) { stop('DISQUALIFIZIERT: NUR ZU FUSS'); return; }
     if (u.mode === 'rad' && performance.now() > u.grace && !(player.car && player.car.userData.bike && !player.car.userData.moto)) { stop('UNGÜLTIG: RAD-WETTBEWERB NUR AUF DEM FAHRRAD'); return; }
     const here = player.car ? player.car.position : player.pos; if (!u.test && here.distanceTo(u.last) > 60) { stop('DISQUALIFIZIERT: KEINE ABKÜRZUNG PER BAHN ODER SPRUNG'); return; } u.last.copy(here);
-    if (Math.hypot(u.W[u.i][0] - here.x, u.W[u.i][1] - here.z) < 200) offRoad(u.W[u.i]); const [x, z] = u.W[u.i]; WEG.update(dt); const d = Math.hypot(here.x - x, here.z - z); const ms = performance.now() - u.st0;
-    const o = document.getElementById('obj'); if (o) o.textContent = `${u.mode === 'rad' ? '🚲' : '🦉'} ${u.r.name}${u.B.length ? ` · Etappe ${u.stage + 1}/${u.B.length + 1}` : ''}: Wegpunkt ${u.i}/${u.W.length - 1} · ${Math.round(d)} m · ${fmt(ms)}`;
-    if (d < (u.mode === 'rad' ? 9 : 7)) { u.i++; sfx('click', 0.6);
+    for (let k = u.i; k < Math.min(u.W.length, u.i + 3); k++) if (Math.hypot(u.W[k][0] - here.x, u.W[k][1] - here.z) < 420) aufStrasse(u.W[k]); const [x, z] = u.W[u.i]; WEG.update(dt); const d = Math.hypot(here.x - x, here.z - z); const ms = performance.now() - u.st0;
+    const o = objEl || (objEl = document.getElementById('obj')); if (o) { const s = `${u.mode === 'rad' ? '🚲' : '🦉'} ${u.r.name}${u.B.length ? ` · Etappe ${u.stage + 1}/${u.B.length + 1}` : ''}: Wegpunkt ${u.i}/${u.W.length - 1} · ${Math.round(d)} m · ${fmt(ms)}`; if (o.textContent !== s) o.textContent = s; } // nur schreiben, wenn sich der Text ändert
+    // Wegpunkt nicht erreichbar (Hof, hinter Gleisen)? Wer schon am nächsten ist, hat ihn passiert: sonst hing der Lauf dort für immer
+    const nx = u.W[u.i + 1], vorbei = !!nx && !u.B.includes(u.i) && Math.hypot(here.x - nx[0], here.z - nx[1]) < 25;
+    if (d < (u.mode === 'rad' ? 9 : 7) || vorbei) { u.i++; sfx('click', 0.6);
       if (u.B.includes(u.i - 1) || u.i >= u.W.length) { u.times.push(ms); u.st0 = performance.now(); u.stage++;
-        if (u.i < u.W.length) { writeSave(u.mode, { name: u.r.name, i: u.i, times: u.times }); player.hp = Math.min(100, player.hp + 30); showMsg(`ETAPPE ${u.stage} GESCHAFFT · ${fmt(ms)} · GESPEICHERT`, 2200); } }
+        if (u.i < u.W.length) { writeSave(u.mode, { name: u.r.name, i: u.i, n: u.W.length, times: u.times }); player.hp = Math.min(100, player.hp + 30); showMsg(`ETAPPE ${u.stage} GESCHAFFT · ${fmt(ms)} · GESPEICHERT`, 2200); } }
       if (u.i >= u.W.length) done(); } }
   function best(key, ms) { let a = []; try { a = JSON.parse(localStorage.getItem('eulenBest') || '{}')[key] || []; } catch (e) { /* leer */ } a.push({ ms, am: new Date().toISOString().slice(0, 10) }); a.sort((p, q) => p.ms - q.ms); a = a.slice(0, 5);
     try { const all = JSON.parse(localStorage.getItem('eulenBest') || '{}'); all[key] = a; localStorage.setItem('eulenBest', JSON.stringify(all)); } catch (e) { /* nur Anzeige */ } return a; }
-  function done() { const u = run, r = u.r, mode = u.mode; stop(); writeSave(mode, null); const ms = u.times.reduce((a, b) => a + b, 0); const len = r.len || 1;
+  function done() { const u = run, r = u.r, mode = u.mode; stop(); writeSave(mode, null); const ms = u.times.reduce((a, b) => a + b, 0); const len = r.len || r.pts.reduce((a, q, i) => i ? a + Math.hypot(q[0] - r.pts[i - 1][0], q[1] - r.pts[i - 1][1]) : 0, 0) || 1; /* normale Läufe hatten keine Länge und bekamen immer Bronze */
     const vMax = V[mode] * (mode === 'lauf' ? ((X.perks && X.perks.run) || 1) : 1), frac = len / (ms / 1000) / vMax; const [, tier, ic] = TIER.find(([f]) => frac >= f);
     const real = ms * REAL[mode] * (r.laenge_km && r.km_gebiet ? r.laenge_km / r.km_gebiet : 1);
     let pay = 0; if (big(r)) { pay = PAY(r)[mode]; player.money = (player.money || 0) + pay; player.hp = 100; if ('stamina' in player) player.stamina = 1; for (let k = 0; k < 6; k++) setTimeout(() => burst(player.pos.clone().setY(player.pos.y + 3), [0xff4060, 0xffd84a, 0x3ad17a, 0x4fa8ff][k % 4], 40), k * 250); }
@@ -116,7 +141,7 @@ export function initEulen(X) {
   function buildFinish([x, z]) { if (finish) return; const g = new THREE.Group(); const y = TH(x, z); const red = new THREE.MeshLambertMaterial({ color: 0xb01020 }), arch = new THREE.MeshLambertMaterial({ color: 0x1f5b3a });
     const carpet = new THREE.Mesh(new THREE.BoxGeometry(3, 0.04, 40), red); carpet.position.set(0, 0.03, -20); g.add(carpet);
     for (const sx of [-2.2, 2.2]) { const p = new THREE.Mesh(new THREE.BoxGeometry(0.5, 5, 0.5), arch); p.position.set(sx, 2.5, 0); g.add(p); } const top = new THREE.Mesh(new THREE.BoxGeometry(5, 1.1, 0.5), new THREE.MeshLambertMaterial({ map: canvasTex(512, 112, (c, w, h) => { c.fillStyle = '#1f5b3a'; c.fillRect(0, 0, w, h); c.fillStyle = '#ffe9a8'; c.font = 'bold 64px sans-serif'; c.textAlign = 'center'; c.fillText('ZIEL', w / 2, 80); }, 1, 1) })); top.position.set(0, 5.4, 0); g.add(top);
-    const fans = []; const fm = [0xd84a4a, 0x4a7ad8, 0xe8c040, 0x5ab868, 0xffffff]; for (let i = 0; i < 40; i++) { const side = i % 2 ? 1 : -1; const f = new THREE.Mesh(new THREE.CapsuleGeometry(0.25, 1.1, 4, 8), new THREE.MeshLambertMaterial({ color: fm[i % fm.length] })); f.position.set(side * (2.4 + Math.random() * 1.5), 0.8, -2 - Math.random() * 36); g.add(f); fans.push(f); }
+    const fans = []; const fg = new THREE.CapsuleGeometry(0.25, 1.1, 4, 8), fm = [0xd84a4a, 0x4a7ad8, 0xe8c040, 0x5ab868, 0xffffff].map(c => new THREE.MeshLambertMaterial({ color: c })); /* eine Geometrie, fünf Materialien statt je 40 */ for (let i = 0; i < 40; i++) { const side = i % 2 ? 1 : -1; const f = new THREE.Mesh(fg, fm[i % fm.length]); f.position.set(side * (2.4 + Math.random() * 1.5), 0.8, -2 - Math.random() * 36); g.add(f); fans.push(f); }
     g.position.set(x, y, z); scene.add(g); finish = { g, fans }; }
 
   // ---------- F-Aktionen und Update ----------
@@ -125,7 +150,8 @@ export function initEulen(X) {
     for (const m of startMark || []) { const r = m.userData.route, [x, z] = r.pts[0]; if (big(r) && Math.hypot(x + 4 - player.pos.x, z - player.pos.z) < 2.5) { const sv = readSave('rad'); const goes = sv && sv.name === r.name; return { label: goes ? `F · Rad-Wettbewerb fortsetzen (${kind(r)})` : `F · Rad-Wettbewerb starten (${kind(r)}, ${r.km_gebiet} km)`, act: () => start(r, goes, 'rad') }; } if (Math.hypot(x - player.pos.x, z - player.pos.z) < 5) { const sv = big(r) ? readSave('lauf') : null; const goes = sv && sv.name === r.name; return { label: big(r) ? (goes ? `F · ${kind(r)} fortsetzen (Etappe ${(r.B || stages(r)).filter(b => b < sv.i).length + 1})` : `F · ${kind(r)} zu Fuß starten (${r.km_gebiet} km)`) : `F · Eulen-Lauf „${r.name}“ starten (${r.km_gebiet} km)`, act: () => { pendingStart = null; start(r, goes); } }; } }
     if (pendingStart) { const [x, z] = pendingStart.pts[0]; if (Math.hypot(x - player.pos.x, z - player.pos.z) < 5) { const r = pendingStart; return { label: `F · Eulen-Lauf „${r.name}“ starten`, act: () => { pendingStart = null; start(r); } }; } }
     return null; });
-  function update(dt) { t += dt; if (Math.floor(t) !== Math.floor(t - dt)) { updatePosters(); placeMarks(); } if (run) runUpdate(dt);
-    if (finish) for (const [i, f] of finish.fans.entries()) f.position.y = 0.8 + Math.abs(Math.sin(t * 6 + i)) * 0.35; }
+  const finishDist = () => Math.hypot(finish.g.position.x - player.pos.x, finish.g.position.z - player.pos.z);
+  function update(dt) { t += dt; if (Math.floor(t) !== Math.floor(t - dt)) { updatePosters(); placeMarks(); if (finish && !run && finishDist() > 400) { scene.remove(finish.g); disposeHierarchy(finish.g); finish = null; } /* Ziel weit weg und kein Lauf: abbauen, der nächste Start baut es neu */ } if (run) runUpdate(dt);
+    if (finish && finishDist() < 150) { const fs = finish.fans; for (let i = 0; i < fs.length; i++) fs[i].position.y = 0.8 + Math.abs(Math.sin(t * 6 + i)) * 0.35; } } // Zuschauer hüpfen nur in Sichtnähe
   return { update, get posters() { return posters; }, get routes() { return routes; }, get run() { return run; }, get marks() { return startMark || []; }, weg: WEG, wps, use, start, stop };
 }

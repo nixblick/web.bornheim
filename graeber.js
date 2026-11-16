@@ -25,6 +25,8 @@ export function initGraeber(X) {
       vitrine: L(0x8d8f92), anz: new THREE.MeshBasicMaterial({ color: 0x1a1a1a }), anzT: new THREE.MeshBasicMaterial({ color: 0xff9a1a }),
       platte: L(0xb4aea4), kante: L(0xd8d4cc),
       glas: new THREE.MeshLambertMaterial({ map: dotTex, transparent: true, opacity: 0.9, emissive: 0x30363c, side: THREE.DoubleSide, depthWrite: false }) };
+    // Cache für alle Gruppen: disposeHierarchy darf ihn beim Abbau einer einzelnen Gruppe nicht freigeben
+    for (const k in M) M[k].userData.shared = true; dotTex.userData.shared = true;
     return M;
   }
   const box = (g, w, h, d, m, x, y, z, ry = 0) => { const o = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m); o.position.set(x, y, z); o.rotation.y = ry; g.add(o); return o; };
@@ -81,7 +83,7 @@ export function initGraeber(X) {
   let hTex = null;
   function hSchild() { if (hTex) return hTex; const c = document.createElement('canvas'); c.width = c.height = 64; const x = c.getContext('2d');
     x.fillStyle = '#f2d21b'; x.fillRect(0, 0, 64, 64); x.strokeStyle = '#2f9a6a'; x.lineWidth = 5; x.beginPath(); x.arc(32, 32, 27, 0, 7); x.stroke();
-    x.fillStyle = '#2f9a6a'; x.font = 'bold 38px Arial'; x.textAlign = 'center'; x.fillText('H', 32, 46); return (hTex = new THREE.CanvasTexture(c)); }
+    x.fillStyle = '#2f9a6a'; x.font = 'bold 38px Arial'; x.textAlign = 'center'; x.fillText('H', 32, 46); hTex = new THREE.CanvasTexture(c); hTex.userData.shared = true; return hTex; }
   function makeHaltestelle(name) {
     const m = mats(), g = new THREE.Group(), L = 28;
     box(g, L, 0.22, 3.2, m.platte, 0, 0.11, 0); box(g, L, 0.24, 0.3, m.kante, 0, 0.12, 1.55);
@@ -109,9 +111,26 @@ export function initGraeber(X) {
     return g;
   }
 
+  // ---- Backen (#162): je Material ein Mesh statt eines je Quader/Zylinder (Anlage 12 statt 104 Draw-Calls, Haltestelle 13 statt 53) ----
+  // Alle Grundkörper hier haben position/normal/uv und genau ein Material; indizierte werden aufgelöst, dann die Puffer aneinandergehängt.
+  // Schatten wirft nur Deckendes: Glas, Anzeiger und Schilder (Basic-Material) nicht mehr.
+  function bake(g) {
+    g.updateMatrixWorld(true); const per = new Map();
+    g.traverse(o => { if (!o.isMesh) return; const src = o.geometry, q = src.index ? src.toNonIndexed() : src.clone(); q.applyMatrix4(o.matrixWorld); src.dispose();
+      if (!per.has(o.material)) per.set(o.material, []); per.get(o.material).push(q); });
+    g.clear();
+    for (const [mat, geos] of per) { let n = 0; for (const q of geos) n += q.attributes.position.count;
+      const P = new Float32Array(n * 3), N = new Float32Array(n * 3), U = new Float32Array(n * 2); let o = 0;
+      for (const q of geos) { P.set(q.attributes.position.array, o * 3); N.set(q.attributes.normal.array, o * 3); U.set(q.attributes.uv.array, o * 2); o += q.attributes.position.count; q.dispose(); }
+      const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(P, 3)); geo.setAttribute('normal', new THREE.BufferAttribute(N, 3)); geo.setAttribute('uv', new THREE.BufferAttribute(U, 2));
+      const m = new THREE.Mesh(geo, mat); m.castShadow = !mat.transparent && !mat.isMeshBasicMaterial; m.receiveShadow = true; g.add(m); }
+    return g;
+  }
   // ---- Platzierung ----
   const railDir = (x, z) => { let best = 1e9, ang = 0; for (const r of CITY.rails || []) { if (r.k === 'platform') continue; const p = r.p; for (let i = 0; i < p.length - 1; i++) { const ax = p[i][0], az = p[i][1], bx = p[i + 1][0], bz = p[i + 1][1]; const dx = bx - ax, dz = bz - az, l = dx * dx + dz * dz || 1; const t = Math.max(0, Math.min(1, ((x - ax) * dx + (z - az) * dz) / l)); const d = (ax + t * dx - x) ** 2 + (az + t * dz - z) ** 2; if (d < best) { best = d; ang = Math.atan2(dz, dx); } } } return best < 400 ? ang : null; };
-  function place(grp, x, z, ang) { grp.position.set(x, TH(x, z), z); grp.rotation.y = -ang; grp.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } }); scene.add(grp); return grp; }
+  // Abstand zum nächsten Gleis (plat=false) bzw. Bahnsteig (plat=true; geschlossene Fläche innen = 0)
+  const railDist = (x, z, plat) => { let best = 1e18; for (const r of CITY.rails || []) { if ((r.k === 'platform') !== plat) continue; const p = r.p; if (!p || p.length < 2) continue; if (plat && p.length > 3 && p[0][0] === p[p.length - 1][0] && p[0][1] === p[p.length - 1][1] && pointInPoly(x, z, p)) return 0; for (let i = 0; i < p.length - 1; i++) { const ax = p[i][0], az = p[i][1], dx = p[i + 1][0] - ax, dz = p[i + 1][1] - az, l = dx * dx + dz * dz || 1; const t = Math.max(0, Math.min(1, ((x - ax) * dx + (z - az) * dz) / l)); const d = (ax + t * dx - x) ** 2 + (az + t * dz - z) ** 2; if (d < best) best = d; } } return Math.sqrt(best); };
+  function place(grp, x, z, ang) { bake(grp); /* solange die Gruppe noch im Ursprung liegt */ grp.position.set(x, TH(x, z), z); grp.rotation.y = -ang; scene.add(grp); return grp; }
   /** Winkel für place(), damit lokal +z (Steinvorderseiten) zum nächsten Weg aus OSM zeigt; null = kein Weg in 60 m */
   const wegZu = (x, z) => { let best = 3600, dx0 = 0, dz0 = 0; for (const r of CITY.roads || []) { const p = r.p; if (!p) continue; for (let i = 0; i < p.length - 1; i++) { const ax = p[i][0], az = p[i][1], dx = p[i + 1][0] - ax, dz = p[i + 1][1] - az, l = dx * dx + dz * dz || 1; const t = Math.max(0, Math.min(1, ((x - ax) * dx + (z - az) * dz) / l)); const qx = ax + t * dx - x, qz = az + t * dz - z, d = qx * qx + qz * qz; if (d < best) { best = d; dx0 = qx; dz0 = qz; } } } return best < 3600 ? -Math.atan2(dx0, dz0) : null; };
   function wanted() {
@@ -120,7 +139,7 @@ export function initGraeber(X) {
     let na = 0; for (const gp of CITY.green || []) { if (gp.k !== 'cemetery' || na >= MAX_ANL || !gp.p || gp.p.length < 3) continue; let best = null, bd = 1e18; // Punkt am Rand innen, nah am Spieler
       for (let i = 0; i < gp.p.length - 1; i++) { const [ax, az] = gp.p[i], [bx, bz] = gp.p[i + 1]; for (let t = 0.2; t < 0.9; t += 0.3) { const ex = ax + (bx - ax) * t, ez = az + (bz - az) * t, l = Math.hypot(bx - ax, bz - az) || 1, nx = -(bz - az) / l, nz = (bx - ax) / l;
         for (const s of [12, -12]) { const x = ex + nx * s, z = ez + nz * s; if (!pointInPoly(x, z, gp.p)) continue; const d = (x - px) ** 2 + (z - pz) ** 2; if (d < bd) { bd = d; best = { x, z, ang: Math.atan2(bz - az, bx - ax) }; } } } }
-      if (best && bd < NAH * NAH) { na++; out.push({ key: 'a' + best.x.toFixed(0) + ',' + best.z.toFixed(0), a: best }); } }
+      if (best && bd < NAH * NAH) { na++; out.push({ key: 'a' + gp.p[0][0].toFixed(0) + ',' + gp.p[0][1].toFixed(0), a: best }); /* Schlüssel je Friedhof, nicht je nächstem Randpunkt: sonst entstand beim Entlanglaufen alle paar Meter eine neue Anlage */ } }
     return out;
   }
   function update(dt) {
@@ -128,8 +147,12 @@ export function initGraeber(X) {
     const w = wanted(), keys = new Set(w.map(e => e.key));
     for (const [k, g] of built) { const d2 = (g.position.x - player.pos.x) ** 2 + (g.position.z - player.pos.z) ** 2; if (!keys.has(k) && d2 > WEG * WEG) { scene.remove(g); disposeHierarchy(g); built.delete(k); } }
     for (const e of w) { if (built.has(e.key)) continue;
-      if (e.st) { const ang = railDir(e.st.x, e.st.z); if (ang === null) { built.set(e.key, new THREE.Group()); continue; } const s = (e.st.x * 7 + e.st.z * 3) % 2 > 0 ? 1 : -1; // Bahnsteig neben das Gleis
-        const ox = -Math.sin(ang) * 3.3 * s, oz = Math.cos(ang) * 3.3 * s; const g = makeHaltestelle(e.st.n || 'Haltestelle'); built.set(e.key, place(g, e.st.x + ox, e.st.z + oz, ang + (s > 0 ? Math.PI : 0))); }
+      if (e.st) { const ang = railDir(e.st.x, e.st.z); if (ang === null) { built.set(e.key, new THREE.Group()); continue; } const s0 = (e.st.x * 7 + e.st.z * 3) % 2 > 0 ? 1 : -1; // Bahnsteig neben das Gleis
+        // #251: nie zwischen die Gleise (zweigleisig, z. B. Dornbusch): erst OSM-Bahnsteig, sonst Abstand >= 2,6 m zu jedem Gleis
+        let s = s0, ox = 0, oz = 0, ok = false; const cand = [];
+        for (const d of [3.3, 4.5, 6, 7.5, 9]) for (const sg of [s0, -s0]) cand.push([sg, d]);
+        for (const pass of [0, 1]) { for (const [sg, d] of cand) { const qx = e.st.x - Math.sin(ang) * d * sg, qz = e.st.z + Math.cos(ang) * d * sg; if (railDist(qx, qz, false) < 2.6) continue; if (pass === 0 && railDist(qx, qz, true) > 1.5) continue; s = sg; ox = qx - e.st.x; oz = qz - e.st.z; ok = true; break; } if (ok) break; }
+        if (!ok) { built.set(e.key, new THREE.Group()); continue; } const g = makeHaltestelle(e.st.n || 'Haltestelle'); built.set(e.key, place(g, e.st.x + ox, e.st.z + oz, ang + (s > 0 ? Math.PI : 0))); }
       else { const w2 = wegZu(e.a.x, e.a.z); built.set(e.key, place(makeAnlage(), e.a.x, e.a.z, w2 === null ? e.a.ang : w2)); } }
   }
   setInterval(() => { try { update(1.5); } catch (e) { console.warn('graeber', e); } }, 1500); // eigener Takt, keine Zeile in der Spielschleife

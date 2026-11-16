@@ -76,7 +76,7 @@ export function initShops(X, W) {
   // Während der Laden offen ist, darf das Loslassen der Maus nicht das Pausemenü öffnen; danach die Maus wieder fangen
   function open(s) { cur = s; X.shopOpen = true; window.__noAutoMenu = true; wasLocked = !!document.pointerLockElement; if (wasLocked) document.exitPointerLock(); for (const k in keys) keys[k] = false; render(); el.style.display = 'flex'; sfx('click', 0.5); }
   function close() { el.style.display = 'none'; X.shopOpen = false; cur = null; window.__noAutoMenu = false; if (wasLocked) { wasLocked = false; try { X.renderer.domElement.requestPointerLock(); } catch (e) {} } }
-  addEventListener('keydown', e => { if (!X.shopOpen) return; if (e.code === 'Escape' || e.code === 'KeyF') { close(); e.stopImmediatePropagation(); } }, true);
+  addEventListener('keydown', e => { if (!cur) return; /* nur der eigene Laden; X.shopOpen setzt auch das Fahrkarten-Menü (interiors.js) */ if (e.code === 'Escape' || e.code === 'KeyF') { close(); e.stopImmediatePropagation(); } }, true);
   // Nähe prüfen, Hinweis zeigen, Taste F
   let near = null, scanT = 0;
   function update(dt) {
@@ -86,6 +86,6 @@ export function initShops(X, W) {
     return near ? `F · ${TYPES[near.k].ic} ${near.name} (${TYPES[near.k].n})` : null;
   }
   addEventListener('keydown', e => { if (X.interiors) return; /* Taste F übernimmt interiors.js (Laden betreten) */ if (e.code !== 'KeyF' || X.shopOpen || !near || X.menuOpen && X.menuOpen()) return; if (player.wanted > 0) { showMsg('POLIZEI SUCHT DICH – KEIN EINKAUF', 1200); return; } open(near); });
-  X.mmHooks.push((ctx, P, R) => { for (const s of shops) { if (s.dead) continue; const [x, y] = P(s.x, s.z); if (x * x + y * y > R * R) continue; ctx.fillStyle = s.k === 'super' ? '#3fd0ff' : '#7fa8b8'; ctx.fillRect(x - 2, y - 2, 4, 4); } });
+  X.mmHooks.push((ctx, P, R) => { const [ox, oy] = P(0, 0), k = P(1, 0)[0] - ox; /* P ist affin: Maßstab und Versatz einmal holen statt ein Array je Laden */ for (let i = 0; i < shops.length; i++) { const s = shops[i]; if (s.dead) continue; const x = ox + s.x * k, y = oy + s.z * k; if (x * x + y * y > R * R) continue; ctx.fillStyle = s.k === 'super' ? '#3fd0ff' : '#7fa8b8'; ctx.fillRect(x - 2, y - 2, 4, 4); } });
   return { update, shops, open, close, ITEMS, TYPES, buy, scan, get near() { return near; } };
 }

@@ -8,6 +8,7 @@ export function initHeli(X) {
   const STOP = [-250, -1710]; // Haltestelle „Unfallklinik“: von hier kommt man zu Fuß
   let site = null; // { b, pad:[x,z,y], ground:[x,z], roofSpot:[x,z,y] }
   let heli = null, signT = 0, respawnT = 0;
+  let txName = null, txCross = null; // Beschriftungs-Texturen einmal für alle Hubschrauber (disposeCar gibt keine Texturen frei)
 
   // ---------- Modell ----------
   function label(text, w = 512, h = 96, bg = null, fg = '#c8102e') { const c = document.createElement('canvas'); c.width = w; c.height = h; const g = c.getContext('2d'); if (bg) { g.fillStyle = bg; g.fillRect(0, 0, w, h); } g.fillStyle = fg; g.font = `900 ${Math.round(h * 0.62)}px system-ui, sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(text, w / 2, h / 2 + 3); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; return t; }
@@ -15,7 +16,7 @@ export function initHeli(X) {
     const g = new THREE.Group(); g.rotation.order = 'YXZ'; const body = new THREE.Group(); g.add(body);
     const white = new THREE.MeshStandardMaterial({ color: 0xf4f4f2, roughness: 0.35, metalness: 0.1 }), red = new THREE.MeshStandardMaterial({ color: 0xc8102e, roughness: 0.4 }), dark = new THREE.MeshStandardMaterial({ color: 0x24272c, roughness: 0.6 });
     const glass = new THREE.MeshStandardMaterial({ color: 0x1d3a52, roughness: 0.05, metalness: 0.4, transparent: true, opacity: 0.85 }), metal = new THREE.MeshStandardMaterial({ color: 0x8a9096, roughness: 0.35, metalness: 0.7 });
-    const add = (geo, mat, x, y, z, rx = 0, ry = 0, rz = 0, parent = body) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); m.rotation.set(rx, ry, rz); m.castShadow = true; parent.add(m); return m; };
+    const add = (geo, mat, x, y, z, rx = 0, ry = 0, rz = 0, parent = body) => { geo.userData.own = mat.userData.own = true; /* je Hubschrauber neu gebaut: disposeCar darf sie freigeben */ const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); m.rotation.set(rx, ry, rz); m.castShadow = true; parent.add(m); return m; };
     const hull = add(new THREE.SphereGeometry(1, 24, 16), white, 0, 1.65, 0.5); hull.scale.set(1.25, 1.15, 2.5);
     add(new THREE.SphereGeometry(1, 24, 16), glass, 0, 1.95, 1.75).scale.set(1.08, 0.82, 1.35);
     const band = add(new THREE.SphereGeometry(1, 24, 10, 0, Math.PI * 2, Math.PI * 0.52, Math.PI * 0.16), red, 0, 1.65, 0.5); band.scale.set(1.27, 1.17, 2.52);
@@ -25,16 +26,16 @@ export function initHeli(X) {
     add(new THREE.BoxGeometry(1.2, 0.5, 1.6), white, 0, 2.75, 0.2); // Triebwerksverkleidung
     for (const sx of [-0.95, 0.95]) { add(new THREE.CylinderGeometry(0.06, 0.06, 3.6, 8), metal, sx, 0.12, 0.4, Math.PI / 2); for (const sz of [-0.4, 1.3]) add(new THREE.CylinderGeometry(0.05, 0.05, 0.9, 6), metal, sx * 0.85, 0.55, sz, 0, 0, sx * 0.25); }
     // Beschriftung (ohne Logos): „CHRISTOPH 2“ auf beiden Seiten des Heckauslegers, Rettungskreuz an der Tür
-    const tx = label('CHRISTOPH 2', 512, 96); const plate = new THREE.MeshBasicMaterial({ map: tx, transparent: true, side: THREE.DoubleSide });
+    const tx = txName || (txName = label('CHRISTOPH 2', 512, 96)); const plate = new THREE.MeshBasicMaterial({ map: tx, transparent: true, side: THREE.DoubleSide });
     for (const sx of [-1, 1]) { const p = add(new THREE.PlaneGeometry(2.8, 0.52), plate, sx * 0.4, 1.98, -3.2, 0, sx * Math.PI / 2); p.castShadow = false; }
-    const cross = label('✚', 128, 128, null, '#c8102e'); const cm = new THREE.MeshBasicMaterial({ map: cross, transparent: true, side: THREE.DoubleSide });
+    const cross = txCross || (txCross = label('✚', 128, 128, null, '#c8102e')); const cm = new THREE.MeshBasicMaterial({ map: cross, transparent: true, side: THREE.DoubleSide });
     for (const sx of [-1, 1]) add(new THREE.PlaneGeometry(0.75, 0.75), cm, sx * 1.27, 1.7, 0.1, 0, sx * Math.PI / 2).castShadow = false;
     // Rotoren
     const rotor = new THREE.Group(); rotor.position.set(0, 3.2, 0.3); g.add(rotor); add(new THREE.CylinderGeometry(0.08, 0.08, 0.5, 8), metal, 0, -0.2, 0, 0, 0, 0, rotor);
     for (let i = 0; i < 4; i++) { const bl = add(new THREE.BoxGeometry(0.32, 0.04, 5.3), dark, 0, 0, 0, 0, i * Math.PI / 2, 0, rotor); bl.geometry.translate(0, 0, 2.65); }
-    const disc = new THREE.Mesh(new THREE.CircleGeometry(5.3, 40), new THREE.MeshBasicMaterial({ color: 0x222222, transparent: true, opacity: 0, depthWrite: false, side: THREE.DoubleSide })); disc.rotation.x = -Math.PI / 2; rotor.add(disc);
+    const disc = new THREE.Mesh(new THREE.CircleGeometry(5.3, 40), new THREE.MeshBasicMaterial({ color: 0x222222, transparent: true, opacity: 0, depthWrite: false, side: THREE.DoubleSide })); disc.geometry.userData.own = disc.material.userData.own = true; disc.rotation.x = -Math.PI / 2; rotor.add(disc);
     const tail = new THREE.Group(); tail.position.set(0.18, 2.75, -6.45); g.add(tail); for (let i = 0; i < 2; i++) add(new THREE.BoxGeometry(0.04, 1.5, 0.16), dark, 0, 0, 0, i * Math.PI / 2, 0, 0, tail);
-    const beacon = new THREE.Mesh(new THREE.SphereGeometry(0.09, 8, 6), new THREE.MeshBasicMaterial({ color: 0xff2020 })); beacon.position.set(0, 3.05, -0.6); g.add(beacon);
+    const beacon = new THREE.Mesh(new THREE.SphereGeometry(0.09, 8, 6), new THREE.MeshBasicMaterial({ color: 0xff2020 })); beacon.geometry.userData.own = beacon.material.userData.own = true; beacon.position.set(0, 3.05, -0.6); g.add(beacon);
     g.userData = { speed: 0, heading: 0, hp: 450, police: false, driver: null, mode: 'parked', bar: null, wheels: [], tlMat: {}, cone: Object.assign(new THREE.Object3D(), { visible: false }), type: "heli", blMat: null, blink: 0, blinkT: 0, heads: [], bodyMats: [white], dims: { w: 3.2, h: 3.6, l: 12 }, heli: true, keep: true, rotor, tail, disc, beacon, vel: new THREE.Vector3(), rpm: 0, tilt: 0, roll: 0, landed: true };
     return g;
   }
@@ -104,7 +105,7 @@ export function initHeli(X) {
   function update(dt) {
     if (!site) { if ((signT -= dt) > 0) return null; signT = 2; if (Math.hypot(player.pos.x - BGU[0], player.pos.z - BGU[1]) > 900) return null; site = findSite(); if (!site) return null; site.g = buildSite(site); }
     if (!heli || (!cars.includes(heli) && Math.hypot(player.pos.x - site.pad[0], player.pos.z - site.pad[1]) > 150)) { if (heli && heli.parent) heli.parent.remove(heli); if ((respawnT -= dt) <= 0) placeHeli(); }
-    else if (heli.userData.mode === 'wreck') { respawnT -= dt; if (respawnT <= 0 && Math.hypot(player.pos.x - site.pad[0], player.pos.z - site.pad[1]) > 150) { const i = cars.indexOf(heli); if (i >= 0) cars.splice(i, 1); scene.remove(heli); heli = null; } }
+    else if (heli.userData.mode === 'wreck') { respawnT -= dt; if (respawnT <= 0 && Math.hypot(player.pos.x - site.pad[0], player.pos.z - site.pad[1]) > 150) { const i = cars.indexOf(heli); if (i >= 0) cars.splice(i, 1); const j = X.shootables.indexOf(heli); if (j >= 0) X.shootables.splice(j, 1); /* sonst bleibt das Wrack für immer in shootables */ if (X.disposeCar) X.disposeCar(heli); scene.remove(heli); heli = null; } }
     if (heli && player.car !== heli && heli.userData.mode !== 'wreck') heliDrive(heli, dt, {}); // Rotor läuft aus, steht auf dem Platz
     if (player.car && player.car.userData.heli) { const u = player.car.userData; return `${u.landed ? 'GELANDET · Leertaste abheben · E aussteigen' : 'W/S vor/zurück · A/D drehen · Leertaste steigen · Shift sinken'} · Höhe ${Math.round(u.alt || 0)} m · ${Math.round(u.speed * 3.6)} km/h`; }
     if (heli && !player.car && heli.position.distanceTo(player.pos) < 7.5 && heli.userData.mode !== 'wreck') return 'E · Christoph 2 fliegen';

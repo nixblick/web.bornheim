@@ -221,13 +221,17 @@ export function initWahrzeichen(X) {
     geo.setAttribute('color', new THREE.BufferAttribute(col, 4)); geo.translate(0, 26, 0);
     const m = new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, depthWrite: false, fog: false, opacity: 0 }); const s = new THREE.Mesh(geo, m); s.renderOrder = 2;
     s.position.set(g.position.x, g.position.y, g.position.z); scene.add(s); g.userData.sockel = s; g.userData.mats.push(m); return s; }
-  function haze() { const f = scene.fog; if (!f) return; const cam = X.camera; if (!cam) return;
-    for (const g of built.values()) { if (!g.userData.b || !['coba', 'main', 'westend', 'euro', 'trianon', 'messe'].includes(g.userData.b.lm)) continue; const s = sockel(g);
-      const d = Math.hypot(cam.position.x - g.position.x, cam.position.z - g.position.z); s.material.color.copy(f.color); s.material.opacity = Math.max(0, Math.min(0.95, (d - f.far * 0.8) / 150)); s.visible = s.material.opacity > 0.01; }
-    for (const g of [...built.values(), ...(X.FAR_HAZE || []).map(h => (h.position = h.position || { x: h.x, z: h.z }, h.userData = h.userData || { mats: h.mats }, h))]) { const d = Math.hypot(cam.position.x - g.position.x, cam.position.z - g.position.z); const near = Math.max(60, f.near);
+  // haze() läuft jedes Bild: keine Listen pro Bild anlegen (vorher ein Array-Literal je Gruppe, Spread und map über FAR_HAZE)
+  const HOCH = new Set(['coba', 'main', 'westend', 'euro', 'trianon', 'messe']);
+  function dunst(g, cam, f) { const d = Math.hypot(cam.position.x - g.position.x, cam.position.z - g.position.z); const near = Math.max(60, f.near);
       const k = Math.min(0.85, Math.max(0, (d - near) / (Math.max(FERN, f.far * 3) - near)));
-      if (g.userData.k !== undefined && Math.abs(g.userData.k - k) < 0.01 && g.userData.fc === f.color.getHex()) continue; g.userData.k = k; g.userData.fc = f.color.getHex(); _fc.copy(f.color);
-      for (const m of g.userData.mats) { if (m.userData.c0) m.color.copy(m.userData.c0).lerp(_fc, k); if (m.userData.e0) m.emissive.copy(m.userData.e0).lerp(_fc, k); } } }
+      if (g.userData.k !== undefined && Math.abs(g.userData.k - k) < 0.01 && g.userData.fc === f.color.getHex()) return; g.userData.k = k; g.userData.fc = f.color.getHex(); _fc.copy(f.color);
+      for (const m of g.userData.mats) { if (m.userData.c0) m.color.copy(m.userData.c0).lerp(_fc, k); if (m.userData.e0) m.emissive.copy(m.userData.e0).lerp(_fc, k); } }
+  function haze() { const f = scene.fog; if (!f) return; const cam = X.camera; if (!cam) return;
+    for (const g of built.values()) { if (!g.userData.b || !HOCH.has(g.userData.b.lm)) continue; const s = sockel(g);
+      const d = Math.hypot(cam.position.x - g.position.x, cam.position.z - g.position.z); s.material.color.copy(f.color); s.material.opacity = Math.max(0, Math.min(0.95, (d - f.far * 0.8) / 150)); s.visible = s.material.opacity > 0.01; }
+    for (const g of built.values()) dunst(g, cam, f);
+    const fh = X.FAR_HAZE; if (fh) for (const h of fh) { if (!h.position) h.position = { x: h.x, z: h.z }; if (!h.userData) h.userData = { mats: h.mats }; dunst(h, cam, f); } }
   function update(dt) {
     haze();
     scanT -= dt; if (scanT > 0) return; scanT = 1;

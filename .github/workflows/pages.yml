@@ -36,16 +36,39 @@ jobs:
         run: |
           mkdir _site
           cp index.html play.html credits.html impressum.html manifest.webmanifest _site/
+          cp *.css _site/  # Stylesheets im Wurzelverzeichnis (menu-neu.css, ui-sunset.css): fehlten live, 404 (13.11.2026)
           cp *.js _site/   # alle Spielmodule im Wurzelverzeichnis (tools/ bleibt draußen); eine feste Liste hat story3.js vergessen und die Seite hing bei „Lade Stadt“
           V="${GITHUB_SHA::7}"
-          sed -i "s/game\.js[^']*/game.js?v=$V/" _site/play.html
-          sed -i -E "s/from '\.\/([a-z0-9_]+\.js)'/from '.\/\1?v=$V'/g" _site/*.js
+          sed -i "s/game.js?v=[0-9a-z]*/game.js?v=$V/" _site/play.html
+          [ "$(grep -c "game.js?v=$V" _site/play.html)" = 2 ] && grep -q -- "-->" _site/play.html || { echo "game.js-Version in play.html nicht sauber ersetzt"; exit 1; }
+          sed -i -E "s/from '\.\/([a-z0-9_-]+\.js)'/from '.\/\1?v=$V'/g" _site/*.js
+          sed -i -E "s/(menu-neu\.css)\?v=[0-9a-z]+/\1?v=$V/" _site/play.html _site/menu-neu.js   # Stylesheet des Pausenmenüs: stand fest auf ?v=3
           # Service Worker: Cache fuer Programm, Bilder und CSS je Deploy neu benennen (alter wird beim Aktivieren geloescht),
           # sonst bekaemen Spieler geaenderte Bilder/CSS nie und der Cache wuechse mit jeder Version (12.11.2026)
           sed -i "s/bornheim-static-v2/bornheim-static-$V/" _site/sw.js
+          # Offline-Start nach einem Deploy: die Adressen, die die Seite wirklich lädt, in die Vorab-Liste des Service Workers.
+          # Importierte Module und game.js mit ?v=, direkt eingebundene Skripte (touch.js, feedback.js) ohne.
+          M="'./menu-neu.css?v=$V', './ui-sunset.css'"
+          for f in _site/*.js; do
+            n="${f##*/}"; [ "$n" = sw.js ] && continue
+            if [ "$n" = game.js ] || grep -qF "from './$n?v=$V'" _site/*.js; then M="$M, './$n?v=$V'"; else M="$M, './$n'"; fi
+          done
+          sed -i "s|/\*MODULE\*/|$M|" _site/sw.js
+          ! grep -qF "/*MODULE*/" _site/sw.js && grep -qF "'./game.js?v=$V'" _site/sw.js && grep -qF "'./ui-sunset.css'" _site/sw.js || { echo "Modul-Liste in sw.js nicht eingesetzt"; exit 1; }
+          # Bilder, Modelle und three.js liegen in einem eigenen Cache. Sein Name hängt am Inhalt von assets/ und vendor/
+          # (Baum-Hashes): reine Programm-Deploys lassen ihn stehen, geänderte Bilder benennen ihn um und kommen an.
+          A="$(git rev-parse --short HEAD:assets)$(git rev-parse --short HEAD:vendor)"
+          sed -i "s/bornheim-assets-v1/bornheim-assets-$A/" _site/sw.js
+          grep -q "bornheim-static-$V" _site/sw.js && grep -q "bornheim-assets-$A" _site/sw.js || { echo "Cache-Namen in sw.js nicht ersetzt"; exit 1; }
           cp -r assets vendor _site/
-          mkdir _site/data && cp -r data/tiles data/dem data/metro.json data/districts.json data/busroutes.json data/overview.json _site/data/
+          mkdir _site/data && cp -r data/tiles data/dem _site/data/ && cp data/*.json _site/data/   # alle JSON im Datenordner (belag.json und vokabeln.json fehlten live); Rohdaten *.osm.json sind nicht eingecheckt
           touch _site/.nojekyll
+          # Wächter: jede lokal verlinkte Datei (href/src in HTML, fetch('data/…') und import './…' in JS) muss im Paket liegen
+          fehlt=0
+          for f in $( { grep -ohE "(href|src)=\"[^\"#:]+\"" _site/*.html | sed -E 's/^[a-z]+="//; s/"$//'; grep -ohE "fetch\('data/[^'\$]+'\)" _site/*.js | sed -E "s/^fetch\('//; s/'\)$//"; grep -ohE "from '\./[^']+'" _site/*.js | sed -E "s/^from '\.\///; s/'$//"; } | sed -E 's/\?.*$//' | sort -u ); do
+            [ -e "_site/$f" ] || { echo "FEHLT im Paket: $f"; fehlt=1; }
+          done
+          [ "$fehlt" = 0 ]
           du -sh _site
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3

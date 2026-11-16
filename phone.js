@@ -40,8 +40,11 @@ export function initPhone(X, S) {
     { id: 'feed', label: 'Feed', icon: '📣', build: appFeed },
     { id: 'karte', label: 'Karte', icon: '🗺', build: appMap },
     { id: 'missionen', label: 'Missionen', icon: '🎯', build: appMissions },
+    { id: 'wohnen', label: 'Wohnen', icon: '🏠', build: p => { const W = X.WOHNEN; if (!W) throw new Error('Wohnen fehlt'); W.app(p, { toast, esc }); }, show: () => !!X.WOHNEN },
+    { id: 'redscout', label: 'redscout', icon: '🔎', build: p => { const W = X.WOHNEN; if (!W) throw new Error('Wohnen fehlt'); W.app(p, { toast, esc }, 'markt'); }, show: () => !!X.WOHNEN },
     { id: 'statistik', label: 'Statistik', icon: '📊', build: appStats },
     { id: 'kamera', label: 'Kamera', icon: '📷', build: appCam },
+    { id: 'album', label: 'Album', icon: '🖼', build: p => { const E = X.ERINNERN; if (!E) throw new Error('Album fehlt'); E.app(p, { toast }); }, show: () => !!X.ERINNERN },
     { id: 'speichern', label: 'Speichern', icon: '💾', build: appSave },
     { id: 'kreativ', label: 'Kreativ', icon: '🛠', build: appCheats, show: () => X.creative && X.creative.on },
   ];
@@ -61,10 +64,20 @@ export function initPhone(X, S) {
   function appMap(p) { p.innerHTML = '<p class="ps-pempty">Karte öffnet sich …</p>'; close(); if (X.openMenu) { X.openMenu(); if (X.menuTab) X.menuTab('karte'); } }
   function appStats(p) { p.innerHTML = `<div class="ps-pstats">${S.PROGRESS && S.PROGRESS.html ? S.PROGRESS.html(true) : ''}</div>`; }
   function appSave(p) { p.innerHTML = `<div class="ps-pbtns"><button class="ps-pbtn is-amber" data-a="save">💾 Schnellspeichern (F6)</button><button class="ps-pbtn" data-a="menu">Pausenmenü öffnen</button></div>`;
-    p.querySelector('[data-a=save]').onclick = () => { try { X.saveGame(true); toast('Gespeichert', 'success'); } catch (e) { toast('Speichern fehlgeschlagen', 'error'); } };
+    p.querySelector('[data-a=save]').onclick = () => { try { X.saveGame(true, true); /* bewusst gespeichert */ toast('Gespeichert', 'success'); } catch (e) { toast('Speichern fehlgeschlagen', 'error'); } };
     p.querySelector('[data-a=menu]').onclick = () => { close(); X.openMenu && X.openMenu(); }; }
-  function appCam(p) { p.innerHTML = `<div class="ps-pbtns"><p class="ps-pempty">Foto vom Spielbild, ohne Handy. Wird als PNG heruntergeladen.</p><button class="ps-pbtn is-amber" data-a="shot">📷 Foto machen</button></div>`;
-    p.querySelector('[data-a=shot]').onclick = () => { root.style.visibility = 'hidden'; requestAnimationFrame(() => { try { const G = /** @type {any} */ (window).G, cv = X.renderer.domElement; const c = G && G.composerRef && G.composerRef(); if (c && c.render) c.render(); else X.renderer.render(X.scene, X.camera); const a = document.createElement('a'); a.href = cv.toDataURL('image/png'); a.download = 'bornheim-' + new Date().toISOString().slice(0, 19).replace(/[T:]/g, '-') + '.png'; a.click(); toast('Foto gespeichert', 'success'); } catch (e) { toast('Foto nicht möglich', 'error'); } root.style.visibility = ''; }); }; }
+  function appCam(p) { const E = X.ERINNERN; // mit Album (erinnerungen.js): Foto ins Album, auf Wunsch zusätzlich als PNG; ohne: nur PNG wie bisher
+    p.innerHTML = `<div class="ps-pbtns"><p class="ps-pempty">${E ? `Foto vom Spielbild, ohne Handy. Es landet im Album (höchstens ${E.MAX_FOTOS} Fotos). Ansehen: App „Album“ oder die Wand zu Hause.${E.clipKannAufnehmen ? ` Clips: ${E.CLIP_SEK} Sekunden ohne Ton, höchstens ${E.MAX_CLIPS}; ansehen im Album oder am Fernseher zu Hause.` : ''}` : 'Foto vom Spielbild, ohne Handy. Wird als PNG heruntergeladen.'}</p>${E ? '<button class="ps-pbtn is-amber" data-a="album">📷 Foto ins Album</button><button class="ps-pbtn" data-a="shot">📷 Foto + Datei speichern</button>' : '<button class="ps-pbtn is-amber" data-a="shot">📷 Foto machen</button>'}${E && E.clipKannAufnehmen ? `<button class="ps-pbtn" data-a="clip">${E.clipLaeuft ? '⏹ Aufnahme beenden' : `🎬 Clip aufnehmen (${E.CLIP_SEK} s)`}</button>` : ''}</div>`;
+    const foto = datei => { root.style.visibility = 'hidden'; requestAnimationFrame(() => {
+      try {
+        if (E) E.fotoAufnehmen({ datei }).then(m => { if (m) toast(`Foto ${m.anzahl} von ${E.MAX_FOTOS} im Album` + (datei ? ' · Datei gespeichert' : ''), 'success'); else toast(E.fotos().length >= E.MAX_FOTOS ? 'Album voll: nur Favoriten. Erst ein Foto löschen.' : 'Foto nicht möglich', 'error'); });
+        else { const G = /** @type {any} */ (window).G, cv = X.renderer.domElement; const c = G && G.composerRef && G.composerRef(); if (c && c.render) c.render(); else X.renderer.render(X.scene, X.camera); const a = document.createElement('a'); a.href = cv.toDataURL('image/png'); a.download = 'bornheim-' + new Date().toISOString().slice(0, 19).replace(/[T:]/g, '-') + '.png'; a.click(); toast('Foto gespeichert', 'success'); }
+      } catch (e) { toast('Foto nicht möglich', 'error'); }
+      root.style.visibility = ''; }); };
+    const ba = p.querySelector('[data-a=album]'); if (ba) ba.onclick = () => foto(false);
+    p.querySelector('[data-a=shot]').onclick = () => foto(true);
+    // Clip (erinnerungen.js): Handy zu, dann läuft die Aufnahme mit rotem Zähler; derselbe Knopf beendet sie vorzeitig
+    const bc = p.querySelector('[data-a=clip]'); if (bc) bc.onclick = () => { const lief = E.clipLaeuft; close(); try { if (lief) E.clipStopp(); else E.clipAufnehmen(); } catch (e) { showMsg('CLIP NICHT MÖGLICH', 1600); } }; }
   function appCheats(p) { p.innerHTML = `<div class="ps-pbtns"><p class="ps-pempty">Nur im Kreativmodus.</p><button class="ps-pbtn" data-a="geld">💶 +1000 €</button><button class="ps-pbtn" data-a="heil">❤ Gesundheit voll</button><button class="ps-pbtn" data-a="fahndung">🚓 Fahndung weg</button></div>`;
     const ok = () => X.creative && X.creative.on;
     p.querySelector('[data-a=geld]').onclick = () => { if (ok()) { player.money = (player.money || 0) + 1000; toast('+1000 €', 'success'); } };
@@ -80,8 +93,8 @@ export function initPhone(X, S) {
 
   // ---------- Öffnen / Schließen ----------
   let tick = 0;
-  function show(id) { if (!X.started || open) return false; if (X.menuOpen()) X.closeMenu(); open = true; root.style.display = 'block'; /** @type {any} */ (window).__noAutoMenu = true; try { document.exitPointerLock(); } catch (e) {} home(); if (id) openApp(id); tick = window.setInterval(() => { root.querySelector('.ps-phone__clock').textContent = clock(); const bc = root.querySelector('.ps-phone__bigclock'); if (bc) bc.textContent = clock(); }, 1000); root.querySelector('.ps-phone__clock').textContent = clock(); sfx && sfx('click', 0.5); return true; }
-  function close() { if (!open) return; open = false; app = null; root.style.display = 'none'; clearInterval(tick); /** @type {any} */ (window).__noAutoMenu = false; if (X.started && !X.menuOpen() && X.lockMouse) X.lockMouse(); }
+  function show(id) { if (!X.started || open) return false; if (X.menuOpen()) X.closeMenu(); open = true; for (const k in X.keys) X.keys[k] = false; /* gehaltene Taste läuft sonst weiter */ root.style.display = 'block'; /** @type {any} */ (window).__noAutoMenu = true; try { document.exitPointerLock(); } catch (e) {} home(); if (id) openApp(id); tick = window.setInterval(() => { root.querySelector('.ps-phone__clock').textContent = clock(); const bc = root.querySelector('.ps-phone__bigclock'); if (bc) bc.textContent = clock(); }, 1000); root.querySelector('.ps-phone__clock').textContent = clock(); sfx && sfx('click', 0.5); return true; }
+  function close() { if (!open) return; open = false; app = null; root.style.display = 'none'; clearInterval(tick); const vk = !!(S.VOKA && S.VOKA.mission); /* Vokabaum-Fenster gerade aus dem Handy gestartet: Maus frei lassen */ /** @type {any} */ (window).__noAutoMenu = vk; if (X.started && !X.menuOpen() && !vk && X.lockMouse) X.lockMouse(); }
   function toggle() { return open ? (close(), false) : show(); }
   addEventListener('keydown', e => {
     if (open && e.code === 'Escape') { e.preventDefault(); e.stopImmediatePropagation(); back(); return; }
@@ -90,5 +103,7 @@ export function initPhone(X, S) {
     toggle(); }, true);
   // Touch: Knopf am rechten Rand
   if (/** @type {any} */ (window).__touch) { const b = document.createElement('button'); b.id = 'phonebtn'; b.textContent = '📱'; b.setAttribute('aria-label', 'Handy'); b.addEventListener('touchstart', e => { e.preventDefault(); if (!player.car) toggle(); }, { passive: false }); b.onclick = () => { if (!player.car) toggle(); }; document.body.appendChild(b); }
-  return { open: show, close, toggle, openApp, get isOpen() { return open; }, get app() { return app ? app.id : null; }, apps: APPS.map(a => a.id), get msgs() { return msgs; }, get feed() { return feed; } };
+  /** Nachricht von außen (wohnen.js: Hausverwaltung), zählt als ungelesen */
+  function nachricht(who, text) { msgs.push({ who: String(who || 'Info'), text: String(text || ''), at: clock() }); if (msgs.length > 80) msgs.shift(); if (!open) unread++; badge(); }
+  return X.PHONE = { open: show, close, toggle, openApp, nachricht, get isOpen() { return open; }, get app() { return app ? app.id : null; }, apps: APPS.map(a => a.id), get msgs() { return msgs; }, get feed() { return feed; } };
 }
