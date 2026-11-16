@@ -127,7 +127,7 @@ export function initSkyline(X) {
           vec3 d = a.xyz - cam; float dist = max(length(d.xz), 1.0); float s = min(1.0, R / dist);
           vec3 wp = cam + (d + position) * s;
           vCol = color; vLit = lit; vN = normal; vGlow = glow; vWin = win; vUV = wuv; vTid = tid; vY = position.y;
-          vHaze = clamp((dist - 450.0) / 4200.0 + hazeAdd, 0.2, 0.82);
+          vHaze = clamp((dist - 450.0) / 7000.0 + hazeAdd, 0.12, 0.7); // 16.11.: weniger Dunst, die Skyline steht von Bornheim aus klar da
           gl_Position = projectionMatrix * viewMatrix * vec4(wp, 1.0); }`,
       fragmentShader: `uniform vec3 fogCol, sun; uniform float dayMul, night, blink;
         varying vec3 vCol, vLit, vN; varying float vGlow, vWin, vHaze, vTid, vY; varying vec2 vUV;
