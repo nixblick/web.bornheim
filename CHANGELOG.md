@@ -2,6 +2,7 @@
 
 ## 2026-11-16
 
+- **HUD-Modul (#118, #190):** Meldungen, `setTxt`/`setSty`, Minikarte, Stadtübersicht und U-Bahn-Linien der Karten aus `game.js` nach `hud.js` ausgelagert; `game.js` behält dünne Hüllen, Verhalten unverändert. Spieltest auf GitHub.
 - Fix: skyline.js: tsc-Fehler am Import von 'three' unterdrückt (wie bei game.js, das tsc auslässt); der Fehler brach tsc, Spieltest und Pages-Deploy waren seit #282 rot.
 
 - Skyline am Horizont neu (skyline.js, data/skyline.json aus tools/build_skyline.py): alle 43 Hochhäuser ab 90 m mit echtem OSM-Grundriss und echter Lage, Europaturm, Messeturm-Pyramide, Commerzbank-Antenne, Main-Tower-Mast, Henninger-Fass, Domturm; nachts Fensterlicht und Flugfeuer. Die alte Liste in game.js lag rund 1 km neben den echten Türmen (z. B. Commerzbank Tower −2175/976 statt −2520/2033). In der Nähe übernimmt weiter wahrzeichen.js. Probe tools/proben/skyline.json (Blick die Berger Straße hinunter).
