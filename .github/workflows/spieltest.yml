@@ -31,6 +31,8 @@ jobs:
           npm i --no-save --no-package-lock eslint@9.15.0 globals@15.12.0
           npx eslint --config eslint.config.mjs *.js
       - run: npx -y -p typescript@5 tsc -p jsconfig.json
+      - name: Podcast-Folgen prüfen (#284, höchstens 30 MB je Datei)
+        run: python3 tools/podcast.py --pruefen
 
   liste:
     runs-on: ubuntu-latest

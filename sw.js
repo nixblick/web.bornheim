@@ -48,6 +48,8 @@ self.addEventListener('fetch', event => {
   if (url.origin !== self.location.origin) return;
 
   const path = url.pathname;
+  // Podcast-Folgen (#284): groß, gestreamt mit Range-Anfragen, nie im Cache
+  if (path.includes('/audio/')) return;
 
   // 1) Stadtkacheln & Höhenmodelle (data/tiles/*.json, data/dem/*.bin): Cache-First (unveränderliche Kartendaten)
   if ((path.includes('/data/tiles/') && !path.endsWith('/index.json')) || path.includes('/data/dem/')) {

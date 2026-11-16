@@ -49,6 +49,8 @@ export function initRadio(X) {
   if (touch) { el.style.top = '6px'; el.style.bottom = 'auto'; el.style.pointerEvents = 'auto'; el.addEventListener('touchstart', e => { e.preventDefault(); e.stopPropagation(); next(); }, { passive: false }); }
   document.body.appendChild(el);
 
+  const pod = () => { const P = A.PODCAST; return P && P.count > 0 ? P : null; }; // #284: Podcast als vierter Sender, nur mit Folgen
+  const podAn = () => { const P = pod(); return !!(P && P.an); };
   const inCar = () => { const c = player.car; if (!c || player.dead) return false; const u = c.userData || {}; return !u.bike && !u.heli && !u.boat; };
   function rotate(now, start) { const S = SENDER[st]; if (!S) return; itemT = now; itemI = start ? Math.floor(Math.random() * S.items.length) : (itemI + 1) % S.items.length; const it = S.items[itemI]; curItem = typeof it === 'function' ? it() : it; }
 
@@ -144,7 +146,7 @@ export function initRadio(X) {
 
   // ---------- Takt (4 Hz, nicht jedes Bild) ----------
   function tick() {
-    const now = performance.now(), on = st >= 0 && inCar() && !!X.started;
+    const now = performance.now(), pa = podAn(), on = st >= 0 && !pa && inCar() && !!X.started;
     const stars = player.wanted > 0.05 ? Math.ceil(player.wanted) : 0, kind = weather.kind;
     if (on) {
       if (stars > lastStars) melde(stars >= 3 ? `Großfahndung der Polizei ${bereich(player.pos)}.` : `Polizeieinsatz ${bereich(player.pos)}, Fahndung läuft.`);
@@ -156,7 +158,8 @@ export function initRadio(X) {
     if (hear && !stumm) { if (playing !== st) { if (playing >= 0) stopMusic(); try { startMusic(st); } catch (e) { stumm = true; stopMusic(); console.warn('Autoradio ohne Ton', e); } } } else if (playing >= 0) stopMusic();
     if (AU && AU.eigen) { const v = vol(); if (Math.abs(AU.eigen.gain.value - v) > 0.01) AU.eigen.gain.value = v; }
     let txt = '', b = false;
-    if (on) { if (now - itemT > ITEM_MS || !curItem) rotate(now, !curItem); const S = SENDER[st]; b = !!bull && now < bull.until; txt = `📻 ${S.name} · ${b ? '⚠ ' + bull.text : curItem}`; }
+    if (pa && inCar() && X.started) txt = `📻 Podcast · ${pod().titel}`;
+    else if (on) { if (now - itemT > ITEM_MS || !curItem) rotate(now, !curItem); const S = SENDER[st]; b = !!bull && now < bull.until; txt = `📻 ${S.name} · ${b ? '⚠ ' + bull.text : curItem}`; }
     else if (touch && inCar() && X.started) txt = '📻 Radio aus · antippen';
     if (txt !== shown) { shown = txt; el.textContent = txt; el.style.display = txt ? 'block' : 'none'; el.style.color = b ? '#ffd27a' : '#e8e2cf'; }
   }
@@ -164,10 +167,14 @@ export function initRadio(X) {
 
   function next() {
     if (!inCar() || !X.started) return false;
-    st = st + 1 >= SENDER.length ? -1 : st + 1;
+    const P = pod();
+    if (P && P.an) { P.setAn(false, true); st = -1; } // Podcast -> Aus
+    else if (P && st === SENDER.length - 1) { st = -1; P.setAn(true, true); } // letzter Sender -> Podcast
+    else st = st + 1 >= SENDER.length ? -1 : st + 1;
     try { localStorage.setItem(KEY, JSON.stringify({ s: st })); } catch (e) { /* kein Speicher */ }
     if (playing >= 0) stopMusic();
-    if (st >= 0) { rotate(performance.now(), true); const a = audio(); if (a) weck(a.ctx); }
+    if (podAn()) { bull = null; curItem = ''; }
+    else if (st >= 0) { rotate(performance.now(), true); const a = audio(); if (a) weck(a.ctx); }
     else { bull = null; curItem = ''; X.showMsg('RADIO AUS', 700); }
     if (X.sfx) X.sfx('click', 0.4);
     tick(); return true;
