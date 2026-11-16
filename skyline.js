@@ -104,7 +104,7 @@ const TINT = { 'Silberturm': COL.silber, 'Europäische Zentralbank': 0x6f8090, '
 function towerParts(P, t, th, far) {
   const ic = ICONS[t.n] ? ICONS[t.n](t.p, t.h, th) : null; const tint = TINT[t.n] || COL.glas;
   const cut = ic ? Math.min(ic.cut, t.h) : t.h;
-  if (cut > 0) prism(P, t.p, far ? -40 : 0, cut, { col: tint, win: 1 }); // im Horizont 40 m tiefer, damit kein Spalt am Boden bleibt
+  if (cut > 0) prism(P, t.p, far ? -160 : 0, cut, { col: tint, win: 1 }); // im Horizont bis 160 m unter den Boden: von oben (Dach, Brücke) sieht man hinter der Sichtweite keinen Boden, der Fuß verläuft dann im Dunst statt zu schweben
   if (ic) ic.build(P); else if (far && t.h >= 100) beacon(P, 0, t.h, 0, th);
 }
 
@@ -137,7 +137,8 @@ export function initSkyline(X) {
           if (vWin > 0.5 && night > 0.01) { vec2 q = vUV / vec2(7.0, 7.2); vec2 f = fract(q); float h = fract(sin(dot(floor(q) + vTid * 13.1, vec2(12.9898, 78.233))) * 43758.5453);
             c += vec3(1.0, 0.82, 0.5) * 0.5 * step(0.2, f.x) * step(f.x, 0.8) * step(0.25, f.y) * step(f.y, 0.75) * step(0.7, h) * night; }
           float L = 0.0; if (vGlow > 0.5) { L = night * (vGlow > 1.5 ? blink : 1.0); c = mix(c, vLit, L); }
-          gl_FragColor = vec4(mix(c, fogCol, vHaze * (1.0 - 0.6 * L)), 1.0);
+          float hz = max(vHaze, clamp(-vY / 140.0, 0.0, 1.0)); // unter dem Boden in den Dunst übergehen (kein Fuß, keine Kante)
+          gl_FragColor = vec4(mix(c, fogCol, hz * (1.0 - 0.6 * L)), 1.0);
           #include <colorspace_fragment>
         }` });
     const mesh = new THREE.Mesh(g, mat); mesh.frustumCulled = false; mesh.userData.noChunk = true; scene.add(mesh); api.mesh = mesh;
