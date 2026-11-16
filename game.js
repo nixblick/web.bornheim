@@ -1009,7 +1009,7 @@ function buildSky() {
   HIMMEL = makeHimmel(THREE, himmelStufe(), !himmelPost()); skyU = HIMMEL.uniforms; skyDome = HIMMEL.dome; scene.add(skyDome); // Verlauf und Wolkendecke in einem Shader (himmel.js, #152)
   const sunTex = canvasTex(128, 128, (ctx, w, h) => { const gr = ctx.createRadialGradient(64, 64, 4, 64, 64, 64); gr.addColorStop(0, 'rgba(255,255,240,1)'); gr.addColorStop(0.15, 'rgba(255,245,210,0.95)'); gr.addColorStop(0.35, 'rgba(255,220,160,0.25)'); gr.addColorStop(1, 'rgba(255,200,120,0)'); ctx.fillStyle = gr; ctx.fillRect(0, 0, w, h); });
   sunDisk = new THREE.Sprite(new THREE.SpriteMaterial({ map: sunTex, fog: false, depthWrite: false, transparent: true, blending: THREE.AdditiveBlending })); sunDisk.scale.set(140, 140, 1); scene.add(sunDisk);
-  SKY = initSkyline({ THREE, scene, onReady: m => { skylineMesh = m; } }); // Horizont-Skyline aus echten Grundrissen (skyline.js, data/skyline.json)
+  SKY = initSkyline({ scene, onReady: m => { skylineMesh = m; } }); // Horizont-Skyline aus echten Grundrissen (skyline.js, data/skyline.json)
 }
 // Himmelsstufe aus der aktuellen Qualität (auch beim Umschalten im Menü): 0 einfach, 1 fein, 2 Volumen (Hoch/Ultra)
 function himmelPost() { return (opts.quality === 'hoch' || opts.quality === 'ultra') && !composerBroken; }
