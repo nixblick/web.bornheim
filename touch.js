@@ -1,9 +1,10 @@
-// Touch-Steuerung für Handy und Tablet: Stick links (analoges Lenken + Laufen), Wischen rechts (umsehen),
+// Touch-Steuerung für Handy und Tablet: Stick links (analoges Lenken + Laufen; er springt unter den Daumen, wenn man links
+// irgendwo aufsetzt), Wischen auf freier Fläche (umsehen), Hoch- und Querformat, Abstand zu Kerbe und Home-Balken (safe-area),
 // kontextabhängige Aktionsknöpfe (Fahrzeug, Hubschrauber, Schwimmen, Kreativmodus, Story-Dialoge).
 // Wird nur auf Touch-Geräten geladen (play.html setzt window.__touch).
 (function () {
   if (!window.__touch) return;
-  const css = `#tc{position:fixed;inset:0;z-index:20;pointer-events:none;user-select:none;-webkit-user-select:none;touch-action:none;font-family:system-ui,sans-serif;display:none}
+  const css = `#tc{position:fixed;inset:env(safe-area-inset-top,0px) env(safe-area-inset-right,0px) env(safe-area-inset-bottom,0px) env(safe-area-inset-left,0px);z-index:20;pointer-events:none;user-select:none;-webkit-user-select:none;touch-action:none;font-family:system-ui,sans-serif;display:none}
 #tc .stick{position:absolute;left:4vw;bottom:6vh;width:30vmin;height:30vmin;max-width:190px;max-height:190px;border-radius:50%;background:#ffffff14;border:2px solid #ffffff40;pointer-events:auto}
 #tc .knob{position:absolute;left:50%;top:50%;width:42%;height:42%;margin:-21% 0 0 -21%;border-radius:50%;background:#ffffff55;border:2px solid #ffffffaa}
 #tc .b{position:absolute;pointer-events:auto;border-radius:50%;background:#00000066;border:2px solid #ffffff70;color:#fff;font-weight:800;display:flex;align-items:center;justify-content:center;text-align:center;line-height:1.05;-webkit-tap-highlight-color:transparent}
@@ -17,8 +18,11 @@
 #tc .w{right:calc(5vw + 33vmin);bottom:5vh;width:11vmin;height:11vmin;max-width:72px;max-height:72px;font-size:18px}
 #tc .ctx1{right:calc(5vw + 33vmin);bottom:calc(5vh + 13vmin);width:10.5vmin;height:10.5vmin;max-width:68px;max-height:68px;font-size:15px}
 #tc .ctx2{right:calc(5vw + 45vmin);bottom:5vh;width:10.5vmin;height:10.5vmin;max-width:68px;max-height:68px;font-size:15px}
-#tc .top{top:8px;width:38px;height:38px;border-radius:10px;font-size:17px}
-#minimap{position:fixed!important;left:8px!important;top:78px!important;bottom:auto!important;width:96px!important;height:96px!important;pointer-events:auto!important}
+#tc .top{top:8px;width:40px;height:40px;border-radius:10px;font-size:17px}#tcx{position:fixed;z-index:70;top:calc(8px + env(safe-area-inset-top,0px));right:calc(8px + env(safe-area-inset-right,0px));width:46px;height:46px;border-radius:12px;border:2px solid #ffffffb0;background:#000000c0;color:#fff;font:800 20px system-ui;display:none}#tc .b *{pointer-events:none}#menu .box,#start,#shop .box,#metromenu,#tabov .box,#phone .ps-phone__page,#phone .ps-phone__home{touch-action:pan-y;-webkit-overflow-scrolling:touch}#tc .top.x{display:none}#tc.mehr .top.x{display:flex}
+#tc .tip{position:absolute;pointer-events:none;background:#000000b0;border:1px solid #ffd84a;color:#fff;font:600 13px system-ui;padding:6px 10px;border-radius:10px;max-width:42vw;text-align:center;transition:opacity .6s}#tc.tipaus .tip{opacity:0}
+body{overscroll-behavior:none;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}#hud{inset:env(safe-area-inset-top,0px) env(safe-area-inset-right,0px) env(safe-area-inset-bottom,0px) env(safe-area-inset-left,0px)!important}
+#phonebtn{top:calc(8px + env(safe-area-inset-top,0px))!important;right:calc(146px + env(safe-area-inset-right,0px))!important;width:40px!important;height:40px!important;font-size:19px!important;border-radius:10px!important;padding:0!important}#hud .tl{left:26px!important}#vehname{right:auto!important;left:50%!important;bottom:auto!important;top:26%!important;transform:translateX(-50%);font-size:22px!important}#hint{opacity:0!important}
+#minimap{position:fixed!important;left:calc(8px + env(safe-area-inset-left, 0px))!important;top:calc(78px + env(safe-area-inset-top, 0px))!important;bottom:auto!important;width:96px!important;height:96px!important;pointer-events:auto!important}
 #street{top:6px!important;bottom:auto!important;right:auto!important;left:50%!important;transform:translateX(-50%);font-size:14px!important}
 #stars{font-size:16px!important;top:52px!important;letter-spacing:2px!important}#money{font-size:14px!important;top:72px!important}
 #zone{display:none}#zoneban b{font-size:26px!important}#feed{width:210px!important;top:92px!important;font-size:11px!important}#hint{bottom:12px!important;font-size:12px!important;max-width:38vw;white-space:normal}
@@ -27,30 +31,46 @@
 #ammo,#weapon{pointer-events:auto!important}
 #hotbar{max-width:92vw!important;overflow-x:auto!important;flex-wrap:nowrap!important;justify-content:flex-start!important;bottom:8px!important;padding:4px 6px!important;touch-action:pan-x!important;-webkit-overflow-scrolling:touch}
 #hotbar .slot{flex:0 0 auto!important;min-width:48px!important}
+#wbar div.off{display:none}#wbar div{width:52px;height:50px}
 #mode{bottom:68px!important;font-size:10px!important;max-width:88vw!important;text-align:center}
 #card h2{font-size:28px!important}#card p{font-size:13px!important}
-#tcrot{position:fixed;inset:0;z-index:60;background:#0b0d12;color:#fff;display:none;align-items:center;justify-content:center;text-align:center;font:600 18px system-ui;padding:30px}`;
+@media (orientation:landscape){#hotbar{bottom:auto!important;top:52px!important;max-width:calc(100vw - 240px)!important}}@media (orientation:portrait){#tc .stick{bottom:9vh}#tc .f{max-width:56vw}#obj{top:54px!important;max-width:calc(100vw - 24px)!important;width:max-content}#stars{top:104px!important}#money{top:126px!important}#feed{top:150px!important;width:170px!important}#sub{bottom:calc(9vh + 44vmin)!important;max-width:92vw!important}#street{font-size:13px!important;max-width:calc(100vw - 205px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;left:8px!important;transform:none!important}#hud .tl{top:104px!important}#minimap{top:calc(186px + env(safe-area-inset-top, 0px))!important}#hotbar{bottom:calc(9vh + 33vmin)!important}}`;
   const st = document.createElement('style'); st.textContent = css; document.head.appendChild(st);
   const el = document.createElement('div'); el.id = 'tc';
   el.innerHTML = `<div class="stick"><div class="knob"></div></div>
 <div class="b fire" data-k="fire">ANGRIFF</div><div class="b jump" data-k="Space">SPRUNG</div><div class="b down hide" data-k="down">▼ RUNTER</div><div class="b aim" data-k="aim">ZIELEN</div>
 <div class="b e" data-k="KeyE">E<br><small style="font-size:9px;font-weight:600">Auto</small></div><div class="b f hide" data-k="KeyF">F</div><div class="b w" data-k="weapon">⟳</div>
 <div class="b ctx1 hide" data-k="ctx1">↻</div><div class="b ctx2 hide" data-k="ctx2">💡</div>
-<div class="b top" data-k="Escape" style="right:8px">☰</div><div class="b top" data-k="KeyM" style="right:50px">🗺</div><div class="b top" data-k="KeyC" style="right:92px">🛠</div><div class="b top" data-k="KeyV" style="right:134px">🎥</div><div class="b top" data-k="KeyG" style="right:176px">📣</div><div class="b top" data-k="stats" style="right:218px">📊</div>`;
+<div class="b top" data-k="Escape" style="right:8px">☰</div><div class="b top" data-k="KeyM" style="right:54px">🗺</div><div class="b top" data-k="mehr" style="right:100px">⋯</div><div class="b top x" data-k="KeyV" style="right:100px;top:54px">🎥</div><div class="b top x" data-k="stats" style="right:100px;top:100px">📊</div><div class="b top x" data-k="KeyG" style="right:100px;top:146px">📣</div><div class="b top x" data-k="KeyC" style="right:100px;top:192px">🛠</div>`;
   document.body.appendChild(el);
-  const rot = document.createElement('div'); rot.id = 'tcrot'; rot.innerHTML = '<div>📱↻<br><br>Bitte das Gerät quer halten.</div>'; document.body.appendChild(rot);
+  // Einstiegshilfe: bei den ersten drei Starts vier kurze Hinweise an den Stellen, um die es geht; weg nach 12 s oder sobald man läuft und sich umsieht
+  let tipN = 3; try { tipN = +localStorage.getItem('notgta.touchTipp') || 0; } catch (e) { /* ohne Speicher: nicht zeigen */ }
+  let tipAn = false, tipT = 0, tipLief = false, tipSah = false;
+  function tipZeigen() { if (tipAn || tipN >= 3) return; tipAn = true; try { localStorage.setItem('notgta.touchTipp', String(tipN + 1)); } catch (e) { /* egal */ }
+    for (const [css, txt] of [['left:4vw;bottom:calc(8vh + 32vmin)', '👆 Hier aufsetzen und ziehen: laufen'], ['left:50%;top:38%;transform:translateX(-50%)', '↔ Wischen: umsehen'], ['right:5vw;bottom:calc(9vh + 34vmin)', 'Knöpfe wechseln je nach Lage'], ['right:8px;top:54px', '☰ Menü · 📱 Handy']]) { const t = document.createElement('div'); t.className = 'tip'; t.style.cssText = css; t.textContent = txt; el.appendChild(t); }
+    tipT = setTimeout(tipWeg, 12000); }
+  function tipWeg() { if (!tipAn) return; clearTimeout(tipT); el.classList.add('tipaus'); setTimeout(() => { for (const t of el.querySelectorAll('.tip')) t.remove(); }, 700); tipAn = false; tipN = 3; }
+  // Schließen-Knopf für Handy und Statistik: beide decken auf kleinen Bildschirmen alles ab, Tasten zum Schließen gibt es nicht
+  const zu = document.createElement('button'); zu.id = 'tcx'; zu.textContent = '✕'; zu.setAttribute('aria-label', 'Schließen'); document.body.appendChild(zu);
+  const tabOffen = () => { const o = document.getElementById('tabov'); return !!o && o.style.display === 'flex'; }, handyOffen = () => { const o = document.getElementById('phone'); return !!o && o.style.display === 'block'; };
+  function schliessen(e) { if (e) { e.preventDefault(); e.stopPropagation(); } const g = window.G; if (!g) return; if (tabOffen() && g.PROGRESS) g.PROGRESS.showTab(false); else if (g.PHONE && g.PHONE.isOpen) g.PHONE.close(); zu.style.display = 'none'; }
+  zu.addEventListener('touchstart', schliessen, { passive: false }); zu.addEventListener('click', schliessen);
+  addEventListener('touchend', e => { if (e.target && e.target.id === 'tabov') schliessen(e); }, { passive: false }); // neben die Statistik tippen schließt sie auch
   const G = () => window.G; const key = (code, down) => dispatchEvent(new KeyboardEvent(down ? 'keydown' : 'keyup', { code, bubbles: true }));
 
   // WebAudio auf iOS/Safari nach Tab-Wechsel oder erstem Tippen automatisch aufwecken
-  function resumeAudio() { const g = G(); if (g && g.SND && g.SND.ctx && g.SND.ctx.state === 'suspended') g.SND.ctx.resume().catch(() => {}); }
-  addEventListener('touchstart', resumeAudio, { passive: true });
+  function resumeAudio() { const g = G(), S = g && g.X && g.X.SND; if (S && S.ctx && S.ctx.state !== 'running' && S.ctx.state !== 'closed') { try { S.ctx.resume().catch(() => {}); } catch (e) { /* bleibt aus */ } } } // SND liegt in G.X, nicht in G
+  for (const ev of ['touchstart', 'touchend', 'click']) addEventListener(ev, resumeAudio, { passive: true }); // iOS lässt Ton erst nach touchend/click zu
+  // iOS meldet die neue Größe nach dem Drehen und beim Ein-/Ausblenden der Adressleiste verspätet: Größe nachziehen
+  const nachziehen = () => { for (const ms of [120, 450, 900]) setTimeout(() => dispatchEvent(new Event('resize')), ms); };
+  addEventListener('orientationchange', nachziehen); if (window.visualViewport) { let vt = 0; visualViewport.addEventListener('resize', () => { clearTimeout(vt); vt = setTimeout(() => dispatchEvent(new Event('resize')), 150); }); }
   document.addEventListener('visibilitychange', () => { if (!document.hidden) resumeAudio(); });
 
   // Stick (mit analogem Lenkausschlag für Fahrzeuge)
   const stick = el.querySelector('.stick'), knob = el.querySelector('.knob');
   let sid = null;
   const held = { KeyW: false, KeyS: false, KeyA: false, KeyD: false, ShiftLeft: false };
-  const setK = (k, v) => { if (held[k] === v) return; held[k] = v; const g = G(); if (g) g.keys[k] = v; };
+  const setK = (k, v) => { const g = G(); if (held[k] === v && (!g || !!g.keys[k] === v)) return; held[k] = v; if (g) g.keys[k] = v; }; // auch nachziehen, wenn ein Menü die Tasten geleert hat
   function stickMove(t) {
     const r = stick.getBoundingClientRect(); const R = r.width / 2 || 1;
     let dx = t.clientX - (r.left + R), dy = t.clientY - (r.top + R);
@@ -63,7 +83,7 @@
     if (g && g.player) g.player.touchSteer = Math.abs(nx) < 0.08 ? 0 : Math.max(-1, Math.min(1, -nx / 0.85));
   }
   function stickEnd() {
-    sid = null; knob.style.transform = '';
+    sid = null; knob.style.transform = ''; stick.style.left = stick.style.top = stick.style.bottom = '';
     for (const k of Object.keys(held)) setK(k, false);
     const g = G(); if (g && g.player) g.player.touchSteer = 0;
   }
@@ -73,7 +93,7 @@
   addEventListener('deviceorientation', e => {
     const g = G();
     if (!g || !g.opts || !g.opts.gyro || !g.player || !g.player.car || sid !== null) return;
-    const ang = (screen.orientation && screen.orientation.angle) || window.orientation || 90;
+    const ang = screen.orientation ? screen.orientation.angle : (window.orientation ?? 90); // 0 (hochkant) ist ein gültiger Wert
     const tilt = ang === 90 ? (e.beta || 0) : ang === -90 || ang === 270 ? -(e.beta || 0) : (e.gamma || 0);
     const norm = Math.abs(tilt) < 3 ? 0 : Math.max(-1, Math.min(1, -tilt / 28));
     g.player.touchSteer = norm;
@@ -90,8 +110,11 @@
   addEventListener('touchstart', e => {
     if (!started()) return;
     for (const t of e.changedTouches) {
-      if (t.target.closest && t.target.closest('#tc .b, #tc .stick, #menu, #shop, #metromenu, #fb, #hotbar, #wbar, #bigmap, #minimap, #sub, #obj')) continue;
-      if (lid === null && t.clientX > innerWidth * 0.3) { lid = t.identifier; lx = t.clientX; ly = t.clientY; }
+      if (t.target.closest && t.target.closest('#tc .b, #tc .stick, #menu, #shop, #metromenu, #zuhausemenu, #erinnerwand, #tabov, #minispiel, #vokabaum, #fb, #hotbar, #wbar, #bigmap, #minimap, #sub, #obj, #phone .ps-phone, #phonebtn, #tabov, #gl_lost')) continue;
+      // links unten aufsetzen: der Stick springt unter den Daumen; sonst umsehen
+      if (sid === null && t.clientX < innerWidth * (innerHeight > innerWidth ? 0.5 : 0.38) && t.clientY > innerHeight * 0.35) {
+        const tr = el.getBoundingClientRect(), R = stick.offsetWidth / 2; stick.style.left = (t.clientX - tr.left - R) + 'px'; stick.style.top = (t.clientY - tr.top - R) + 'px'; stick.style.bottom = 'auto'; sid = t.identifier; stickMove(t);
+      } else if (lid === null) { lid = t.identifier; lx = t.clientX; ly = t.clientY; }
     }
   }, { passive: true });
   addEventListener('touchmove', e => {
@@ -130,6 +153,8 @@
       } else if (k === 'weapon') {
         if (g.creative && g.creative.on) { key('Period', true); }
         else if (g.WPN && g.WPN.cycle) g.WPN.cycle(1);
+      } else if (k === 'mehr') {
+        el.classList.toggle('mehr'); b.classList.toggle('on', el.classList.contains('mehr')); return;
       } else if (k === 'stats') {
         if (g.PROGRESS) { const o = document.getElementById('tabov'); g.PROGRESS.showTab(!(o && o.style.display === 'flex')); }
       } else if (k === 'Space') {
@@ -149,7 +174,7 @@
 
     const up = e => {
       e.preventDefault();
-      if (k !== 'aim') b.classList.remove('on');
+      if (k === 'mehr') return; if (k !== 'aim') b.classList.remove('on');
       const g = G(); if (!g) return;
       if (k === 'fire') {
         if (g.WPN && g.WPN.press) g.WPN.press(false);
@@ -183,14 +208,19 @@
 
   // Kontextabhängige Beschriftung & Sichtbarkeit der Touch-Knöpfe (alle 200 ms)
   function started() { const s = document.getElementById('start'); return !s || s.style.display === 'none'; }
+  // Beschriftung nur schreiben, wenn sie sich ändert (textContent/innerHTML ersetzen sonst jedes Mal die Kindknoten)
+  const setT = (b, v) => { if (b._t !== v) { b._t = v; b.textContent = v; } };
+  const setH = (b, v) => { if (b._t !== v) { b._t = v; b.innerHTML = v; } };
   setInterval(() => {
     const g = G();
+    const zeig = tabOffen() || handyOffen() ? 'block' : 'none'; if (zu.style.display !== zeig) zu.style.display = zeig;
     const on = started() && !document.querySelector('#menu[style*="flex"]');
     el.style.display = on ? 'block' : 'none';
-    if (!on || !g || !g.player) {
-      rot.style.display = innerHeight > innerWidth * 1.1 && on ? 'flex' : 'none';
-      return;
-    }
+    // Handyknopf (phone.js legt ihn erst später an): nur zu Fuß im laufenden Spiel, bei offenem Handy bleibt er zum Schließen
+    const pb = document.getElementById('phonebtn');
+    if (pb) { const ph = document.getElementById('phone'), offen = !!ph && ph.style.display === 'block'; const v = on && g && g.player && (offen || (!g.player.car && !g.player.dead)) ? '' : 'none'; if (pb.style.display !== v) pb.style.display = v; }
+    if (!on || !g || !g.player) return;
+    if (tipN < 3 && !tipAn) tipZeigen(); if (tipAn) { if (held.KeyW || held.KeyS || held.KeyA || held.KeyD) tipLief = true; if (lid !== null) tipSah = true; if (tipLief && tipSah) tipWeg(); }
     const p = g.player, car = p.car, cu = car && car.userData;
     const isHeli = !!(cu && cu.heli), isCannon = !!(cu && cu.cannon), isCreat = !!(g.creative && g.creative.on);
     const spawner = !!(g.creativeSpawnerActive && g.creativeSpawnerActive());
@@ -198,34 +228,34 @@
     if (cTopB) cTopB.classList.toggle('on', isCreat);
 
     // 1) Feuer-/Hauptknopf
-    fireB.textContent = p.dead ? 'NEUSTART' : spawner ? 'SETZEN' : isCannon ? '💦\nWASSER' : 'ANGRIFF';
+    setT(fireB, p.dead ? 'NEUSTART' : spawner ? 'SETZEN' : isCannon ? '💦\nWASSER' : 'ANGRIFF');
 
     // 2) Sprung / Bremse / Steigen / Tauchen
-    jumpB.textContent = p.dead ? '↩' : p.swim ? 'TAUCHEN' : isCreat ? '▲ HOCH' : isHeli ? '▲ STEIGEN' : car ? 'BREMSE' : 'SPRUNG';
+    setT(jumpB, p.dead ? '↩' : p.swim ? 'TAUCHEN' : isCreat ? '▲ HOCH' : isHeli ? '▲ STEIGEN' : car ? 'BREMSE' : 'SPRUNG');
 
     // 3) Sinken / Runter (nur im Kreativflug oder Hubschrauber)
     const showDown = !p.dead && (isCreat || isHeli);
     downB.classList.toggle('hide', !showDown);
-    if (showDown) downB.textContent = isHeli ? '▼ SINKEN' : '▼ RUNTER';
+    if (showDown) setT(downB, isHeli ? '▼ SINKEN' : '▼ RUNTER');
 
     // 4) Zielen-Knopf im Hubschrauber oder bei Spawner ausblenden
-    aimB.classList.toggle('hide', isHeli || spawner || isCannon);
+    aimB.classList.toggle('hide', isHeli || spawner || isCannon); if ((isHeli || spawner || isCannon) && p.aimHold) { p.aimHold = false; aimB.classList.remove('on'); }
 
     // 5) Kontextknöpfe ctx1 (Hupe/Sirene/Nachladen) & ctx2 (Licht/Zünder)
     if (car && !isHeli) {
       ctx1B.classList.remove('hide'); ctx1B.dataset.act = 'KeyH';
-      ctx1B.textContent = (cu.police || cu.cannon || cu.brigade || cu.ambulance) ? '🚨' : (cu.bike && !cu.moto) ? '🔔' : '📢';
+      setT(ctx1B, (cu.police || cu.cannon || cu.brigade || cu.ambulance) ? '🚨' : (cu.bike && !cu.moto) ? '🔔' : '📢');
       ctx1B.classList.toggle('on', !!cu.siren);
       ctx2B.classList.remove('hide'); ctx2B.dataset.act = 'KeyL';
-      ctx2B.textContent = '💡';
+      setT(ctx2B, '💡');
     } else if (!car && g.WPN && g.WPN.DEF) {
       const w = g.WPN.DEF[g.WPN.cur];
       const canReload = !!(w && w.mag);
       const hasFuse = g.WPN.cur === 'tnt' || g.WPN.cur === 'grenade';
       ctx1B.classList.toggle('hide', !canReload);
-      if (canReload) { ctx1B.dataset.act = 'KeyR'; ctx1B.textContent = '↻'; ctx1B.classList.remove('on'); }
+      if (canReload) { ctx1B.dataset.act = 'KeyR'; setT(ctx1B, '↻'); ctx1B.classList.remove('on'); }
       ctx2B.classList.toggle('hide', !hasFuse);
-      if (hasFuse) { ctx2B.dataset.act = 'KeyT'; ctx2B.textContent = '⏱'; ctx2B.classList.remove('on'); }
+      if (hasFuse) { ctx2B.dataset.act = 'KeyT'; setT(ctx2B, '⏱'); ctx2B.classList.remove('on'); }
     } else {
       ctx1B.classList.add('hide');
       ctx2B.classList.add('hide');
@@ -235,13 +265,12 @@
     const h = (document.getElementById('hint') || {}).textContent || '';
     const fm = h.match(/F · ([^·]+)/);
     fB.classList.toggle('hide', !fm);
-    if (fm) fB.textContent = fm[1].trim().slice(0, 34);
+    if (fm) setT(fB, fm[1].trim().slice(0, 34));
     const em = h.match(/E · ([^·]+)/);
-    eB.innerHTML = em ? em[1].trim().split(' ')[0] : 'E<br><small style="font-size:9px;font-weight:600">Auto</small>';
+    setH(eB, em ? em[1].trim().split(' ')[0] : 'E<br><small style="font-size:9px;font-weight:600">Auto</small>');
     eB.classList.toggle('hide', !em && !car);
     eB.style.bottom = showDown ? 'calc(5vh + 26vmin)' : 'calc(5vh + 14vmin)';
 
-    rot.style.display = innerHeight > innerWidth * 1.1 && on ? 'flex' : 'none';
   }, 200);
 
   // Beim Start: Vollbild und Querformat versuchen
@@ -258,12 +287,12 @@
   const obj = document.getElementById('obj');
   if (obj) {
     obj.addEventListener('touchstart', e => { e.preventDefault(); obj.style.display = 'none'; }, { passive: false });
-    const fix = () => { if (/Esc ›/.test(obj.innerHTML)) obj.innerHTML = obj.innerHTML.replace(/Esc ›/g, '☰ ›'); };
+    const fix = () => { if (/Esc ›|H Handy|F1 Hilfe/.test(obj.innerHTML)) obj.innerHTML = obj.innerHTML.replace(/Esc ›/g, '☰ ›').replace(/ · H Handy/g, ' · 📱 Handy').replace(/ · F1 Hilfe/g, ''); };
     new MutationObserver(fix).observe(obj, { childList: true, characterData: true, subtree: true });
     fix();
   }
 
   // Doppeltipp-Zoom und Scrollen verhindern
   document.addEventListener('gesturestart', e => e.preventDefault());
-  document.documentElement.style.touchAction = 'none';
+  for (const c of document.querySelectorAll('canvas')) if (!c.closest('#menu, #phone, #shop')) c.style.touchAction = 'none'; // nicht auf <html>: Safari sperrte sonst das Scrollen in Menü, Läden und Handy
 })();

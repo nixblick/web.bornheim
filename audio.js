@@ -1,5 +1,7 @@
 // Sound (Web Audio, alles synthetisch), ausgelagert aus game.js (#118). Verhalten unverändert.
-// audioUpdate bekommt den Spielzustand (player, keys, cars, worldT) als Parameter.
+// audioUpdate bekommt den Spielzustand (player, keys, cars, worldT) als Parameter; sfx fragt zuerst klang.js (setKlang).
+let KLANG = null;
+export function setKlang(k) { KLANG = k; }
 // ---------- Sound (Web Audio, alles synthetisch) ----------
 export const SND = { ctx: null, master: null, vol: 0.8, engine: null, siren: null, ambient: null };
 export function audioInit() {
@@ -13,7 +15,8 @@ export function audioInit() {
   const buf = C.createBuffer(1, C.sampleRate * 2, C.sampleRate); const d = buf.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1); const src = C.createBufferSource(); src.buffer = buf; src.loop = true; const af = C.createBiquadFilter(); af.type = 'lowpass'; af.frequency.value = 300; const ag = C.createGain(); ag.gain.value = 0.06; src.connect(af); af.connect(ag); ag.connect(SND.master); src.start(); SND.ambient = ag; SND.noise = buf;
   const rs = C.createBufferSource(); rs.buffer = buf; rs.loop = true; const rf = C.createBiquadFilter(); rf.type = 'highpass'; rf.frequency.value = 1200; const rg = C.createGain(); rg.gain.value = 0; rs.connect(rf); rf.connect(rg); rg.connect(SND.master); rs.start(); SND.rain = rg;
 }
-export function sfx(kind, vol = 1) {
+export function sfx(kind, vol = 1, pos) {
+  if (KLANG && KLANG.sfx(kind, vol, pos)) return; // pos: Ort der Quelle ({x, z}), ohne = Mitte. Geräusche aus Schichten (klang.js); kennt das Modul eines nicht, klingt es wie bisher
   if (!SND.ctx) return; const C = SND.ctx, t = C.currentTime;
   const noise = (dur, f0, f1, g0, type = 'lowpass') => { const src = C.createBufferSource(); src.buffer = SND.noise; const f = C.createBiquadFilter(); f.type = type; f.frequency.setValueAtTime(f0, t); f.frequency.exponentialRampToValueAtTime(f1, t + dur); const g = C.createGain(); g.gain.setValueAtTime(g0 * vol, t); g.gain.exponentialRampToValueAtTime(0.001, t + dur); src.connect(f); f.connect(g); g.connect(SND.master); src.start(t); src.stop(t + dur + 0.05); };
   const tone = (dur, f0, f1, g0, type = 'sine') => { const o = C.createOscillator(); o.type = type; o.frequency.setValueAtTime(f0, t); o.frequency.exponentialRampToValueAtTime(f1, t + dur); const g = C.createGain(); g.gain.setValueAtTime(g0 * vol, t); g.gain.exponentialRampToValueAtTime(0.001, t + dur); o.connect(g); g.connect(SND.master); o.start(t); o.stop(t + dur + 0.05); };
@@ -49,9 +52,13 @@ export function sfx(kind, vol = 1) {
   else if (kind === 'schoolbell') { for (let i = 0; i < 14; i++) setTimeout(() => tone(0.09, 2100, 2050, 0.22, 'square'), i * 95); }
   else if (kind === 'whoosh') { noise(0.8, 800, 4000, 0.35, 'bandpass'); }
 }
+/* Leistung: setTargetAtTime nur, wenn sich der Zielwert geändert hat (ein gesetztes Ziel läuft von selbst weiter); Sirenensuche über alle Autos mit 5 Hz */
+const _sndZ = new WeakMap(); let _sirT = 0, _sirD = 1e9;
+function sndZiel(p, v, t, tc) { if (_sndZ.get(p) === v) return; p.setTargetAtTime(v, t, tc); _sndZ.set(p, v); }
 export function audioUpdate(dt, player, keys, cars, worldT) {
   if (!SND.ctx) return; const t = SND.ctx.currentTime;
-  if (SND.engine) { const car = player.car && (!player.car.userData.bike || player.car.userData.moto) ? player.car : null; /* Fahrrad hat keinen Motor, Motorrad schon */ const sp = car ? Math.abs(car.userData.speed) : 0; const target = car ? 0.18 + Math.min(sp / 30, 1) * 0.25 : 0; SND.engine.g.gain.setTargetAtTime(target, t, 0.1); const f = (car && car.userData.moto ? 80 + sp * 9 : 50 + sp * 6) + (car && keys.KeyW ? 15 : 0); SND.engine.o1.frequency.setTargetAtTime(f, t, 0.08); SND.engine.o2.frequency.setTargetAtTime(f / 2, t, 0.08); SND.engine.f.frequency.setTargetAtTime(300 + sp * 40, t, 0.1); }
-  if (SND.siren) { let best = 1e9; for (const c of cars) if (c.userData.mode === 'police' || (c.userData.siren && c !== player.car)) best = Math.min(best, c.position.distanceTo(player.pos)); if (player.car && player.car.userData.siren) best = 0; const g = best < 220 ? 0.25 * (1 - best / 220) : 0; SND.siren.g.gain.setTargetAtTime(g, t, 0.1); SND.siren.o.frequency.setTargetAtTime(Math.floor(worldT * 1.7) % 2 ? 650 : 870, t, 0.03); }
-  if (SND.ambient) SND.ambient.gain.setTargetAtTime(player.car ? 0.02 : 0.06, t, 0.5);
+  if (SND.engine) { const car = player.car && (!player.car.userData.bike || player.car.userData.moto) ? player.car : null; /* Fahrrad hat keinen Motor, Motorrad schon */ const sp = car ? Math.abs(car.userData.speed) : 0; const target = car ? 0.18 + Math.min(sp / 30, 1) * 0.25 : 0; sndZiel(SND.engine.g.gain, target, t, 0.1); const f = (car && car.userData.moto ? 80 + sp * 9 : 50 + sp * 6) + (car && keys.KeyW ? 15 : 0); sndZiel(SND.engine.o1.frequency, f, t, 0.08); sndZiel(SND.engine.o2.frequency, f / 2, t, 0.08); sndZiel(SND.engine.f.frequency, 300 + sp * 40, t, 0.1); }
+  if (SND.siren) { _sirT -= dt; if (!(_sirT > 0)) { _sirT = 0.2; _sirD = 1e9; for (const c of cars) if (c.userData.mode === 'police' || (c.userData.siren && c !== player.car)) _sirD = Math.min(_sirD, c.position.distanceTo(player.pos)); } let best = _sirD; if (player.car && player.car.userData.siren) best = 0; const g = best < 220 ? 0.25 * (1 - best / 220) : 0; sndZiel(SND.siren.g.gain, g, t, 0.1); sndZiel(SND.siren.o.frequency, Math.floor(worldT * 1.7) % 2 ? 650 : 870, t, 0.03); }
+  if (SND.ambient) sndZiel(SND.ambient.gain, player.car ? 0.02 : 0.06, t, 0.5);
 }
+

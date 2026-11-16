@@ -39,7 +39,7 @@ export function initNebenjobs(X) {
   function next() { const a = plan(job.id); if (!a) { showMsg('KEIN AUFTRAG GEFUNDEN', 1500); return stop(); } job.auftrag = { ...a, i: 0 };
     WEG.route({ pts: a.pts, get i() { return job && job.auftrag ? job.auftrag.i : 0; }, label: a.label }); }
 
-  function start(id) { const J = JOBS[id]; if (!J || job) return false; if (WEG.cur) { showMsg('ERST DEN LAUF BEENDEN', 1500); return false; }
+  function start(id) { const J = JOBS[id]; if (!J || job) return false; if (!WEG.frei()) return false;
     job = { id, J, done: 0, veh: player.car && J.ok(player.car.userData) ? player.car : spawnVeh(J), t0: performance.now() };
     sfx('bell', 0.5); card(J.name.toUpperCase(), `${J.n} ${J.n > 1 ? 'Aufträge' : 'Route'} · ${player.car && J.ok(player.car.userData) ? 'los geht’s' : 'Dienstfahrzeug steht neben dir (E)'} · dem grünen Strahl folgen`, 5);
     next(); return true; }

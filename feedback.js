@@ -46,6 +46,25 @@ el.innerHTML = `<div class="box"><h3>Fehler melden oder Idee schicken</h3>
 <p id="fb_alt" style="display:none;margin-top:12px">Andere Wege: <a href="#" id="fb_gh" style="color:#ffd84a">auf GitHub melden</a> (Bild liegt dann in der Zwischenablage, mit Strg+V einfügen), <a href="#" id="fb_share" style="color:#ffd84a">teilen</a> oder <a href="#" id="fb_mail" style="color:#ffd84a">per E-Mail</a>.</p></div>`;
 document.body.appendChild(el);
 const $ = id => document.getElementById(id);
+// Diagnose (André 14.11.2026: „besser verstehen, was bei Usern schiefläuft“): einmal je Sekunde prüft ein Wächter, ob etwas
+// offensichtlich nicht stimmt (Figur oder Auto steht in einem Haus, Bildrate bricht ein), und merkt sich Ort und Uhrzeit.
+// Das bleibt im Browser und geht nur mit dem Feedback raus, wenn „Spielzustand mitschicken“ angehakt ist – wie die Fehlermeldungen.
+const diag = [], dSeen = new WeakSet(); let dRaf = 0, dRaf0 = 0, dT = performance.now(), dFpsSum = 0, dFpsN = 0, dFpsMin = 1e9, dImHaus = 0, dLangsam = 0;
+function dlog(msg) { diag.push(new Date().toTimeString().slice(0, 8) + ' ' + msg); if (diag.length > 20) diag.shift(); }
+(function dTick() { dRaf++; requestAnimationFrame(dTick); })();
+setInterval(() => { try {
+  const G = /** @type {any} */ (window).G, now = performance.now(), menu = document.getElementById('menu');
+  const pause = !G || !G.player || !(/** @type {any} */ (window).__started) || document.hidden || (menu && menu.style.display === 'flex');
+  const fps = (dRaf - dRaf0) * 1000 / Math.max(1, now - dT); dRaf0 = dRaf; dT = now; if (pause) { dLangsam = 0; return; }
+  dFpsSum += fps; dFpsN++; if (dFpsN > 5 && fps < dFpsMin) dFpsMin = fps;
+  if (fps < 12) { if (++dLangsam === 5) dlog(`Bildrate seit 5 s unter 12 (jetzt ${fps.toFixed(0)}/s, Stufe ${G.opts.quality})`); } else dLangsam = 0;
+  const p = G.player, P = p.pos, ort = (x, z) => `x ${x.toFixed(0)}, z ${z.toFixed(0)}`;
+  if ((G.INTERIORS && G.INTERIORS.inside) || (G.creative && G.creative.on) || (G.X && G.X.inPocket && G.X.inPocket(P.x, P.z))) return;
+  if (!p.car) { if (G.solidAt(P.x, P.z) >= 0 && P.y - G.TH(P.x, P.z) < 2) { if (++dImHaus === 2) dlog('Figur steht in einem Haus: ' + ort(P.x, P.z)); } else dImHaus = 0; }
+  else if (!dSeen.has(p.car) && Math.abs(p.car.userData.speed || 0) < 2) { const c = p.car, h = c.userData.heading || 0, L = 1.6; let n = 0; for (const s of [-L, 0, L]) if (G.solidAt(c.position.x + Math.sin(h) * s, c.position.z + Math.cos(h) * s) >= 0) n++; if (n >= 2) { dSeen.add(c); dlog('Eigenes Fahrzeug steckt in einem Haus: ' + ort(c.position.x, c.position.z)); } }
+  for (const c of G.cars) { if (c === p.car || !c.visible || dSeen.has(c)) continue; const dx = c.position.x - P.x, dz = c.position.z - P.z; if (dx * dx + dz * dz > 3600) continue;
+    if (G.solidAt(c.position.x, c.position.z) >= 0) { dSeen.add(c); dlog(`Auto (${c.userData.mode || '?'}) steht in einem Haus: ` + ort(c.position.x, c.position.z)); } }
+} catch (e) { /* Diagnose darf das Spiel nie stören */ } }, 1000);
 function info() {
   const G = window.G; const lines = [];
   lines.push('- Seite: ' + location.href.split('?')[0]);
@@ -53,6 +72,8 @@ function info() {
   try { if (G) { const gl = G.renderer.getContext(); const ext = gl.getExtension('WEBGL_debug_renderer_info'); lines.push('- Grafik: ' + (ext ? gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) : '?') + ', Stufe ' + G.opts.quality + ', ' + innerWidth + 'x' + innerHeight); } } catch (e) {}
   try { if (G) { const p = G.player.pos; lines.push(`- Position: x ${p.x.toFixed(0)}, z ${p.z.toFixed(0)} (${document.getElementById('street')?.textContent || '?'})` + (G.player.car ? ', im Fahrzeug' : '') + (G.creative?.on ? ', Kreativmodus' : '')); lines.push(`- Waffe: ${G.WPN?.cur || '?'}, Uhrzeit ${G.world.hour.toFixed(1)}, Wetter ${G.weather.kind}`); const s = G.STORY?.S; if (s && s.state === 'active') lines.push('- Story: ' + (G.STORY.sid || '') + ' Kapitel ' + ((s.ch ?? 0) + 1)); } } catch (e) {}
   const list = (h, a) => { if (a.length) { lines.push(h); for (const e of a) lines.push('  - `' + e.replace(/`/g, "'") + '`'); } };
+  try { if (G) lines.push(`- Gerät: ${/** @type {any} */ (window).__touch ? 'Touch' : 'Maus/Tastatur'}, Pixelverhältnis ${devicePixelRatio || 1} (gerendert ${G.renderer.getPixelRatio().toFixed(2)}), Sichtweite ${G.opts.view}, Bildrate Ø ${dFpsN ? (dFpsSum / dFpsN).toFixed(0) : '?'}/s, schlechteste Sekunde ${dFpsMin < 1e9 ? dFpsMin.toFixed(0) : '?'}/s`); } catch (e) {}
+  list('- Automatisch erkannt:', diag);
   list('- Letzte Fehlermeldungen:', errors); list('- Vorige Sitzung (vor Neustart/Absturz):', prevErrors);
   return lines.join('\n');
 }
@@ -87,7 +108,7 @@ function shotDataUrl() {
   return null;
 }
 function showAlt(msg) { $('fb_hint').textContent = msg; $('fb_alt').style.display = ''; }
-export function openFeedback() { if (document.pointerLockElement) { wasLocked = true; document.exitPointerLock(); } takeShot(); $('fb_hint').textContent = ''; $('fb_alt').style.display = 'none'; $('fb_send').disabled = false; $('fb_share').style.display = navigator.share ? '' : 'none'; /* GitHub ist der Hauptweg, Mail nur Ausweich (André 13.11.2026) */ el.style.display = 'flex'; setTimeout(() => $('fb_title').focus(), 50); }
+export function openFeedback() { delete el.dataset.gesendet; if (document.pointerLockElement) { wasLocked = true; document.exitPointerLock(); } takeShot(); $('fb_hint').textContent = ''; $('fb_alt').style.display = 'none'; $('fb_send').disabled = false; $('fb_close').textContent = 'Abbrechen'; $('fb_share').style.display = navigator.share ? '' : 'none'; /* GitHub ist der Hauptweg, Mail nur Ausweich (André 13.11.2026) */ el.style.display = 'flex'; setTimeout(() => $('fb_title').focus(), 50); }
 function close() { el.style.display = 'none'; }
 $('fb_close').onclick = close; el.addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Escape') close(); }); el.addEventListener('keyup', e => e.stopPropagation());
 function download(f) { const a = document.createElement('a'); a.href = URL.createObjectURL(f); a.download = f.name; document.body.appendChild(a); a.click(); a.remove(); }
@@ -105,6 +126,8 @@ $('fb_mail').onclick = ev => { ev.preventDefault();
 };
 $('fb_send').onclick = async ev => {
   ev.preventDefault(); const b = $('fb_send'); if (b.disabled) return;
+  if (el.dataset.gesendet && !$('fb_title').value.trim() && !$('fb_text').value.trim()) { $('fb_hint').textContent = 'Schon gesendet. Für eine weitere Meldung bitte kurz beschreiben, was los ist.'; return; } // leeres Doppel nach dem Senden verhindern
+  delete el.dataset.gesendet;
   const kind = $('fb_kind').value;
   const payload = { kind: 'feedback', typ: kind === 'Fehler' ? 'bug' : 'idee', titel: ($('fb_title').value.trim() || (kind === 'Fehler' ? 'Fehler im Spiel' : 'Idee')).slice(0, 120),
     text: ($('fb_text').value.trim() || '(keine Beschreibung)').slice(0, 5000), zustand: $('fb_info').checked ? info().slice(0, 4000) : '' };
@@ -122,6 +145,9 @@ $('fb_send').onclick = async ev => {
     if (url) { h.append('Danke! Gemeldet: '); const a = document.createElement('a'); a.href = url; a.target = '_blank'; a.rel = 'noopener'; a.style.color = '#ffd84a'; a.textContent = url.replace('https://github.com/nixblick/web.bornheim/issues/', 'Issue #'); h.append(a); }
     else h.textContent = 'Danke! Deine Meldung ist angekommen.';
     $('fb_title').value = ''; $('fb_text').value = '';
+    // #236/#237: nach dem Senden „Schließen“ statt „Abbrechen“, und eine neue Meldung lässt sich gleich wieder senden (der Knopf blieb gesperrt)
+    $('fb_close').textContent = 'Schließen'; b.disabled = false; el.dataset.gesendet = '1';
+    setTimeout(() => { if (el.style.display === 'flex' && el.dataset.gesendet) close(); }, 2500); // nach dem Senden schließt sich das Fenster von selbst (André 14.11.2026)
     return;
   }
   b.disabled = false;
@@ -140,3 +166,15 @@ window.openFeedback = openFeedback;
 // Spielzeit-Marken für die anonyme Zählung (nixblick Analytics zählt Klicks auf Elemente mit data-track)
 { const marks = [10, 30, 60]; let sec = 0; const btn = document.createElement('button'); btn.style.display = 'none'; document.body.appendChild(btn);
   setInterval(() => { const G = window.G; if (!G || !G.player || !G.player.mesh || document.hidden) return; sec += 15; const m = marks.find(m => sec === m * 60); if (m) { btn.setAttribute('data-track', 'spielzeit-' + m); btn.click(); } }, 15000); }
+
+// Kleiner Feedback-Knopf im Spielbild (André 14.11.2026: „gleich an der Stelle, wo man ist, draufklicken: Bildschirmfoto und Feedback“).
+// Desktop unten rechts über dem Straßennamen, Touch oben in der Knopfreihe. Nur im laufenden Spiel, nicht im Menü und nicht im Handy.
+{ const b = document.createElement('button'); b.id = 'fbbtn'; b.textContent = '🐞'; b.title = 'Fehler melden (mit Bildschirmfoto dieser Stelle)'; b.setAttribute('aria-label', 'Fehler melden');
+  const touch = !!(/** @type {any} */ (window).__touch);
+  b.style.cssText = 'position:fixed;z-index:19;width:38px;height:38px;border-radius:10px;border:1px solid #ffffff55;background:#000000a0;color:#fff;font-size:18px;cursor:pointer;display:none;padding:0;' +
+    (touch ? 'top:calc(8px + env(safe-area-inset-top,0px));right:calc(192px + env(safe-area-inset-right,0px));' : 'right:18px;bottom:96px;');
+  const auf = e => { e.preventDefault(); e.stopPropagation(); openFeedback(); };
+  b.addEventListener('click', auf); if (touch) b.addEventListener('touchend', auf, { passive: false }); b.addEventListener('mousedown', e => e.stopPropagation());
+  document.body.appendChild(b);
+  setInterval(() => { const m = document.getElementById('menu'), ph = document.getElementById('phone'); const an = !!(/** @type {any} */ (window).__started) && !(m && m.style.display === 'flex') && !(ph && ph.style.display === 'block') && el.style.display !== 'flex'; const v = an ? 'block' : 'none'; if (b.style.display !== v) b.style.display = v; }, 500);
+}

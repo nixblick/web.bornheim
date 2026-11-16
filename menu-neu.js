@@ -1,5 +1,5 @@
 // Pausenmenü im Stil GTA V / Project Sunset (André 13.11.2026: „mehr wie bei GTA, ein schönes, übersichtliches Menü“).
-// Oben eine schlanke Reiterleiste (Karte, Missionen, Statistik, Einstellungen), Startreiter ist die Karte als große Fläche,
+// Oben eine schlanke Reiterleiste (Karte, Missionen, Statistik, Spielstand, Einstellungen), Startreiter ist die Karte als große Fläche,
 // rechts daneben ein kompakter Statusblock (Uhrzeit, Wetter, Ziel, Gesundheit, Fahndung, Geld, Waffe, Stufe) und die Spiel-Knöpfe.
 // Die vorhandenen Knöpfe und Seiten aus play.html werden nur umgehängt (game.js bindet per id); game.js schaltet weiter über data-tab.
 import { missionList } from './missionen.js';
@@ -20,7 +20,7 @@ export function initMenuNeu(X, S) {
   // Hauptpunkte: welche Seiten (data-tab) zu welchem Punkt gehören. Eine Beschriftung je Knopf, kein Zweitlabel.
   const SET = ['schnell', 'grafik', 'kamera', 'welt', 'spiel', 'ton', 'hilfe'];
   /** @type {[string, string, string[]][]} */
-  const MAIN = [['karte', 'Karte', ['karte', 'uebersicht']], ['story', 'Missionen', ['story']], ['fortschritt', 'Statistik', ['fortschritt']], ['einst', 'Einstellungen', SET]];
+  const MAIN = [['karte', 'Karte', ['karte', 'uebersicht']], ['story', 'Missionen', ['story']], ['fortschritt', 'Statistik', ['fortschritt']], ['stand', 'Spielstand', ['stand']], ['einst', 'Einstellungen', SET]];
   let lastSet = 'schnell';
 
   const top = el('header', 'mn-top');
