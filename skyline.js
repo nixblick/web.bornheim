@@ -5,6 +5,7 @@
 // 2) Ikonen: Messeturm-Pyramide, Europaturm (Turmkorb, Antenne), Commerzbank-Antenne und gelbe Krone,
 //    Main-Tower-Antenne, Krone des Westend Tower, Henninger-Fass, Japan-Center-Dach, Domturm.
 // In der Nähe baut wahrzeichen.js die Wahrzeichen selbst; solange es einen Turm gebaut hat (e.shown), fehlt er hier.
+// @ts-ignore -- 'three' kommt zur Laufzeit aus der Importmap; tsc kennt das Modul nicht (types: [])
 import * as THREE from 'three';
 
 const R = 760; // wie die alte Horizontschicht: innerhalb der Sichtweite, vor der Himmelskuppel (850)
