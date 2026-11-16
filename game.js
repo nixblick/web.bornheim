@@ -844,15 +844,15 @@ function* buildDetails() {
       const u0 = col / COLS, u1 = (col + 1) / COLS, v1 = 1 - row / ROWS, v0 = 1 - (row + 1) / ROWS; const w = 0.62;
       { const hp = new THREE.BoxGeometry(0.5, 0.14, 0.02); hp.rotateY(Math.atan2(uz, ux) + Math.PI / 2); hp.translate(sx + ux * 0.32, y + 2.42, sz + uz * 0.32); poles.push(hp); } const qx = sx + ux * (w + 0.07), qz = sz + uz * (w + 0.07); /* Schild neben dem Mast, nicht durch ihn hindurch */ for (const s of [1, -1]) { const ox = -uz * 0.014 * s, oz = ux * 0.014 * s; const A = [qx - ux * w * s + ox, y + 2.55, qz - uz * w * s + oz], B = [qx + ux * w * s + ox, y + 2.55, qz + uz * w * s + oz], C = [B[0], y + 2.8, B[2]], D = [A[0], y + 2.8, A[2]]; sv.push(...A, ...B, ...C, ...A, ...C, ...D); suv.push(u0, v0, u1, v0, u1, v1, u0, v0, u1, v1, u0, v1); }
       } /* Poller entfernt (André 12.11.2026: blockierten Straßen wie die Mainzer Landstraße) */
-    yield; { const pa = [], pb = [], ws = [], wz = []; list.forEach((e, i) => { const ux = e.ux, uz = e.uz;
+    yield; { const pa = [], pb = [], ws = [], wz = []; for (let i = 0; i < list.length; i++) { if (++YC % 6 === 0) yield; const e = list[i]; const ux = e.ux, uz = e.uz;
         if (i % 3 === 1) { const x = e.x + ux * 14 + uz * (e.r.w / 2 + 0.9), z = e.z + uz * 14 - ux * (e.r.w / 2 + 0.9); if (solidAt(x, z) < 0 && !onOtherRoad(x, z, null, 0.8)) { const y = TH(x, z); const g = new THREE.BoxGeometry(0.4, 1.6, 0.3); g.translate(x, y + 0.8, z); pa.push(g); const b = new THREE.BoxGeometry(0.3, 0.55, 0.02); b.rotateY(Math.atan2(uz, -ux)); b.translate(x - uz * 0.16, y + 1.15, z + ux * 0.16); pb.push(b); barrierAdd(x - 0.2, z, x + 0.2, z, 1.6); } } // Parkscheinautomat (Foto)
-        if (i % 5 === 2) { const sx = e.x - uz * (e.r.w / 2 + 2.6), sz = e.z + ux * (e.r.w / 2 + 2.6); if (solidAt(sx, sz) >= 0 || onOtherRoad(sx, sz, null, 0.8)) return; const y = TH(sx, sz); const p = new THREE.CylinderGeometry(0.04, 0.04, 3.2, 5); p.translate(sx, y + 1.6, sz); poles.push(p);
-          const zl = WEGZIELE.map(d => [d.n, d.c[0] - sx, d.c[1] - sz]).filter(d => Math.hypot(d[1], d[2]) > 300).sort((p, q) => Math.hypot(p[1], p[2]) - Math.hypot(q[1], q[2])).slice(0, 3); for (let k = 0; k < zl.length && wz.length < 31; k++) { const [zn, dx, dz] = zl[k]; const dl = Math.hypot(dx, dz); const a = Math.atan2(-dz / dl, dx / dl); const n = wz.length; const km = (dl / 1000).toFixed(1).replace('.', ','); wz.push([zn, km, 0], [zn, km, 1]); { const g = new THREE.PlaneGeometry(1.0, 0.24); const uv = g.attributes.uv; for (let q = 0; q < uv.count; q++) uv.setY(q, (uv.getY(q) + 31 - (n + 1)) / 32); g.rotateY(Math.PI); g.translate(0.62, 0, -0.012); g.rotateY(a); g.translate(sx, y + 2.9 - k * 0.3, sz); ws.push(g); } /* Rückseite */ const g = new THREE.PlaneGeometry(1.0, 0.24); const uv = g.attributes.uv; for (let q = 0; q < uv.count; q++) uv.setY(q, (uv.getY(q) + 31 - n) / 32); g.translate(0, 0, 0.012); g.translate(0.62, 0, 0); g.rotateY(a); g.translate(sx, y + 2.9 - k * 0.3, sz); ws.push(g); } } }); // Radwegweiser weiß (Foto Berger Straße)
-      yield; { const sp = [], rf = []; list.forEach((e, i) => { const ux = e.ux, uz = e.uz;
+        if (i % 5 === 2) { const sx = e.x - uz * (e.r.w / 2 + 2.6), sz = e.z + ux * (e.r.w / 2 + 2.6); if (solidAt(sx, sz) >= 0 || onOtherRoad(sx, sz, null, 0.8)) continue; const y = TH(sx, sz); const p = new THREE.CylinderGeometry(0.04, 0.04, 3.2, 5); p.translate(sx, y + 1.6, sz); poles.push(p);
+          const zl = WEGZIELE.map(d => [d.n, d.c[0] - sx, d.c[1] - sz]).filter(d => Math.hypot(d[1], d[2]) > 300).sort((p, q) => Math.hypot(p[1], p[2]) - Math.hypot(q[1], q[2])).slice(0, 3); for (let k = 0; k < zl.length && wz.length < 31; k++) { const [zn, dx, dz] = zl[k]; const dl = Math.hypot(dx, dz); const a = Math.atan2(-dz / dl, dx / dl); const n = wz.length; const km = (dl / 1000).toFixed(1).replace('.', ','); wz.push([zn, km, 0], [zn, km, 1]); { const g = new THREE.PlaneGeometry(1.0, 0.24); const uv = g.attributes.uv; for (let q = 0; q < uv.count; q++) uv.setY(q, (uv.getY(q) + 31 - (n + 1)) / 32); g.rotateY(Math.PI); g.translate(0.62, 0, -0.012); g.rotateY(a); g.translate(sx, y + 2.9 - k * 0.3, sz); ws.push(g); } /* Rückseite */ const g = new THREE.PlaneGeometry(1.0, 0.24); const uv = g.attributes.uv; for (let q = 0; q < uv.count; q++) uv.setY(q, (uv.getY(q) + 31 - n) / 32); g.translate(0, 0, 0.012); g.translate(0.62, 0, 0); g.rotateY(a); g.translate(sx, y + 2.9 - k * 0.3, sz); ws.push(g); } } } // Radwegweiser weiß (Foto Berger Straße)
+      yield; { const sp = [], rf = []; for (let i = 0; i < list.length; i++) { if (++YC % 6 === 0) yield; const e = list[i]; const ux = e.ux, uz = e.uz;
           if (i % 7 === 3) { const x = e.x + uz * (e.r.w / 2 + 1.0) + ux * 2, z = e.z - ux * (e.r.w / 2 + 1.0) + uz * 2; if (solidAt(x, z) < 0 && !onOtherRoad(x, z, null, 0.8)) { const y = TH(x, z); const p = new THREE.CylinderGeometry(0.04, 0.04, 2.6, 5); p.translate(x, y + 1.3, z); poles.push(p); const fr = new THREE.BoxGeometry(0.9, 0.7, 0.05); fr.rotateY(Math.atan2(ux, uz)); fr.translate(x, y + 2.75, z); rf.push(fr); const m = new THREE.BoxGeometry(0.78, 0.58, 0.02); m.rotateY(Math.atan2(ux, uz)); m.translate(x + ux * 0.03, y + 2.75, z + uz * 0.03); sp.push(m); } } // Verkehrsspiegel (Foto Moni's)
-          });
-        if (rf.length) addMerged(rf, shLambert(0xd8402a), false); if (sp.length) addMerged(sp, new THREE.MeshBasicMaterial({ color: 0x9aa8b4 }), false); }
-      if (pa.length) addMerged(pa, shLambert(0xe4e6e8), false); if (pb.length) addMerged(pb, shLambert(0x2f7fd0), false); if (ws.length) { const tex = ownTex(canvasTex(256, 2048, (c, w) => { wz.forEach(([n, km, back], r) => { const y = r * 64; const L = back ? 30 : 0; c.fillStyle = '#f4f6f2'; c.fillRect(0, y, w, 64); c.fillStyle = '#1f7a3a'; c.beginPath(); if (back) { c.moveTo(4, y + 32); c.lineTo(26, y + 6); c.lineTo(26, y + 58); } else { c.moveTo(w - 4, y + 32); c.lineTo(w - 26, y + 6); c.lineTo(w - 26, y + 58); } c.fill(); c.fillStyle = '#123'; let fs = 24; c.font = `bold ${fs}px Arial`; while (c.measureText(n).width > w - 104 && fs > 12) { fs--; c.font = `bold ${fs}px Arial`; } c.fillText(n, 10 + L, y + 41); c.font = '20px Arial'; c.fillText(km, w - 72 + (back ? 4 : -2), y + 41); }); }, 1, 1)); addMerged(ws, new THREE.MeshLambertMaterial({ map: tex, side: THREE.DoubleSide }), false); } /* Ziele: die nächsten Stadtteile mit echter Entfernung */ }
+          }
+        yield; if (rf.length) addMerged(rf, shLambert(0xd8402a), false); if (sp.length) addMerged(sp, new THREE.MeshBasicMaterial({ color: 0x9aa8b4 }), false); }
+      yield; if (pa.length) addMerged(pa, shLambert(0xe4e6e8), false); if (pb.length) addMerged(pb, shLambert(0x2f7fd0), false); yield; if (ws.length) { const tex = ownTex(canvasTex(256, 2048, (c, w) => { wz.forEach(([n, km, back], r) => { const y = r * 64; const L = back ? 30 : 0; c.fillStyle = '#f4f6f2'; c.fillRect(0, y, w, 64); c.fillStyle = '#1f7a3a'; c.beginPath(); if (back) { c.moveTo(4, y + 32); c.lineTo(26, y + 6); c.lineTo(26, y + 58); } else { c.moveTo(w - 4, y + 32); c.lineTo(w - 26, y + 6); c.lineTo(w - 26, y + 58); } c.fill(); c.fillStyle = '#123'; let fs = 24; c.font = `bold ${fs}px Arial`; while (c.measureText(n).width > w - 104 && fs > 12) { fs--; c.font = `bold ${fs}px Arial`; } c.fillText(n, 10 + L, y + 41); c.font = '20px Arial'; c.fillText(km, w - 72 + (back ? 4 : -2), y + 41); }); }, 1, 1)); addMerged(ws, new THREE.MeshLambertMaterial({ map: tex, side: THREE.DoubleSide }), false); } /* Ziele: die nächsten Stadtteile mit echter Entfernung */ }
     yield; if (poles.length) addMerged(poles, shLambert(0x6a6e72), false);
     if (sv.length) { const tex = ownTex(new THREE.CanvasTexture(at)); tex.colorSpace = THREE.SRGBColorSpace; const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(sv, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(suv, 2)); g.computeVertexNormals(); scene.add(new THREE.Mesh(g, new THREE.MeshLambertMaterial({ map: tex, side: THREE.DoubleSide }))); } }
   yield; DET_PART = 'd8'; /* Abschnittsgrenze: Kachelbau gibt ab, Probe sparmodus (13.11.2026) */
@@ -1030,7 +1030,7 @@ function* buildDetails2() {
   const quad = (T, A, B, C, D, nx, ny, nz) => { T.v.push(...A, ...B, ...C, ...A, ...C, ...D); for (let i = 0; i < 6; i++) T.n.push(nx, ny, nz); };
   const mk = (T, mat, shadow = false) => { if (!T.v.length) return null; const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(T.v, 3)); g.setAttribute('normal', new THREE.Float32BufferAttribute(T.n, 3)); const m = new THREE.Mesh(g, mat); m.castShadow = shadow; m.receiveShadow = true; scene.add(m); return m; };
   const cor = Q(), band = Q(), curbF = Q(), curbT = Q(); const roofBox = [], chim = [];
-  for (const b of CITY.buildings) { if (++YC % 3 === 0) yield; if (b.mh >= 2.2 || b.lm) continue;
+  for (const b of CITY.buildings) { yield; /* je Haus (Probe sparmodus, 16.11.2026) */ if (b.mh >= 2.2 || b.lm) continue;
     const base = b.base ?? 0, top = base + b.h, kind = b.k || 'res'; const sgn = polyArea(b.p) > 0 ? 1 : -1;
     const lowQ = opts.quality === 'niedrig'; const doCor = !lowQ && (kind === 'res' || kind === 'public' || kind === 'church' || kind === 'house'); const doBand = !lowQ && (kind === 'res' || kind === 'public') && b.h >= 7;
     for (let i = 0; i < b.p.length; i++) { const [ax, az] = b.p[i], [bx, bz] = b.p[(i + 1) % b.p.length]; const dx = bx - ax, dz = bz - az, l = Math.hypot(dx, dz); if (l < 1.2) continue; const nx = dz / l * sgn, nz = -dx / l * sgn; const ex = dx / l * 0.3, ez = dz / l * 0.3;
@@ -1047,18 +1047,18 @@ function* buildDetails2() {
       for (let k = 0; k < 3; k++) { const [vx, vz] = ob.pt(rnd(ob.umin + 1, ob.umax - 1), rnd(ob.vmin + 1, ob.vmax - 1)); if (!pointInPoly(vx, vz, b.p)) continue; const g = new THREE.BoxGeometry(rnd(0.6, 1.4), rnd(0.5, 1.1), rnd(0.6, 1.4)); g.rotateY(ang); g.translate(vx, top + 0.45, vz); roofBox.push(g); }
     }
   }
-  mk(cor, shLambert(0xe9e2d6, THREE.DoubleSide), true); mk(band, shLambert(0xddd5c8, THREE.DoubleSide));
-  if (roofBox.length) { const m = new THREE.Mesh(mergeGeometries(roofBox), shLambert(0x8f8b85)); m.castShadow = true; m.receiveShadow = true; scene.add(m); }
-  if (chim.length) { const m = new THREE.Mesh(mergeGeometries(chim), shLambert(0x8a4b38)); m.castShadow = true; scene.add(m); }
+  yield; mk(cor, shLambert(0xe9e2d6, THREE.DoubleSide), true); yield; mk(band, shLambert(0xddd5c8, THREE.DoubleSide));
+  yield; if (roofBox.length) { const m = new THREE.Mesh(mergeGeometries(roofBox), shLambert(0x8f8b85)); m.castShadow = true; m.receiveShadow = true; scene.add(m); }
+  yield; if (chim.length) { const m = new THREE.Mesh(mergeGeometries(chim), shLambert(0x8a4b38)); m.castShadow = true; scene.add(m); }
   // Bordsteine: an beiden Fahrbahnrändern, unterbrochen an Einmündungen
-  for (const r of CITY.roads) { if (r.ped || r.w < 5) continue; if (++YC % 3 === 0) yield;
+  for (const r of CITY.roads) { if (r.ped || r.w < 5) continue; yield; /* je Straße */
     for (let i = 0; i < r.p.length - 1; i++) { const [ax, az] = r.p[i], [bx, bz] = r.p[i + 1]; const l = Math.hypot(bx - ax, bz - az); if (l < 0.5) continue; const nx = -(bz - az) / l, nz = (bx - ax) / l; const steps = Math.max(1, Math.ceil(l / 2));
       for (const sd of [-1, 1]) for (let k = 0; k < steps; k++) { const t0 = k / steps, t1 = (k + 1) / steps; const off = r.w / 2; const x0 = ax + (bx - ax) * t0 + nx * off * sd, z0 = az + (bz - az) * t0 + nz * off * sd, x1 = ax + (bx - ax) * t1 + nx * off * sd, z1 = az + (bz - az) * t1 + nz * off * sd;
         const mx = (x0 + x1) / 2, mz = (z0 + z1) / 2; if (onOtherRoad(mx, mz, r, 0.3)) continue;
         const y0 = TH(x0, z0) + 0.04, y1 = TH(x1, z1) + 0.04, hh = 0.13, ww = 0.3; const ox = nx * sd * ww, oz = nz * sd * ww;
         quad(curbF, [x0, y0, z0], [x1, y1, z1], [x1, y1 + hh, z1], [x0, y0 + hh, z0], -nx * sd, 0, -nz * sd);
         quad(curbT, [x0, y0 + hh, z0], [x1, y1 + hh, z1], [x1 + ox, y1 + hh, z1 + oz], [x0 + ox, y0 + hh, z0 + oz], 0, 1, 0); } } }
-  mk(curbF, shLambert(0x9c978e, THREE.DoubleSide)); mk(curbT, shLambert(0xbab4a9, THREE.DoubleSide));
+  yield; mk(curbF, shLambert(0x9c978e, THREE.DoubleSide)); yield; mk(curbT, shLambert(0xbab4a9, THREE.DoubleSide));
 }
 // Geparkte Autos als ein InstancedMesh; beim Einsteigen wird daraus ein echtes Auto
 const staticParked = []; let parkedMesh = null; let roadMeshRef = null; const roadChunks = [];
@@ -1394,7 +1394,7 @@ function* buildCity() { CITY_PART = 'c0';
       { const zy = new THREE.Mesh(new THREE.CylinderGeometry(rr * 0.62, rr * 0.66, 31, 24), mtB); zy.position.set(mx, TH(mx, mz) + 190 + 15.5, mz); zy.castShadow = true; scene.add(zy); } // Glaszylinder unter der Spitze // Pyramidenspitze, 36 m, rotbraun wie der Granit (Foto 12.11.2026)
       const pm = new THREE.Mesh(new THREE.ConeGeometry(rr * 0.62, 36, 4), mtC); pm.rotation.y = Math.PI / 4; pm.position.set(mx, TH(mx, mz) + 221 + 18, mz); pm.castShadow = true; scene.add(pm); }
     if (b._stad) { const S = b._stad; scene.add(waldstadion(S.mx, S.mz, S.rx, S.rz, S.s)); } // Waldstadion und FSV-Stadion (markStadium)
-    const shape = new THREE.Shape(b.p.map(([x, z]) => new THREE.Vector2(x, -z)));
+    yield; const shape = new THREE.Shape(b.p.map(([x, z]) => new THREE.Vector2(x, -z)));
     const ths = b.p.map(([x, z]) => TH(x, z)); const tBase = Math.min(...ths), tTop = Math.max(...ths); b.base = tTop; // Erdgeschoss auf dem höchsten Punkt
     if (b.lm || b._stad) continue; // Stadion: Modell aus waldstadion(), Wahrzeichen (#73) baut wahrzeichen.js, Kollision bleibt über WORLD.buildings
     const lift = b.mh >= 2.2 ? b.mh + (tTop - tBase) + 0.6 : 0; // aufgeständert: Körper erst ab der Unterkante
@@ -1407,7 +1407,7 @@ function* buildCity() { CITY_PART = 'c0';
       const x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i), ny = nrm.getY(i);
       if (Math.abs(ny) > 0.5) uv.setXY(i, x, z); else { const nx = nrm.getX(i), nz = nrm.getZ(i); uv.setXY(i, Math.abs(nx) > Math.abs(nz) ? z : x, y - tTop - GF_H); }
     }
-    const fk = facKind(b, kind);
+    yield; const fk = facKind(b, kind);
     const c = fk !== kind || ['wache', 'school', 'altschule', 'messeturm', 'barock'].includes(kind) ? 0xf6f6f6 : kind === 'church' ? 0x9a8f86 : kind === 'hall' ? pick([0xbfc3c7, 0xd0d4d8, 0xb9b1a6]) : palette[Math.abs((b.p[0][0] * 7 + b.p[0][1] * 13) | 0) % palette.length];
     const key = fk + '|' + c; if (!byKey.has(key)) byKey.set(key, []);
     for (const grp of g.groups) {
@@ -1418,7 +1418,7 @@ function* buildCity() { CITY_PART = 'c0';
       (grp.materialIndex === 0 ? roofGeos : byKey.get(key)).push(sub);
     }
     // Erdgeschossband: je Kante ein Quad 4 cm vor der Wand, Tür/Fenster-Textur in Metern + Kontakt-Schatten am Gehweg
-    if (b.h >= 2.5 && !(b.mh >= 2.2)) {
+    yield; if (b.h >= 2.5 && !(b.mh >= 2.2)) {
       const sgn = polyArea(b.p) > 0 ? 1 : -1; const v = [], uvs = [], nn = [], cc = []; let along = 0; const H = Math.min(GF_H, b.h);
       for (let i = 0; i < b.p.length; i++) {
         const [ax, az] = b.p[i], [bx, bz] = b.p[(i + 1) % b.p.length]; const dx = bx - ax, dz = bz - az, l = Math.hypot(dx, dz); if (l < 1.5) { along += l; continue; }
@@ -1439,7 +1439,7 @@ function* buildCity() { CITY_PART = 'c0';
       if (v.length) { const bg = new THREE.BufferGeometry(); bg.setAttribute('position', new THREE.Float32BufferAttribute(v, 3)); bg.setAttribute('normal', new THREE.Float32BufferAttribute(nn, 3)); bg.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2)); bg.setAttribute('color', new THREE.Float32BufferAttribute(cc, 3)); const gk = kind === 'res' && GEWERBE.has(b) ? 'resshop' : kind; if (!gfByKind.has(gk)) gfByKind.set(gk, []); gfByKind.get(gk).push(bg); }
     }
     // Sattel- und Walmdächer auf einfachen Grundrissen
-    if (b.r && b.rh > 0 && b.p.length <= 12) {
+    yield; if (b.r && b.rh > 0 && b.p.length <= 12) {
       const ob = orientedBox(b.p);
       if (ob.ratio > 0.6 && (ob.vmax - ob.vmin) < 24) {
         const ov = 0.35, u0 = ob.umin - ov, u1 = ob.umax + ov, v0 = ob.vmin - ov, v1 = ob.vmax + ov, vm = (v0 + v1) / 2, W = v1 - v0;
