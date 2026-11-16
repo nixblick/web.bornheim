@@ -60,6 +60,10 @@
 #menu.mn .mn-stats div{display:flex;flex-direction:column;gap:3px;min-width:0}#menu.mn .mn-stats small{letter-spacing:.06em}
 #menu.mn .mn-stats b{font-size:18px;color:var(--mn-ivory);font-variant-numeric:tabular-nums}
 #menu.mn .mn-stats i{display:block;height:3px;background:#ffffff1a}#menu.mn .mn-stats em{display:block;height:100%;background:#b07cff}
+/* Mitte des Statusblocks auf hohen Bildschirmen (ab 900 px): Fortschritt statt Leere; darunter ausgeblendet, damit 720/768 nicht scrollen */
+#menu.mn .mn-more{display:none;flex-direction:column;gap:7px;padding-top:10px;border-top:1px solid var(--mn-line)}
+@media (min-height:900px){#menu.mn .mn-more{display:flex}}
+#menu.mn .mn-more .mn-goal .mn-ic{color:var(--mn-amber)}#menu.mn .mn-more .mn-row b{font-size:14px}
 /* Spiel-Knöpfe im Statusblock */
 #menu.mn .mn-acts{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:auto;padding-top:10px;border-top:1px solid var(--mn-line)}
 #menu.mn .mn-acts > .row2{display:contents}#menu.mn .mn-acts > details.more{grid-column:1/-1}
