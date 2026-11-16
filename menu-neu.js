@@ -11,7 +11,7 @@ export function initMenuNeu(X, S) {
   const box = menu.querySelector('.box'), side = menu.querySelector('.mside'), opts = menu.querySelector('.opts');
   if (!box || !side || !opts) return null;
   // Eigenes Stylesheet sicherstellen (falls play.html aus dem Cache ohne den Link kommt, standen sonst rohe Knöpfe da)
-  if (![...document.styleSheets].some(s => /menu-neu\.css/.test(s.href || ''))) { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 'menu-neu.css?v=4'; document.head.append(l); }
+  if (![...document.styleSheets].some(s => /menu-neu\.css/.test(s.href || ''))) { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 'menu-neu.css?v=5'; document.head.append(l); }
   const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
   const el = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; };
   const noEmoji = s => String(s || '').replace(/[\p{Extended_Pictographic}️‍]/gu, '').replace(/\s+/g, ' ').trim();
@@ -77,6 +77,9 @@ export function initMenuNeu(X, S) {
     coin: '<circle cx="12" cy="12" r="8.5"/><path d="M14.5 9a3 3 0 1 0 0 6M8 11h5M8 13.5h5"/>',
     aim: '<circle cx="12" cy="12" r="7"/><path d="M12 2v5M12 17v5M2 12h5M17 12h5"/>',
     flag: '<path d="M5 21V4M5 4h11l-2 4 2 4H5"/>',
+    medal: '<circle cx="12" cy="15" r="5.5"/><path d="M8.5 10.5L6 3h4l2 5M15.5 10.5L18 3h-4l-2 5"/>',
+    clock: '<circle cx="12" cy="12" r="8.5"/><path d="M12 7v5l3 2"/>',
+    road: '<path d="M8 3L5 21M16 3l3 18M12 4v3M12 10.5v3M12 17v3"/>',
     pin: '<path d="M12 21s6-5.6 6-11a6 6 0 0 0-12 0c0 5.4 6 11 6 11z"/><circle cx="12" cy="10" r="2.2"/>'
   };
   const WX = { clear: 'Klar', cloudy: 'Bewölkt', rain: 'Regen', storm: 'Gewitter', fog: 'Nebel' };
@@ -101,7 +104,14 @@ export function initMenuNeu(X, S) {
       <div class="mn-row">${svg(IC.star)}<span>Fahndung</span><span class="mn-stars">${[0, 1, 2, 3, 4].map(i => `<i class="${i < wanted ? 'is-on' : ''}"></i>`).join('')}</span></div>
       <div class="mn-row">${svg(IC.coin)}<span>Geld</span><b>${(player.money || 0).toLocaleString('de-DE')} €</b></div>
       <div class="mn-row">${svg(IC.aim)}<span>${esc(wp ? wp[0] : 'Unbewaffnet')}</span><b>${esc(wp ? wp[1] : '')}</b></div>
-      ${P ? `<div class="mn-stats"><div><small>Stufe</small><b>${P.lvl}</b><i><em style="width:${Math.min(100, Math.round(P.xp / need * 100))}%"></em></i></div><div><small>Karma</small><b>${P.karma > 0 ? '+' : ''}${P.karma || 0}</b></div><div><small>Fitness</small><b>${P.fit || 0}</b></div><div><small>Medaillen</small><b>${med}</b></div></div>` : ''}`;
+      ${P ? `<div class="mn-stats"><div><small>Stufe</small><b>${P.lvl}</b><i><em style="width:${Math.min(100, Math.round(P.xp / need * 100))}%"></em></i></div><div><small>Karma</small><b>${P.karma > 0 ? '+' : ''}${P.karma || 0}</b></div><div><small>Fitness</small><b>${P.fit || 0}</b></div><div><small>Medaillen</small><b>${med}</b></div></div>` : ''}
+      ${P ? (() => { const lm = med ? P.medals[med - 1] : null, nSeen = P.seen ? Object.keys(P.seen).length : 0, st = P.st || {};
+        return `<div class="mn-more"><div class="mn-kicker">Fortschritt</div>
+        <div class="mn-goal">${svg(IC.medal)}<div><small>Letzte Medaille</small>${lm ? `<b>${esc(noEmoji(lm.n))}</b><span>${lm.at ? new Date(lm.at).toLocaleDateString('de-DE') : ''}</span>` : '<b class="is-muted">Noch keine</b><span>Marathon oder Megamarsch laufen</span>'}</div></div>
+        <div class="mn-row">${svg(IC.pin)}<span>Stadtteile entdeckt</span><b>${nSeen}</b></div>
+        <div class="mn-row">${svg(IC.star)}<span>Bis Stufe ${P.lvl + 1}</span><b>${Math.max(0, need - P.xp).toLocaleString('de-DE')} EP</b></div>
+        <div class="mn-row">${svg(IC.clock)}<span>Spielzeit</span><b>${Math.floor((st.time || 0) / 3600)} h ${String(Math.floor((st.time || 0) / 60) % 60).padStart(2, '0')} min</b></div>
+        <div class="mn-row">${svg(IC.road)}<span>Gefahren / gelaufen</span><b>${((st.drive || 0) / 1000).toFixed(1)} / ${((st.walk || 0) / 1000).toFixed(1)} km</b></div></div>`; })() : ''}`;
   }
   // Missionen: alle startbaren Missionen wie im Handy, über story.js' Storyblöcken (die Storys mit Kapiteln bleiben dort)
   function missions() {
