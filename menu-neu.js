@@ -11,7 +11,7 @@ export function initMenuNeu(X, S) {
   const box = menu.querySelector('.box'), side = menu.querySelector('.mside'), opts = menu.querySelector('.opts');
   if (!box || !side || !opts) return null;
   // Eigenes Stylesheet sicherstellen (falls play.html aus dem Cache ohne den Link kommt, standen sonst rohe Knöpfe da)
-  if (![...document.styleSheets].some(s => /menu-neu\.css/.test(s.href || ''))) { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 'menu-neu.css?v=3'; document.head.append(l); }
+  if (![...document.styleSheets].some(s => /menu-neu\.css/.test(s.href || ''))) { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 'menu-neu.css?v=4'; document.head.append(l); }
   const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
   const el = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; };
   const noEmoji = s => String(s || '').replace(/[\p{Extended_Pictographic}️‍]/gu, '').replace(/\s+/g, ' ').trim();
@@ -49,7 +49,7 @@ export function initMenuNeu(X, S) {
   const kp = opts.querySelector('.pane[data-tab=karte]'); if (kp) kp.after(status); else opts.append(status);
   side.remove();
   box.prepend(top);
-  box.append(el('footer', 'mn-foot', '<span><kbd>ESC</kbd> Weiter</span><span><kbd>F1</kbd> Hilfe</span><span><kbd>H</kbd> Handy</span><span>Karte: Klick springt hin, Mausrad zoomt</span>'));
+  box.append(el('footer', 'mn-foot', '<span><kbd>ESC</kbd> Weiter</span><span><kbd>F1</kbd> Hilfe</span><span><kbd>H</kbd> Handy</span><span>Karte: Klick springt hin, Mausrad zoomt, Ziehen verschiebt</span>'));
 
   // Hervorhebung: Hauptpunkt nach sichtbarer Seite, Reiterzeile nur unter Einstellungen
   function sync() {
@@ -121,7 +121,7 @@ export function initMenuNeu(X, S) {
   X.menuHooks.push(() => {
     try { board(); missions(); } catch (e) { console.warn('Pausenmenü', e); }
     if (X.menuTab) X.menuTab('karte'); sync();
-    requestAnimationFrame(() => { for (const b of acts.querySelectorAll('button')) { const t = noEmoji(b.textContent); if (t !== b.textContent) b.textContent = t; } redraw(); });
+    requestAnimationFrame(() => { const fb = $('m_feedback'); if (fb) fb.textContent = TXT.m_feedback; for (const b of acts.querySelectorAll('button')) { const t = noEmoji(b.textContent); if (t !== b.textContent) b.textContent = t; } redraw(); });
   });
   sync();
   return { board, pane: status };

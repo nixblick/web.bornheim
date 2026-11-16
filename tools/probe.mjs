@@ -18,6 +18,7 @@
 //   wait   ms warten vor dem Bild (5000), shot false = kein Bild
 //   geraet [breite, höhe]: Handy nachstellen (Touch, grober Zeiger, Handy-Kennung). Im ersten Schritt gilt es schon beim Laden
 //          (dazu ein Bild 'start' vom Startbildschirm), in späteren Schritten dreht es nur das Gerät.
+//   fenster [breite, höhe]: Desktop-Fenstergröße nachstellen (kein Touch), z. B. [1920, 1080]
 import { spawn } from 'node:child_process'; import { writeFileSync, mkdirSync, readFileSync, appendFileSync } from 'node:fs';
 import { createServer } from 'node:net'; import { dirname, resolve } from 'node:path'; import { fileURLToPath } from 'node:url';
 const [STEPS, OUT, B = process.env.CHROME || 'chromium-browser', URL0] = process.argv.slice(2);
@@ -68,6 +69,7 @@ try {
   const pos = "(() => { const G = window.G, p = G.player.pos; return JSON.stringify({ x: Math.round(p.x), y: +p.y.toFixed(2), z: Math.round(p.z), drin: !!G.INTERIORS.inside }); })()";
   for (const s of steps) {
     if (s.geraet && s !== steps[0]) { await geraet(s.geraet); await sleep(1500); }
+    if (s.fenster) { await cmd('Emulation.setDeviceMetricsOverride', { width: s.fenster[0], height: s.fenster[1], deviceScaleFactor: 1, mobile: false }); await sleep(1500); }
     if (s.x !== undefined) await ev(`(async () => { const G = window.G; G.world.hour = ${s.hour ?? 13}; if (G.INTERIORS.inside) G.INTERIORS.leave(); await G.streamInit(${s.x}, ${s.z}); const y = ${s.y ?? 'null'} ?? G.TH(${s.x}, ${s.z}); G.player.pos.set(${s.x}, y, ${s.z}); G.player.vy = 0; if (G.player.mesh) G.player.mesh.position.copy(G.player.pos); })()`);
     if (s.ride) await ev(`(() => { const I = window.G.INTERIORS, M = I.metro, to = I.ST.get(${JSON.stringify(s.ride[1])}); let f = ${JSON.stringify(s.ride[0])} ? I.ST.get(${JSON.stringify(s.ride[0])}) : null;
       if (!f) { let d = 1e12; for (const q of M.stations) { const k = Math.hypot(q.p[0] - window.G.player.pos.x, q.p[1] - window.G.player.pos.z); if (k < d && q.id !== to.id) { d = k; f = q; } } } I.ride(f, to); })()`);
