@@ -30,11 +30,12 @@ import { weather, initWetter } from './wetter.js';
 import { initRasen, rasenMat, RASEN_KINDS } from './rasen.js';
 import { initLandmarks } from './landmarks.js';
 import { initGraeber } from './graeber.js'; import { initErinnerungen } from './erinnerungen.js'; import { initSupermarkt } from './supermarkt.js'; import { initLadesaeulen } from './ladesaeulen.js'; import { initTaxi } from './taxi.js'; import { initBus } from './bus.js';
-import { initRadio } from './radio.js'; import { initKlang } from './klang.js';
+import { initRadio } from './radio.js'; import { initKlang } from './klang.js'; import { SND, audioInit, sfx, audioUpdate, setKlang } from './audio.js';
 import { initMinispiele } from './minispiele.js';
 import { initZuhause } from './zuhause.js';
 import { initWohnen } from './wohnen.js';
 import { initWahrzeichen, markLandmark } from './wahrzeichen.js';
+import { initSkyline } from './skyline.js';
 import { disposeHierarchy } from './dispose.js';
 import { initPhone } from './phone.js';
 import { initMenuNeu } from './menu-neu.js';
@@ -69,7 +70,7 @@ const camera = new THREE.PerspectiveCamera(65, (innerWidth > 0 && innerHeight > 
 
 const hemi = new THREE.HemisphereLight(0x8a90c8, 0x4a4038, 1.1); scene.add(hemi);
 const world = { hour: 8, tag: 1, speed: 0.25 / 60, headlights: true }; /* tag: Spieltag ab 1 (wohnen.js: Kalender, Miete) */ function zeitVor(h) { const n = world.hour + h; if (n >= 24) world.tag = (world.tag || 1) + Math.floor(n / 24); world.hour = n % 24; } /* einzige Stelle, an der Zeit vergeht: zählt den Tag über Mitternacht */ /* Start 8 Uhr, 1 Spielstunde = 4 Minuten (12.11.2026, André) */
-let skyU = null, HIMMEL = null, WASSER = null, skyDome = null, sunDisk = null, skylineMesh = null, skylineBeacons = null;
+let skyU = null, HIMMEL = null, WASSER = null, skyDome = null, sunDisk = null, skylineMesh = null, skylineBeacons = null, SKY = null;
 let WET = null, roadMatRef = null; const lampSpots = []; let streaks = null, streakT = 0;
 // Wiederverwendete Hilfsobjekte für updateStreaks: nichts wird je Lauf neu angelegt
 const _stO = new THREE.Object3D(), _stC = new THREE.Color(), _stD = [], _stL = [], _stI = [], _stCmp = (a, b) => _stD[a] - _stD[b];
@@ -1005,53 +1006,11 @@ function streetTrees() {
         if (solidAt(x, z) >= 0 || solidAt(x + nx * sd * 1.5, z + nz * sd * 1.5) >= 0 || onOtherRoad(x, z, r, 2) || nearPoint(x, z, CITY.signals, 8) || nearPoint(x, z, CITY.stops, 6)) continue; out.push([x, z]); } } }
   return out;
 }
-// Echte Frankfurter Hochhäuser (ab 80 m) für die Horizont-Silhouette aus allen Stadtteilen (ein Draw-Call, blendet aus sobald die echte Kachel gebaut ist)
-const SKYLINE_TOWERS = [
-  [-3028, -1637, 28, 28, 337.5, 0, -8, -5], [-2175, 976, 56, 52, 259, -0.82, -6, 2], [-3705, 972, 41, 41, 256.5, -1.21, -10, 2],
-  [-2225, 845, 36, 34, 233, -0.35, -6, 2], [-3352, 1132, 34, 62, 200, 0.25, -9, 2], [-2940, 991, 44, 52, 198, -0.36, -8, 2],
-  [-2344, 793, 42, 42, 198, 0.2, -6, 1], [-3391, 956, 38, 49, 185, -1.29, -9, 2], [-82, 1419, 48, 69, 185, -0.26, -1, 3],
-  [-2191, 835, 42, 50, 183, 0.43, -6, 2], [-3487, 1126, 30, 56, 172, -1.03, -9, 2], [-2340, 825, 30, 32, 170, 0.27, -6, 2],
-  [-2611, 563, 35, 57, 170, 1.38, -7, 1], [-2536, 868, 52, 59, 170, -0.23, -7, 2], [-2713, 1185, 37, 62, 166, -1.16, -7, 2],
-  [-3267, 653, 34, 48, 159, 0.68, -9, 1], [-2563, 796, 35, 38, 155, -0.3, -7, 1], [-2579, 755, 35, 38, 155, 1.27, -7, 1],
-  [-2458, 916, 38, 42, 155, -0.25, -7, 2], [-2526, 1084, 39, 43, 153.8, -1.2, -7, 2], [-2125, 1020, 40, 65, 148, -1.13, -6, 2],
-  [-2819, 865, 44, 43, 142, 0.34, -8, 2], [-2907, 948, 43, 44, 142, 0.9, -8, 2], [-1074, 2407, 42, 42, 140, 0.45, -3, 6],
-  [-2505, 1166, 37, 48, 136, -1.14, -7, 2], [-1713, 620, 33, 52, 136, 1.22, -5, 1], [-3348, 998, 27, 47, 130, -1.3, -9, 2],
-  [-2231, 902, 26, 40, 127, 0.44, -6, 2], [-4286, 1020, 31, 51, 117, -1.24, -11, 2], [-2221, 1063, 38, 38, 115, 0.44, -6, 2],
-  [-3175, 1894, 30, 30, 112.3, -0.89, -8, 4], [-4052, 658, 24, 67, 112, 0.4, -11, 1], [-2340, 761, 29, 29, 110, -0.66, -6, 1],
-  [-2118, 1236, 26, 42, 110, 0.38, -6, 3], [-2300, 954, 24, 46, 108.6, 0.44, -6, 2], [-3487, 492, 24, 49, 106, 1.24, -9, 1],
-  [-1197, 3082, 31, 34, 100, -0.35, -3, 7], [-1754, 672, 26, 51, 99, 1.22, -5, 1], [-3806, 1307, 19, 89, 96, -1.03, -10, 3],
-  [-3059, 976, 20, 48, 96, -1.27, -8, 2], [-2767, 815, 29, 36, 95, -1.32, -7, 2], [-1826, 27, 34, 42, 93, 0.31, -5, 0],
-  [546, 1277, 18, 86, 90, -0.21, 1, 3], [-4404, 1463, 21, 61, 87, -0.87, -12, 3]
-];
-const SKY_KEYS = SKYLINE_TOWERS.map(t => t[6] + '_' + t[7]); // Kachelschlüssel einmal bauen statt 88 Strings je Bild in updateSky
-const _skyO = new THREE.Object3D(), _skyC1 = new THREE.Color(), _skyC2 = new THREE.Color(), _skyTint = new THREE.Color();
 function buildSky() {
   HIMMEL = makeHimmel(THREE, himmelStufe(), !himmelPost()); skyU = HIMMEL.uniforms; skyDome = HIMMEL.dome; scene.add(skyDome); // Verlauf und Wolkendecke in einem Shader (himmel.js, #152)
   const sunTex = canvasTex(128, 128, (ctx, w, h) => { const gr = ctx.createRadialGradient(64, 64, 4, 64, 64, 64); gr.addColorStop(0, 'rgba(255,255,240,1)'); gr.addColorStop(0.15, 'rgba(255,245,210,0.95)'); gr.addColorStop(0.35, 'rgba(255,220,160,0.25)'); gr.addColorStop(1, 'rgba(255,200,120,0)'); ctx.fillStyle = gr; ctx.fillRect(0, 0, w, h); });
   sunDisk = new THREE.Sprite(new THREE.SpriteMaterial({ map: sunTex, fog: false, depthWrite: false, transparent: true, blending: THREE.AdditiveBlending })); sunDisk.scale.set(140, 140, 1); scene.add(sunDisk);
-  // Frankfurter Skyline-Horizontschicht: ein einziges InstancedMesh (1 Draw-Call) für alle fernen Wolkenkratzer
-  const twTex = canvasTex(64, 128, (ctx, w, h) => {
-    ctx.fillStyle = '#8fa0b5'; ctx.fillRect(0, 0, w, h);
-    for (let y = 4; y < h - 4; y += 6) for (let x = 4; x < w - 4; x += 8) {
-      ctx.fillStyle = ((x * 7 + y * 13) % 5 === 0) ? '#ffe4a8' : '#4a5c72';
-      ctx.fillRect(x, y, 5, 3.5);
-    }
-  });
-  // Nachtbild (12.11.2026, nach Nachtfotos vom Mainufer): dunkle Fassade, viele helle Fenster in Warm- und Kaltweiß, angestrahlte Krone oben
-  const twTexN = canvasTex(64, 128, (ctx, w, h) => { let s = 9; const r = () => (s = (s * 16807) % 2147483647) / 2147483647;
-    ctx.fillStyle = '#141b27'; ctx.fillRect(0, 0, w, h);
-    for (let y = 10; y < h - 4; y += 6) for (let x = 4; x < w - 4; x += 8) { const q = r(); ctx.fillStyle = q < 0.55 ? pick(['#fff1cf', '#e9f0ff', '#ffe0a0', '#f6f6ee']) : q < 0.7 ? '#8a7a5a' : '#263040'; ctx.fillRect(x, y, 5, 3.5); }
-    const g = ctx.createLinearGradient(0, 0, 0, 10); g.addColorStop(0, '#fff6c8'); g.addColorStop(1, 'rgba(255,240,180,0.2)'); ctx.fillStyle = g; ctx.fillRect(0, 0, w, 10); });
-  const twGeo = new THREE.BoxGeometry(1, 1, 1); twGeo.userData.shared = true;
-  const twMat = new THREE.MeshBasicMaterial({ map: twTex, fog: false, transparent: true, opacity: 0.92 }); twMat.userData.shared = true;
-  twMat.userData.day = twTex; twMat.userData.night = twTexN;
-  skylineMesh = new THREE.InstancedMesh(twGeo, twMat, SKYLINE_TOWERS.length);
-  skylineMesh.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(SKYLINE_TOWERS.length * 3), 3);
-  skylineMesh.userData.noChunk = true; skylineMesh.frustumCulled = false; scene.add(skylineMesh);
-  const bcGeo = new THREE.SphereGeometry(1, 6, 4); bcGeo.userData.shared = true;
-  const bcMat = new THREE.MeshBasicMaterial({ color: 0xff2820, fog: false }); bcMat.userData.shared = true;
-  skylineBeacons = new THREE.InstancedMesh(bcGeo, bcMat, SKYLINE_TOWERS.length);
-  skylineBeacons.userData.noChunk = true; skylineBeacons.frustumCulled = false; scene.add(skylineBeacons);
+  SKY = initSkyline({ scene, onReady: m => { skylineMesh = m; } }); // Horizont-Skyline aus echten Grundrissen (skyline.js, data/skyline.json)
 }
 // Himmelsstufe aus der aktuellen Qualität (auch beim Umschalten im Menü): 0 einfach, 1 fein, 2 Volumen (Hoch/Ultra)
 function himmelPost() { return (opts.quality === 'hoch' || opts.quality === 'ultra') && !composerBroken; }
@@ -1063,48 +1022,8 @@ function updateSky(dt) {
   const sd = _sunV.copy(world.sunDir).normalize(); sunDisk.position.copy(camera.position).addScaledVector(sd, 700); sunDisk.material.opacity = clamp(world.day * 1.2 - weather.cloud * 0.9, 0, 1); sunDisk.visible = sunDisk.material.opacity > 0.02;
   HIMMEL.update(dt, { day: world.day, cloud: weather.cloud, flash: weather.flash, night: !!world.night, sunColor: sun.color, sunDir: world.sunDir });
   if (WASSER) WASSER.update(dt, { sky: skyU.top.value, sunColor: sun.color, sunDir: world.sunDir, sunI: sun.intensity, night: !!world.night, camera });
-  if (skylineMesh) {
-    const showSkyline = !POCKET;
-    skylineMesh.visible = showSkyline;
-    skylineBeacons.visible = showSkyline && !!world.night;
-    if (showSkyline) {
-      const cx = camera.position.x, cy = camera.position.y, cz = camera.position.z;
-      const sm = skylineMesh.material, wantMap = world.night ? sm.userData.night : sm.userData.day; if (wantMap && sm.map !== wantMap) { sm.map = wantMap; sm.needsUpdate = true; }
-      const baseCol = world.night ? _skyC1.setHex(0xd8dce6) : _skyC1.setHex(0x7b8ea6).multiplyScalar(0.38 + 0.62 * world.day); // nachts leuchten die Fenster selbst
-      const blink = Math.floor(performance.now() / 700) % 2 === 0;
-      for (let i = 0; i < SKYLINE_TOWERS.length; i++) {
-        const T = SKYLINE_TOWERS[i], tx0 = T[0], tz0 = T[1], w = T[2], d = T[3], h = T[4], ang = T[5];
-        const tile = TILES.get(SKY_KEYS[i]);
-        if (tile && tile.built) {
-          _skyO.scale.setScalar(0); _skyO.updateMatrix();
-          skylineMesh.setMatrixAt(i, _skyO.matrix);
-          if (world.night) skylineBeacons.setMatrixAt(i, _skyO.matrix);
-          continue;
-        }
-        const dx = tx0 - cx, dz = tz0 - cz, dist = Math.hypot(dx, dz) || 1;
-        const dProj = Math.min(dist, 760), s = dProj / dist;
-        const inf = WIDX.tiles[SKY_KEYS[i]]; const by = inf ? inf[2] : 98;
-        _skyO.position.set(cx + dx * s, cy + (by + h * 0.5 - cy) * s, cz + dz * s);
-        _skyO.rotation.set(0, ang, 0);
-        _skyO.scale.set(w * s, h * s, d * s);
-        _skyO.updateMatrix();
-        skylineMesh.setMatrixAt(i, _skyO.matrix);
-        const haze = clamp((dist - 450) / 4200 + weather.fog * 0.45 + weather.rain * 0.25, 0.2, 0.82);
-        _skyC2.copy(baseCol); if (!world.night) { if (h > 250 && h < 260 && w < 45) _skyC2.multiply(_skyTint.setHex(0xc89a8c)); else if (h > 150 && h < 160) _skyC2.multiply(_skyTint.setHex(0x9fbde6)); } _skyC2.lerp(_cFog, haze); // Messeturm-Granit, Glastürme blau (Fotos)
-        skylineMesh.setColorAt(i, _skyC2);
-        if (world.night) {
-          const r = (blink || i % 3 !== 0) ? Math.max(1.6, dist * 0.0022) * s : 0;
-          _skyO.position.set(cx + dx * s, cy + (by + h + 2.5 - cy) * s, cz + dz * s);
-          _skyO.scale.setScalar(r);
-          _skyO.updateMatrix();
-          skylineBeacons.setMatrixAt(i, _skyO.matrix);
-        }
-      }
-      skylineMesh.instanceMatrix.needsUpdate = true;
-      skylineMesh.instanceColor.needsUpdate = true;
-      if (world.night) skylineBeacons.instanceMatrix.needsUpdate = true;
-    }
-  }
+  if (SKY) SKY.update({ cam: camera.position, fogCol: _cFog, haze: weather.fog * 0.45 + weather.rain * 0.25, day: world.day, blink: Math.floor(performance.now() / 700) % 2 === 0, sunDir: world.sunDir, pocket: POCKET,
+    built: k => { const t = TILES.get(k); return !!(t && t.built); }, shown: n => !!(typeof WAHRZ !== 'undefined' && WAHRZ && WAHRZ.shown && WAHRZ.shown(n)) });
 }
 function* buildDetails2() {
   const Q = () => ({ v: [], n: [] });
@@ -1164,12 +1083,13 @@ function* buildParked() { // Generator wie die übrigen Bauschritte (#173)
   // Geometrie je Typ vorbereiten: Lack (Instanzfarbe) + Rest (Vertexfarben oder Atlas-Textur)
   const toNI = g => { const gg = g.index ? g.toNonIndexed() : g; for (const k of Object.keys(gg.attributes)) if (!['position', 'normal', 'uv'].includes(k)) gg.deleteAttribute(k); if (!gg.attributes.uv) gg.setAttribute('uv', new THREE.Float32BufferAttribute(new Float32Array(gg.attributes.position.count * 2), 2)); return gg; };
   const withColor = (g, col) => { const n = g.attributes.position.count; const a = new Float32Array(n * 3); for (let i = 0; i < n; i++) { a[i * 3] = col.r; a[i * 3 + 1] = col.g; a[i * 3 + 2] = col.b; } g.setAttribute('color', new THREE.BufferAttribute(a, 3)); return g; };
-  const TG = PARK_TG || (PARK_TG = (() => {
+  yield; if (!PARK_TG) { /* einmalig, je Autotyp ein Stück (Probe sparmodus, 13.11.2026) */
   const TG = {};
-  for (const type of Object.keys(CAR_TPL)) { const T = CAR_TPL[type]; T.root.updateMatrixWorld(true); const body = [], rest = []; let atlas = null;
+  for (const type of Object.keys(CAR_TPL)) { yield; const T = CAR_TPL[type]; T.root.updateMatrixWorld(true); const body = [], rest = []; let atlas = null;
     T.root.traverse(m => { if (!m.isMesh) return; const g = toNI(m.geometry.clone().applyMatrix4(m.matrixWorld)); if (BODY_MATS.includes(m.material.name)) body.push(g); else { if (m.material.map) atlas = m.material.map; rest.push(withColor(g, m.material.color)); } });
     TG[type] = { body: body.length ? mergeGeometries(body) : null, rest: rest.length ? mergeGeometries(rest) : null, restMat: (m => LACK ? LACK.rest(m) : m)(atlas ? new THREE.MeshLambertMaterial({ map: atlas }) : new THREE.MeshLambertMaterial({ vertexColors: true })) }; }
-  for (const t of Object.values(TG)) { for (const g of [t.body, t.rest]) if (g) g.userData.shared = true; t.restMat.userData.shared = true; } return TG; })());
+  for (const t of Object.values(TG)) { for (const g of [t.body, t.rest]) if (g) g.userData.shared = true; t.restMat.userData.shared = true; } PARK_TG = TG; }
+  const TG = PARK_TG; yield;
   if (!PARK_LOW) { PARK_LOW = { bodyMat: LACK ? LACK.body : new THREE.MeshLambertMaterial({ color: 0xffffff }) }; PARK_LOW.bodyMat.userData.shared = true; }
   const bodyMat = PARK_LOW.bodyMat;
   // Ferne Stufe: einfacher Kasten mit Fensterband
@@ -1180,7 +1100,7 @@ function* buildParked() { // Generator wie die übrigen Bauschritte (#173)
   const PT = opts.quality === 'niedrig' ? TS : 100; const lowOnly = opts.quality === 'niedrig'; const tiles = new Map(); for (const sp of local) { const k = Math.floor(sp.x / PT) + ',' + Math.floor(sp.z / PT); if (!tiles.has(k)) tiles.set(k, { x0: Math.floor(sp.x / PT) * PT, z0: Math.floor(sp.z / PT) * PT, list: [] }); tiles.get(k).list.push(sp); }
   const o = new THREE.Object3D(); const cc = new THREE.Color();
   const place = (im, list, colorize) => { list.forEach((sp, i) => { o.position.set(sp.x, TH(sp.x, sp.z), sp.z); o.rotation.set(0, sp.h, 0); o.scale.setScalar(1); o.updateMatrix(); im.setMatrixAt(i, o.matrix); if (colorize) im.setColorAt(i, cc.setHex(sp.col).convertSRGBToLinear()); sp.refs.push({ mesh: im, i }); }); im.userData.noChunk = true; im.computeBoundingSphere(); scene.add(im); };
-  for (const [, t] of tiles) { const det = []; const byType = new Map(); for (const sp of t.list) { if (!byType.has(sp.type)) byType.set(sp.type, []); byType.get(sp.type).push(sp); }
+  for (const [, t] of tiles) { yield; const det = []; const byType = new Map(); for (const sp of t.list) { if (!byType.has(sp.type)) byType.set(sp.type, []); byType.get(sp.type).push(sp); }
     for (const [type, list] of byType) { if (lowOnly) break; const G = TG[type]; if (!G) continue; if (G.body) { const im = new THREE.InstancedMesh(G.body, bodyMat, list.length); place(im, list, true); im.castShadow = true; det.push(im); } if (G.rest) { const im = new THREE.InstancedMesh(G.rest, G.restMat, list.length); place(im, list, false); im.castShadow = true; det.push(im); } }
     const low = new THREE.InstancedMesh(lowGeo, lowMat, t.list.length); place(low, t.list, true);
     parkedTiles.push({ x0: t.x0, z0: t.z0, det, low }); }
@@ -2314,66 +2234,6 @@ function advanceAlongRoad(u, pos, dist, offset) {
   }
 }
 
-// ---------- Sound (Web Audio, alles synthetisch) ----------
-const SND = { ctx: null, master: null, vol: 0.8, engine: null, siren: null, ambient: null };
-function audioInit() {
-  if (SND.ctx) { if (SND.ctx.state === 'suspended') SND.ctx.resume(); return; }
-  const C = new (window.AudioContext || window.webkitAudioContext)(); SND.ctx = C; SND.master = C.createGain(); SND.master.gain.value = SND.vol; SND.master.connect(C.destination);
-  // Motor: zwei Sägezähne + Tiefpass
-  const eg = C.createGain(); eg.gain.value = 0; const ef = C.createBiquadFilter(); ef.type = 'lowpass'; ef.frequency.value = 400; const o1 = C.createOscillator(), o2 = C.createOscillator(); o1.type = 'sawtooth'; o2.type = 'square'; o1.frequency.value = 60; o2.frequency.value = 31; o1.connect(ef); o2.connect(ef); ef.connect(eg); eg.connect(SND.master); o1.start(); o2.start(); SND.engine = { g: eg, o1, o2, f: ef };
-  // Sirene
-  const sg = C.createGain(); sg.gain.value = 0; const so = C.createOscillator(); so.type = 'triangle'; so.frequency.value = 700; so.connect(sg); sg.connect(SND.master); so.start(); SND.siren = { g: sg, o: so };
-  // Stadtrauschen
-  const buf = C.createBuffer(1, C.sampleRate * 2, C.sampleRate); const d = buf.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1); const src = C.createBufferSource(); src.buffer = buf; src.loop = true; const af = C.createBiquadFilter(); af.type = 'lowpass'; af.frequency.value = 300; const ag = C.createGain(); ag.gain.value = 0.06; src.connect(af); af.connect(ag); ag.connect(SND.master); src.start(); SND.ambient = ag; SND.noise = buf;
-  const rs = C.createBufferSource(); rs.buffer = buf; rs.loop = true; const rf = C.createBiquadFilter(); rf.type = 'highpass'; rf.frequency.value = 1200; const rg = C.createGain(); rg.gain.value = 0; rs.connect(rf); rf.connect(rg); rg.connect(SND.master); rs.start(); SND.rain = rg;
-}
-function sfx(kind, vol = 1, pos) {
-  if (KLANG && KLANG.sfx(kind, vol, pos)) return; // pos: Ort der Quelle ({x, z}), ohne = Mitte. Geräusche aus Schichten (klang.js); kennt das Modul eines nicht, klingt es wie bisher
-  if (!SND.ctx) return; const C = SND.ctx, t = C.currentTime;
-  const noise = (dur, f0, f1, g0, type = 'lowpass') => { const src = C.createBufferSource(); src.buffer = SND.noise; const f = C.createBiquadFilter(); f.type = type; f.frequency.setValueAtTime(f0, t); f.frequency.exponentialRampToValueAtTime(f1, t + dur); const g = C.createGain(); g.gain.setValueAtTime(g0 * vol, t); g.gain.exponentialRampToValueAtTime(0.001, t + dur); src.connect(f); f.connect(g); g.connect(SND.master); src.start(t); src.stop(t + dur + 0.05); };
-  const tone = (dur, f0, f1, g0, type = 'sine') => { const o = C.createOscillator(); o.type = type; o.frequency.setValueAtTime(f0, t); o.frequency.exponentialRampToValueAtTime(f1, t + dur); const g = C.createGain(); g.gain.setValueAtTime(g0 * vol, t); g.gain.exponentialRampToValueAtTime(0.001, t + dur); o.connect(g); g.connect(SND.master); o.start(t); o.stop(t + dur + 0.05); };
-  if (kind === 'shot') { noise(0.18, 4000, 400, 0.9, 'bandpass'); tone(0.12, 180, 50, 0.6); }
-  else if (kind === 'reload') { tone(0.05, 900, 600, 0.2, 'square'); setTimeout(() => tone(0.05, 700, 1200, 0.2, 'square'), 120); }
-  else if (kind === 'step') { noise(0.07, 800, 200, 0.25); }
-  else if (kind === 'crash') { noise(0.5, 1500, 100, 1.0); tone(0.3, 90, 30, 0.6); }
-  else if (kind === 'bump') { noise(0.15, 600, 100, 0.4); }
-  else if (kind === 'screech') { noise(0.2, 2400, 1500, 0.35, 'bandpass'); }
-  else if (kind === 'thunder') { noise(2.5, 400, 30, 1.2); tone(1.5, 55, 25, 0.8); }
-  else if (kind === 'explosion') { noise(1.6, 900, 40, 1.4); tone(0.9, 70, 20, 1.0); }
-  else if (kind === 'bell') { tone(0.12, 2600, 2500, 0.25, 'sine'); tone(0.3, 3900, 3800, 0.1, 'sine'); setTimeout(() => { tone(0.12, 2600, 2500, 0.2, 'sine'); }, 110); }
-  else if (kind === 'horn') { tone(0.5, 420, 420, 0.35, 'square'); tone(0.5, 530, 530, 0.25, 'square'); }
-  else if (kind === 'hit') { noise(0.12, 2000, 300, 0.5); tone(0.15, 300, 100, 0.3); }
-  else if (kind === 'door') { noise(0.12, 500, 150, 0.35); tone(0.08, 160, 80, 0.3); }
-  else if (kind === 'pickup') { tone(0.1, 880, 1320, 0.3); setTimeout(() => tone(0.15, 1320, 1760, 0.3), 90); }
-  else if (kind === 'click') { tone(0.04, 1200, 800, 0.15, 'square'); }
-  else if (kind === 'smg') { noise(0.1, 5000, 600, 0.7, 'bandpass'); tone(0.07, 220, 70, 0.4); }
-  else if (kind === 'shotgun') { noise(0.35, 2500, 120, 1.3); tone(0.25, 120, 35, 0.9); }
-  else if (kind === 'rifle') { noise(0.16, 6000, 500, 1.0, 'bandpass'); tone(0.1, 260, 60, 0.5); }
-  else if (kind === 'swing') { noise(0.18, 600, 2400, 0.35, 'bandpass'); }
-  else if (kind === 'punch') { noise(0.1, 900, 120, 0.7); tone(0.12, 140, 60, 0.6); }
-  else if (kind === 'bang') { noise(0.06, 9000, 3000, 1.6, 'highpass'); noise(0.9, 1200, 60, 1.1); tone(0.3, 90, 30, 0.8); }
-  else if (kind === 'hiss') { noise(0.7, 3000, 2500, 0.3, 'highpass'); }
-  else if (kind === 'taser') { tone(0.5, 2400, 2200, 0.2, 'square'); noise(0.5, 4000, 3000, 0.25, 'bandpass'); }
-  else if (kind === 'splat') { noise(0.14, 700, 150, 0.6); }
-  else if (kind === 'throw') { noise(0.15, 400, 1500, 0.25, 'bandpass'); }
-  else if (kind === 'cough') { noise(0.12, 900, 300, 0.4, 'bandpass'); setTimeout(() => noise(0.1, 800, 300, 0.3, 'bandpass'), 180); }
-  else if (kind === 'notify') { tone(0.07, 1320, 1320, 0.12); setTimeout(() => tone(0.09, 1760, 1760, 0.1), 80); }
-  else if (kind === 'crackle') { for (let i = 0; i < 6; i++) setTimeout(() => noise(0.03, 7000, 4000, 0.5, 'highpass'), i * 60 + Math.random() * 40); }
-  else if (kind === 'bell') { tone(0.35, 1480, 1470, 0.25, 'triangle'); setTimeout(() => tone(0.35, 1480, 1470, 0.22, 'triangle'), 220); }
-  else if (kind === 'glass') { noise(0.25, 7000, 2500, 0.8, 'highpass'); tone(0.12, 2600, 1800, 0.15, 'triangle'); }
-  else if (kind === 'schoolbell') { for (let i = 0; i < 14; i++) setTimeout(() => tone(0.09, 2100, 2050, 0.22, 'square'), i * 95); }
-  else if (kind === 'whoosh') { noise(0.8, 800, 4000, 0.35, 'bandpass'); }
-}
-/* Leistung: setTargetAtTime nur, wenn sich der Zielwert geändert hat (ein gesetztes Ziel läuft von selbst weiter); Sirenensuche über alle Autos mit 5 Hz */
-const _sndZ = new WeakMap(); let _sirT = 0, _sirD = 1e9;
-function sndZiel(p, v, t, tc) { if (_sndZ.get(p) === v) return; p.setTargetAtTime(v, t, tc); _sndZ.set(p, v); }
-function audioUpdate(dt) {
-  if (!SND.ctx) return; const t = SND.ctx.currentTime;
-  if (SND.engine) { const car = player.car && (!player.car.userData.bike || player.car.userData.moto) ? player.car : null; /* Fahrrad hat keinen Motor, Motorrad schon */ const sp = car ? Math.abs(car.userData.speed) : 0; const target = car ? 0.18 + Math.min(sp / 30, 1) * 0.25 : 0; sndZiel(SND.engine.g.gain, target, t, 0.1); const f = (car && car.userData.moto ? 80 + sp * 9 : 50 + sp * 6) + (car && keys.KeyW ? 15 : 0); sndZiel(SND.engine.o1.frequency, f, t, 0.08); sndZiel(SND.engine.o2.frequency, f / 2, t, 0.08); sndZiel(SND.engine.f.frequency, 300 + sp * 40, t, 0.1); }
-  if (SND.siren) { _sirT -= dt; if (!(_sirT > 0)) { _sirT = 0.2; _sirD = 1e9; for (const c of cars) if (c.userData.mode === 'police' || (c.userData.siren && c !== player.car)) _sirD = Math.min(_sirD, c.position.distanceTo(player.pos)); } let best = _sirD; if (player.car && player.car.userData.siren) best = 0; const g = best < 220 ? 0.25 * (1 - best / 220) : 0; sndZiel(SND.siren.g.gain, g, t, 0.1); sndZiel(SND.siren.o.frequency, Math.floor(worldT * 1.7) % 2 ? 650 : 870, t, 0.03); }
-  if (SND.ambient) sndZiel(SND.ambient.gain, player.car ? 0.02 : 0.06, t, 0.5);
-}
-
 // ---------- Straßenbahn ----------
 function makeTram() {
   const g = new THREE.Group(); const paint = new THREE.MeshLambertMaterial({ color: 0x3aa8b8 }); /* Foto 12.11.2026: türkis wie die Frankfurter Straßenbahn */ const glass = new THREE.MeshLambertMaterial({ color: 0x182030, emissive: 0x2a3a50 });
@@ -3216,8 +3076,10 @@ function drawPMap() {
     c2.font = 'bold 12px system-ui'; for (const s of M.stations) { if (s.lines.every(r => PM_OFF.has(r))) continue; const [x, y] = P(s.p[0], s.p[1]); if (x < -10 || y < -10 || x > W + 10 || y > H + 10) continue; c2.fillStyle = '#fff'; c2.strokeStyle = '#1e5fb4'; c2.lineWidth = 3; c2.beginPath(); c2.arc(x, y, 6, 0, 7); c2.fill(); c2.stroke(); if (pmSpan < 9000) { c2.fillStyle = '#fff'; c2.fillText(s.name, x + 9, y + 4); } pmHits.push({ x, y, kind: 'u', s, lw: pmSpan < 9000 ? c2.measureText(s.name).width + 9 : 0 }); } }
   if ($('pm_b').checked && pmSpan < 7000) { PM_STOPS = PM_STOPS || pmStops(); c2.font = '11px system-ui'; for (const s of PM_STOPS) { const [x, y] = P(s.x, s.z); if (x < 0 || y < 0 || x > W || y > H) continue; c2.fillStyle = '#2e9c3a'; c2.fillRect(x - 4, y - 4, 8, 8); if (pmSpan < 4500) { c2.fillStyle = '#bfe8c4'; c2.fillText((s.n ? s.n + ' · ' : '') + [...s.lines].slice(0, 4).join(' '), x + 6, y + 4); } pmHits.push({ x, y, kind: 'b', s, lw: pmSpan < 4500 ? c2.measureText((s.n ? s.n + ' · ' : '') + [...s.lines].slice(0, 4).join(' ')).width + 6 : 0 }); } }
   for (const f of MAP_HOOKS) f(c2, P);
-  const [px, py] = P(player.pos.x, player.pos.z); c2.fillStyle = '#ffd84a'; c2.beginPath(); c2.arc(px, py, 7, 0, 7); c2.fill(); c2.strokeStyle = '#000'; c2.lineWidth = 2; c2.stroke();
-  c2.fillStyle = '#fff'; c2.font = '13px system-ui'; c2.fillText((pmSpan / 1000).toFixed(1) + ' km Breite · ' + Math.floor(world.hour) + ':' + String(Math.floor(world.hour % 1 * 60)).padStart(2, '0') + ' Uhr · ' + (player.money || 0) + ' €', 12, 20);
+  // Spieler als Pfeil in Blickrichtung (wie Minikarte, Norden oben), mit Halo, damit er auf jeder Kachel sofort auffällt
+  const [px, py] = P(player.pos.x, player.pos.z); c2.save(); c2.translate(px, py); c2.fillStyle = '#f4b54440'; c2.strokeStyle = '#f4b544aa'; c2.lineWidth = 1.5; c2.beginPath(); c2.arc(0, 0, 26, 0, 7); c2.fill(); c2.stroke(); c2.rotate(Math.PI - camYaw.v);
+  c2.beginPath(); c2.moveTo(0, -18); c2.lineTo(13, 13); c2.lineTo(0, 6); c2.lineTo(-13, 13); c2.closePath(); c2.lineJoin = 'round'; c2.strokeStyle = '#000'; c2.lineWidth = 6; c2.stroke(); c2.fillStyle = '#f4b544'; c2.fill(); c2.strokeStyle = '#fff'; c2.lineWidth = 2.5; c2.lineJoin = 'round'; c2.stroke(); c2.restore();
+  c2.fillStyle = '#ffffffb0'; c2.font = '12px system-ui'; c2.textAlign = 'right'; c2.fillText((pmSpan / 1000).toFixed(1) + ' km', W - 12, H - 12); c2.textAlign = 'left';
 }
 { const box = $('pm_lines'); const M = () => INTERIORS && INTERIORS.metro; const fill = () => { if (!box || box.childElementCount || !M()) return; for (const l of M().lines) { const lb = document.createElement('label'); const cb = document.createElement('input'); cb.type = 'checkbox'; cb.checked = true; cb.onchange = () => { if (cb.checked) PM_OFF.delete(l.ref); else PM_OFF.add(l.ref); drawPMap(); }; lb.append(cb, ' '); const sw = document.createElement('b'); sw.textContent = l.ref; sw.style.color = l.color || '#fff'; lb.append(sw); box.appendChild(lb); } };
   MENU_HOOKS.push(fill); for (const id of ['pm_u', 'pm_b']) if ($(id)) $(id).onchange = drawPMap; }
@@ -3264,7 +3126,7 @@ $('cont').onclick = () => { let d = null; try { d = JSON.parse(localStorage.getI
 while (solidAt(player.pos.x, player.pos.z) >= 0) player.pos.x += 3;
 const X = { FAR_HAZE, sun, THREE, scene, camera, renderer, player, peds, cars, shootables, pickups, FX, puff, losFactor, keys, camYaw, camPitch, opts, world, weather, CITY, TH, solidAt, solidAtH, floorAt, nearestEdge, edgeNormal, moveWithCollision, makeHuman, makeCar, makeAmbulance, dropRider, tipBike, rehome, spawnCar, spawnPedAt, playAnim, animateWalk, damage, explode, burst, smoke, wakeParked, wakeParkedRay, sfx, SND, showMsg, raiseWanted, camShake, freeSkel, canvasTex, tracerMat, makeGun, dentCar, rnd, clamp, pick, lerpAngle, distSegSq, pointInPoly, randomRoadPoint, roadsDrivable, driveCar, carFx, carTerrain, exitCar, syncHand, CHAR, coneTex, hurtPlayer, card, closeMenu, saveGame, lockMouse, disposeCar,
   listeners: [], mmHooks: MM_HOOKS, mapHooks: MAP_HOOKS, menuHooks: MENU_HOOKS, rallyLimit: 8, get creative() { return creative; }, creativeSpawnerActive, pedRoads: () => pedRoads, roadsNear: (x, z, R, car) => roadsNear(x, z, R, car), streetAt: (x, z) => streetNameAt(x, z), barrierNear: (x, z, r) => barrierHit(x, z, r), storyBusy: () => STORY ? STORY.busy : false, openMenu, menuTab: t => MENU_TAB(t), get started() { return started; }, menuOpen: () => menuOpen };
-var PFUETZEN = initLichtpfuetzen(X); var DUNST = initDunst(X); var WPN = initWeapons(X); var DEMO = initDemo(X, WPN); var FIRE = initFire(X, WPN, DEMO); var STORY = initStory(X, WPN, DEMO, FIRE); var SHOPS = initShops(X, WPN); Object.assign(X, { wachen: WACHEN, nearestRoadDir, pushOffRoads, setPocket: p => { POCKET = p; camera.userData.init = false; }, inPocket, streamInit, roofHeight, WORLD, TILES, TS, WIDX }); var INTERIORS = initInteriors(X, WPN, DEMO, SHOPS); var PROGRESS = initProgress(X); var HELI = initHeli(X); var EULEN = null; try { EULEN = initEulen(X); } catch (e) { console.warn('Frischlufteulen aus', e); } var VOKA = null; var LAUF = null; var NEBENJOBS = null; try { VOKA = initVokabaum(X); try { LAUF = initLaufrunden(X); try { X.SHOPS_LIST = () => SHOPS.shops; NEBENJOBS = initNebenjobs(X); } catch (e) { console.warn('Nebenjobs aus', e); NEBENJOBS = null; } X.VOKA_BUSY = () => !!(VOKA && (VOKA.mission || VOKA.ped)); X.PROGRESS_GAIN = (n, why) => PROGRESS.gain(n, why); } catch (e) { console.warn('Laufrunden', e); LAUF = null; } } catch (e) { console.warn('Vokabaum-Mission aus', e); } var RASEN = null; try { Object.assign(X, { LOW_GFX, WEAK_GPU, waterAt, deckAt, rasenRoad: (x, z) => onOtherRoad(x, z, null, 0.3) }); RASEN = initRasen(X); } catch (e) { console.warn('Rasen aus', e); } var ZIVIL = null; try { ZIVIL = initZivilcourage(X); } catch (e) { console.warn('Zivilcourage aus', e); } var LANDMARKS = initLandmarks(X); initGraeber(X); initSupermarkt(X); try { initErinnerungen(X); } catch (e) { console.warn('Erinnerungen aus', e); } try { X.zeitVor = zeitVor; initWohnen(X); } catch (e) { console.warn('Wohnen aus', e); } try { initLadesaeulen(X); } catch (e) { console.warn('Ladesäulen aus', e); } try { initTaxi(X); } catch (e) { console.warn('Taxi aus', e); } try { initBus(X); } catch (e) { console.warn('Bus aus', e); } var KLANG = null; try { KLANG = initKlang(X); fetch('assets/sfx/manifest.json').then(r => r.ok ? r.json() : null).then(m => m && KLANG.ladeAufnahmen(m.aufnahmen)).catch(() => { /* ohne Aufnahmen bleibt die Synthese */ }); } catch (e) { console.warn('Klang aus', e); } try { X.ZUHAUSE = initZuhause(X, INTERIORS); } catch (e) { console.warn('Zuhause aus', e); } var MINI = null; try { MINI = initMinispiele(X, SHOPS); } catch (e) { console.warn('Minispiele aus', e); } var WAHRZ = initWahrzeichen(X); /* #150: Handy (H) nach Sunset */ var PHONE = null; try { const SY = { STORY, DEMO, PROGRESS, LAUF, VOKA, get NEBENJOBS() { return NEBENJOBS; }, get EULEN() { return EULEN; } }; initSpielstaende(X); initMenuNeu(X, SY); PHONE = initPhone(X, SY); } catch (e) { console.warn('Handy/Menü', e); }
+var PFUETZEN = initLichtpfuetzen(X); var DUNST = initDunst(X); var WPN = initWeapons(X); var DEMO = initDemo(X, WPN); var FIRE = initFire(X, WPN, DEMO); var STORY = initStory(X, WPN, DEMO, FIRE); var SHOPS = initShops(X, WPN); Object.assign(X, { wachen: WACHEN, nearestRoadDir, pushOffRoads, setPocket: p => { POCKET = p; camera.userData.init = false; }, inPocket, streamInit, roofHeight, WORLD, TILES, TS, WIDX }); var INTERIORS = initInteriors(X, WPN, DEMO, SHOPS); var PROGRESS = initProgress(X); var HELI = initHeli(X); var EULEN = null; try { EULEN = initEulen(X); } catch (e) { console.warn('Frischlufteulen aus', e); } var VOKA = null; var LAUF = null; var NEBENJOBS = null; try { VOKA = initVokabaum(X); try { LAUF = initLaufrunden(X); try { X.SHOPS_LIST = () => SHOPS.shops; NEBENJOBS = initNebenjobs(X); } catch (e) { console.warn('Nebenjobs aus', e); NEBENJOBS = null; } X.VOKA_BUSY = () => !!(VOKA && (VOKA.mission || VOKA.ped)); X.PROGRESS_GAIN = (n, why) => PROGRESS.gain(n, why); } catch (e) { console.warn('Laufrunden', e); LAUF = null; } } catch (e) { console.warn('Vokabaum-Mission aus', e); } var RASEN = null; try { Object.assign(X, { LOW_GFX, WEAK_GPU, waterAt, deckAt, rasenRoad: (x, z) => onOtherRoad(x, z, null, 0.3) }); RASEN = initRasen(X); } catch (e) { console.warn('Rasen aus', e); } var ZIVIL = null; try { ZIVIL = initZivilcourage(X); } catch (e) { console.warn('Zivilcourage aus', e); } var LANDMARKS = initLandmarks(X); initGraeber(X); initSupermarkt(X); try { initErinnerungen(X); } catch (e) { console.warn('Erinnerungen aus', e); } try { X.zeitVor = zeitVor; initWohnen(X); } catch (e) { console.warn('Wohnen aus', e); } try { initLadesaeulen(X); } catch (e) { console.warn('Ladesäulen aus', e); } try { initTaxi(X); } catch (e) { console.warn('Taxi aus', e); } try { initBus(X); } catch (e) { console.warn('Bus aus', e); } var KLANG = null; try { KLANG = initKlang(X); setKlang(KLANG); fetch('assets/sfx/manifest.json').then(r => r.ok ? r.json() : null).then(m => m && KLANG.ladeAufnahmen(m.aufnahmen)).catch(() => { /* ohne Aufnahmen bleibt die Synthese */ }); } catch (e) { console.warn('Klang aus', e); } try { X.ZUHAUSE = initZuhause(X, INTERIORS); } catch (e) { console.warn('Zuhause aus', e); } var MINI = null; try { MINI = initMinispiele(X, SHOPS); } catch (e) { console.warn('Minispiele aus', e); } var WAHRZ = initWahrzeichen(X); /* #150: Handy (H) nach Sunset */ var PHONE = null; try { const SY = { STORY, DEMO, PROGRESS, LAUF, VOKA, get NEBENJOBS() { return NEBENJOBS; }, get EULEN() { return EULEN; } }; initSpielstaende(X); initMenuNeu(X, SY); PHONE = initPhone(X, SY); } catch (e) { console.warn('Handy/Menü', e); }
 try { initRadio(X); } catch (e) { console.warn('Autoradio aus', e); } // #146, Taste U im Auto
 for (let i = 0; i < 200 && cars.length < 60; i++) spawnCar(false, player.pos, 10, 260);
 for (let i = 0; i < 55; i++) spawnPed(null);
@@ -3556,7 +3418,7 @@ renderer.setAnimationLoop(() => {
   // Menü offen oder Startbildschirm: die Welt steht, also nur 4 bzw. 10 Bilder je Sekunde zeichnen statt jedes (spart GPU und Akku)
   if (menuOpen || !started) { if (tn - ruheBild < (started ? 250 : 100)) return; ruheBild = tn; }
   // Ein Fehler in einem Bild darf das Spiel nicht einfrieren (three fordert den nächsten Frame erst nach dem Callback an)
-  try { update(dt); audioUpdate(dt); } catch (e) { loopErrors++; if (loopErrors <= 3 || loopErrors % 300 === 0) console.error('update-Fehler', loopErrors, e); if (loopErrors === 3) showMsg('FEHLER IM SPIEL – bitte melden (Esc › Fehler melden)', 4000); }
+  try { update(dt); audioUpdate(dt, player, keys, cars, worldT); } catch (e) { loopErrors++; if (loopErrors <= 3 || loopErrors % 300 === 0) console.error('update-Fehler', loopErrors, e); if (loopErrors === 3) showMsg('FEHLER IM SPIEL – bitte melden (Esc › Fehler melden)', 4000); }
   // Render-Fehler getrennt zählen (aufeinanderfolgend): nach 5 Bildern in Folge Effekte abschalten und direkt zeichnen
   try { { const ch = scene.children; for (let i = 0, n = ch.length; i < n; i++) { const c = ch[i]; if (c.visible || c.userData.inst) mwSichtbar(c, null); } } if (composer) composer.render(); else renderer.render(scene, camera); renderErrors = 0; } catch (e) { renderErrors++; if (renderLogs++ < 3) console.error('render-Fehler', e); if (renderErrors === 5) { if (composer) { composerBroken = true; try { disposeComposer(); } catch (e2) { composer = null; } try { if (HIMMEL) HIMMEL.setStufe(himmelStufe(), true); } catch (e3) { } renderErrors = 0; showMsg('EFFEKTE ABGESCHALTET (RENDER-FEHLER)', 4000); } else if (!renderWarned) { renderWarned = true; showMsg('FEHLER BEI DER GRAFIK – bitte melden (Esc › Fehler melden)', 4000); } } }
 });

@@ -242,5 +242,5 @@ export function initWahrzeichen(X) {
       else if (g && d > e.r * 1.2) { drop(g); built.delete(key); } }
     if (night !== lastNight) { lastNight = night; for (const g of built.values()) for (const m of g.userData.mats) if (m.emissiveIntensity !== undefined) m.emissiveIntensity = night ? 0.55 : 0.05; } // nachts angestrahlt
   }
-  return { update };
+  return { update, shown: n => built.has(n) }; // skyline.js blendet seinen Horizont-Turm aus, solange hier das Modell steht
 }
