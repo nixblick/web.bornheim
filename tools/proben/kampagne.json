@@ -12,7 +12,7 @@
   "tz": 2033,
   "pitch": 0.12,
   "wait": 12000,
-  "js": "(() => { for (const e of document.body.children) if (e.tagName !== 'CANVAS' && !e.querySelector('canvas')) e.style.visibility = 'hidden'; return 'hud aus'; })()"
+  "js": "(() => { const c = [...document.querySelectorAll('canvas')].sort((a, b) => b.width * b.height - a.width * a.height)[0]; document.body.style.visibility = 'hidden'; c.style.visibility = 'visible'; return 'hud aus'; })()"
  },
  {
   "n": "skyline_abend_16x9",
@@ -27,7 +27,7 @@
   "tz": 2033,
   "pitch": 0.12,
   "wait": 12000,
-  "js": "(() => { for (const e of document.body.children) if (e.tagName !== 'CANVAS' && !e.querySelector('canvas')) e.style.visibility = 'hidden'; return 'hud aus'; })()"
+  "js": "(() => { const c = [...document.querySelectorAll('canvas')].sort((a, b) => b.width * b.height - a.width * a.height)[0]; document.body.style.visibility = 'hidden'; c.style.visibility = 'visible'; return 'hud aus'; })()"
  },
  {
   "n": "skyline_nacht_16x9",
@@ -42,7 +42,7 @@
   "tz": 2033,
   "pitch": 0.12,
   "wait": 12000,
-  "js": "(() => { for (const e of document.body.children) if (e.tagName !== 'CANVAS' && !e.querySelector('canvas')) e.style.visibility = 'hidden'; return 'hud aus'; })()"
+  "js": "(() => { const c = [...document.querySelectorAll('canvas')].sort((a, b) => b.width * b.height - a.width * a.height)[0]; document.body.style.visibility = 'hidden'; c.style.visibility = 'visible'; return 'hud aus'; })()"
  },
  {
   "n": "skyline_weit_16x9",
@@ -57,7 +57,7 @@
   "tz": 2033,
   "pitch": 0.12,
   "wait": 12000,
-  "js": "(() => { for (const e of document.body.children) if (e.tagName !== 'CANVAS' && !e.querySelector('canvas')) e.style.visibility = 'hidden'; return 'hud aus'; })()"
+  "js": "(() => { const c = [...document.querySelectorAll('canvas')].sort((a, b) => b.width * b.height - a.width * a.height)[0]; document.body.style.visibility = 'hidden'; c.style.visibility = 'visible'; return 'hud aus'; })()"
  },
  {
   "n": "luft_abend_16x9",
@@ -72,7 +72,7 @@
   "tz": 2033,
   "pitch": 0.02,
   "wait": 12000,
-  "js": "(async () => { const G = window.G; if (!G.creative.on) G.toggleCreative(); const p = G.player.pos; p.y = G.TH(p.x, p.z) + 55; G.player.vy = 0; await new Promise(r => setTimeout(r, 4000)); (() => { for (const e of document.body.children) if (e.tagName !== 'CANVAS' && !e.querySelector('canvas')) e.style.visibility = 'hidden'; return 'hud aus'; })(); return 'hoch'; })()"
+  "js": "(async () => { const G = window.G; if (!G.creative.on) G.toggleCreative(); const p = G.player.pos; p.y = G.TH(p.x, p.z) + 55; G.player.vy = 0; await new Promise(r => setTimeout(r, 4000)); (() => { const c = [...document.querySelectorAll('canvas')].sort((a, b) => b.width * b.height - a.width * a.height)[0]; document.body.style.visibility = 'hidden'; c.style.visibility = 'visible'; return 'hud aus'; })(); return 'hoch'; })()"
  },
  {
   "n": "_kreativ_aus_16x9",
@@ -93,7 +93,7 @@
   "tz": 2033,
   "pitch": 0.12,
   "wait": 12000,
-  "js": "(() => { for (const e of document.body.children) if (e.tagName !== 'CANVAS' && !e.querySelector('canvas')) e.style.visibility = 'hidden'; return 'hud aus'; })()"
+  "js": "(() => { const c = [...document.querySelectorAll('canvas')].sort((a, b) => b.width * b.height - a.width * a.height)[0]; document.body.style.visibility = 'hidden'; c.style.visibility = 'visible'; return 'hud aus'; })()"
  },
  {
   "n": "skyline_abend_1x1",
@@ -108,7 +108,7 @@
   "tz": 2033,
   "pitch": 0.12,
   "wait": 12000,
-  "js": "(() => { for (const e of document.body.children) if (e.tagName !== 'CANVAS' && !e.querySelector('canvas')) e.style.visibility = 'hidden'; return 'hud aus'; })()"
+  "js": "(() => { const c = [...document.querySelectorAll('canvas')].sort((a, b) => b.width * b.height - a.width * a.height)[0]; document.body.style.visibility = 'hidden'; c.style.visibility = 'visible'; return 'hud aus'; })()"
  },
  {
   "n": "skyline_nacht_1x1",
@@ -123,7 +123,7 @@
   "tz": 2033,
   "pitch": 0.12,
   "wait": 12000,
-  "js": "(() => { for (const e of document.body.children) if (e.tagName !== 'CANVAS' && !e.querySelector('canvas')) e.style.visibility = 'hidden'; return 'hud aus'; })()"
+  "js": "(() => { const c = [...document.querySelectorAll('canvas')].sort((a, b) => b.width * b.height - a.width * a.height)[0]; document.body.style.visibility = 'hidden'; c.style.visibility = 'visible'; return 'hud aus'; })()"
  },
  {
   "n": "skyline_weit_1x1",
@@ -138,7 +138,7 @@
   "tz": 2033,
   "pitch": 0.12,
   "wait": 12000,
-  "js": "(() => { for (const e of document.body.children) if (e.tagName !== 'CANVAS' && !e.querySelector('canvas')) e.style.visibility = 'hidden'; return 'hud aus'; })()"
+  "js": "(() => { const c = [...document.querySelectorAll('canvas')].sort((a, b) => b.width * b.height - a.width * a.height)[0]; document.body.style.visibility = 'hidden'; c.style.visibility = 'visible'; return 'hud aus'; })()"
  },
  {
   "n": "luft_abend_1x1",
@@ -153,7 +153,7 @@
   "tz": 2033,
   "pitch": 0.02,
   "wait": 12000,
-  "js": "(async () => { const G = window.G; if (!G.creative.on) G.toggleCreative(); const p = G.player.pos; p.y = G.TH(p.x, p.z) + 55; G.player.vy = 0; await new Promise(r => setTimeout(r, 4000)); (() => { for (const e of document.body.children) if (e.tagName !== 'CANVAS' && !e.querySelector('canvas')) e.style.visibility = 'hidden'; return 'hud aus'; })(); return 'hoch'; })()"
+  "js": "(async () => { const G = window.G; if (!G.creative.on) G.toggleCreative(); const p = G.player.pos; p.y = G.TH(p.x, p.z) + 55; G.player.vy = 0; await new Promise(r => setTimeout(r, 4000)); (() => { const c = [...document.querySelectorAll('canvas')].sort((a, b) => b.width * b.height - a.width * a.height)[0]; document.body.style.visibility = 'hidden'; c.style.visibility = 'visible'; return 'hud aus'; })(); return 'hoch'; })()"
  },
  {
   "n": "_kreativ_aus_1x1",
@@ -174,7 +174,7 @@
   "tz": 2033,
   "pitch": 0.12,
   "wait": 12000,
-  "js": "(() => { for (const e of document.body.children) if (e.tagName !== 'CANVAS' && !e.querySelector('canvas')) e.style.visibility = 'hidden'; return 'hud aus'; })()"
+  "js": "(() => { const c = [...document.querySelectorAll('canvas')].sort((a, b) => b.width * b.height - a.width * a.height)[0]; document.body.style.visibility = 'hidden'; c.style.visibility = 'visible'; return 'hud aus'; })()"
  },
  {
   "n": "skyline_abend_9x16",
@@ -189,7 +189,7 @@
   "tz": 2033,
   "pitch": 0.12,
   "wait": 12000,
-  "js": "(() => { for (const e of document.body.children) if (e.tagName !== 'CANVAS' && !e.querySelector('canvas')) e.style.visibility = 'hidden'; return 'hud aus'; })()"
+  "js": "(() => { const c = [...document.querySelectorAll('canvas')].sort((a, b) => b.width * b.height - a.width * a.height)[0]; document.body.style.visibility = 'hidden'; c.style.visibility = 'visible'; return 'hud aus'; })()"
  },
  {
   "n": "skyline_nacht_9x16",
@@ -204,7 +204,7 @@
   "tz": 2033,
   "pitch": 0.12,
   "wait": 12000,
-  "js": "(() => { for (const e of document.body.children) if (e.tagName !== 'CANVAS' && !e.querySelector('canvas')) e.style.visibility = 'hidden'; return 'hud aus'; })()"
+  "js": "(() => { const c = [...document.querySelectorAll('canvas')].sort((a, b) => b.width * b.height - a.width * a.height)[0]; document.body.style.visibility = 'hidden'; c.style.visibility = 'visible'; return 'hud aus'; })()"
  },
  {
   "n": "skyline_weit_9x16",
@@ -219,7 +219,7 @@
   "tz": 2033,
   "pitch": 0.12,
   "wait": 12000,
-  "js": "(() => { for (const e of document.body.children) if (e.tagName !== 'CANVAS' && !e.querySelector('canvas')) e.style.visibility = 'hidden'; return 'hud aus'; })()"
+  "js": "(() => { const c = [...document.querySelectorAll('canvas')].sort((a, b) => b.width * b.height - a.width * a.height)[0]; document.body.style.visibility = 'hidden'; c.style.visibility = 'visible'; return 'hud aus'; })()"
  },
  {
   "n": "luft_abend_9x16",
@@ -234,7 +234,7 @@
   "tz": 2033,
   "pitch": 0.02,
   "wait": 12000,
-  "js": "(async () => { const G = window.G; if (!G.creative.on) G.toggleCreative(); const p = G.player.pos; p.y = G.TH(p.x, p.z) + 55; G.player.vy = 0; await new Promise(r => setTimeout(r, 4000)); (() => { for (const e of document.body.children) if (e.tagName !== 'CANVAS' && !e.querySelector('canvas')) e.style.visibility = 'hidden'; return 'hud aus'; })(); return 'hoch'; })()"
+  "js": "(async () => { const G = window.G; if (!G.creative.on) G.toggleCreative(); const p = G.player.pos; p.y = G.TH(p.x, p.z) + 55; G.player.vy = 0; await new Promise(r => setTimeout(r, 4000)); (() => { const c = [...document.querySelectorAll('canvas')].sort((a, b) => b.width * b.height - a.width * a.height)[0]; document.body.style.visibility = 'hidden'; c.style.visibility = 'visible'; return 'hud aus'; })(); return 'hoch'; })()"
  },
  {
   "n": "_kreativ_aus_9x16",
