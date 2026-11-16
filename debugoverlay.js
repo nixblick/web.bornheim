@@ -102,7 +102,7 @@ export function initDebugOverlay(G) {
     if (withGroups && groups && !(el && elGroups)) { groups = false; renderer.renderBufferDirect = orig; }
     if (active > 0 && !--active) { renderer.info.autoReset = true; groups = false; renderer.renderBufferDirect = orig; observe(false); }
   }
-  const stat = a => { if (!a.length) return null; const s = [...a].sort((x, y) => x - y); return { mean: +(a.reduce((x, y) => x + y, 0) / a.length).toFixed(2), p95: +s[Math.min(s.length - 1, Math.floor(s.length * 0.95))].toFixed(2), n: a.length }; };
+  const stat = a => { if (!a.length) return null; const s = [...a].sort((x, y) => x - y); return { mean: +(a.reduce((x, y) => x + y, 0) / a.length).toFixed(2), p95: +s[Math.max(0, Math.ceil(s.length * 0.95) - 1)].toFixed(2) /* Nächster Rang: bei 20 Werten der zweitgrößte, nicht das Maximum */, n: a.length }; };
   function snapshot() {
     const f = frameInfo || {};
     const top = f.keys ? Object.entries(f.keys).sort((a, b) => b[1] - a[1]).slice(0, 12) : null;
