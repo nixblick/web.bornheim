@@ -58,12 +58,12 @@ Linksklick schießen, R nachladen, Enter nach dem Tod, C Kreativmodus, B im Wass
 - Demos: spontan oder selbst angeführt (G sammelt junge Leute), Schilder, Transparent, Sprechchöre (optional vorgelesen), Trommeln und Pfeifen; Polizei eskaliert nach Spannung, mit G deeskalieren; Wasserwerfer auch selbst fahrbar; Filmen mit V für den Feed
 - Story 1 „Bornheim bleibt“: Start durch Demo anführen oder mitlaufen, lila B am Uhrtürmchen oder Menü; Missionsziele, GPS auf der Minikarte, Dialoge, Ruf bei Kollektiv, Polizei, Anwohnern und Investor
 - Fahndungssterne, Polizei spawnt und rammt, Tod und Neustart
-- Gelände aus EU-DEM: Straßen, Gebäude, Figuren und Autos folgen der Höhe (Bornheimer Hang)
+- Gelände aus dem DGM1 Hessen: Straßen, Gebäude, Figuren und Autos folgen der Höhe (Bornheimer Hang)
 - Gebäudetypen (Wohnhaus, Schule, Halle, Garage, Kirche) mit eigenen Fassaden, Erdgeschoss mit Türen, Schaufenstern und Toren, Sattel- und Walmdächer aus roof:shape
 - Spielplätze mit Geräten, Sportplätze mit Linien und Toren
 - Kreativmodus (Taste C): fliegen, alle Waffen ohne Limit, per Klick Feuerwerk, Demo, Polizei-Einheit, Wasserwerfer, Auto oder Mensch setzen; Leiste 1–0, Shift+1–0, ß, Mausrad, Komma/Punkt oder Klick. Unendlich Munition im normalen Spiel: Menü › Spiel
 - Verkehr: Rechtsverkehr, Einbahnstraßen und Tempolimits aus OSM, Ampelphasen, KI bremst vor Hindernissen
-- Sound komplett synthetisch (Web Audio): Motor, Schüsse, Sirene, Schritte, Crash, Explosion, Hupe (H), Pickups
+- Sound im Browser erzeugt (Web Audio), dazu CC0-Aufnahmen für Schritte, Schläge, Türen, Klicks und Nachladen (`assets/sfx/`): Motor, Schüsse, Sirene, Schritte, Crash, Explosion, Hupe (H), Pickups
 - Tag-Nacht-Zyklus mit Sonnenstand, Laternen und Scheinwerfern nur bei Dunkelheit
 - Menü (Esc): Speichern (F6), Laden (F9), Optionen (Maus, Lautstärke, Schatten, Zeitlauf, Uhrzeit); Spielstand im Browser
 - Karte (M) mit Straßennamen, Pickups für Geld, Munition, Leben; Lebensenergie regeneriert ohne Fahndung
@@ -98,6 +98,13 @@ Ganz Frankfurt in Kacheln zu 500 m (Ursprung bleibt Bornheim, 50.129441 N / 8.70
 3. `python -I tools/build_tiles.py` erzeugt `data/tiles/<tx>_<tz>.json` und `data/tiles/index.json`. Brücken- und Rampenhöhen werden dabei über die ganze Stadt berechnet. `tools/build_city.py` enthält die Umwandlung OSM -> Spielobjekte.
 
 `data/tiles/` und `data/dem/` sind eingecheckt, damit die Seite ohne Server-Logik läuft.
+
+## Quellen und Lizenzen
+
+- Karte © OpenStreetMap-Mitwirkende, ODbL 1.0 (https://www.openstreetmap.org/copyright); alle OSM-Dateien unter `data/` stehen als abgeleitete Datenbanken ebenfalls unter der ODbL.
+- Gelände: DGM1 Hessen, © HVBG, Datenlizenz Deutschland – Zero – 2.0.
+- Modelle, Texturen und Geräusche: CC0 bis auf eine Figur (CC BY 3.0), three.js unter MIT.
+- Die vollständige Liste je Datei steht in `CREDITS.md`, für Spieler in `credits.html` (verlinkt vom Startbildschirm und im Pausenmenü unter Hilfe).
 
 ## Veröffentlichung
 

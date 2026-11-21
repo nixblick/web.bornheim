@@ -50,6 +50,12 @@ export function initMenuNeu(X, S) {
   side.remove();
   box.prepend(top);
   box.append(el('footer', 'mn-foot', '<span><kbd>ESC</kbd> Weiter</span><span><kbd>F1</kbd> Hilfe</span><span><kbd>H</kbd> Handy</span><span>Karte: Klick springt hin, Mausrad zoomt, Ziehen verschiebt</span>'));
+  // Quellenangabe (#276): Karte © OpenStreetMap (ODbL) und Credits unten im Hilfe-Reiter (die Fußzeile fehlt auf kleinen Schirmen)
+  const hilfe = opts.querySelector('.pane[data-tab=hilfe]');
+  if (hilfe && !hilfe.querySelector('a[href="credits.html"]')) {
+    const q = el('p', null, 'Karte © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener" style="color:inherit">OpenStreetMap-Mitwirkende</a> (ODbL) · <a href="credits.html" target="_blank" rel="noopener" style="color:inherit">Credits &amp; Quellen</a>');
+    q.style.cssText = 'font-size:13px;line-height:1.6;margin:12px 0 0;opacity:.75'; hilfe.append(q);
+  }
 
   // Hervorhebung: Hauptpunkt nach sichtbarer Seite, Reiterzeile nur unter Einstellungen
   function sync() {
