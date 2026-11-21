@@ -1,0 +1,24 @@
+[
+ {
+  "n": "quellen_start",
+  "wait": 2000,
+  "shot": false,
+  "js": "(() => { const s = document.getElementById('start'), a = s && s.querySelector('a[href=\"credits.html\"]'); return JSON.stringify({ link: !!a, ziel: a && a.target, osm: !!s && /OpenStreetMap/.test(s.textContent), odbl: !!s && /ODbL/.test(s.textContent) }); })()",
+  "expect": "(() => { const s = document.getElementById('start'), a = s && s.querySelector('a[href=\"credits.html\"]'); return !!a && a.target === '_blank' && /OpenStreetMap/.test(s.textContent) && /ODbL/.test(s.textContent); })()"
+ },
+ {
+  "n": "quellen_menu",
+  "x": -138,
+  "z": 372,
+  "wait": 6000,
+  "js": "(() => { const G = window.G; if (G.player.car) G.toggleCar(); dispatchEvent(new KeyboardEvent('keydown', { code: 'Escape', key: 'Escape' })); return new Promise(r => setTimeout(() => { G.X.menuTab('hilfe'); setTimeout(() => { const p = document.querySelector('#menu .pane[data-tab=hilfe]'), a = p && p.querySelector('a[href=\"credits.html\"]'); r(JSON.stringify({ menu: document.getElementById('menu').style.display, pane: p && p.style.display, link: !!a, sichtbar: !!(a && (a.offsetWidth || a.offsetHeight)), ziel: a && a.target, text: a && a.textContent })); }, 500); }, 500)); })()",
+  "expect": "(() => { const p = document.querySelector('#menu .pane[data-tab=hilfe]'), a = p && p.querySelector('a[href=\"credits.html\"]'); return document.getElementById('menu').style.display === 'flex' && p.style.display === 'block' && !!a && !!(a.offsetWidth || a.offsetHeight) && a.target === '_blank' && /Credits/.test(a.textContent) && /OpenStreetMap/.test(p.textContent); })()"
+ },
+ {
+  "n": "quellen_seite",
+  "wait": 500,
+  "shot": false,
+  "js": "(async () => { window.G.X.closeMenu && window.G.X.closeMenu(); const r = await fetch('credits.html', { cache: 'no-store' }); const t = await r.text(); window.__qs = { status: r.status, kenney: t.includes('Kenney'), odbl: t.includes('ODbL'), osm: t.includes('OpenStreetMap') }; return JSON.stringify(window.__qs); })()",
+  "expect": "window.__qs.status === 200 && window.__qs.kenney && window.__qs.odbl && window.__qs.osm"
+ }
+]

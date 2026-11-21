@@ -16,21 +16,35 @@
   <h1>Credits</h1>
   <p>Bornheim steht auf den Schultern freier Daten und freier Kunst. Danke an alle, die ihre Arbeit offen teilen.</p>
 
-  <h2>Karten- und Geländedaten</h2>
+  <h2>Daten</h2>
+  <p>Kartendaten © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap-Mitwirkende</a>, verfügbar unter der <a href="https://opendatacommons.org/licenses/odbl/1-0/">Open Database License (ODbL) 1.0</a>. Die Dateien unter <code>data/</code> sind daraus abgeleitete Datenbanken und stehen ebenfalls unter der ODbL.</p>
   <table>
-    <tr><th>Was</th><th>Quelle</th><th>Lizenz</th></tr>
-    <tr><td>Gebäude, Straßen, Bäume, Ampeln, Grünflächen</td><td>© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap-Mitwirkende</a></td><td>ODbL 1.0</td></tr>
-    <tr><td>Gelände (DGM1, im Spiel auf 4 m gemittelt)</td><td>© Hessische Verwaltung für Bodenmanagement und Geoinformation (HVBG)</td><td>Datenlizenz Deutschland – Zero – 2.0</td></tr>
+    <tr><th>Datei</th><th>Inhalt</th><th>Quelle und Lizenz</th></tr>
+    <tr><td><code>data/tiles/</code></td><td>Stadtkacheln: Gebäude, Straßen, Wege, Gleise, Grünflächen, Bäume, Ampeln, Läden, Haltestellen</td><td>© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap-Mitwirkende</a>, ODbL 1.0; Höhen aus dem DGM1 (nächste Zeile)</td></tr>
+    <tr><td><code>data/dem/</code></td><td>Gelände (DGM1, im Spiel auf 4 m gemittelt), Stadt und Umland</td><td>© Hessische Verwaltung für Bodenmanagement und Geoinformation (HVBG), <a href="https://www.govdata.de/dl-de/zero-2-0">Datenlizenz Deutschland – Zero – 2.0</a></td></tr>
+    <tr><td><code>data/overview.json</code></td><td>Übersichtskarte (Menü und große Karte)</td><td>OpenStreetMap, ODbL 1.0</td></tr>
+    <tr><td><code>data/skyline.json</code></td><td>Hochhäuser am Horizont</td><td>OpenStreetMap, ODbL 1.0; Gelände DGM1</td></tr>
+    <tr><td><code>data/metro.json</code></td><td>U- und S-Bahn-Linien, Stationen, Eingänge</td><td>OpenStreetMap, ODbL 1.0</td></tr>
+    <tr><td><code>data/busroutes.json</code></td><td>Buslinien und Haltestellen</td><td>OpenStreetMap, ODbL 1.0</td></tr>
+    <tr><td><code>data/districts.json</code></td><td>Stadtteilgrenzen</td><td>OpenStreetMap, ODbL 1.0</td></tr>
+    <tr><td><code>data/belag.json</code></td><td>Straßen mit Pflaster</td><td>OpenStreetMap, ODbL 1.0</td></tr>
+    <tr><td><code>data/ladesaeulen.json</code></td><td>Ladesäulen für E-Autos (ohne Betreiber und Marken)</td><td>OpenStreetMap, ODbL 1.0</td></tr>
+    <tr><td><code>data/jugend.json</code></td><td>Jugendhäuser</td><td>OpenStreetMap, ODbL 1.0</td></tr>
+    <tr><td><code>data/vokabeln.json</code></td><td>Sätze der Minimission „Kannst du mir helfen?“</td><td>Inhalt von <a href="https://vokabaum.hinjas.de">Vokabaum</a> (Kunde), wortgleich übernommen</td></tr>
+    <tr><td><code>data/podcast.json</code></td><td>Liste der Podcast-Folgen</td><td>eigene Inhalte</td></tr>
+    <tr><td>Laufstrecken der Frischlufteulen</td><td>Eulen-Lauf und Eulen-Marathon, beim Spielstart abgerufen</td><td>Schnittstelle von <a href="https://frischlufteulen.de">frischlufteulen.de</a> (Kunde)</td></tr>
+    <tr><td><code>audio/podcast/</code></td><td>Podcast-Sender im Autoradio und Headset</td><td>eigene Folgen</td></tr>
   </table>
+  <p>Einzelne Hochhaushöhen, die in OpenStreetMap fehlen, sind nach belegten Zahlen der deutschen Wikipedia ergänzt.</p>
 
-  <h2>Figuren</h2>
+  <h2>Figuren (<code>assets/people/</code>)</h2>
   <table>
     <tr><th>Modell</th><th>Autor</th><th>Lizenz</th></tr>
     <tr><td>Man, Man in Suit, Woman Casual, Woman in Tank Top, Woman in Dress, Woman, Casual Character, Animated Woman, Business Man</td><td>Quaternius</td><td>CC0</td></tr>
     <tr><td><a href="https://poly.pizza/m/oAArCNHjFB">Soldier</a> (Polizei-Einsatzkraft)</td><td>Quaternius</td><td>CC BY 3.0</td></tr>
   </table>
 
-  <h2>Fahrzeuge und Waffen</h2>
+  <h2>Fahrzeuge und Waffen (<code>assets/cars/</code>, <code>assets/weapons/</code>)</h2>
   <table>
     <tr><th>Modell</th><th>Autor</th><th>Lizenz</th></tr>
     <tr><td>Car, SUV, Taxi, Police Car, Pistol</td><td>Quaternius</td><td>CC0</td></tr>
@@ -38,11 +52,25 @@
   </table>
   <p>Modelle über <a href="https://poly.pizza">poly.pizza</a>.</p>
 
-  <h2>Texturen</h2>
+  <h2>Texturen (<code>assets/textures/</code>)</h2>
   <p>Putz, Asphalt, Pflaster, Dachziegel, Backstein und Kopfsteinpflaster von <a href="https://polyhaven.com">Poly Haven</a>, CC0.</p>
 
+  <h2>Geräusche (<code>assets/sfx/</code>)</h2>
+  <table>
+    <tr><th>Geräusch</th><th>Paket und Autor</th><th>Lizenz</th></tr>
+    <tr><td>Schritte (Beton, Gras, Holz), Schläge, Blech, weicher Aufprall</td><td><a href="https://kenney.nl/assets/impact-sounds">Impact Sounds</a>, Kenney</td><td>CC0</td></tr>
+    <tr><td>Türen</td><td><a href="https://kenney.nl/assets/rpg-audio">RPG Audio</a>, Kenney</td><td>CC0</td></tr>
+    <tr><td>Klicks</td><td><a href="https://kenney.nl/assets/ui-audio">UI Audio</a>, Kenney</td><td>CC0</td></tr>
+    <tr><td>Bestätigung</td><td><a href="https://kenney.nl/assets/interface-sounds">Interface Sounds</a>, Kenney</td><td>CC0</td></tr>
+    <tr><td>Nachladen</td><td><a href="https://opengameart.org/content/gun-reload-sounds">Gun reload sounds</a>, SpringySpringo</td><td>CC0</td></tr>
+    <tr><td>Alle übrigen Geräusche, Motor und Radiomusik</td><td>im Browser erzeugt (Web Audio, <code>klang.js</code>, <code>radio.js</code>)</td><td>eigene Inhalte</td></tr>
+  </table>
+
+  <h2>Webseite (<code>assets/site/</code>)</h2>
+  <p>Bildschirmfotos aus dem Spiel, Icon und Stylesheet: eigene Inhalte.</p>
+
   <h2>Software</h2>
-  <p><a href="https://threejs.org">three.js</a> 0.170 (MIT-Lizenz), lokal mitgeliefert. Alle Geräusche werden im Browser erzeugt.</p>
+  <p><a href="https://threejs.org">three.js</a> 0.170 (MIT-Lizenz), lokal mitgeliefert.</p>
 
   <h2>Hinweis</h2>
   <p>Ein Fan- und Hobbyprojekt. Alle Firmen, Läden und Marken sind verfremdet. Personen und Handlung sind frei erfunden.</p>
